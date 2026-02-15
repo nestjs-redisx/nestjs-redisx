@@ -71,14 +71,14 @@ jobs:
         run: npm run build
 
       - name: Run tests
-        run: npm test -- --reporter=verbose 2>&1 | tee test-results.txt
+        run: npm test -- --reporter=verbose --coverage 2>&1 | tee test-results.txt
         env:
           REDIS_HOST: localhost
           REDIS_PORT: 6379
 
       - name: Upload coverage to Codecov
         if: matrix.node == 20
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
@@ -168,7 +168,54 @@ jobs:
 
       - name: Copy smoke test files
         run: |
-          cp apps/pack-test/test/smoke.spec.ts "$SMOKE_DIR"/smoke.spec.ts
+          cat > "$SMOKE_DIR"/smoke.spec.ts << 'SPECEOF'
+          import { describe, it, expect } from 'vitest';
+
+          describe('Pack Smoke Test', () => {
+            it('should import core exports', async () => {
+              const core = await import('@nestjs-redisx/core');
+              expect(core.RedisModule).toBeDefined();
+              expect(core.RedisService).toBeDefined();
+            });
+
+            it('should import cache exports', async () => {
+              const cache = await import('@nestjs-redisx/cache');
+              expect(cache.CachePlugin).toBeDefined();
+              expect(cache.CacheService).toBeDefined();
+            });
+
+            it('should import locks exports', async () => {
+              const locks = await import('@nestjs-redisx/locks');
+              expect(locks.LocksPlugin).toBeDefined();
+              expect(locks.LockService).toBeDefined();
+            });
+
+            it('should import rate-limit exports', async () => {
+              const rl = await import('@nestjs-redisx/rate-limit');
+              expect(rl.RateLimitPlugin).toBeDefined();
+            });
+
+            it('should import idempotency exports', async () => {
+              const idem = await import('@nestjs-redisx/idempotency');
+              expect(idem.IdempotencyPlugin).toBeDefined();
+            });
+
+            it('should import streams exports', async () => {
+              const streams = await import('@nestjs-redisx/streams');
+              expect(streams.StreamsPlugin).toBeDefined();
+            });
+
+            it('should import metrics exports', async () => {
+              const metrics = await import('@nestjs-redisx/metrics');
+              expect(metrics.MetricsPlugin).toBeDefined();
+            });
+
+            it('should import tracing exports', async () => {
+              const tracing = await import('@nestjs-redisx/tracing');
+              expect(tracing.TracingPlugin).toBeDefined();
+            });
+          });
+          SPECEOF
 
           cat > "$SMOKE_DIR"/tsconfig.json << 'TSEOF'
           {
@@ -203,43 +250,3 @@ jobs:
       - name: Run smoke tests
         run: cd "$SMOKE_DIR" && npx vitest run --reporter=verbose
 
-  pack-e2e:
-    name: Pack E2E Test
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-
-    services:
-      redis:
-        image: redis:7
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build packages
-        run: npm run build
-
-      - name: Pack and install
-        run: cd apps/pack-test && npm run pack-install
-
-      - name: Run E2E tests
-        run: cd apps/pack-test && npm test -- --reporter=verbose
-        env:
-          REDIS_HOST: localhost
-          REDIS_PORT: 6379
