@@ -1,0 +1,2 @@
+export const TRACING_PLUGIN_OPTIONS = Symbol.for('TRACING_PLUGIN_OPTIONS');
+export const TRACING_SERVICE = Symbol.for('TRACING_SERVICE');

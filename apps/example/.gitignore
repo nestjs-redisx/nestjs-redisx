@@ -1,0 +1,19 @@
+/dist
+*.js
+*.d.ts
+*.js.map
+!jest.config.js
+
+# Dependencies
+/node_modules
+
+# IDE
+.idea
+.vscode
+
+# Environment
+.env
+.env.local
+
+# Test coverage
+/coverage

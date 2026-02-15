@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+Disallow: /assets/
+Disallow: /hashmap.json
+
+Sitemap: https://nestjs-redisx.dev/sitemap.xml
+
+Host: https://nestjs-redisx.dev
+
+# LLM-friendly documentation
+# llms.txt: index with links to documentation sections
+# llms-full.txt: complete documentation in one file
+# See https://llmstxt.org for specification

@@ -1,0 +1,119 @@
+# NestJS RedisX
+
+> Modular Redis toolkit for NestJS with plugin architecture. Provides two-tier caching (L1 memory + L2 Redis), distributed locks, rate limiting, idempotency, Redis Streams, Prometheus metrics, and OpenTelemetry tracing. Supports both ioredis and node-redis drivers. TypeScript-first, zero external dependencies per plugin.
+
+NestJS RedisX is designed for production NestJS applications that need Redis beyond simple key-value storage. Instead of installing separate libraries for caching, locking, rate limiting, etc., RedisX provides a unified plugin system where you import only what you need. Each plugin is a self-contained NestJS module with its own providers, decorators, and configuration.
+
+## Getting Started
+
+- [Installation](https://nestjs-redisx.dev/en/guide/installation): Install @nestjs-redisx/core and plugin packages. Supports ioredis and node-redis drivers.
+- [Quick Start](https://nestjs-redisx.dev/en/guide/quick-start): Create your first cached endpoint in 5 minutes with RedisModule.forRoot() and @Cached decorator.
+- [Decision Guide](https://nestjs-redisx.dev/en/guide/decision-guide): Flowchart and decision matrix to choose the right plugins for your use case.
+
+## Core Module
+
+- [Core Overview](https://nestjs-redisx.dev/en/reference/core/): RedisModule, RedisService, driver abstraction, multi-client support, and plugin system.
+- [Configuration](https://nestjs-redisx.dev/en/reference/core/configuration): Complete configuration reference for forRoot() and forRootAsync().
+- [RedisService API](https://nestjs-redisx.dev/en/reference/core/redis-service): High-level Redis operations wrapper with type safety.
+- [Multiple Clients](https://nestjs-redisx.dev/en/reference/core/multiple-clients): Named connections for different Redis instances or purposes.
+- [Connection Types](https://nestjs-redisx.dev/en/reference/core/connection-types): Single instance, Redis Cluster, and Redis Sentinel configurations.
+- [Driver Abstraction](https://nestjs-redisx.dev/en/reference/core/driver-abstraction): Switch between ioredis and node-redis without changing application code.
+- [Plugin System](https://nestjs-redisx.dev/en/reference/core/plugin-system): Plugin architecture with lifecycle hooks for extending RedisModule.
+- [Error Handling](https://nestjs-redisx.dev/en/reference/core/error-handling): Structured error system with error codes.
+
+## Cache Plugin
+
+- [Cache Overview](https://nestjs-redisx.dev/en/reference/cache/): Two-tier L1+L2 caching with anti-stampede protection, SWR, and tag-based invalidation.
+- [Configuration](https://nestjs-redisx.dev/en/reference/cache/configuration): CachePlugin configuration options for L1, L2, stampede, SWR, and serializers.
+- [@Cached Decorator](https://nestjs-redisx.dev/en/reference/cache/decorators): Declarative caching with key templates, TTL, tags, conditions, and vary-by.
+- [Service API](https://nestjs-redisx.dev/en/reference/cache/service-api): Programmatic cache get/set/delete/invalidate with ICacheService.
+- [Tag Invalidation](https://nestjs-redisx.dev/en/reference/cache/tags): Invalidate groups of cache entries by semantic tags.
+- [Anti-Stampede](https://nestjs-redisx.dev/en/reference/cache/stampede): Prevent thundering herd with lock-based cache regeneration.
+- [Stale-While-Revalidate](https://nestjs-redisx.dev/en/reference/cache/swr): Serve stale data while refreshing cache in the background.
+- [Cache Warming](https://nestjs-redisx.dev/en/reference/cache/warmup): Pre-populate cache entries on application startup.
+
+## Locks Plugin
+
+- [Locks Overview](https://nestjs-redisx.dev/en/reference/locks/): Distributed locking with auto-renewal, ownership validation, and retry strategies.
+- [Configuration](https://nestjs-redisx.dev/en/reference/locks/configuration): LocksPlugin configuration for TTL, retry, and auto-renewal.
+- [@WithLock Decorator](https://nestjs-redisx.dev/en/reference/locks/decorator): Declarative distributed locking on methods.
+- [Service API](https://nestjs-redisx.dev/en/reference/locks/service-api): Programmatic lock/unlock with ILockService.withLock().
+- [Auto-Renewal](https://nestjs-redisx.dev/en/reference/locks/auto-renewal): Automatic lock extension for long-running operations.
+- [Retry Strategies](https://nestjs-redisx.dev/en/reference/locks/retry-strategies): Fixed, linear, and exponential backoff retry strategies.
+
+## Rate Limit Plugin
+
+- [Rate Limit Overview](https://nestjs-redisx.dev/en/reference/rate-limit/): Multiple algorithms for API protection with decorator and guard support.
+- [Configuration](https://nestjs-redisx.dev/en/reference/rate-limit/configuration): RateLimitPlugin configuration for algorithms, points, windows, and key strategies.
+- [@RateLimit Decorator](https://nestjs-redisx.dev/en/reference/rate-limit/decorator): Route-level rate limiting with per-endpoint configuration.
+- [Algorithms](https://nestjs-redisx.dev/en/reference/rate-limit/algorithms): Fixed window, sliding window, and token bucket — all atomic Lua scripts.
+- [Key Extraction](https://nestjs-redisx.dev/en/reference/rate-limit/key-extraction): Custom key strategies for IP, user, tenant, or custom identifiers.
+
+## Idempotency Plugin
+
+- [Idempotency Overview](https://nestjs-redisx.dev/en/reference/idempotency/): Request deduplication with exactly-once execution for payments and mutations.
+- [Configuration](https://nestjs-redisx.dev/en/reference/idempotency/configuration): IdempotencyPlugin configuration for TTL, header name, and fingerprinting.
+- [@Idempotent Decorator](https://nestjs-redisx.dev/en/reference/idempotency/decorator): Route-level idempotency with key validation and response replay.
+- [Fingerprinting](https://nestjs-redisx.dev/en/reference/idempotency/fingerprinting): Request body hashing to detect mismatched requests with same idempotency key.
+- [Concurrent Requests](https://nestjs-redisx.dev/en/reference/idempotency/concurrent-requests): Second request waits for first to complete, then returns cached response.
+
+## Streams Plugin
+
+- [Streams Overview](https://nestjs-redisx.dev/en/reference/streams/): Redis Streams with consumer groups, dead letter queues, and automatic retry.
+- [Configuration](https://nestjs-redisx.dev/en/reference/streams/configuration): StreamsPlugin configuration for consumers, groups, and retry policies.
+- [Producer API](https://nestjs-redisx.dev/en/reference/streams/producer): Publish single or batch messages to Redis Streams.
+- [Consumer API](https://nestjs-redisx.dev/en/reference/streams/consumer): @StreamConsumer decorator for declarative message consumption.
+- [Consumer Groups](https://nestjs-redisx.dev/en/reference/streams/consumer-groups): Load-balanced message distribution across multiple consumers.
+- [Dead Letter Queue](https://nestjs-redisx.dev/en/reference/streams/dead-letter-queue): Isolate failed messages after max retries for analysis.
+
+## Metrics Plugin
+
+- [Metrics Overview](https://nestjs-redisx.dev/en/reference/metrics/): Prometheus-compatible metrics for Redis operations, cache hit rates, and lock contention.
+- [Configuration](https://nestjs-redisx.dev/en/reference/metrics/configuration): MetricsPlugin configuration for endpoint, prefix, and custom labels.
+- [Prometheus](https://nestjs-redisx.dev/en/reference/metrics/prometheus): HTTP /metrics endpoint for Prometheus scraping.
+- [Grafana Dashboards](https://nestjs-redisx.dev/en/reference/metrics/grafana): Example dashboard configurations for visualizing Redis metrics.
+- [Custom Metrics](https://nestjs-redisx.dev/en/reference/metrics/custom-metrics): API for adding application-specific metrics to the registry.
+
+## Tracing Plugin
+
+- [Tracing Overview](https://nestjs-redisx.dev/en/reference/tracing/): OpenTelemetry distributed tracing for Redis operations across services.
+- [Configuration](https://nestjs-redisx.dev/en/reference/tracing/configuration): TracingPlugin configuration for exporters, sampling, and span attributes.
+- [Spans](https://nestjs-redisx.dev/en/reference/tracing/spans): Redis command spans with db.system, db.operation, and plugin-specific attributes.
+- [Exporters](https://nestjs-redisx.dev/en/reference/tracing/exporters): OTLP, Jaeger, Zipkin, and Console exporter configuration.
+
+## Concepts
+
+- [Two-Tier Caching](https://nestjs-redisx.dev/en/guide/concepts/two-tier-caching): How L1 memory + L2 Redis caching works, when to use SWR, and cache coherence.
+- [Distributed Coordination](https://nestjs-redisx.dev/en/guide/concepts/distributed-coordination): Distributed locks, leader election, and coordination patterns.
+- [Rate Limiting Strategies](https://nestjs-redisx.dev/en/guide/concepts/rate-limiting-strategies): Fixed window vs sliding window vs token bucket — choosing the right algorithm.
+- [Event Streaming](https://nestjs-redisx.dev/en/guide/concepts/event-streaming): Redis Streams vs Pub/Sub, consumer groups, and event-driven architecture.
+- [Observability Strategy](https://nestjs-redisx.dev/en/guide/concepts/observability-strategy): Metrics + tracing strategy for production Redis monitoring.
+
+## Architecture
+
+- [Key Naming](https://nestjs-redisx.dev/en/guide/architecture/key-naming): Key naming conventions and namespace management.
+- [Multi-Tenancy](https://nestjs-redisx.dev/en/guide/architecture/multi-tenancy): Tenant isolation with vary-by and key prefixes.
+- [Deployment](https://nestjs-redisx.dev/en/guide/architecture/deployment): Redis topologies — Single, Sentinel, Cluster — and cloud managed options.
+- [Failure Modes](https://nestjs-redisx.dev/en/guide/architecture/failure-modes): How each plugin behaves when Redis is unavailable.
+- [Tuning](https://nestjs-redisx.dev/en/guide/architecture/tuning): Performance optimization for connection pooling, pipelining, and memory.
+
+## Recipes
+
+- [Payment Processing](https://nestjs-redisx.dev/en/guide/recipes/payment-processing): Prevent double charges with Idempotency + Locks.
+- [Webhook Delivery](https://nestjs-redisx.dev/en/guide/recipes/webhook-delivery): Reliable webhook reception with idempotency.
+- [Login Throttling](https://nestjs-redisx.dev/en/guide/recipes/login-throttling): Progressive rate limiting for brute-force protection.
+- [API Protection](https://nestjs-redisx.dev/en/guide/recipes/api-protection): Multi-tier rate limiting for public APIs.
+- [Background Jobs](https://nestjs-redisx.dev/en/guide/recipes/background-jobs): Task queues with Redis Streams and consumer groups.
+- [Session Management](https://nestjs-redisx.dev/en/guide/recipes/session-management): Redis-backed session storage with cache plugin.
+- [CQRS Invalidation](https://nestjs-redisx.dev/en/guide/recipes/cqrs-invalidation): Cache invalidation in CQRS/event-sourced architectures.
+
+## Migration
+
+- [From cache-manager](https://nestjs-redisx.dev/en/guide/integration/migration-cache-manager): Step-by-step migration from @nestjs/cache-manager to NestJS RedisX.
+- [From ioredis](https://nestjs-redisx.dev/en/guide/integration/migration-ioredis): Migration from raw ioredis usage to RedisX abstractions.
+
+## Troubleshooting
+
+- [Cache Issues](https://nestjs-redisx.dev/en/guide/troubleshooting/cache-issues): Cache not working, stampede, tag invalidation problems.
+- [Lock Issues](https://nestjs-redisx.dev/en/guide/troubleshooting/lock-issues): Lock timeouts, deadlocks, and auto-renewal failures.
+- [Performance Issues](https://nestjs-redisx.dev/en/guide/troubleshooting/performance-issues): Latency, memory, and connection pool problems.

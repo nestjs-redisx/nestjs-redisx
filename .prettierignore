@@ -1,0 +1,11 @@
+dist
+node_modules
+coverage
+*.md
+pnpm-lock.yaml
+package-lock.json
+CHANGELOG.md
+apps/demo
+apps/example
+apps/pack-test
+website

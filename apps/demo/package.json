@@ -1,0 +1,41 @@
+{
+  "name": "@nestjs-redisx/demo",
+  "version": "0.0.1",
+  "description": "Demo app — source of all documentation code snippets",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "nest build",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "start:debug": "nest start --debug --watch",
+    "start:prod": "node dist/main",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nestjs-redisx/core": "^0.1.0",
+    "@nestjs-redisx/cache": "^0.1.0",
+    "@nestjs-redisx/locks": "^0.1.0",
+    "@nestjs-redisx/rate-limit": "^0.1.0",
+    "@nestjs-redisx/idempotency": "^0.1.0",
+    "@nestjs-redisx/streams": "^0.1.0",
+    "@nestjs-redisx/metrics": "^0.1.0",
+    "@nestjs-redisx/tracing": "^0.1.0",
+    "@nestjs/common": "^10.0.0",
+    "@nestjs/config": "^4.0.2",
+    "@nestjs/event-emitter": "^2.0.0",
+    "@nestjs/core": "^10.0.0",
+    "@nestjs/platform-express": "^10.0.0",
+    "@nestjs/terminus": "^10.0.0",
+    "prom-client": "^15.0.0",
+    "reflect-metadata": "^0.2.0",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^10.0.0",
+    "@nestjs/schematics": "^10.0.0",
+    "@types/express": "^5.0.0",
+    "@types/node": "^20.3.1",
+    "typescript": "^5.1.3"
+  }
+}

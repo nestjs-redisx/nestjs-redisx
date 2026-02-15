@@ -1,0 +1,182 @@
+version: '3.8'
+
+# Redis Cluster configuration for Docker local development
+# Note: Cluster nodes use Docker internal IPs for inter-node gossip
+# Clients connecting from host need natMap support (ioredis) or
+# tests must run inside Docker network
+
+services:
+  # Redis Cluster - 3 masters + 3 replicas
+  redis-cluster-node-1:
+    image: redis:7-alpine
+    container_name: redis-cluster-1
+    command: >
+      redis-server
+      --bind 0.0.0.0
+      --port 7001
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+      --appendfilename "appendonly-7001.aof"
+      --dbfilename "dump-7001.rdb"
+      --dir /data
+      --logfile /data/redis-7001.log
+    ports:
+      - "7001:7001"
+    volumes:
+      - redis-cluster-data-1:/data
+    networks:
+      redis-cluster-network:
+        ipv4_address: 172.28.0.11
+
+  redis-cluster-node-2:
+    image: redis:7-alpine
+    container_name: redis-cluster-2
+    command: >
+      redis-server
+      --bind 0.0.0.0
+      --port 7002
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+      --appendfilename "appendonly-7002.aof"
+      --dbfilename "dump-7002.rdb"
+      --dir /data
+      --logfile /data/redis-7002.log
+    ports:
+      - "7002:7002"
+    volumes:
+      - redis-cluster-data-2:/data
+    networks:
+      redis-cluster-network:
+        ipv4_address: 172.28.0.12
+
+  redis-cluster-node-3:
+    image: redis:7-alpine
+    container_name: redis-cluster-3
+    command: >
+      redis-server
+      --bind 0.0.0.0
+      --port 7003
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+      --appendfilename "appendonly-7003.aof"
+      --dbfilename "dump-7003.rdb"
+      --dir /data
+      --logfile /data/redis-7003.log
+    ports:
+      - "7003:7003"
+    volumes:
+      - redis-cluster-data-3:/data
+    networks:
+      redis-cluster-network:
+        ipv4_address: 172.28.0.13
+
+  redis-cluster-node-4:
+    image: redis:7-alpine
+    container_name: redis-cluster-4
+    command: >
+      redis-server
+      --bind 0.0.0.0
+      --port 7004
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+      --appendfilename "appendonly-7004.aof"
+      --dbfilename "dump-7004.rdb"
+      --dir /data
+      --logfile /data/redis-7004.log
+    ports:
+      - "7004:7004"
+    volumes:
+      - redis-cluster-data-4:/data
+    networks:
+      redis-cluster-network:
+        ipv4_address: 172.28.0.14
+
+  redis-cluster-node-5:
+    image: redis:7-alpine
+    container_name: redis-cluster-5
+    command: >
+      redis-server
+      --bind 0.0.0.0
+      --port 7005
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+      --appendfilename "appendonly-7005.aof"
+      --dbfilename "dump-7005.rdb"
+      --dir /data
+      --logfile /data/redis-7005.log
+    ports:
+      - "7005:7005"
+    volumes:
+      - redis-cluster-data-5:/data
+    networks:
+      redis-cluster-network:
+        ipv4_address: 172.28.0.15
+
+  redis-cluster-node-6:
+    image: redis:7-alpine
+    container_name: redis-cluster-6
+    command: >
+      redis-server
+      --bind 0.0.0.0
+      --port 7006
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+      --appendfilename "appendonly-7006.aof"
+      --dbfilename "dump-7006.rdb"
+      --dir /data
+      --logfile /data/redis-7006.log
+    ports:
+      - "7006:7006"
+    volumes:
+      - redis-cluster-data-6:/data
+    networks:
+      redis-cluster-network:
+        ipv4_address: 172.28.0.16
+
+  # Cluster initializer - creates the cluster
+  redis-cluster-init:
+    image: redis:7-alpine
+    container_name: redis-cluster-init
+    depends_on:
+      - redis-cluster-node-1
+      - redis-cluster-node-2
+      - redis-cluster-node-3
+      - redis-cluster-node-4
+      - redis-cluster-node-5
+      - redis-cluster-node-6
+    networks:
+      - redis-cluster-network
+    command: >
+      sh -c "sleep 5 &&
+      redis-cli --cluster create
+      172.28.0.11:7001 172.28.0.12:7002 172.28.0.13:7003
+      172.28.0.14:7004 172.28.0.15:7005 172.28.0.16:7006
+      --cluster-replicas 1 --cluster-yes"
+    restart: "no"
+
+volumes:
+  redis-cluster-data-1:
+  redis-cluster-data-2:
+  redis-cluster-data-3:
+  redis-cluster-data-4:
+  redis-cluster-data-5:
+  redis-cluster-data-6:
+
+networks:
+  redis-cluster-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

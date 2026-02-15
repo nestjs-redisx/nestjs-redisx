@@ -1,0 +1,684 @@
+# NestJS RedisX
+
+> Modular Redis toolkit for NestJS with plugin architecture. Provides two-tier caching (L1 memory + L2 Redis), distributed locks, rate limiting, idempotency, Redis Streams, Prometheus metrics, and OpenTelemetry tracing. Supports both ioredis and node-redis drivers. TypeScript-first, zero external dependencies per plugin.
+
+## Installation
+
+Requirements: Node.js 20+, NestJS 10+, Redis 6+, TypeScript 5+.
+
+Install core and your preferred Redis driver:
+
+```bash
+# ioredis
+npm install @nestjs-redisx/core ioredis
+
+# node-redis
+npm install @nestjs-redisx/core redis
+```
+
+Install only the plugins you need:
+
+```bash
+npm install @nestjs-redisx/cache        # Two-tier caching
+npm install @nestjs-redisx/locks        # Distributed locks
+npm install @nestjs-redisx/rate-limit   # Rate limiting
+npm install @nestjs-redisx/idempotency  # Request deduplication
+npm install @nestjs-redisx/streams      # Redis Streams
+npm install @nestjs-redisx/metrics      # Prometheus metrics
+npm install @nestjs-redisx/tracing      # OpenTelemetry tracing
+```
+
+## Core Module Configuration
+
+### Synchronous Setup
+
+```typescript
+import { Module } from '@nestjs/common';
+import { RedisModule } from '@nestjs-redisx/core';
+import { CachePlugin } from '@nestjs-redisx/cache';
+import { LocksPlugin } from '@nestjs-redisx/locks';
+
+@Module({
+  imports: [
+    RedisModule.forRoot({
+      clients: {
+        host: 'localhost',
+        port: 6379,
+        password: 'optional',
+      },
+      plugins: [
+        new CachePlugin({
+          l1: { maxSize: 1000, ttl: 60000 },
+          l2: { defaultTtl: 3600 },
+        }),
+        new LocksPlugin({ defaultTtl: 30000 }),
+      ],
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+### Asynchronous Setup (recommended for production)
+
+```typescript
+RedisModule.forRootAsync({
+  imports: [ConfigModule],
+  inject: [ConfigService],
+  plugins: [new CachePlugin(), new LocksPlugin()],
+  useFactory: (config: ConfigService) => ({
+    clients: {
+      host: config.get('REDIS_HOST'),
+      port: config.get('REDIS_PORT'),
+      password: config.get('REDIS_PASSWORD'),
+    },
+  }),
+})
+```
+
+### Connection Types
+
+Single instance (default):
+
+```typescript
+{ clients: { host: 'localhost', port: 6379 } }
+```
+
+Redis Cluster:
+
+```typescript
+{
+  clients: {
+    type: 'cluster',
+    nodes: [
+      { host: 'node1', port: 6379 },
+      { host: 'node2', port: 6379 },
+      { host: 'node3', port: 6379 },
+    ],
+  }
+}
+```
+
+Redis Sentinel:
+
+```typescript
+{
+  clients: {
+    type: 'sentinel',
+    sentinels: [
+      { host: 'sentinel1', port: 26379 },
+      { host: 'sentinel2', port: 26379 },
+    ],
+    name: 'mymaster',
+  }
+}
+```
+
+### Multiple Named Clients
+
+```typescript
+RedisModule.forRoot({
+  clients: {
+    default: { host: 'redis-primary', port: 6379 },
+    cache: { host: 'redis-cache', port: 6380 },
+    sessions: { host: 'redis-sessions', port: 6381 },
+  },
+})
+```
+
+Inject a specific client:
+
+```typescript
+import { InjectRedis } from '@nestjs-redisx/core';
+
+@Injectable()
+export class SessionService {
+  constructor(@InjectRedis('sessions') private readonly redis: RedisService) {}
+}
+```
+
+### RedisService API
+
+```typescript
+import { RedisService } from '@nestjs-redisx/core';
+
+@Injectable()
+export class MyService {
+  constructor(private readonly redis: RedisService) {}
+
+  async example() {
+    await this.redis.set('key', 'value');
+    const val = await this.redis.get('key');
+    await this.redis.del('key');
+    await this.redis.expire('key', 3600);
+    const exists = await this.redis.exists('key');
+    // Access native client for advanced commands
+    const client = this.redis.getClient();
+  }
+}
+```
+
+## Cache Plugin
+
+Two-tier caching: L1 in-memory (per-instance) + L2 Redis (shared). Features: anti-stampede protection, stale-while-revalidate, tag-based invalidation, vary-by, custom serializers.
+
+### CachePlugin Configuration
+
+```typescript
+new CachePlugin({
+  l1: {
+    enabled: true,
+    maxSize: 1000,       // max entries in memory
+    ttl: 60000,          // L1 TTL in milliseconds
+  },
+  l2: {
+    enabled: true,
+    defaultTtl: 3600,    // L2 TTL in seconds
+    keyPrefix: 'cache:',
+  },
+  stampede: {
+    enabled: true,
+    lockTimeout: 10000,  // ms to wait for lock during regeneration
+  },
+  swr: {
+    enabled: false,
+    staleTime: 300,      // seconds to serve stale while refreshing
+  },
+})
+```
+
+### @Cached Decorator
+
+Works on any @Injectable() class method (services, controllers). Uses proxy-based wrapping — no HTTP context required.
+
+```typescript
+import { Cached } from '@nestjs-redisx/cache';
+
+@Injectable()
+export class UserService {
+  // Basic caching with key template
+  @Cached({ key: 'user:{0}', ttl: 300 })
+  async findById(id: string): Promise<User> {
+    return this.userRepository.findById(id);
+  }
+
+  // With tag-based invalidation
+  @Cached({
+    key: 'user:{0}',
+    ttl: 300,
+    tags: (id) => [`user:${id}`, 'users'],
+  })
+  async findByIdWithTags(id: string): Promise<User> {
+    return this.userRepository.findById(id);
+  }
+
+  // Conditional caching
+  @Cached({
+    key: 'user:{0}',
+    condition: (id) => id !== 'system',
+    unless: (result) => result === null,
+  })
+  async findConditional(id: string): Promise<User | null> {
+    return this.userRepository.findById(id);
+  }
+
+  // Multi-tenant with vary-by
+  @Cached({
+    key: 'products:{0}',
+    varyBy: ['tenantId'],  // resolved from contextProvider (CLS/AsyncLocalStorage)
+  })
+  async findByCategory(category: string): Promise<Product[]> {
+    return this.productRepository.findByCategory(category);
+  }
+
+  // Stale-while-revalidate
+  @Cached({
+    key: 'stats:dashboard',
+    ttl: 60,
+    swr: { enabled: true, staleTime: 300 },
+  })
+  async getDashboardStats(): Promise<DashboardStats> {
+    return this.analyticsService.computeStats();
+  }
+}
+```
+
+Key template placeholders: `{0}`, `{1}`, etc. map to method argument positions.
+
+### Cache Service API (programmatic)
+
+```typescript
+import { CACHE_SERVICE, ICacheService } from '@nestjs-redisx/cache';
+
+@Injectable()
+export class MyService {
+  constructor(@Inject(CACHE_SERVICE) private readonly cache: ICacheService) {}
+
+  async example() {
+    // Get with loader (cache-aside pattern)
+    const user = await this.cache.get('user:123', {
+      loader: () => this.db.findUser('123'),
+      ttl: 300,
+      tags: ['users', 'user:123'],
+    });
+
+    // Manual set
+    await this.cache.set('key', value, { ttl: 3600 });
+
+    // Delete
+    await this.cache.delete('key');
+
+    // Invalidate by tags
+    await this.cache.invalidateTags(['users']);
+    await this.cache.invalidateTags(['user:123']);
+
+    // Clear all cache
+    await this.cache.clear();
+  }
+}
+```
+
+### @InvalidateTags Decorator
+
+```typescript
+@InvalidateTags({
+  tags: (id: string) => [`user:${id}`, 'users'],
+})
+async updateUser(id: string, data: UpdateUserDto): Promise<User> {
+  return this.userRepository.update(id, data);
+}
+```
+
+### Cache Flow
+
+1. Check L1 (memory) → hit returns in <1ms
+2. Check L2 (Redis) → hit backfills L1, returns in <5ms
+3. Miss → execute method, store in L2 + L1, return result
+4. If stampede protection enabled: only one request regenerates, others wait
+5. If SWR enabled: serve stale immediately, refresh in background
+
+## Locks Plugin
+
+Redis-based distributed locks with automatic renewal, ownership validation, and configurable retry strategies.
+
+### LocksPlugin Configuration
+
+```typescript
+new LocksPlugin({
+  defaultTtl: 30000,       // lock TTL in ms
+  retryDelay: 200,         // ms between retry attempts
+  retryCount: 10,          // max retry attempts
+  autoRenew: {
+    enabled: true,
+    interval: 10000,       // renewal interval in ms
+  },
+})
+```
+
+### @WithLock Decorator
+
+```typescript
+import { WithLock } from '@nestjs-redisx/locks';
+
+@Injectable()
+export class OrderService {
+  @WithLock('order:{0}', { ttl: 30000 })
+  async processOrder(orderId: string): Promise<Order> {
+    // Only one instance processes this order at a time
+    return this.doProcess(orderId);
+  }
+}
+```
+
+### Lock Service API (programmatic)
+
+```typescript
+import { LOCK_SERVICE, ILockService } from '@nestjs-redisx/locks';
+
+@Injectable()
+export class MyService {
+  constructor(@Inject(LOCK_SERVICE) private readonly lockService: ILockService) {}
+
+  async example() {
+    const result = await this.lockService.withLock(
+      'resource:123',
+      async () => {
+        // exclusive operation
+        return await this.process();
+      },
+      { ttl: 30000, waitTimeout: 10000 },
+    );
+  }
+}
+```
+
+## Rate Limit Plugin
+
+Multiple algorithms for API protection: fixed window, sliding window, token bucket. All run as atomic Lua scripts in Redis.
+
+### RateLimitPlugin Configuration
+
+```typescript
+new RateLimitPlugin({
+  algorithm: 'sliding-window',  // 'fixed-window' | 'sliding-window' | 'token-bucket'
+  points: 100,                   // max requests
+  window: 60,                    // time window in seconds
+  keyPrefix: 'rl:',
+})
+```
+
+### @RateLimit Decorator + Guard
+
+```typescript
+import { RateLimit } from '@nestjs-redisx/rate-limit';
+import { RateLimitGuard } from '@nestjs-redisx/rate-limit';
+
+@Controller('api')
+@UseGuards(RateLimitGuard)
+export class ApiController {
+  @Get('data')
+  @RateLimit({ points: 100, window: 60 })
+  getData() { }
+
+  @Post('submit')
+  @RateLimit({ points: 10, window: 60, algorithm: 'token-bucket' })
+  submit() { }
+}
+```
+
+### Key Extraction
+
+Default: by IP address. Custom:
+
+```typescript
+@RateLimit({
+  points: 100,
+  window: 60,
+  keyGenerator: (req) => req.user?.id ?? req.ip,
+})
+```
+
+### Skip Rate Limiting
+
+```typescript
+import { SkipRateLimit } from '@nestjs-redisx/rate-limit';
+
+@Get('health')
+@SkipRateLimit()
+healthCheck() { return { status: 'ok' }; }
+```
+
+### Response Headers
+
+Rate limit responses include standard headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, `Retry-After` (on 429).
+
+### Algorithms
+
+Fixed Window: Simple counter per time window. Cheap but allows burst at window boundaries.
+Sliding Window: Rolling window that smooths out bursts. Best for most APIs.
+Token Bucket: Allows controlled bursts up to bucket capacity. Best for bursty workloads.
+
+## Idempotency Plugin
+
+Request deduplication for payments, order creation, and mutations. Ensures operations execute exactly once even when clients retry.
+
+### IdempotencyPlugin Configuration
+
+```typescript
+new IdempotencyPlugin({
+  headerName: 'Idempotency-Key',  // HTTP header name
+  defaultTtl: 86400,               // response cache TTL in seconds (24h)
+  validateFingerprint: true,        // detect mismatched requests with same key
+})
+```
+
+### @Idempotent Decorator
+
+```typescript
+import { Idempotent } from '@nestjs-redisx/idempotency';
+
+@Controller('payments')
+export class PaymentsController {
+  @Post()
+  @Idempotent({ ttl: 86400, validateFingerprint: true })
+  async createPayment(@Body() dto: CreatePaymentDto): Promise<Payment> {
+    return this.paymentService.process(dto);
+  }
+}
+```
+
+### How It Works
+
+1. Client sends request with `Idempotency-Key: <unique-key>` header
+2. First request: executes handler, caches response in Redis
+3. Duplicate request (same key): returns cached response without executing handler
+4. Concurrent request (same key, first still processing): waits for first to complete, returns same result
+5. Mismatched request (same key, different body): returns 422 error if fingerprinting enabled
+
+## Streams Plugin
+
+Redis Streams with consumer groups, dead letter queues, batch processing, and automatic retry with exponential backoff.
+
+### StreamsPlugin Configuration
+
+```typescript
+new StreamsPlugin({
+  consumer: {
+    groupName: 'my-service',
+    consumerName: 'instance-1',
+    blockTime: 5000,           // ms to block waiting for messages
+    batchSize: 10,             // messages per read
+    maxRetries: 3,             // retries before DLQ
+  },
+})
+```
+
+### Publishing Messages
+
+```typescript
+import { STREAMS_SERVICE, IStreamsService } from '@nestjs-redisx/streams';
+
+@Injectable()
+export class OrderService {
+  constructor(@Inject(STREAMS_SERVICE) private readonly streams: IStreamsService) {}
+
+  async createOrder(order: Order) {
+    await this.streams.publish('orders', {
+      type: 'order.created',
+      payload: order,
+    });
+  }
+
+  async publishBatch(events: Event[]) {
+    await this.streams.publishBatch('events', events);
+  }
+}
+```
+
+### Consuming Messages
+
+```typescript
+import { StreamConsumer } from '@nestjs-redisx/streams';
+
+@Injectable()
+export class OrderProcessor {
+  @StreamConsumer({
+    stream: 'orders',
+    group: 'processor',
+    consumer: 'worker-1',
+  })
+  async handleOrder(message: StreamMessage) {
+    const order = message.data;
+    await this.process(order);
+    // Message auto-acknowledged on success
+    // Auto-retried on error with exponential backoff
+    // Moved to DLQ after maxRetries
+  }
+}
+```
+
+## Metrics Plugin
+
+Prometheus-compatible metrics for all Redis operations and plugin activity.
+
+### MetricsPlugin Configuration
+
+```typescript
+new MetricsPlugin({
+  endpoint: '/metrics',        // HTTP endpoint path
+  prefix: 'redisx_',          // metric name prefix
+  defaultLabels: { app: 'my-service' },
+})
+```
+
+### Available Metrics
+
+Command metrics: `commands_total`, `command_duration_seconds`, `connections_active`, `errors_total`.
+Cache metrics: `cache_hits_total`, `cache_misses_total`, `cache_hit_ratio`, `cache_size`, `cache_stampede_prevented_total`.
+Lock metrics: `lock_acquisitions_total`, `lock_wait_duration_seconds`, `lock_hold_duration_seconds`, `locks_active`.
+Rate limit metrics: `ratelimit_requests_total` (with status label: allowed/rejected).
+Stream metrics: `stream_messages_published_total`, `stream_messages_consumed_total`, `stream_processing_duration_seconds`.
+Idempotency metrics: `idempotency_requests_total` (with status: new/replay/conflict).
+
+## Tracing Plugin
+
+OpenTelemetry distributed tracing for Redis operations.
+
+### TracingPlugin Configuration
+
+```typescript
+new TracingPlugin({
+  serviceName: 'my-service',
+  exporter: 'otlp',           // 'otlp' | 'jaeger' | 'zipkin' | 'console'
+  exporterUrl: 'http://jaeger:4318',
+  sampling: {
+    strategy: 'ratio',         // 'always' | 'never' | 'ratio' | 'parent-based'
+    ratio: 0.1,                // sample 10% of traces
+  },
+})
+```
+
+### Span Attributes
+
+Each Redis span includes: `db.system: "redis"`, `db.operation`, `db.redis.key`, `redisx.plugin` (cache/locks/rate-limit), `redisx.cache.hit` (boolean), `redisx.duration_ms`.
+
+## Common Recipes
+
+### Payment Processing (Idempotency + Locks)
+
+```typescript
+@Controller('payments')
+export class PaymentsController {
+  @Post()
+  @Idempotent({ ttl: 86400, validateFingerprint: true })
+  async createPayment(@Body() dto: CreatePaymentDto) {
+    return this.paymentService.processPayment(dto);
+  }
+}
+
+@Injectable()
+export class PaymentService {
+  constructor(@Inject(LOCK_SERVICE) private readonly lockService: ILockService) {}
+
+  async processPayment(dto: CreatePaymentDto) {
+    return this.lockService.withLock(`order:${dto.orderId}`, async () => {
+      const existing = await this.repo.findByOrderId(dto.orderId);
+      if (existing?.status === 'completed') return existing;
+
+      const payment = await this.repo.create(dto);
+      const result = await this.gateway.charge(dto);
+      await this.repo.update(payment.id, { status: 'completed' });
+      return payment;
+    });
+  }
+}
+```
+
+### API Rate Limiting (multi-tier)
+
+```typescript
+// Global: 1000 req/min for all users
+@UseGuards(RateLimitGuard)
+@RateLimit({ points: 1000, window: 60 })
+@Controller('api')
+export class ApiController {
+
+  // Endpoint-specific: 10 req/min for expensive operations
+  @Post('export')
+  @RateLimit({ points: 10, window: 60 })
+  exportData() { }
+
+  // Per-user rate limiting
+  @Get('data')
+  @RateLimit({
+    points: 100,
+    window: 60,
+    keyGenerator: (req) => `user:${req.user.id}`,
+  })
+  getData() { }
+}
+```
+
+### Background Jobs (Streams)
+
+```typescript
+// Producer
+@Injectable()
+export class JobService {
+  constructor(@Inject(STREAMS_SERVICE) private streams: IStreamsService) {}
+
+  async enqueue(job: Job) {
+    await this.streams.publish('jobs', { type: job.type, payload: job.data });
+  }
+}
+
+// Consumer
+@Injectable()
+export class JobWorker {
+  @StreamConsumer({ stream: 'jobs', group: 'workers' })
+  async process(message: StreamMessage) {
+    switch (message.data.type) {
+      case 'email': await this.sendEmail(message.data.payload); break;
+      case 'report': await this.generateReport(message.data.payload); break;
+    }
+  }
+}
+```
+
+## Plugin Decision Matrix
+
+| Scenario | Plugin |
+|----------|--------|
+| Slow database queries | Cache |
+| Duplicate form submissions | Idempotency |
+| Payment processing | Idempotency + Locks |
+| Cron job on multiple instances | Locks |
+| API abuse protection | Rate Limit |
+| Login brute force | Rate Limit |
+| Background job processing | Streams |
+| Event-driven architecture | Streams |
+| Production monitoring | Metrics |
+| Request tracing | Tracing |
+
+## Key Architecture Decisions
+
+- **Proxy-based decorators**: @Cached, @WithLock work on any @Injectable() method, not just controllers. NestJS Interceptors only work on controller methods, so RedisX uses immediate method wrapping with lazy service injection.
+- **Plugin isolation**: Each plugin is a self-contained NestJS module. Import only what you need.
+- **Driver abstraction**: Both ioredis and node-redis supported through adapter pattern. Switch without code changes.
+- **Atomic operations**: Rate limiting, locks, and idempotency use Lua scripts for atomicity.
+- **No external dependencies**: Each plugin has zero npm dependencies beyond NestJS and the Redis driver.
+- **Global module**: RedisModule is global — import once in AppModule, inject anywhere.
+- **Composition over inheritance**: No base classes required. Decorators and services compose freely.
+
+## Deployment Topologies
+
+Single: Development and small apps. No HA.
+Sentinel: Production HA. Automatic failover ~30s. Vertical scaling.
+Cluster: Horizontal scaling with 16384 hash slots. Use `{hash_tag}` to co-locate keys.
+
+## Links
+
+- Documentation: https://nestjs-redisx.dev
+- GitHub: https://github.com/nestjs-redisx/nestjs-redisx
+- npm: https://www.npmjs.com/package/@nestjs-redisx/core
+- License: MIT

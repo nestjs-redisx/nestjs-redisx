@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build
+dist/
+*.tsbuildinfo
+
+# Compiled files in src (should only be in dist)
+packages/*/src/**/*.js
+packages/*/src/**/*.d.ts
+packages/*/src/**/*.d.ts.map
+!packages/*/src/**/*.spec.ts
+
+# Coverage
+coverage/
+packages/*/coverage/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Testing
+.testcontainers/
+
+# VitePress
+website/.vitepress/cache/
+website/.vitepress/dist/
+
+# Misc
+*.tgz
+.changeset/*.md
+!.changeset/README.md

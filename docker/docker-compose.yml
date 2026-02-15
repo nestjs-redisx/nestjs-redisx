@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis-cluster-node-1:
+    image: redis:7-alpine
+    command: redis-server --port 7001 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000
+    ports:
+      - '7001:7001'
+    profiles:
+      - cluster
+
+  redis-cluster-node-2:
+    image: redis:7-alpine
+    command: redis-server --port 7002 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000
+    ports:
+      - '7002:7002'
+    profiles:
+      - cluster
+
+  redis-cluster-node-3:
+    image: redis:7-alpine
+    command: redis-server --port 7003 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000
+    ports:
+      - '7003:7003'
+    profiles:
+      - cluster
+
+  redis-sentinel:
+    image: redis:7-alpine
+    ports:
+      - '26379:26379'
+    command: redis-sentinel /etc/redis/sentinel.conf
+    profiles:
+      - sentinel
+    depends_on:
+      - redis
+
+volumes:
+  redis-data:

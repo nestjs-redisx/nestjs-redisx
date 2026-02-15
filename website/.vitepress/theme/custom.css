@@ -1,0 +1,437 @@
+/**
+ * Customize default theme styling by overriding CSS variables:
+ * https://github.com/vuejs/vitepress/blob/main/src/client/theme-default/styles/vars.css
+ */
+
+/**
+ * Colors
+ * Redis Red Brand + NestJS inspired
+ * -------------------------------------------------------------------------- */
+
+:root {
+  --vp-c-brand-1: #DC382D;
+  --vp-c-brand-2: #B91C1C;
+  --vp-c-brand-3: #FF6B6B;
+  --vp-c-brand-soft: rgba(220, 56, 45, 0.14);
+  
+  /* Status colors */
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+}
+
+.dark {
+  --vp-c-brand-1: #FF6B6B;
+  --vp-c-brand-2: #DC382D;
+  --vp-c-brand-3: #B91C1C;
+  --vp-c-brand-soft: rgba(255, 107, 107, 0.16);
+  
+  /* Status colors for dark mode */
+  --color-success: #34D399;
+  --color-warning: #FBBF24;
+  --color-danger: #F87171;
+}
+
+/**
+ * Component: Button
+ * -------------------------------------------------------------------------- */
+
+:root {
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-text: var(--vp-c-white);
+  --vp-button-brand-bg: var(--vp-c-brand-1);
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-hover-text: var(--vp-c-white);
+  --vp-button-brand-hover-bg: var(--vp-c-brand-2);
+  --vp-button-brand-active-border: transparent;
+  --vp-button-brand-active-text: var(--vp-c-white);
+  --vp-button-brand-active-bg: var(--vp-c-brand-2);
+}
+
+/**
+ * Component: Home
+ * -------------------------------------------------------------------------- */
+
+:root {
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(
+    120deg,
+    #DC382D 30%,
+    #FF6B6B
+  );
+
+  --vp-home-hero-image-background-image: linear-gradient(
+    -45deg,
+    #DC382D 50%,
+    #FF6B6B 50%
+  );
+  --vp-home-hero-image-filter: blur(44px);
+}
+
+.dark {
+  --vp-home-hero-name-background: linear-gradient(
+    120deg,
+    #FF6B6B 30%,
+    #DC382D
+  );
+}
+
+@media (min-width: 640px) {
+  :root {
+    --vp-home-hero-image-filter: blur(56px);
+  }
+}
+
+@media (min-width: 960px) {
+  :root {
+    --vp-home-hero-image-filter: blur(68px);
+  }
+}
+
+/**
+ * Component: Custom Block
+ * -------------------------------------------------------------------------- */
+
+:root {
+  --vp-custom-block-tip-border: transparent;
+  --vp-custom-block-tip-text: var(--vp-c-text-1);
+  --vp-custom-block-tip-bg: var(--vp-c-brand-soft);
+  --vp-custom-block-tip-code-bg: var(--vp-c-brand-soft);
+}
+
+/**
+ * Component: Algolia
+ * -------------------------------------------------------------------------- */
+
+.DocSearch {
+  --docsearch-primary-color: var(--vp-c-brand-1) !important;
+}
+
+/**
+ * Component: Mermaid Diagrams
+ * -------------------------------------------------------------------------- */
+
+/* Base mermaid styles */
+.mermaid {
+  background: transparent !important;
+}
+
+.mermaid svg {
+  background: transparent !important;
+}
+
+/* ============================================
+   LIGHT THEME - Mermaid Styles
+   ============================================ */
+
+/* Light theme - Node styles (flowcharts, state diagrams) */
+.mermaid .node rect,
+.mermaid .node circle,
+.mermaid .node ellipse,
+.mermaid .node polygon,
+.mermaid .node path {
+  fill: rgba(27, 27, 31, 0.04) !important;
+  stroke: rgb(185, 28, 28) !important;
+  stroke-width: 1px !important;
+}
+
+/* Light theme - Text/Label styles */
+.mermaid .label text,
+.mermaid span,
+.mermaid .nodeLabel,
+.mermaid .label {
+  fill: #333 !important;
+  color: rgba(51, 51, 51, 0.84) !important;
+}
+
+/* Light theme - Edge label text */
+.mermaid .edgeLabel {
+  background-color: transparent !important;
+  color: rgba(51, 51, 51, 0.84) !important;
+}
+
+.mermaid .edgeLabel rect {
+  fill: transparent !important;
+  opacity: 0 !important;
+}
+
+/* Light theme - Edge/line styles */
+.mermaid .edgePath .path,
+.mermaid .flowchart-link {
+  stroke: rgb(185, 28, 28) !important;
+  stroke-width: 1px !important;
+}
+
+/* Light theme - Arrowhead */
+.mermaid .arrowheadPath,
+.mermaid marker path {
+  fill: rgb(185, 28, 28) !important;
+}
+
+/* Light theme - Subgraph/cluster */
+.mermaid .cluster rect {
+  fill: rgba(27, 27, 31, 0.02) !important;
+  stroke: rgba(185, 28, 28, 0.3) !important;
+}
+
+.mermaid .cluster-label .nodeLabel {
+  color: rgba(51, 51, 51, 0.9) !important;
+  fill: rgba(51, 51, 51, 0.9) !important;
+}
+
+/* Light theme - Sequence diagram actors */
+.mermaid .actor {
+  fill: rgba(27, 27, 31, 0.04) !important;
+  stroke: rgb(185, 28, 28) !important;
+}
+
+.mermaid text.actor > tspan {
+  fill: rgba(51, 51, 51, 0.9) !important;
+}
+
+.mermaid .actor-line {
+  stroke: rgb(156, 163, 175) !important;
+}
+
+/* Light theme - Sequence diagram messages */
+.mermaid .messageLine0,
+.mermaid .messageLine1 {
+  stroke: rgb(185, 28, 28) !important;
+}
+
+.mermaid .messageText {
+  fill: rgba(51, 51, 51, 0.84) !important;
+}
+
+/* Light theme - State diagram */
+.mermaid .stateGroup rect,
+.mermaid .statediagram-state rect {
+  fill: rgba(27, 27, 31, 0.04) !important;
+  stroke: rgb(185, 28, 28) !important;
+}
+
+.mermaid .statediagram-state .nodeLabel {
+  fill: rgba(51, 51, 51, 0.9) !important;
+  color: rgba(51, 51, 51, 0.9) !important;
+}
+
+/* Light theme - State transitions */
+.mermaid .transition {
+  stroke: rgb(185, 28, 28) !important;
+}
+
+/* ============================================
+   DARK THEME - Mermaid Styles
+   ============================================ */
+
+/* Dark theme - Node styles (flowcharts, state diagrams) */
+.dark .mermaid .node rect,
+.dark .mermaid .node circle,
+.dark .mermaid .node ellipse,
+.dark .mermaid .node polygon,
+.dark .mermaid .node path {
+  fill: rgba(255, 107, 107, 0.16) !important;
+  stroke: rgb(153, 27, 27) !important;
+  stroke-width: 1px !important;
+}
+
+/* Dark theme - Text/Label styles */
+.dark .mermaid .label text,
+.dark .mermaid span,
+.dark .mermaid .nodeLabel,
+.dark .mermaid .label {
+  fill: rgb(249, 250, 251) !important;
+  color: rgba(249, 250, 251, 0.75) !important;
+}
+
+/* Dark theme - Edge label text */
+.dark .mermaid .edgeLabel {
+  background-color: transparent !important;
+  color: rgba(249, 250, 251, 0.75) !important;
+}
+
+.dark .mermaid .edgeLabel rect {
+  fill: transparent !important;
+  opacity: 0 !important;
+}
+
+/* Dark theme - Edge/line styles */
+.dark .mermaid .edgePath .path,
+.dark .mermaid .flowchart-link {
+  stroke: rgb(156, 163, 175) !important;
+  stroke-width: 1px !important;
+}
+
+/* Dark theme - Arrowhead */
+.dark .mermaid .arrowheadPath,
+.dark .mermaid marker path {
+  fill: rgb(156, 163, 175) !important;
+}
+
+/* Dark theme - Subgraph/cluster */
+.dark .mermaid .cluster rect {
+  fill: rgba(31, 41, 55, 0.5) !important;
+  stroke: rgb(55, 65, 81) !important;
+}
+
+.dark .mermaid .cluster-label .nodeLabel {
+  color: rgba(249, 250, 251, 0.9) !important;
+  fill: rgba(249, 250, 251, 0.9) !important;
+}
+
+/* Dark theme - Sequence diagram actors */
+.dark .mermaid .actor {
+  fill: rgba(255, 107, 107, 0.16) !important;
+  stroke: rgb(153, 27, 27) !important;
+}
+
+.dark .mermaid text.actor > tspan {
+  fill: rgba(249, 250, 251, 0.9) !important;
+}
+
+.dark .mermaid .actor-line {
+  stroke: rgb(107, 114, 128) !important;
+}
+
+/* Dark theme - Sequence diagram messages */
+.dark .mermaid .messageLine0,
+.dark .mermaid .messageLine1 {
+  stroke: rgb(156, 163, 175) !important;
+}
+
+.dark .mermaid .messageText {
+  fill: rgba(249, 250, 251, 0.75) !important;
+}
+
+/* Dark theme - State diagram */
+.dark .mermaid .stateGroup rect,
+.dark .mermaid .statediagram-state rect {
+  fill: rgba(255, 107, 107, 0.16) !important;
+  stroke: rgb(153, 27, 27) !important;
+}
+
+.dark .mermaid .statediagram-state .nodeLabel {
+  fill: rgba(249, 250, 251, 0.9) !important;
+  color: rgba(249, 250, 251, 0.9) !important;
+}
+
+/* Dark theme - State transitions */
+.dark .mermaid .transition {
+  stroke: rgb(156, 163, 175) !important;
+}
+
+/**
+ * Component: Status Badges (Green checkmarks)
+ * -------------------------------------------------------------------------- */
+
+/* Stable status - green checkmark */
+.status-stable {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+/* Warning status - yellow */
+.status-warning {
+  color: var(--color-warning);
+  font-weight: 600;
+}
+
+/* Danger/deprecated status - red */
+.status-danger {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+/* Beta status - brand color */
+.status-beta {
+  color: var(--vp-c-brand-1);
+  font-weight: 600;
+}
+
+/**
+ * Component: Inline Icons
+ * -------------------------------------------------------------------------- */
+
+/* Lists with icons */
+.features-list {
+  list-style: none;
+  padding: 0;
+}
+
+.features-list li {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+}
+
+.features-list li svg {
+  flex-shrink: 0;
+  margin-right: 0.5rem;
+  margin-top: 0.2rem;
+  color: var(--vp-c-brand-1);
+}
+
+/* Inline icons color */
+.vp-doc svg.lucide,
+.vp-doc .inline-icon {
+  color: var(--vp-c-brand-1);
+}
+
+/* Table icons */
+.vp-doc table svg {
+  color: var(--vp-c-brand-1);
+}
+
+/**
+ * Component: Tables
+ * -------------------------------------------------------------------------- */
+
+/* Make tables look better */
+.vp-doc table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.vp-doc table th {
+  font-weight: 600;
+  text-align: left;
+}
+
+.vp-doc table td,
+.vp-doc table th {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--vp-c-divider);
+}
+
+/* Zebra striping */
+.vp-doc table tr:nth-child(even) {
+  background-color: var(--vp-c-bg-soft);
+}
+
+/**
+ * Component: Code blocks
+ * -------------------------------------------------------------------------- */
+
+/* Better code block styling */
+.vp-doc div[class*='language-'] {
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+/**
+ * Component: Feature list
+ * -------------------------------------------------------------------------- */
+
+.vp-doc ul li {
+  line-height: 1.7;
+}
+
+/**
+ * Component: Nav logo
+ * -------------------------------------------------------------------------- */
+
+.VPNavBarTitle .logo {
+  height: 36px;
+  width: auto;
+}

@@ -1,0 +1,200 @@
+name: Compatibility Matrix
+
+on:
+  schedule:
+    - cron: '0 3 * * 1' # Weekly on Monday at 03:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: compatibility-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke-test:
+    name: NestJS ${{ matrix.nestjs }} / Node ${{ matrix.node }} / Redis ${{ matrix.redis }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        nestjs: ['10', '11']
+        node: ['18', '20']
+        redis: ['6.2', '7.2']
+
+    services:
+      redis:
+        image: redis:${{ matrix.redis }}
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Override NestJS version to ${{ matrix.nestjs }}
+        if: matrix.nestjs != '10'
+        run: |
+          npm install --no-save \
+            @nestjs/common@^${{ matrix.nestjs }}.0.0 \
+            @nestjs/core@^${{ matrix.nestjs }}.0.0 \
+            @nestjs/testing@^${{ matrix.nestjs }}.0.0 \
+            @nestjs/platform-express@^${{ matrix.nestjs }}.0.0
+
+      - name: Build packages
+        run: npm run build
+
+      - name: Run smoke tests
+        id: smoke
+        run: |
+          npx vitest run \
+            redis.module.simple redis.service.spec redis-client.manager plugin-registry.service \
+            cached.decorator cache.service.spec cache.plugin stampede-protection l1-memory l2-redis-store.adapter.spec tag.vo.spec \
+            with-lock lock.service.spec locks.plugin \
+            rate-limit.decorator rate-limit.guard rate-limit.service.spec \
+            idempotent.decorator idempotency.service.spec idempotency.plugin \
+            --reporter=verbose 2>&1 | tee smoke-results.txt
+        env:
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+
+      - name: Generate result summary
+        if: always()
+        run: |
+          echo "## Smoke Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| NestJS | ${{ matrix.nestjs }}.x |" >> $GITHUB_STEP_SUMMARY
+          echo "| Node.js | ${{ matrix.node }}.x |" >> $GITHUB_STEP_SUMMARY
+          echo "| Redis | ${{ matrix.redis }}.x |" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | ${{ steps.smoke.outcome }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f smoke-results.txt ]; then
+            SUMMARY=$(grep -E "^[[:space:]]*(Tests|Test Files)" smoke-results.txt | tail -2)
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "$SUMMARY" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload smoke results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-results-nestjs${{ matrix.nestjs }}-node${{ matrix.node }}-redis${{ matrix.redis }}
+          path: smoke-results.txt
+          retention-days: 7
+
+  nestjs9:
+    name: NestJS 9 (best-effort)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    services:
+      redis:
+        image: redis:7.2
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Override NestJS to v9
+        run: |
+          npm install --no-save \
+            @nestjs/common@^9.0.0 \
+            @nestjs/core@^9.0.0 \
+            @nestjs/testing@^9.0.0 \
+            @nestjs/platform-express@^9.0.0
+
+      - name: Build packages
+        run: npm run build
+
+      - name: Run smoke tests
+        run: |
+          npx vitest run \
+            redis.module.simple redis.service.spec redis-client.manager plugin-registry.service \
+            cached.decorator cache.service.spec cache.plugin \
+            with-lock lock.service.spec locks.plugin \
+            rate-limit.decorator rate-limit.guard rate-limit.service.spec \
+            idempotent.decorator idempotency.service.spec idempotency.plugin \
+            --reporter=verbose 2>&1 | tee smoke-results.txt
+        env:
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## NestJS 9 (Best Effort)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if grep -q "passed" smoke-results.txt 2>/dev/null; then
+            echo "Status: Pass" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Status: Fail (expected — best-effort only)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  summary:
+    name: Matrix Summary
+    runs-on: ubuntu-latest
+    needs: [smoke-test, nestjs9]
+    if: always()
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: results
+
+      - name: Generate matrix summary
+        run: |
+          echo "## Compatibility Matrix Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| NestJS | Node.js | Redis | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|---------|-------|--------|" >> $GITHUB_STEP_SUMMARY
+
+          for dir in results/smoke-results-*/; do
+            if [ -d "$dir" ]; then
+              NAME=$(basename "$dir" | sed 's/smoke-results-//')
+              NESTJS=$(echo "$NAME" | grep -oP 'nestjs\K[0-9]+')
+              NODE=$(echo "$NAME" | grep -oP 'node\K[0-9]+')
+              REDIS=$(echo "$NAME" | grep -oP 'redis\K[0-9.]+')
+
+              if grep -q "passed" "$dir/smoke-results.txt" 2>/dev/null; then
+                RESULT="Pass"
+              else
+                RESULT="Fail"
+              fi
+
+              echo "| ${NESTJS}.x | ${NODE}.x | ${REDIS}.x | ${RESULT} |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done

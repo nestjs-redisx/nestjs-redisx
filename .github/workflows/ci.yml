@@ -1,0 +1,245 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build packages
+        run: npm run build
+
+      - name: Typecheck
+        run: npm run typecheck
+
+  test:
+    name: Test (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20]
+
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build packages
+        run: npm run build
+
+      - name: Run tests
+        run: npm test -- --reporter=verbose 2>&1 | tee test-results.txt
+        env:
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+
+      - name: Upload coverage to Codecov
+        if: matrix.node == 20
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+
+      - name: Test summary
+        if: always()
+        run: |
+          echo "## Test Results (Node ${{ matrix.node }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f test-results.txt ]; then
+            SUMMARY=$(grep -E "^[[:space:]]*(Tests|Test Files)" test-results.txt | tail -2)
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "$SUMMARY" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-node${{ matrix.node }}
+          path: test-results.txt
+          retention-days: 7
+
+  pack-smoke:
+    name: Pack Smoke Test
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build packages
+        run: npm run build
+
+      - name: Pack all packages
+        run: |
+          TARBALLS_DIR=$(mktemp -d)
+          echo "TARBALLS_DIR=$TARBALLS_DIR" >> $GITHUB_ENV
+
+          for pkg in core cache locks rate-limit idempotency streams metrics tracing; do
+            echo "Packing @nestjs-redisx/$pkg..."
+            cd packages/$pkg
+            npm pack --pack-destination "$TARBALLS_DIR"
+            cd ../..
+          done
+
+          echo "Tarballs:"
+          ls -la "$TARBALLS_DIR"/*.tgz
+
+      - name: Create smoke test project
+        run: |
+          SMOKE_DIR=$(mktemp -d)
+          echo "SMOKE_DIR=$SMOKE_DIR" >> $GITHUB_ENV
+          cd "$SMOKE_DIR"
+
+          npm init -y
+
+          npm install \
+            "$TARBALLS_DIR"/nestjs-redisx-core-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-cache-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-locks-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-rate-limit-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-idempotency-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-streams-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-metrics-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-tracing-*.tgz \
+            @nestjs/common@^10.3.0 \
+            @nestjs/core@^10.3.0 \
+            @nestjs/platform-express@^10.3.0 \
+            @nestjs/testing@^10.3.0 \
+            reflect-metadata@^0.2.0 \
+            rxjs@^7.8.0 \
+            ioredis@^5.9.0
+
+          npm install -D typescript@^5.3.0 vitest@^1.2.0
+
+      - name: Copy smoke test files
+        run: |
+          cp apps/pack-test/test/smoke.spec.ts "$SMOKE_DIR"/smoke.spec.ts
+
+          cat > "$SMOKE_DIR"/tsconfig.json << 'TSEOF'
+          {
+            "compilerOptions": {
+              "target": "ES2022",
+              "module": "commonjs",
+              "moduleResolution": "node",
+              "esModuleInterop": true,
+              "experimentalDecorators": true,
+              "emitDecoratorMetadata": true,
+              "strict": false,
+              "skipLibCheck": true,
+              "noEmit": true
+            },
+            "include": ["smoke.spec.ts"]
+          }
+          TSEOF
+
+          cat > "$SMOKE_DIR"/vitest.config.ts << 'VTEOF'
+          import { defineConfig } from 'vitest/config';
+          export default defineConfig({
+            test: {
+              include: ['smoke.spec.ts'],
+              testTimeout: 30000,
+            },
+          });
+          VTEOF
+
+      - name: TypeScript compile check
+        run: cd "$SMOKE_DIR" && npx tsc --noEmit
+
+      - name: Run smoke tests
+        run: cd "$SMOKE_DIR" && npx vitest run --reporter=verbose
+
+  pack-e2e:
+    name: Pack E2E Test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build packages
+        run: npm run build
+
+      - name: Pack and install
+        run: cd apps/pack-test && npm run pack-install
+
+      - name: Run E2E tests
+        run: cd apps/pack-test && npm test -- --reporter=verbose
+        env:
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
