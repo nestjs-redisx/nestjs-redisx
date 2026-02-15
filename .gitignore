@@ -40,6 +40,9 @@ pnpm-debug.log*
 website/.vitepress/cache/
 website/.vitepress/dist/
 
+# Dev-only test apps
+apps/pack-test/
+
 # Misc
 *.tgz
 .changeset/*.md
