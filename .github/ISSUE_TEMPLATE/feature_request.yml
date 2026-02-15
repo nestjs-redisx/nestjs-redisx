@@ -1,0 +1,73 @@
+name: Feature Request
+description: Suggest a new feature for NestJS RedisX
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      description: Which package does this relate to?
+      options:
+        - "@nestjs-redisx/core"
+        - "@nestjs-redisx/cache"
+        - "@nestjs-redisx/locks"
+        - "@nestjs-redisx/rate-limit"
+        - "@nestjs-redisx/idempotency"
+        - "@nestjs-redisx/streams"
+        - "@nestjs-redisx/metrics"
+        - "@nestjs-redisx/tracing"
+        - "New package"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Estimated Scope
+      description: How big do you think this change is?
+      options:
+        - "Small (config option, minor tweak)"
+        - "Medium (new API, new strategy)"
+        - "Large (new module, architectural change)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear description of the feature you'd like.
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: Why do you need this? What problem does it solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-api
+    attributes:
+      label: Proposed API
+      description: How would you like to use this feature? Show example code.
+      render: typescript
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any workarounds or alternative solutions you've considered.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Before submitting
+      options:
+        - label: I have searched existing issues and feature requests for duplicates
+          required: true
+        - label: I am willing to submit a PR for this feature
+          required: false

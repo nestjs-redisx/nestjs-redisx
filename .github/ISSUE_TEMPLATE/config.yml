@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a Question
+    url: https://github.com/nestjs-redisx/nestjs-redisx/discussions/new?category=q-a
+    about: Use Discussions for questions and help. Issues are for bugs and feature requests only.
+  - name: Documentation
+    url: https://nestjs-redisx.dev
+    about: Check the documentation before opening an issue.
