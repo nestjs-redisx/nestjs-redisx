@@ -1,6 +1,6 @@
 {
   "name": "@nestjs-redisx/tracing",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "OpenTelemetry tracing plugin for NestJS RedisX - distributed tracing for Redis operations with Jaeger/Zipkin support",
   "author": "NestJS RedisX Team",
   "license": "MIT",
@@ -55,7 +55,7 @@
     "url": "https://github.com/nestjs-redisx/nestjs-redisx/issues"
   },
   "peerDependencies": {
-    "@nestjs-redisx/core": "^0.1.0",
+    "@nestjs-redisx/core": "^1.0.0",
     "@nestjs/common": "^10.0.0",
     "@nestjs/core": "^10.0.0",
     "reflect-metadata": "^0.2.0",
