@@ -1,6 +1,6 @@
 {
   "name": "@nestjs-redisx/locks",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Distributed locks plugin for NestJS RedisX with auto-renewal and retry strategies",
   "author": "NestJS RedisX Team",
   "license": "MIT",

@@ -1,6 +1,6 @@
 {
   "name": "@nestjs-redisx/metrics",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Prometheus metrics plugin for NestJS RedisX with custom metrics support",
   "author": "NestJS RedisX Team",
   "license": "MIT",
