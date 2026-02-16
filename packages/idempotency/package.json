@@ -54,8 +54,8 @@
   },
   "peerDependencies": {
     "@nestjs-redisx/core": "^1.0.0",
-    "@nestjs/common": "^10.0.0",
-    "@nestjs/core": "^10.0.0",
+    "@nestjs/common": "^10.0.0 || ^11.0.0",
+    "@nestjs/core": "^10.0.0 || ^11.0.0",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.0"
   },

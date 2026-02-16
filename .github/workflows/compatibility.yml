@@ -48,7 +48,7 @@ jobs:
       - name: Override NestJS version to ${{ matrix.nestjs }}
         if: matrix.nestjs != '10'
         run: |
-          npm install --no-save \
+          npm install --no-save --legacy-peer-deps \
             @nestjs/common@^${{ matrix.nestjs }}.0.0 \
             @nestjs/core@^${{ matrix.nestjs }}.0.0 \
             @nestjs/testing@^${{ matrix.nestjs }}.0.0 \
@@ -130,7 +130,7 @@ jobs:
 
       - name: Override NestJS to v9
         run: |
-          npm install --no-save \
+          npm install --no-save --legacy-peer-deps \
             @nestjs/common@^9.0.0 \
             @nestjs/core@^9.0.0 \
             @nestjs/testing@^9.0.0 \

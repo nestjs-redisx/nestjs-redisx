@@ -5,7 +5,8 @@
   "description": "Best-in-class Redis module for NestJS with plugin architecture",
   "workspaces": [
     "packages/*",
-    "apps/*",
+    "apps/demo",
+    "apps/example",
     "website"
   ],
   "scripts": {
