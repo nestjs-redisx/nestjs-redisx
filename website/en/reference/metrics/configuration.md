@@ -181,7 +181,15 @@ APP_VERSION=1.0.0
 
 ## Async Configuration
 
+Using `process.env` directly in plugin constructor with `forRootAsync`:
+
 <<< @/apps/demo/src/plugins/metrics/async-config.setup.ts{typescript}
+
+### Using registerAsync with ConfigService
+
+For type-safe configuration via NestJS DI:
+
+<<< @/apps/demo/src/plugins/metrics/register-async.setup.ts{typescript}
 
 ## Histogram Bucket Guidelines
 

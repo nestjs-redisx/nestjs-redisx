@@ -13,9 +13,15 @@ Configure the Streams plugin.
 
 ## Async Configuration
 
-Load connection config from ConfigService:
+Using `process.env` directly in plugin constructor with `forRootAsync`:
 
 <<< @/apps/demo/src/plugins/streams/async-config.setup.ts{typescript}
+
+### Using registerAsync with ConfigService
+
+For type-safe configuration via NestJS DI:
+
+<<< @/apps/demo/src/plugins/streams/register-async.setup.ts{typescript}
 
 ## Configuration Options
 

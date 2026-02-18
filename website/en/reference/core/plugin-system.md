@@ -42,6 +42,9 @@ interface IRedisXPlugin {
   /** Returns exports that other modules can inject */
   getExports?(): Array<Provider | string | symbol | Type>;
 
+  /** Returns NestJS modules to import (used by registerAsync) */
+  getImports?(): Array<Type | DynamicModule | ForwardReference>;
+
   /** Returns NestJS controllers this plugin contributes */
   getControllers?(): Type[];
 }
@@ -58,6 +61,26 @@ interface IRedisXPlugin {
 Plugins are provided **outside** `useFactory` — they must be available at module construction time:
 
 <<< @/apps/demo/src/core/plugins-async.setup.ts{typescript}
+
+### Plugin Async Configuration (registerAsync)
+
+By default, plugins receive static options at instantiation. With `registerAsync()`, plugins can read configuration from NestJS DI — for example, `ConfigService`:
+
+<<< @/apps/demo/src/core/plugins-register-async.setup.ts{typescript}
+
+Every built-in plugin supports `registerAsync()`. You can mix sync and async plugins in the same `plugins` array.
+
+`registerAsync()` accepts:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `imports` | `Module[]` | Modules to import (e.g., `ConfigModule`) |
+| `inject` | `any[]` | Providers to inject into `useFactory` |
+| `useFactory` | `(...args) => Options \| Promise<Options>` | Factory function returning plugin options |
+
+::: tip
+`registerAsync()` works with both `RedisModule.forRoot()` and `RedisModule.forRootAsync()`. The plugin resolves its own configuration independently from the module-level async config.
+:::
 
 ## Lifecycle Hooks
 

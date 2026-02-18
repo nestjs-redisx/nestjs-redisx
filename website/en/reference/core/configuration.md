@@ -270,6 +270,14 @@ Plugins are provided **outside** `useFactory` — they must be available at modu
 Plugins must be available at module construction time for NestJS DI to register their providers. This is a standard NestJS pattern — similar to how `@nestjs/typeorm` handles entities or `@nestjs/graphql` handles resolvers.
 :::
 
+### Plugin Async Configuration (registerAsync)
+
+Plugins can also resolve their own options from DI, independently from the module-level async config:
+
+<<< @/apps/demo/src/core/plugins-register-async.setup.ts{typescript}
+
+See [Plugin System](./plugin-system#plugin-async-configuration-registerasync) for details.
+
 ## Multiple Clients
 
 ```typescript

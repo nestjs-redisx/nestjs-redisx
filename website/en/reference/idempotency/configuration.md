@@ -92,6 +92,12 @@ new IdempotencyPlugin({
 })
 ```
 
+## Async Configuration with registerAsync
+
+For type-safe configuration via NestJS DI:
+
+<<< @/apps/demo/src/plugins/idempotency/register-async.setup.ts{typescript}
+
 ## Environment Configuration
 
 ```typescript

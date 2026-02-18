@@ -278,7 +278,15 @@ Add custom attributes to all spans.
 
 ## Complete Example
 
+Using `process.env` directly in plugin constructor:
+
 <<< @/apps/demo/src/plugins/tracing/env-config.setup.ts{typescript}
+
+### Using registerAsync with ConfigService
+
+For type-safe configuration via NestJS DI:
+
+<<< @/apps/demo/src/plugins/tracing/register-async.setup.ts{typescript}
 
 ## Environment Variables
 

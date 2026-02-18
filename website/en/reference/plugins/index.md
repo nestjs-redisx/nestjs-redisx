@@ -242,6 +242,24 @@ export class AppModule {}
 Each plugin is self-contained. You only pay for what you use — unused plugins are not loaded.
 :::
 
+All plugins support `registerAsync()` for DI-based configuration. You can mix sync and async plugins freely:
+
+```typescript
+plugins: [
+  new CachePlugin({ l2: { defaultTtl: 3600 } }),      // sync
+  LocksPlugin.registerAsync({                           // async
+    imports: [ConfigModule],
+    inject: [ConfigService],
+    useFactory: (config: ConfigService) => ({
+      defaultTtl: config.get('LOCK_TTL', 30000),
+    }),
+  }),
+  new MetricsPlugin({ enabled: true }),                 // sync
+]
+```
+
+See [Plugin System](../core/plugin-system#plugin-async-configuration-registerasync) for details.
+
 ## Architecture Overview
 
 ```mermaid

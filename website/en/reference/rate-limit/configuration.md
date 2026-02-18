@@ -111,9 +111,15 @@ new RateLimitPlugin({
 
 ## Async Configuration
 
-Use `forRootAsync` with `ConfigService` for environment-based configuration:
+Using `process.env` directly in plugin constructor with `forRootAsync`:
 
 <<< @/apps/demo/src/plugins/rate-limit/env-config.setup.ts{typescript}
+
+### Using registerAsync with ConfigService
+
+For type-safe configuration via NestJS DI:
+
+<<< @/apps/demo/src/plugins/rate-limit/register-async.setup.ts{typescript}
 
 ## Environment Configuration
 

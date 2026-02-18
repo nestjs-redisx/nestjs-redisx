@@ -137,7 +137,19 @@ When `source` is `'amqp'`, configure the AMQP connection:
 
 ## Configuration by Environment
 
+Using `process.env` directly in plugin constructor:
+
 <<< @/apps/demo/src/plugins/cache/async-config.setup.ts{typescript}
+
+### Using registerAsync with ConfigService
+
+For type-safe configuration via NestJS DI:
+
+<<< @/apps/demo/src/plugins/cache/register-async.setup.ts{typescript}
+
+::: tip
+`registerAsync()` works with both `RedisModule.forRoot()` and `RedisModule.forRootAsync()`. You can mix sync and async plugins freely.
+:::
 
 ## Configuration Presets
 

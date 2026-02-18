@@ -71,12 +71,21 @@ export class AppModule {}
 ```
 
 ::: tip Production Configuration
-For production deployments, use `forRootAsync` with environment variables:
+For production deployments, use `forRootAsync` with environment variables. Plugins also support `registerAsync()` for DI-based configuration:
 ```typescript
 RedisModule.forRootAsync({
   imports: [ConfigModule],
   inject: [ConfigService],
-  plugins: [new CachePlugin()],  // Plugins defined here
+  plugins: [
+    CachePlugin.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        l1: { maxSize: config.get('CACHE_L1_MAX_SIZE', 1000) },
+        l2: { defaultTtl: config.get('CACHE_L2_TTL', 3600) },
+      }),
+    }),
+  ],
   useFactory: (config: ConfigService) => ({
     clients: {
       host: config.get('REDIS_HOST'),

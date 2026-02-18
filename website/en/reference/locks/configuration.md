@@ -102,7 +102,15 @@ new LocksPlugin({
 
 ## Environment-Based Configuration
 
+Using `process.env` directly in plugin constructor:
+
 <<< @/apps/demo/src/plugins/locks/env-config.setup.ts{typescript}
+
+### Using registerAsync with ConfigService
+
+For type-safe configuration via NestJS DI:
+
+<<< @/apps/demo/src/plugins/locks/register-async.setup.ts{typescript}
 
 ## Next Steps
 
