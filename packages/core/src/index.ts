@@ -16,7 +16,7 @@ export * from './driver';
 
 export * from './client';
 
-export type { IRedisXPlugin, IPluginContext } from './plugin/domain/interfaces';
+export type { IRedisXPlugin, IPluginAsyncOptions, IPluginContext } from './plugin/domain/interfaces';
 export { PluginRegistryService } from './plugin/application/plugin-registry.service';
 
 export * from './errors';

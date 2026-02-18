@@ -1,6 +1,41 @@
-import { Provider, Type } from '@nestjs/common';
+import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
 
 import { IPluginContext } from './plugin-context.interface';
+
+/**
+ * Async configuration options for plugins.
+ * Allows plugins to receive configuration from NestJS DI (e.g., ConfigService).
+ *
+ * @example
+ * ```typescript
+ * CachePlugin.registerAsync({
+ *   imports: [ConfigModule],
+ *   inject: [ConfigService],
+ *   useFactory: (config: ConfigService) => ({
+ *     l1: { maxSize: config.get('CACHE_L1_MAX_SIZE') },
+ *     swr: { enabled: config.get('CACHE_SWR_ENABLED') },
+ *   }),
+ * })
+ * ```
+ */
+export interface IPluginAsyncOptions<T = unknown> {
+  /**
+   * Optional modules to import (e.g., ConfigModule).
+   * Only needed if the injected services are not globally available.
+   */
+  imports?: Array<Type<unknown> | DynamicModule | ForwardReference>;
+
+  /**
+   * Dependencies to inject into the factory function.
+   */
+  inject?: unknown[];
+
+  /**
+   * Factory function that returns plugin options.
+   * Receives injected dependencies as arguments.
+   */
+  useFactory: (...args: unknown[]) => T | Promise<T>;
+}
 
 /**
  * Base interface for all RedisX plugins.
@@ -95,6 +130,12 @@ export interface IRedisXPlugin {
    * Typically the main service of the plugin.
    */
   getExports?(): Array<Provider | string | symbol | Type>;
+
+  /**
+   * Returns NestJS modules to import.
+   * Used by registerAsync() to make injected services available.
+   */
+  getImports?(): Array<Type<unknown> | DynamicModule | ForwardReference>;
 
   /**
    * Returns NestJS controllers this plugin contributes.

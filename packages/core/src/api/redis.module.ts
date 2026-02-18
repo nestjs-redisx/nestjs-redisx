@@ -1,4 +1,4 @@
-import { Module, DynamicModule, Provider, Type } from '@nestjs/common';
+import { Module, DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
 import { DiscoveryModule } from '@nestjs/core';
 
 import { createRedisProviders, createAsyncProviders } from '../application/redis.providers';
@@ -95,7 +95,9 @@ export class RedisModule {
     const pluginExports: Array<string | symbol | Provider> = [];
     const pluginControllers: Type[] = [];
 
-    // Register plugin providers and collect exports and controllers
+    // Register plugin providers and collect exports, controllers, and imports
+    const pluginImports: Array<Type<unknown> | DynamicModule | ForwardReference> = [];
+
     if (options.plugins && options.plugins.length > 0) {
       options.plugins.forEach((plugin) => {
         if (plugin.getProviders) {
@@ -108,6 +110,12 @@ export class RedisModule {
           const exports = plugin.getExports();
           if (Array.isArray(exports)) {
             pluginExports.push(...exports);
+          }
+        }
+        if (plugin.getImports) {
+          const imports = plugin.getImports();
+          if (Array.isArray(imports)) {
+            pluginImports.push(...imports);
           }
         }
         if (plugin.getControllers) {
@@ -124,7 +132,7 @@ export class RedisModule {
     return {
       module: RedisModule,
       global: true,
-      imports: [DiscoveryModule], // Required for plugins that scan providers (e.g., CachePlugin)
+      imports: [DiscoveryModule, ...pluginImports], // Required for plugins that scan providers (e.g., CachePlugin)
       providers: [...providers, ...pluginProviders, { provide: REGISTERED_PLUGINS, useValue: plugins }, PluginRegistryService, RedisService],
       controllers: pluginControllers,
       exports: [CLIENT_MANAGER, RedisService, ...pluginExports],
@@ -183,14 +191,14 @@ export class RedisModule {
     const imports = options.imports || [];
 
     // Extract plugin providers from options (provided outside useFactory)
-    // This is the standard NestJS pattern - plugins are statically available,
-    // similar to how @nestjs/typeorm handles entities or @nestjs/graphql handles resolvers
+    // Plugins are statically available at module construction time.
     const plugins = options.plugins || [];
     const pluginProviders: Provider[] = [];
     const pluginExports: Array<string | symbol | Provider> = [];
     const pluginControllers: Type[] = [];
+    const pluginImports: Array<Type<unknown> | DynamicModule | ForwardReference> = [];
 
-    // Register plugin providers and collect exports and controllers
+    // Register plugin providers and collect exports, controllers, and imports
     if (plugins.length > 0) {
       plugins.forEach((plugin) => {
         if (plugin.getProviders) {
@@ -205,6 +213,12 @@ export class RedisModule {
             pluginExports.push(...exports);
           }
         }
+        if (plugin.getImports) {
+          const pluginModules = plugin.getImports();
+          if (Array.isArray(pluginModules)) {
+            pluginImports.push(...pluginModules);
+          }
+        }
         if (plugin.getControllers) {
           const controllers = plugin.getControllers();
           if (Array.isArray(controllers)) {
@@ -217,7 +231,7 @@ export class RedisModule {
     return {
       module: RedisModule,
       global: true,
-      imports: [DiscoveryModule, ...imports], // DiscoveryModule required for plugins
+      imports: [DiscoveryModule, ...imports, ...pluginImports], // DiscoveryModule required for plugins
       providers: [...baseProviders, ...pluginProviders, { provide: REGISTERED_PLUGINS, useValue: plugins }, PluginRegistryService, RedisService],
       controllers: pluginControllers,
       exports: [CLIENT_MANAGER, RedisService, ...pluginExports],
