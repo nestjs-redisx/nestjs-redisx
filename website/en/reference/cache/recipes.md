@@ -110,7 +110,23 @@ tags: (tenantId: string, dataId: string) => [`data:${tenantId}:${dataId}`],
 
 ## 8. Stale-While-Revalidate (SWR)
 
-Serve stale data instantly while refreshing in the background. Use `getOrSet()` directly — SWR revalidation is triggered by `getOrSet`, not `get`.
+Serve stale data instantly while refreshing in the background. Both `@Cached` and `getOrSet()` support full SWR behavior.
+
+### With @Cached
+
+```typescript
+@Cached({
+  key: 'catalog:categories',
+  ttl: 300,
+  tags: ['catalog'],
+  swr: { enabled: true, staleTime: 120 },
+})
+async getCategories(): Promise<Category[]> {
+  return this.repository.findAllCategories();
+}
+```
+
+### With getOrSet()
 
 <<< @/apps/demo/src/plugins/cache/recipes/swr.usage.ts{typescript}
 
@@ -120,10 +136,6 @@ Serve stale data instantly while refreshing in the background. Use `getOrSet()` 
 - 0–300s: Fresh data served from cache
 - 300–420s: Stale data served instantly, revalidation triggered in background
 - 420s+: Cache expired, next request loads fresh data synchronously
-
-::: warning SWR and @Cached decorator
-The `@Cached` decorator uses `get()` for cache reads, which does not trigger SWR revalidation. For SWR to work correctly, use `getOrSet()` directly as shown above.
-:::
 
 ## 9. Batch Operations
 

@@ -93,17 +93,27 @@ Keep L1 TTL shorter than L2 TTL. L1 is memory — bounded by `maxSize` and TTL. 
 
 **Symptoms:** Stale-while-revalidate configured, but background revalidation never triggers. Data only refreshes after full expiration.
 
-**Cause:** The `@Cached` decorator uses `get()` for cache reads, which does not check SWR staleness. SWR revalidation only triggers through `getOrSet()`.
+**Common causes:**
+
+| Cause | Solution |
+|-------|----------|
+| SWR not enabled globally | Set `swr: { enabled: true }` in `CachePlugin` options |
+| SWR disabled per-call | Check `swr: { enabled: false }` is not set in decorator/getOrSet options |
+| L2 disabled | SWR requires L2 (Redis) — metadata is stored in L2 only |
+| TTL + staleTime already expired | Data past `staleAt + staleTime` is treated as a full cache miss, not SWR |
+
+Both `@Cached` and `getOrSet()` support full SWR behavior:
 
 ```typescript
-// Won't trigger SWR revalidation on read
+// Decorator — works with full SWR
 @Cached({
   key: 'data:{0}',
+  ttl: 300,
   swr: { enabled: true, staleTime: 120 },
 })
 async getData(id: string) { ... }
 
-// Correct — use getOrSet() directly
+// Service API — also works
 async getData(id: string) {
   return this.cache.getOrSet(
     `data:${id}`,
@@ -287,7 +297,7 @@ Key debug messages:
 5. Tags match between `@Cached` and `@InvalidateTags`
 6. `getStats()` shows expected hit/miss ratios
 7. L1 TTL (default: 60s) is not too short for your use case
-8. SWR uses `getOrSet()`, not `@Cached` decorator
+8. SWR enabled globally (`swr: { enabled: true }`) or per-call in decorator/getOrSet options
 9. `contextProvider` configured if using `varyBy`
 10. Debug logging enabled to see cache behavior
 

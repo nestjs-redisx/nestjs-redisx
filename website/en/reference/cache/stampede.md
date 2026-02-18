@@ -39,7 +39,7 @@ Layer 2: Distributed Redis Lock (cross-process)
 
 **Step by step:**
 
-1. Request arrives, cache miss detected in `getOrSet()`
+1. Request arrives, cache miss detected in `getOrSet()` (via Service API or `@Cached` decorator)
 2. Check local flights — if another request is already loading this key, **wait for its Promise**
 3. Register new flight (synchronous, before any async work)
 4. Try to acquire distributed Redis lock (`SET _stampede:{key} {value} EX {ttl} NX`)
@@ -50,9 +50,8 @@ Layer 2: Distributed Redis Lock (cross-process)
 
 Waiting uses `Promise.race()` — no polling, no busy-waiting.
 
-::: warning @Cached does NOT use stampede protection
-`@Cached` decorator uses separate `get()` + `set()` calls — no stampede protection.
-Only **`getOrSet()`** (Service API) includes stampede protection. If you need stampede protection with decorators, use `getOrSet()` in your service method instead.
+::: tip @Cached includes stampede protection
+Since v1.1.0, `@Cached` decorator uses `getOrSet()` internally — stampede protection is automatic for both decorator and Service API usage.
 :::
 
 ## Configuration

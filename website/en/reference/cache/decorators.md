@@ -285,6 +285,7 @@ async getAppConfig() { }
 | Scenario | Behavior |
 |----------|----------|
 | Method returns `null` / `undefined` | **Cached by default.** Use `unless: (r) => r == null` to skip. |
+| Concurrent cache misses | **Stampede protected.** Only one call executes the method, others wait for result. |
 | Redis connection error | **Fail-open.** Method executes normally, error logged to console. |
 | Cache key validation fails | **Fail-open on read**, fail-closed on write (throws `CacheKeyError`). Key must be non-empty, no whitespace, only `a-zA-Z0-9_-:.`, max 1024 chars (configurable via `keys.maxLength`). |
 | Tags function throws | Error caught, result returned without caching. |
@@ -465,6 +466,7 @@ When `beforeInvocation: false` (default), eviction runs as fire-and-forget — t
 | Key pipeline (contextProvider, varyBy, contextKeys, auto key) | Yes | No (interceptor metadata only) |
 | `unless` | Yes | No |
 | `namespace` | No (use key prefix) | Yes |
+| Anti-stampede | Yes (via `getOrSet`) | No |
 | Null caching control | Yes (`unless`) | No (`@CachePut`: `cacheNullValues`) |
 | Invalidation timing | `@InvalidateTags`: `when` | `@CacheEvict`: `beforeInvocation` |
 | Recommended | **Yes** | For Spring-style patterns |

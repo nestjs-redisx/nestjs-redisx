@@ -67,7 +67,7 @@ new CachePlugin({
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `enabled` | `false` | Enable SWR globally. When enabled, `getOrSet()` uses SWR flow by default. |
+| `enabled` | `false` | Enable SWR globally. When enabled, `getOrSet()` and `@Cached` use SWR flow by default. Can be overridden per call/decorator. |
 | `defaultStaleTime` | `60` | Default stale window in seconds. Can be overridden per call. |
 
 ## Service API Usage
@@ -85,10 +85,26 @@ const user = await this.cache.getOrSet<User>(
 );
 ```
 
+### Enable SWR per call
+
+SWR can be enabled per call even when globally disabled. This is useful when only specific methods need SWR:
+
+```typescript
+// Global SWR is off, but this call uses SWR
+const user = await this.cache.getOrSet<User>(
+  'user:123',
+  () => this.repository.findOne('123'),
+  {
+    ttl: 300,
+    swr: { enabled: true, staleTime: 300 },  // SWR for this call only
+  }
+);
+```
+
 ### Disable SWR per call
 
 ```typescript
-// Override: disable SWR for this specific call
+// Global SWR is on, but this call skips it
 const user = await this.cache.getOrSet<User>(
   'user:123',
   () => this.repository.findOne('123'),
@@ -101,9 +117,20 @@ const user = await this.cache.getOrSet<User>(
 
 ## Decorator Usage
 
-::: warning @Cached SWR limitation
-`@Cached` uses separate `get()` + `set()` calls internally. When SWR is enabled on `@Cached`, it stores SWR metadata via `getOrSet()` on **write** (cache miss), but **read** uses plain `get()` which does not check `staleAt`/`expiresAt`. For full SWR behavior (return stale + background revalidation), use `getOrSet()` in your service directly.
-:::
+`@Cached` uses `getOrSet()` internally, so SWR works fully with the decorator — stale data is served immediately while background revalidation refreshes the cache.
+
+```typescript
+@Cached({
+  key: 'user:{0}',
+  ttl: 300,
+  swr: { enabled: true, staleTime: 300 },
+})
+async getUser(id: string): Promise<User> {
+  return this.repository.findOne(id);
+}
+```
+
+Or with the Service API directly:
 
 <<< @/apps/demo/src/plugins/cache/swr-get-or-set.usage.ts{typescript}
 

@@ -85,6 +85,7 @@ const user = await this.cache.getOrSet<User>(
     varyBy: { tenantId: 'acme' },           // Additional key variation
     swr: { enabled: true, staleTime: 60 },  // Stale-while-revalidate
     skipStampede: true,                      // Bypass anti-stampede for this call
+    unless: (result) => result === null,     // Don't cache null results
   }
 );
 ```

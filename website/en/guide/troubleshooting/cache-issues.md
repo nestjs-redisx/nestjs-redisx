@@ -142,27 +142,31 @@ sum(rate(redisx_cache_hits_total[5m])) /
 
 ### Solutions
 
+Stampede protection is enabled by default for both `@Cached` and `getOrSet()`. No extra configuration needed on the decorator — it's controlled at the plugin level:
+
 ```typescript
-// Enable stampede protection
-@Cached({
-  key: 'popular:item',
-  ttl: 300,
+new CachePlugin({
   stampede: {
-    enabled: true,
-    lockTimeout: 5000,
+    enabled: true,       // default: true
+    lockTimeout: 5000,   // default: 5000ms
+    waitTimeout: 10000,  // default: 10000ms
   },
 })
+```
+
+```typescript
+// Stampede protection is automatic
+@Cached({ key: 'popular:item', ttl: 300 })
 async getPopularItem() { }
 ```
 
-Or use stale-while-revalidate:
+Combine with stale-while-revalidate for even better protection:
 
 ```typescript
 @Cached({
   key: 'dashboard',
   ttl: 60,
-  swr: true,
-  staleTime: 300, // Serve stale for 5 min while refreshing
+  swr: { enabled: true, staleTime: 300 }, // Serve stale for 5 min while refreshing
 })
 async getDashboard() { }
 ```
