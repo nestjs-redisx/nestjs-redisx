@@ -354,6 +354,94 @@ describe('CacheService (Internal)', () => {
       expect(mockStampede.protect).not.toHaveBeenCalled();
       expect(loader).toHaveBeenCalled();
     });
+
+    it('should not cache when unless returns true', async () => {
+      // Given
+      const key = 'test-key';
+      mockL1Store.get.mockResolvedValue(null);
+      mockL2Store.get.mockResolvedValue(null);
+      const loader = vi.fn().mockResolvedValue(null);
+
+      // When
+      const value = await service.getOrSet(key, loader, {
+        unless: (result) => result === null,
+      });
+
+      // Then
+      expect(value).toBeNull();
+      expect(mockStampede.protect).toHaveBeenCalled();
+      // set should not be called because unless returned true
+      expect(mockL2Store.set).not.toHaveBeenCalled();
+      expect(mockL1Store.set).not.toHaveBeenCalled();
+    });
+
+    it('should cache when unless returns false', async () => {
+      // Given
+      const key = 'test-key';
+      mockL1Store.get.mockResolvedValue(null);
+      mockL2Store.get.mockResolvedValue(null);
+      const loader = vi.fn().mockResolvedValue('data');
+
+      // When
+      const value = await service.getOrSet(key, loader, {
+        unless: (result) => result === null,
+      });
+
+      // Then
+      expect(value).toBe('data');
+      expect(mockL2Store.set).toHaveBeenCalled();
+    });
+
+    it('should cache normally when unless is not provided', async () => {
+      // Given
+      const key = 'test-key';
+      mockL1Store.get.mockResolvedValue(null);
+      mockL2Store.get.mockResolvedValue(null);
+      const loader = vi.fn().mockResolvedValue('data');
+
+      // When
+      const value = await service.getOrSet(key, loader);
+
+      // Then
+      expect(value).toBe('data');
+      expect(mockL2Store.set).toHaveBeenCalled();
+    });
+
+    it('should not cache when unless returns true with skipStampede', async () => {
+      // Given
+      const key = 'test-key';
+      mockL1Store.get.mockResolvedValue(null);
+      mockL2Store.get.mockResolvedValue(null);
+      const loader = vi.fn().mockResolvedValue(null);
+
+      // When
+      const value = await service.getOrSet(key, loader, {
+        skipStampede: true,
+        unless: (result) => result === null,
+      });
+
+      // Then
+      expect(value).toBeNull();
+      expect(mockStampede.protect).not.toHaveBeenCalled();
+      expect(mockL2Store.set).not.toHaveBeenCalled();
+    });
+
+    it('should not store SWR entry when unless returns true', async () => {
+      // Given
+      const swrService = new CacheService(mockDriver, mockL1Store, mockL2Store, mockStampede, mockTagIndex, mockSwrManager, { ...options, swr: { enabled: true } });
+      mockL2Store.getSwr.mockResolvedValue(null);
+      const loader = vi.fn().mockResolvedValue(null);
+
+      // When
+      const value = await swrService.getOrSet('test-key', loader, {
+        swr: { enabled: true, staleTime: 60 },
+        unless: (result) => result === null,
+      });
+
+      // Then
+      expect(value).toBeNull();
+      expect(mockL2Store.setSwr).not.toHaveBeenCalled();
+    });
   });
 
   describe('delete', () => {

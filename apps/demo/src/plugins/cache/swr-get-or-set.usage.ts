@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { CacheService } from '@nestjs-redisx/cache';
 import { User, UserRepository } from './types';
 
-// Full SWR with getOrSet (recommended)
+// SWR with getOrSet (Service API approach)
 @Injectable()
 export class UserService {
   constructor(

@@ -222,7 +222,9 @@ describe('@Cached decorator', () => {
       mockCacheService = {
         get: vi.fn().mockResolvedValue(null),
         set: vi.fn().mockResolvedValue(undefined),
-        getOrSet: vi.fn().mockResolvedValue(null),
+        getOrSet: vi.fn().mockImplementation(async (_key: string, loader: () => Promise<unknown>, _opts?: unknown) => {
+          return loader();
+        }),
         invalidateTags: vi.fn().mockResolvedValue(0),
         deleteMany: vi.fn().mockResolvedValue(0),
       };
@@ -251,7 +253,7 @@ describe('@Cached decorator', () => {
       await svc.getUser('42');
 
       // Then
-      expect(mockCacheService.get).toHaveBeenCalledWith('user:42');
+      expect(mockCacheService.getOrSet).toHaveBeenCalledWith('user:42', expect.any(Function), expect.any(Object));
     });
 
     it('should enrich key with global contextKeys', async () => {
@@ -274,7 +276,7 @@ describe('@Cached decorator', () => {
       await svc.getUser('42');
 
       // Then
-      expect(mockCacheService.get).toHaveBeenCalledWith('user:42:_ctx_:tenantId.acme');
+      expect(mockCacheService.getOrSet).toHaveBeenCalledWith('user:42:_ctx_:tenantId.acme', expect.any(Function), expect.any(Object));
     });
 
     it('should enrich key with varyBy resolved from contextProvider', async () => {
@@ -300,7 +302,7 @@ describe('@Cached decorator', () => {
       await svc.getProducts();
 
       // Then — both global contextKeys + varyBy, sorted alphabetically
-      expect(mockCacheService.get).toHaveBeenCalledWith('products:_ctx_:locale.en:tenantId.acme');
+      expect(mockCacheService.getOrSet).toHaveBeenCalledWith('products:_ctx_:locale.en:tenantId.acme', expect.any(Function), expect.any(Object));
     });
 
     it('should override global contextKeys with per-decorator contextKeys', async () => {
@@ -327,7 +329,7 @@ describe('@Cached decorator', () => {
       await svc.getData();
 
       // Then — only per-decorator contextKeys used, not global
-      expect(mockCacheService.get).toHaveBeenCalledWith('data:_ctx_:locale.en');
+      expect(mockCacheService.getOrSet).toHaveBeenCalledWith('data:_ctx_:locale.en', expect.any(Function), expect.any(Object));
     });
 
     it('should skip context enrichment when skipContext is true', async () => {
@@ -350,10 +352,10 @@ describe('@Cached decorator', () => {
       await svc.getConfig();
 
       // Then — no context suffix
-      expect(mockCacheService.get).toHaveBeenCalledWith('config:app');
+      expect(mockCacheService.getOrSet).toHaveBeenCalledWith('config:app', expect.any(Function), expect.any(Object));
     });
 
-    it('should use same enriched key for both get and set', async () => {
+    it('should use enriched key in getOrSet call', async () => {
       // Given
       const contextStore = new Map([['tenantId', 'acme']]);
       registerCachePluginOptions({
@@ -372,10 +374,11 @@ describe('@Cached decorator', () => {
       const svc = new Svc();
       await svc.getUser('42');
 
-      // Then
+      // Then — single getOrSet call with enriched key
       const expectedKey = 'user:42:_ctx_:tenantId.acme';
-      expect(mockCacheService.get).toHaveBeenCalledWith(expectedKey);
-      expect(mockCacheService.set).toHaveBeenCalledWith(expectedKey, { id: '42' }, expect.objectContaining({ ttl: 60 }));
+      expect(mockCacheService.getOrSet).toHaveBeenCalledWith(expectedKey, expect.any(Function), expect.objectContaining({ ttl: 60 }));
+      expect(mockCacheService.get).not.toHaveBeenCalled();
+      expect(mockCacheService.set).not.toHaveBeenCalled();
     });
 
     it('should ignore varyBy keys not found in contextProvider', async () => {
@@ -398,7 +401,7 @@ describe('@Cached decorator', () => {
       await svc.getData();
 
       // Then — only tenantId present, missing-key ignored
-      expect(mockCacheService.get).toHaveBeenCalledWith('data:_ctx_:tenantId.acme');
+      expect(mockCacheService.getOrSet).toHaveBeenCalledWith('data:_ctx_:tenantId.acme', expect.any(Function), expect.any(Object));
     });
 
     it('should use custom separator from plugin options', async () => {
@@ -422,7 +425,203 @@ describe('@Cached decorator', () => {
       await svc.getUser('42');
 
       // Then — uses :: separator for _ctx_ marker
-      expect(mockCacheService.get).toHaveBeenCalledWith('user:42::_ctx_::tenantId.acme');
+      expect(mockCacheService.getOrSet).toHaveBeenCalledWith('user:42::_ctx_::tenantId.acme', expect.any(Function), expect.any(Object));
+    });
+  });
+
+  describe('stampede protection via getOrSet', () => {
+    let mockCacheService: {
+      get: ReturnType<typeof vi.fn>;
+      set: ReturnType<typeof vi.fn>;
+      getOrSet: ReturnType<typeof vi.fn>;
+      invalidateTags: ReturnType<typeof vi.fn>;
+      deleteMany: ReturnType<typeof vi.fn>;
+    };
+
+    beforeEach(() => {
+      mockCacheService = {
+        get: vi.fn().mockResolvedValue(null),
+        set: vi.fn().mockResolvedValue(undefined),
+        getOrSet: vi.fn().mockImplementation(async (_key: string, loader: () => Promise<unknown>, _opts?: unknown) => {
+          return loader();
+        }),
+        invalidateTags: vi.fn().mockResolvedValue(0),
+        deleteMany: vi.fn().mockResolvedValue(0),
+      };
+      registerCacheServiceGetter(() => mockCacheService);
+      registerCachePluginOptions({});
+    });
+
+    afterEach(() => {
+      registerCacheServiceGetter(null as unknown as () => typeof mockCacheService);
+      registerCachePluginOptions(null as unknown as { contextProvider?: unknown });
+    });
+
+    it('should use getOrSet for stampede protection', async () => {
+      // Given
+      class Svc {
+        @Cached({ key: 'user:{0}' })
+        async getUser(id: string) {
+          return { id };
+        }
+      }
+
+      // When
+      const svc = new Svc();
+      await svc.getUser('42');
+
+      // Then
+      expect(mockCacheService.getOrSet).toHaveBeenCalledTimes(1);
+      expect(mockCacheService.get).not.toHaveBeenCalled();
+      expect(mockCacheService.set).not.toHaveBeenCalled();
+    });
+
+    it('should pass unless option to getOrSet', async () => {
+      // Given
+      class Svc {
+        @Cached({ key: 'user:{0}', unless: (result) => result === null })
+        async getUser(id: string) {
+          return null;
+        }
+      }
+
+      // When
+      const svc = new Svc();
+      await svc.getUser('42');
+
+      // Then
+      expect(mockCacheService.getOrSet).toHaveBeenCalledWith('user:42', expect.any(Function), expect.objectContaining({ unless: expect.any(Function) }));
+    });
+
+    it('should adapt unless signature (result, ...args) to (result)', async () => {
+      // Given
+      const unlessFn = vi.fn().mockReturnValue(false);
+
+      class Svc {
+        @Cached({ key: 'user:{0}', unless: unlessFn })
+        async getUser(id: string) {
+          return { id };
+        }
+      }
+
+      // When
+      const svc = new Svc();
+      await svc.getUser('42');
+
+      // Then — the unless passed to getOrSet should be an adapter
+      const getOrSetCall = mockCacheService.getOrSet.mock.calls[0];
+      const adaptedUnless = getOrSetCall[2].unless;
+      expect(adaptedUnless).toBeDefined();
+
+      // Call the adapter to verify it passes args through
+      adaptedUnless({ id: '42' });
+      expect(unlessFn).toHaveBeenCalledWith({ id: '42' }, '42');
+    });
+
+    it('should bypass cache when condition returns false', async () => {
+      // Given
+      class Svc {
+        @Cached({ key: 'user:{0}', condition: () => false })
+        async getUser(id: string) {
+          return { id };
+        }
+      }
+
+      // When
+      const svc = new Svc();
+      const result = await svc.getUser('42');
+
+      // Then
+      expect(result).toEqual({ id: '42' });
+      expect(mockCacheService.getOrSet).not.toHaveBeenCalled();
+    });
+
+    it('should fall back to original method when getOrSet throws', async () => {
+      // Given
+      mockCacheService.getOrSet.mockRejectedValue(new Error('Redis down'));
+
+      class Svc {
+        @Cached({ key: 'user:{0}' })
+        async getUser(id: string) {
+          return { id };
+        }
+      }
+
+      // When
+      const svc = new Svc();
+      const result = await svc.getUser('42');
+
+      // Then
+      expect(result).toEqual({ id: '42' });
+    });
+
+    it('should pass swr options to getOrSet', async () => {
+      // Given
+      class Svc {
+        @Cached({ key: 'user:{0}', swr: { enabled: true, staleTime: 30 } })
+        async getUser(id: string) {
+          return { id };
+        }
+      }
+
+      // When
+      const svc = new Svc();
+      await svc.getUser('42');
+
+      // Then
+      expect(mockCacheService.getOrSet).toHaveBeenCalledWith('user:42', expect.any(Function), expect.objectContaining({ swr: { enabled: true, staleTime: 30 } }));
+    });
+
+    it('should pass tags to getOrSet options', async () => {
+      // Given
+      class Svc {
+        @Cached({ key: 'user:{0}', tags: ['users'] })
+        async getUser(id: string) {
+          return { id };
+        }
+      }
+
+      // When
+      const svc = new Svc();
+      await svc.getUser('42');
+
+      // Then
+      expect(mockCacheService.getOrSet).toHaveBeenCalledWith('user:42', expect.any(Function), expect.objectContaining({ tags: ['users'] }));
+    });
+
+    it('should resolve dynamic tags before passing to getOrSet', async () => {
+      // Given
+      class Svc {
+        @Cached({ key: 'user:{0}', tags: (id: string) => [`user:${id}`, 'users'] })
+        async getUser(id: string) {
+          return { id };
+        }
+      }
+
+      // When
+      const svc = new Svc();
+      await svc.getUser('42');
+
+      // Then
+      expect(mockCacheService.getOrSet).toHaveBeenCalledWith('user:42', expect.any(Function), expect.objectContaining({ tags: ['user:42', 'users'] }));
+    });
+
+    it('should not pass unless to getOrSet when not configured', async () => {
+      // Given
+      class Svc {
+        @Cached({ key: 'user:{0}' })
+        async getUser(id: string) {
+          return { id };
+        }
+      }
+
+      // When
+      const svc = new Svc();
+      await svc.getUser('42');
+
+      // Then
+      const getOrSetCall = mockCacheService.getOrSet.mock.calls[0];
+      expect(getOrSetCall[2].unless).toBeUndefined();
     });
   });
 });
