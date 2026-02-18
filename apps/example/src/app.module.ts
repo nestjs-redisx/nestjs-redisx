@@ -69,17 +69,24 @@ import { IntegrationDemoModule } from './demo/integration/integration-demo.modul
           enabled: true,
         }),
 
-        // CachePlugin — L1+L2 caching, SWR, tag invalidation
-        new CachePlugin({
-          l1: {
-            enabled: true,
-            maxSize: parseInt(process.env.CACHE_L1_MAX_SIZE || '1000', 10),
-            ttl: parseInt(process.env.CACHE_L1_TTL || '60', 10),
-          },
-          l2: {
-            enabled: true,
-            defaultTtl: parseInt(process.env.CACHE_L2_TTL || '3600', 10),
-          },
+        // CachePlugin — L1+L2 caching, SWR, tag invalidation (async via ConfigService)
+        CachePlugin.registerAsync({
+          imports: [ConfigModule],
+          inject: [ConfigService],
+          useFactory: (config: ConfigService) => ({
+            l1: {
+              enabled: true,
+              maxSize: config.get<number>('CACHE_L1_MAX_SIZE', 1000),
+              ttl: config.get<number>('CACHE_L1_TTL', 60),
+            },
+            l2: {
+              enabled: true,
+              defaultTtl: config.get<number>('CACHE_L2_TTL', 3600),
+            },
+            stampede: { enabled: true },
+            swr: { enabled: false },
+            tags: { enabled: true },
+          }),
         }),
 
         // LocksPlugin — distributed locks with auto-renewal
