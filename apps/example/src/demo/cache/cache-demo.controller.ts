@@ -238,4 +238,103 @@ export class CacheDemoController {
   async clear() {
     return this.cacheDemo.clearAll();
   }
+
+  // ─── Stampede & SWR Verification Endpoints ──────────────────────────
+
+  /**
+   * Reset stampede/SWR test state (clear cache + counters).
+   *
+   * @example
+   * ```bash
+   * curl -X POST http://localhost:3000/demo/cache/verify/reset
+   * ```
+   */
+  @Post('verify/reset')
+  @HttpCode(HttpStatus.OK)
+  async verifyReset() {
+    return this.cacheDemo.resetStampedeTest();
+  }
+
+  /**
+   * Stampede protection verification.
+   *
+   * Has a 2-second slow loader. Fire 10 concurrent requests —
+   * loader should execute exactly ONCE.
+   *
+   * @example
+   * ```bash
+   * # Reset first
+   * curl -X POST http://localhost:3000/demo/cache/verify/reset
+   *
+   * # Fire 10 concurrent requests
+   * for i in $(seq 1 10); do
+   *   curl -s http://localhost:3000/demo/cache/verify/stampede &
+   * done
+   * wait
+   *
+   * # Check count — should be 1
+   * curl http://localhost:3000/demo/cache/verify/stampede/count
+   * ```
+   */
+  @Get('verify/stampede')
+  async verifyStampede() {
+    return this.cacheDemo.stampedeTestLoad();
+  }
+
+  /**
+   * Get stampede loader call count (bypasses cache).
+   */
+  @Get('verify/stampede/count')
+  async verifyStampedeCount() {
+    return {
+      loaderCallCount: this.cacheDemo.getStampedeCallCount(),
+      expected: 1,
+      pass: this.cacheDemo.getStampedeCallCount() === 1,
+    };
+  }
+
+  /**
+   * SWR verification via @Cached.
+   *
+   * TTL=5s, staleTime=15s. After 6s, returns stale data instantly
+   * and revalidates in background.
+   *
+   * @example
+   * ```bash
+   * # Reset
+   * curl -X POST http://localhost:3000/demo/cache/verify/reset
+   *
+   * # 1) Populate cache (loader call #1)
+   * curl http://localhost:3000/demo/cache/verify/swr
+   *
+   * # 2) Wait for TTL to expire (6 seconds)
+   * sleep 6
+   *
+   * # 3) Should return STALE data instantly + trigger background revalidation
+   * curl http://localhost:3000/demo/cache/verify/swr
+   *
+   * # 4) Wait for revalidation to complete (2 seconds)
+   * sleep 2
+   *
+   * # 5) Should return FRESH data from revalidation (loader call #2)
+   * curl http://localhost:3000/demo/cache/verify/swr
+   *
+   * # Check count — should be 2 (initial + 1 revalidation)
+   * curl http://localhost:3000/demo/cache/verify/swr/count
+   * ```
+   */
+  @Get('verify/swr')
+  async verifySwr() {
+    return this.cacheDemo.swrTestLoad();
+  }
+
+  /**
+   * Get SWR loader call count (bypasses cache).
+   */
+  @Get('verify/swr/count')
+  async verifySwrCount() {
+    return {
+      loaderCallCount: this.cacheDemo.getSwrCallCount(),
+    };
+  }
 }

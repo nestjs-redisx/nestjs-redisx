@@ -32,6 +32,12 @@ export interface Product {
 
 @Injectable()
 export class CacheDemoService {
+  /** Atomic counter: how many times the stampede loader actually executed */
+  private stampedeLoaderCallCount = 0;
+
+  /** Atomic counter: how many times the SWR loader actually executed */
+  private swrLoaderCallCount = 0;
+
   constructor(
     @Inject(CACHE_SERVICE) private readonly cacheService: ICacheService,
   ) {}
@@ -243,6 +249,100 @@ export class CacheDemoService {
       email: data.email || `user${id}@example.com`,
     };
   }
+
+  // ─── Stampede & SWR Verification ────────────────────────────────────
+
+  /**
+   * Reset stampede/SWR test state.
+   * Clears cache keys and resets loader counters.
+   */
+  async resetStampedeTest(): Promise<{ success: true }> {
+    this.stampedeLoaderCallCount = 0;
+    this.swrLoaderCallCount = 0;
+    await this.cacheService.delete('stampede-test:verify');
+    await this.cacheService.delete('swr-test:verify');
+    return { success: true };
+  }
+
+  /**
+   * Stampede protection verification via @Cached.
+   *
+   * Uses a 2-second slow loader. When called concurrently,
+   * only ONE loader should execute (stampedeLoaderCallCount === 1).
+   * Without stampede protection, all concurrent callers would each
+   * run the loader independently.
+   */
+  @Cached({
+    key: 'stampede-test:verify',
+    ttl: 30,
+  })
+  async stampedeTestLoad(): Promise<{
+    loaderCallCount: number;
+    loadedAt: number;
+    pid: number;
+  }> {
+    this.stampedeLoaderCallCount++;
+    const callNum = this.stampedeLoaderCallCount;
+    console.log(`[STAMPEDE-TEST] Loader executing (call #${callNum})...`);
+
+    // Slow loader — 2 seconds to simulate DB
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    console.log(`[STAMPEDE-TEST] Loader finished (call #${callNum})`);
+    return {
+      loaderCallCount: callNum,
+      loadedAt: Date.now(),
+      pid: process.pid,
+    };
+  }
+
+  /**
+   * Get current stampede loader call count (without going through cache).
+   */
+  getStampedeCallCount(): number {
+    return this.stampedeLoaderCallCount;
+  }
+
+  /**
+   * SWR verification via @Cached.
+   *
+   * Short TTL (5s) + staleTime (15s).
+   * After TTL expires, stale data should be returned immediately
+   * and revalidation should happen in background.
+   */
+  @Cached({
+    key: 'swr-test:verify',
+    ttl: 5,
+    swr: { enabled: true, staleTime: 15 },
+  })
+  async swrTestLoad(): Promise<{
+    loaderCallCount: number;
+    loadedAt: number;
+    timestamp: string;
+  }> {
+    this.swrLoaderCallCount++;
+    const callNum = this.swrLoaderCallCount;
+    console.log(`[SWR-TEST] Loader executing (call #${callNum})...`);
+
+    // 1-second delay to make revalidation observable
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    console.log(`[SWR-TEST] Loader finished (call #${callNum})`);
+    return {
+      loaderCallCount: callNum,
+      loadedAt: Date.now(),
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Get current SWR loader call count (without going through cache).
+   */
+  getSwrCallCount(): number {
+    return this.swrLoaderCallCount;
+  }
+
+  // ─── Private ────────────────────────────────────────────────────────
 
   /**
    * Simulate DB delay.
