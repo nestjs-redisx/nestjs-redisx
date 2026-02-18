@@ -60,13 +60,30 @@ npm install @nestjs-redisx/core @nestjs-redisx/cache ioredis
 ```typescript
 import { RedisModule } from '@nestjs-redisx/core';
 import { CachePlugin, Cached } from '@nestjs-redisx/cache';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 // 1. Register
 @Module({
   imports: [
-    RedisModule.forRoot({
-      clients: { host: 'localhost', port: 6379 },
-      plugins: [new CachePlugin({ l1: { maxSize: 1000 }, l2: { defaultTtl: 3600 } })],
+    RedisModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      plugins: [
+        CachePlugin.registerAsync({
+          imports: [ConfigModule],
+          inject: [ConfigService],
+          useFactory: (config: ConfigService) => ({
+            l1: { maxSize: config.get('CACHE_L1_MAX_SIZE', 1000) },
+            l2: { defaultTtl: config.get('CACHE_L2_TTL', 3600) },
+          }),
+        }),
+      ],
+      useFactory: (config: ConfigService) => ({
+        clients: {
+          host: config.get('REDIS_HOST', 'localhost'),
+          port: config.get('REDIS_PORT', 6379),
+        },
+      }),
     }),
   ],
 })
