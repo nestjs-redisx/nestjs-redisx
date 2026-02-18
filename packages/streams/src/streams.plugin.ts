@@ -3,8 +3,8 @@
  * Provides Redis Streams support with consumer groups and DLQ.
  */
 
-import { Provider } from '@nestjs/common';
-import { IRedisXPlugin } from '@nestjs-redisx/core';
+import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
+import { IRedisXPlugin, IPluginAsyncOptions } from '@nestjs-redisx/core';
 
 import { STREAMS_PLUGIN_OPTIONS, STREAM_PRODUCER, STREAM_CONSUMER, DEAD_LETTER_SERVICE } from './shared/constants';
 import { IStreamsPluginOptions } from './shared/types';
@@ -78,34 +78,47 @@ export class StreamsPlugin implements IRedisXPlugin {
   readonly version = '0.1.0';
   readonly description = 'Redis Streams support with consumer groups and DLQ';
 
+  private asyncOptions?: IPluginAsyncOptions<IStreamsPluginOptions>;
+
   constructor(private readonly options: IStreamsPluginOptions = {}) {}
 
-  getProviders(): Provider[] {
-    const config: IStreamsPluginOptions = {
-      keyPrefix: this.options.keyPrefix ?? DEFAULT_STREAMS_CONFIG.keyPrefix,
-      consumer: {
-        ...DEFAULT_STREAMS_CONFIG.consumer,
-        ...this.options.consumer,
-      },
-      producer: {
-        ...DEFAULT_STREAMS_CONFIG.producer,
-        ...this.options.producer,
-      },
-      dlq: {
-        ...DEFAULT_STREAMS_CONFIG.dlq,
-        ...this.options.dlq,
-      },
-      retry: {
-        ...DEFAULT_STREAMS_CONFIG.retry,
-        ...this.options.retry,
-      },
-      trim: {
-        ...DEFAULT_STREAMS_CONFIG.trim,
-        ...this.options.trim,
-      },
-    };
+  static registerAsync(asyncOptions: IPluginAsyncOptions<IStreamsPluginOptions>): StreamsPlugin {
+    const plugin = new StreamsPlugin();
+    plugin.asyncOptions = asyncOptions;
+    return plugin;
+  }
 
-    return [{ provide: STREAMS_PLUGIN_OPTIONS, useValue: config }, { provide: DEAD_LETTER_SERVICE, useClass: DeadLetterService }, { provide: STREAM_PRODUCER, useClass: StreamProducerService }, { provide: STREAM_CONSUMER, useClass: StreamConsumerService }, StreamConsumerDiscovery];
+  private static mergeDefaults(options: IStreamsPluginOptions): IStreamsPluginOptions {
+    return {
+      keyPrefix: options.keyPrefix ?? DEFAULT_STREAMS_CONFIG.keyPrefix,
+      consumer: { ...DEFAULT_STREAMS_CONFIG.consumer, ...options.consumer },
+      producer: { ...DEFAULT_STREAMS_CONFIG.producer, ...options.producer },
+      dlq: { ...DEFAULT_STREAMS_CONFIG.dlq, ...options.dlq },
+      retry: { ...DEFAULT_STREAMS_CONFIG.retry, ...options.retry },
+      trim: { ...DEFAULT_STREAMS_CONFIG.trim, ...options.trim },
+    };
+  }
+
+  getImports(): Array<Type<unknown> | DynamicModule | ForwardReference> {
+    return this.asyncOptions?.imports ?? [];
+  }
+
+  getProviders(): Provider[] {
+    const optionsProvider: Provider = this.asyncOptions
+      ? {
+          provide: STREAMS_PLUGIN_OPTIONS,
+          useFactory: async (...args: unknown[]) => {
+            const userOptions = await this.asyncOptions!.useFactory(...args);
+            return StreamsPlugin.mergeDefaults(userOptions);
+          },
+          inject: this.asyncOptions.inject || [],
+        }
+      : {
+          provide: STREAMS_PLUGIN_OPTIONS,
+          useValue: StreamsPlugin.mergeDefaults(this.options),
+        };
+
+    return [optionsProvider, { provide: DEAD_LETTER_SERVICE, useClass: DeadLetterService }, { provide: STREAM_PRODUCER, useClass: StreamProducerService }, { provide: STREAM_CONSUMER, useClass: StreamConsumerService }, StreamConsumerDiscovery];
   }
 
   getExports(): Array<string | symbol | Provider> {

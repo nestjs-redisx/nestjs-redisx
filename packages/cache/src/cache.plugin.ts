@@ -3,9 +3,9 @@
  * Provides L1+L2 caching with anti-stampede, SWR, and tag invalidation.
  */
 
-import { Provider } from '@nestjs/common';
+import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { IRedisXPlugin } from '@nestjs-redisx/core';
+import { IRedisXPlugin, IPluginAsyncOptions } from '@nestjs-redisx/core';
 
 import { CacheDecoratorInitializerService } from './cache/application/services/cache-decorator-initializer.service';
 import { CacheService as InternalCacheService } from './cache/application/services/cache.service';
@@ -30,30 +30,66 @@ export class CachePlugin implements IRedisXPlugin {
   readonly version = '0.1.0';
   readonly description = 'Advanced caching with L1+L2, anti-stampede, SWR, and tag invalidation';
 
+  private asyncOptions?: IPluginAsyncOptions<ICachePluginOptions>;
+
   constructor(private readonly options: ICachePluginOptions = {}) {}
 
-  getProviders(): Provider[] {
-    // Merge user options with defaults
-    const config: ICachePluginOptions = {
-      l1: { ...DEFAULT_CACHE_CONFIG.l1, ...this.options.l1 },
-      l2: { ...DEFAULT_CACHE_CONFIG.l2, ...this.options.l2 },
-      stampede: { ...DEFAULT_CACHE_CONFIG.stampede, ...this.options.stampede },
-      swr: { ...DEFAULT_CACHE_CONFIG.swr, ...this.options.swr },
-      tags: { ...DEFAULT_CACHE_CONFIG.tags, ...this.options.tags },
-      warmup: { ...DEFAULT_CACHE_CONFIG.warmup, ...this.options.warmup },
-      keys: { ...DEFAULT_CACHE_CONFIG.keys, ...this.options.keys },
-      invalidation: {
-        ...DEFAULT_CACHE_CONFIG.invalidation,
-        ...this.options.invalidation,
-      },
+  /**
+   * Create a CachePlugin with async configuration from DI.
+   *
+   * @example
+   * ```typescript
+   * CachePlugin.registerAsync({
+   *   imports: [ConfigModule],
+   *   inject: [ConfigService],
+   *   useFactory: (config: ConfigService) => ({
+   *     l1: { maxSize: config.get('CACHE_L1_MAX_SIZE', 1000) },
+   *     swr: { enabled: config.get('CACHE_SWR_ENABLED', false) },
+   *   }),
+   * })
+   * ```
+   */
+  static registerAsync(asyncOptions: IPluginAsyncOptions<ICachePluginOptions>): CachePlugin {
+    const plugin = new CachePlugin();
+    plugin.asyncOptions = asyncOptions;
+    return plugin;
+  }
+
+  private static mergeDefaults(options: ICachePluginOptions): ICachePluginOptions {
+    return {
+      l1: { ...DEFAULT_CACHE_CONFIG.l1, ...options.l1 },
+      l2: { ...DEFAULT_CACHE_CONFIG.l2, ...options.l2 },
+      stampede: { ...DEFAULT_CACHE_CONFIG.stampede, ...options.stampede },
+      swr: { ...DEFAULT_CACHE_CONFIG.swr, ...options.swr },
+      tags: { ...DEFAULT_CACHE_CONFIG.tags, ...options.tags },
+      warmup: { ...DEFAULT_CACHE_CONFIG.warmup, ...options.warmup },
+      keys: { ...DEFAULT_CACHE_CONFIG.keys, ...options.keys },
+      invalidation: { ...DEFAULT_CACHE_CONFIG.invalidation, ...options.invalidation },
     };
+  }
+
+  getImports(): Array<Type<unknown> | DynamicModule | ForwardReference> {
+    return this.asyncOptions?.imports ?? [];
+  }
+
+  getProviders(): Provider[] {
+    // Options provider: useFactory (async) or useValue (sync)
+    const optionsProvider: Provider = this.asyncOptions
+      ? {
+          provide: CACHE_PLUGIN_OPTIONS,
+          useFactory: async (...args: unknown[]) => {
+            const userOptions = await this.asyncOptions!.useFactory(...args);
+            return CachePlugin.mergeDefaults(userOptions);
+          },
+          inject: this.asyncOptions.inject || [],
+        }
+      : {
+          provide: CACHE_PLUGIN_OPTIONS,
+          useValue: CachePlugin.mergeDefaults(this.options),
+        };
 
     return [
-      // Configuration
-      {
-        provide: CACHE_PLUGIN_OPTIONS,
-        useValue: config,
-      },
+      optionsProvider,
 
       // Domain services
       {

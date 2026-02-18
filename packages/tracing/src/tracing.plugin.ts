@@ -3,8 +3,8 @@
  * Provides OpenTelemetry distributed tracing support.
  */
 
-import type { Provider } from '@nestjs/common';
-import type { IRedisXPlugin } from '@nestjs-redisx/core';
+import type { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
+import type { IRedisXPlugin, IPluginAsyncOptions } from '@nestjs-redisx/core';
 import { TRACING_PLUGIN_OPTIONS, TRACING_SERVICE } from './shared/constants';
 import type { ITracingPluginOptions } from './shared/types';
 import { TracingService } from './tracing/application/services/tracing.service';
@@ -65,34 +65,59 @@ export class TracingPlugin implements IRedisXPlugin {
   readonly version = '0.1.0';
   readonly description = 'OpenTelemetry distributed tracing support';
 
+  private asyncOptions?: IPluginAsyncOptions<ITracingPluginOptions>;
+
   constructor(private readonly options: ITracingPluginOptions = {}) {}
 
-  getProviders(): Provider[] {
-    const config: ITracingPluginOptions = {
-      enabled: this.options.enabled ?? DEFAULT_TRACING_CONFIG.enabled,
-      serviceName: this.options.serviceName ?? DEFAULT_TRACING_CONFIG.serviceName,
-      sampleRate: this.options.sampleRate ?? DEFAULT_TRACING_CONFIG.sampleRate,
-      traceRedisCommands: this.options.traceRedisCommands ?? DEFAULT_TRACING_CONFIG.traceRedisCommands,
-      traceHttpRequests: this.options.traceHttpRequests ?? DEFAULT_TRACING_CONFIG.traceHttpRequests,
+  static registerAsync(asyncOptions: IPluginAsyncOptions<ITracingPluginOptions>): TracingPlugin {
+    const plugin = new TracingPlugin();
+    plugin.asyncOptions = asyncOptions;
+    return plugin;
+  }
+
+  private static mergeDefaults(options: ITracingPluginOptions): ITracingPluginOptions {
+    return {
+      enabled: options.enabled ?? DEFAULT_TRACING_CONFIG.enabled,
+      serviceName: options.serviceName ?? DEFAULT_TRACING_CONFIG.serviceName,
+      sampleRate: options.sampleRate ?? DEFAULT_TRACING_CONFIG.sampleRate,
+      traceRedisCommands: options.traceRedisCommands ?? DEFAULT_TRACING_CONFIG.traceRedisCommands,
+      traceHttpRequests: options.traceHttpRequests ?? DEFAULT_TRACING_CONFIG.traceHttpRequests,
       sampling: {
-        strategy: this.options.sampling?.strategy ?? DEFAULT_TRACING_CONFIG.sampling.strategy,
-        ratio: this.options.sampling?.ratio ?? DEFAULT_TRACING_CONFIG.sampling.ratio,
+        strategy: options.sampling?.strategy ?? DEFAULT_TRACING_CONFIG.sampling.strategy,
+        ratio: options.sampling?.ratio ?? DEFAULT_TRACING_CONFIG.sampling.ratio,
       },
       spans: {
-        includeArgs: this.options.spans?.includeArgs ?? DEFAULT_TRACING_CONFIG.spans.includeArgs,
-        includeResult: this.options.spans?.includeResult ?? DEFAULT_TRACING_CONFIG.spans.includeResult,
-        maxArgLength: this.options.spans?.maxArgLength ?? DEFAULT_TRACING_CONFIG.spans.maxArgLength,
-        excludeCommands: this.options.spans?.excludeCommands ?? DEFAULT_TRACING_CONFIG.spans.excludeCommands,
+        includeArgs: options.spans?.includeArgs ?? DEFAULT_TRACING_CONFIG.spans.includeArgs,
+        includeResult: options.spans?.includeResult ?? DEFAULT_TRACING_CONFIG.spans.includeResult,
+        maxArgLength: options.spans?.maxArgLength ?? DEFAULT_TRACING_CONFIG.spans.maxArgLength,
+        excludeCommands: options.spans?.excludeCommands ?? DEFAULT_TRACING_CONFIG.spans.excludeCommands,
       },
-      pluginTracing: this.options.pluginTracing ?? DEFAULT_TRACING_CONFIG.pluginTracing,
-      exporter: this.options.exporter,
-      resourceAttributes: this.options.resourceAttributes,
+      pluginTracing: options.pluginTracing ?? DEFAULT_TRACING_CONFIG.pluginTracing,
+      exporter: options.exporter,
+      resourceAttributes: options.resourceAttributes,
     };
+  }
 
-    return [
-      { provide: TRACING_PLUGIN_OPTIONS, useValue: config },
-      { provide: TRACING_SERVICE, useClass: TracingService },
-    ];
+  getImports(): Array<Type<unknown> | DynamicModule | ForwardReference> {
+    return this.asyncOptions?.imports ?? [];
+  }
+
+  getProviders(): Provider[] {
+    const optionsProvider: Provider = this.asyncOptions
+      ? {
+          provide: TRACING_PLUGIN_OPTIONS,
+          useFactory: async (...args: unknown[]) => {
+            const userOptions = await this.asyncOptions!.useFactory(...args);
+            return TracingPlugin.mergeDefaults(userOptions);
+          },
+          inject: this.asyncOptions.inject || [],
+        }
+      : {
+          provide: TRACING_PLUGIN_OPTIONS,
+          useValue: TracingPlugin.mergeDefaults(this.options),
+        };
+
+    return [optionsProvider, { provide: TRACING_SERVICE, useClass: TracingService }];
   }
 
   getExports(): Array<string | symbol | Provider> {

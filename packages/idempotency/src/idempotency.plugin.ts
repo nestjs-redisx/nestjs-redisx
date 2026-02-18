@@ -3,9 +3,9 @@
  * Provides request deduplication with response replay for idempotent operations.
  */
 
-import { Provider } from '@nestjs/common';
+import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { IRedisXPlugin } from '@nestjs-redisx/core';
+import { IRedisXPlugin, IPluginAsyncOptions } from '@nestjs-redisx/core';
 
 import { IdempotencyInterceptor } from './idempotency/api/interceptors/idempotency.interceptor';
 import { IdempotencyService } from './idempotency/application/services/idempotency.service';
@@ -57,23 +57,51 @@ export class IdempotencyPlugin implements IRedisXPlugin {
   readonly version = '0.1.0';
   readonly description = 'Request deduplication with response replay for idempotent operations';
 
+  private asyncOptions?: IPluginAsyncOptions<IIdempotencyPluginOptions>;
+
   constructor(private readonly options: IIdempotencyPluginOptions = {}) {}
 
-  getProviders(): Provider[] {
-    const config: IIdempotencyPluginOptions = {
-      defaultTtl: this.options.defaultTtl ?? DEFAULT_IDEMPOTENCY_CONFIG.defaultTtl,
-      keyPrefix: this.options.keyPrefix ?? DEFAULT_IDEMPOTENCY_CONFIG.keyPrefix,
-      headerName: this.options.headerName ?? DEFAULT_IDEMPOTENCY_CONFIG.headerName,
-      lockTimeout: this.options.lockTimeout ?? DEFAULT_IDEMPOTENCY_CONFIG.lockTimeout,
-      waitTimeout: this.options.waitTimeout ?? DEFAULT_IDEMPOTENCY_CONFIG.waitTimeout,
-      validateFingerprint: this.options.validateFingerprint ?? DEFAULT_IDEMPOTENCY_CONFIG.validateFingerprint,
-      fingerprintFields: this.options.fingerprintFields ?? DEFAULT_IDEMPOTENCY_CONFIG.fingerprintFields,
-      errorPolicy: this.options.errorPolicy ?? DEFAULT_IDEMPOTENCY_CONFIG.errorPolicy,
-      fingerprintGenerator: this.options.fingerprintGenerator,
+  static registerAsync(asyncOptions: IPluginAsyncOptions<IIdempotencyPluginOptions>): IdempotencyPlugin {
+    const plugin = new IdempotencyPlugin();
+    plugin.asyncOptions = asyncOptions;
+    return plugin;
+  }
+
+  private static mergeDefaults(options: IIdempotencyPluginOptions): IIdempotencyPluginOptions {
+    return {
+      defaultTtl: options.defaultTtl ?? DEFAULT_IDEMPOTENCY_CONFIG.defaultTtl,
+      keyPrefix: options.keyPrefix ?? DEFAULT_IDEMPOTENCY_CONFIG.keyPrefix,
+      headerName: options.headerName ?? DEFAULT_IDEMPOTENCY_CONFIG.headerName,
+      lockTimeout: options.lockTimeout ?? DEFAULT_IDEMPOTENCY_CONFIG.lockTimeout,
+      waitTimeout: options.waitTimeout ?? DEFAULT_IDEMPOTENCY_CONFIG.waitTimeout,
+      validateFingerprint: options.validateFingerprint ?? DEFAULT_IDEMPOTENCY_CONFIG.validateFingerprint,
+      fingerprintFields: options.fingerprintFields ?? DEFAULT_IDEMPOTENCY_CONFIG.fingerprintFields,
+      errorPolicy: options.errorPolicy ?? DEFAULT_IDEMPOTENCY_CONFIG.errorPolicy,
+      fingerprintGenerator: options.fingerprintGenerator,
     };
+  }
+
+  getImports(): Array<Type<unknown> | DynamicModule | ForwardReference> {
+    return this.asyncOptions?.imports ?? [];
+  }
+
+  getProviders(): Provider[] {
+    const optionsProvider: Provider = this.asyncOptions
+      ? {
+          provide: IDEMPOTENCY_PLUGIN_OPTIONS,
+          useFactory: async (...args: unknown[]) => {
+            const userOptions = await this.asyncOptions!.useFactory(...args);
+            return IdempotencyPlugin.mergeDefaults(userOptions);
+          },
+          inject: this.asyncOptions.inject || [],
+        }
+      : {
+          provide: IDEMPOTENCY_PLUGIN_OPTIONS,
+          useValue: IdempotencyPlugin.mergeDefaults(this.options),
+        };
 
     return [
-      { provide: IDEMPOTENCY_PLUGIN_OPTIONS, useValue: config },
+      optionsProvider,
       { provide: IDEMPOTENCY_STORE, useClass: RedisIdempotencyStoreAdapter },
       { provide: IDEMPOTENCY_SERVICE, useClass: IdempotencyService },
       // Reflector is needed for @Idempotent decorator metadata

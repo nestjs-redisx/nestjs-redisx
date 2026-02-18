@@ -3,9 +3,9 @@
  * Provides multiple algorithms: fixed-window, sliding-window, token-bucket.
  */
 
-import { Provider } from '@nestjs/common';
+import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
 import { APP_FILTER, Reflector } from '@nestjs/core';
-import { IRedisXPlugin } from '@nestjs-redisx/core';
+import { IRedisXPlugin, IPluginAsyncOptions } from '@nestjs-redisx/core';
 
 import { RateLimitExceptionFilter } from './rate-limit/api/filters/rate-limit-exception.filter';
 import { RateLimitGuard } from './rate-limit/api/guards/rate-limit.guard';
@@ -63,27 +63,52 @@ export class RateLimitPlugin implements IRedisXPlugin {
   readonly version = '0.1.0';
   readonly description = 'Rate limiting with fixed-window, sliding-window, and token-bucket algorithms';
 
+  private asyncOptions?: IPluginAsyncOptions<IRateLimitPluginOptions>;
+
   constructor(private readonly options: IRateLimitPluginOptions = {}) {}
 
-  getProviders(): Provider[] {
-    const config: IRateLimitPluginOptions = {
-      defaultAlgorithm: this.options.defaultAlgorithm ?? DEFAULT_RATE_LIMIT_CONFIG.defaultAlgorithm,
-      defaultPoints: this.options.defaultPoints ?? DEFAULT_RATE_LIMIT_CONFIG.defaultPoints,
-      defaultDuration: this.options.defaultDuration ?? DEFAULT_RATE_LIMIT_CONFIG.defaultDuration,
-      keyPrefix: this.options.keyPrefix ?? DEFAULT_RATE_LIMIT_CONFIG.keyPrefix,
-      defaultKeyExtractor: this.options.defaultKeyExtractor ?? DEFAULT_RATE_LIMIT_CONFIG.defaultKeyExtractor,
-      includeHeaders: this.options.includeHeaders ?? DEFAULT_RATE_LIMIT_CONFIG.includeHeaders,
-      headers: {
-        ...DEFAULT_RATE_LIMIT_CONFIG.headers,
-        ...this.options.headers,
-      },
-      errorPolicy: this.options.errorPolicy ?? DEFAULT_RATE_LIMIT_CONFIG.errorPolicy,
-      skip: this.options.skip,
-      errorFactory: this.options.errorFactory,
+  static registerAsync(asyncOptions: IPluginAsyncOptions<IRateLimitPluginOptions>): RateLimitPlugin {
+    const plugin = new RateLimitPlugin();
+    plugin.asyncOptions = asyncOptions;
+    return plugin;
+  }
+
+  private static mergeDefaults(options: IRateLimitPluginOptions): IRateLimitPluginOptions {
+    return {
+      defaultAlgorithm: options.defaultAlgorithm ?? DEFAULT_RATE_LIMIT_CONFIG.defaultAlgorithm,
+      defaultPoints: options.defaultPoints ?? DEFAULT_RATE_LIMIT_CONFIG.defaultPoints,
+      defaultDuration: options.defaultDuration ?? DEFAULT_RATE_LIMIT_CONFIG.defaultDuration,
+      keyPrefix: options.keyPrefix ?? DEFAULT_RATE_LIMIT_CONFIG.keyPrefix,
+      defaultKeyExtractor: options.defaultKeyExtractor ?? DEFAULT_RATE_LIMIT_CONFIG.defaultKeyExtractor,
+      includeHeaders: options.includeHeaders ?? DEFAULT_RATE_LIMIT_CONFIG.includeHeaders,
+      headers: { ...DEFAULT_RATE_LIMIT_CONFIG.headers, ...options.headers },
+      errorPolicy: options.errorPolicy ?? DEFAULT_RATE_LIMIT_CONFIG.errorPolicy,
+      skip: options.skip,
+      errorFactory: options.errorFactory,
     };
+  }
+
+  getImports(): Array<Type<unknown> | DynamicModule | ForwardReference> {
+    return this.asyncOptions?.imports ?? [];
+  }
+
+  getProviders(): Provider[] {
+    const optionsProvider: Provider = this.asyncOptions
+      ? {
+          provide: RATE_LIMIT_PLUGIN_OPTIONS,
+          useFactory: async (...args: unknown[]) => {
+            const userOptions = await this.asyncOptions!.useFactory(...args);
+            return RateLimitPlugin.mergeDefaults(userOptions);
+          },
+          inject: this.asyncOptions.inject || [],
+        }
+      : {
+          provide: RATE_LIMIT_PLUGIN_OPTIONS,
+          useValue: RateLimitPlugin.mergeDefaults(this.options),
+        };
 
     return [
-      { provide: RATE_LIMIT_PLUGIN_OPTIONS, useValue: config },
+      optionsProvider,
       { provide: RATE_LIMIT_STORE, useClass: RedisRateLimitStoreAdapter },
       { provide: RATE_LIMIT_SERVICE, useClass: RateLimitService },
       // Reflector is needed for @RateLimit decorator metadata

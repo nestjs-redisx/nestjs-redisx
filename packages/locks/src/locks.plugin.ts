@@ -3,9 +3,9 @@
  * Provides distributed locking with auto-renewal and retry strategies.
  */
 
-import { Provider } from '@nestjs/common';
+import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { IRedisXPlugin } from '@nestjs-redisx/core';
+import { IRedisXPlugin, IPluginAsyncOptions } from '@nestjs-redisx/core';
 
 import { LOCKS_PLUGIN_OPTIONS, LOCK_SERVICE, LOCK_STORE } from './shared/constants';
 import { ILocksPluginOptions } from './shared/types';
@@ -58,30 +58,47 @@ export class LocksPlugin implements IRedisXPlugin {
   readonly version = '0.1.0';
   readonly description = 'Distributed locking with auto-renewal and retry strategies';
 
+  private asyncOptions?: IPluginAsyncOptions<ILocksPluginOptions>;
+
   constructor(private readonly options: ILocksPluginOptions = {}) {}
 
-  getProviders(): Provider[] {
-    // Merge user options with defaults
-    const config: ILocksPluginOptions = {
-      defaultTtl: this.options.defaultTtl ?? DEFAULT_LOCKS_CONFIG.defaultTtl,
-      maxTtl: this.options.maxTtl ?? DEFAULT_LOCKS_CONFIG.maxTtl,
-      keyPrefix: this.options.keyPrefix ?? DEFAULT_LOCKS_CONFIG.keyPrefix,
-      retry: {
-        ...DEFAULT_LOCKS_CONFIG.retry,
-        ...this.options.retry,
-      },
-      autoRenew: {
-        ...DEFAULT_LOCKS_CONFIG.autoRenew,
-        ...this.options.autoRenew,
-      },
+  static registerAsync(asyncOptions: IPluginAsyncOptions<ILocksPluginOptions>): LocksPlugin {
+    const plugin = new LocksPlugin();
+    plugin.asyncOptions = asyncOptions;
+    return plugin;
+  }
+
+  private static mergeDefaults(options: ILocksPluginOptions): ILocksPluginOptions {
+    return {
+      defaultTtl: options.defaultTtl ?? DEFAULT_LOCKS_CONFIG.defaultTtl,
+      maxTtl: options.maxTtl ?? DEFAULT_LOCKS_CONFIG.maxTtl,
+      keyPrefix: options.keyPrefix ?? DEFAULT_LOCKS_CONFIG.keyPrefix,
+      retry: { ...DEFAULT_LOCKS_CONFIG.retry, ...options.retry },
+      autoRenew: { ...DEFAULT_LOCKS_CONFIG.autoRenew, ...options.autoRenew },
     };
+  }
+
+  getImports(): Array<Type<unknown> | DynamicModule | ForwardReference> {
+    return this.asyncOptions?.imports ?? [];
+  }
+
+  getProviders(): Provider[] {
+    const optionsProvider: Provider = this.asyncOptions
+      ? {
+          provide: LOCKS_PLUGIN_OPTIONS,
+          useFactory: async (...args: unknown[]) => {
+            const userOptions = await this.asyncOptions!.useFactory(...args);
+            return LocksPlugin.mergeDefaults(userOptions);
+          },
+          inject: this.asyncOptions.inject || [],
+        }
+      : {
+          provide: LOCKS_PLUGIN_OPTIONS,
+          useValue: LocksPlugin.mergeDefaults(this.options),
+        };
 
     return [
-      // Configuration
-      {
-        provide: LOCKS_PLUGIN_OPTIONS,
-        useValue: config,
-      },
+      optionsProvider,
 
       // Store adapter
       {

@@ -3,8 +3,8 @@
  * Provides Prometheus metrics collection and export.
  */
 
-import { Provider, Type } from '@nestjs/common';
-import { IRedisXPlugin } from '@nestjs-redisx/core';
+import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
+import { IRedisXPlugin, IPluginAsyncOptions } from '@nestjs-redisx/core';
 import { METRICS_PLUGIN_OPTIONS, METRICS_SERVICE } from './shared/constants';
 import { IMetricsPluginOptions } from './shared/types';
 import { MetricsService } from './metrics/application/services/metrics.service';
@@ -56,26 +56,51 @@ export class MetricsPlugin implements IRedisXPlugin {
   readonly version = '0.1.0';
   readonly description = 'Prometheus metrics collection and export';
 
+  private asyncOptions?: IPluginAsyncOptions<IMetricsPluginOptions>;
+
   constructor(private readonly options: IMetricsPluginOptions = {}) {}
 
-  getProviders(): Provider[] {
-    const config: IMetricsPluginOptions = {
-      enabled: this.options.enabled ?? DEFAULT_METRICS_CONFIG.enabled,
-      prefix: this.options.prefix ?? DEFAULT_METRICS_CONFIG.prefix,
-      exposeEndpoint: this.options.exposeEndpoint ?? DEFAULT_METRICS_CONFIG.exposeEndpoint,
-      endpoint: this.options.endpoint ?? DEFAULT_METRICS_CONFIG.endpoint,
-      histogramBuckets: this.options.histogramBuckets ?? DEFAULT_METRICS_CONFIG.histogramBuckets,
-      collectDefaultMetrics: this.options.collectDefaultMetrics ?? DEFAULT_METRICS_CONFIG.collectDefaultMetrics,
-      commandMetrics: this.options.commandMetrics ?? DEFAULT_METRICS_CONFIG.commandMetrics,
-      pluginMetrics: this.options.pluginMetrics ?? DEFAULT_METRICS_CONFIG.pluginMetrics,
-      collectInterval: this.options.collectInterval ?? DEFAULT_METRICS_CONFIG.collectInterval,
-      defaultLabels: this.options.defaultLabels,
-    };
+  static registerAsync(asyncOptions: IPluginAsyncOptions<IMetricsPluginOptions>): MetricsPlugin {
+    const plugin = new MetricsPlugin();
+    plugin.asyncOptions = asyncOptions;
+    return plugin;
+  }
 
-    return [
-      { provide: METRICS_PLUGIN_OPTIONS, useValue: config },
-      { provide: METRICS_SERVICE, useClass: MetricsService },
-    ];
+  private static mergeDefaults(options: IMetricsPluginOptions): IMetricsPluginOptions {
+    return {
+      enabled: options.enabled ?? DEFAULT_METRICS_CONFIG.enabled,
+      prefix: options.prefix ?? DEFAULT_METRICS_CONFIG.prefix,
+      exposeEndpoint: options.exposeEndpoint ?? DEFAULT_METRICS_CONFIG.exposeEndpoint,
+      endpoint: options.endpoint ?? DEFAULT_METRICS_CONFIG.endpoint,
+      histogramBuckets: options.histogramBuckets ?? DEFAULT_METRICS_CONFIG.histogramBuckets,
+      collectDefaultMetrics: options.collectDefaultMetrics ?? DEFAULT_METRICS_CONFIG.collectDefaultMetrics,
+      commandMetrics: options.commandMetrics ?? DEFAULT_METRICS_CONFIG.commandMetrics,
+      pluginMetrics: options.pluginMetrics ?? DEFAULT_METRICS_CONFIG.pluginMetrics,
+      collectInterval: options.collectInterval ?? DEFAULT_METRICS_CONFIG.collectInterval,
+      defaultLabels: options.defaultLabels,
+    };
+  }
+
+  getImports(): Array<Type<unknown> | DynamicModule | ForwardReference> {
+    return this.asyncOptions?.imports ?? [];
+  }
+
+  getProviders(): Provider[] {
+    const optionsProvider: Provider = this.asyncOptions
+      ? {
+          provide: METRICS_PLUGIN_OPTIONS,
+          useFactory: async (...args: unknown[]) => {
+            const userOptions = await this.asyncOptions!.useFactory(...args);
+            return MetricsPlugin.mergeDefaults(userOptions);
+          },
+          inject: this.asyncOptions.inject || [],
+        }
+      : {
+          provide: METRICS_PLUGIN_OPTIONS,
+          useValue: MetricsPlugin.mergeDefaults(this.options),
+        };
+
+    return [optionsProvider, { provide: METRICS_SERVICE, useClass: MetricsService }];
   }
 
   getExports(): Array<string | symbol | Provider> {
