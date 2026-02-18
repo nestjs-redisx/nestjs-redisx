@@ -1,4 +1,4 @@
-import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
+import { DynamicModule, ForwardReference, InjectionToken, Provider, Type } from '@nestjs/common';
 
 import { IPluginContext } from './plugin-context.interface';
 
@@ -28,7 +28,7 @@ export interface IPluginAsyncOptions<T = unknown> {
   /**
    * Dependencies to inject into the factory function.
    */
-  inject?: unknown[];
+  inject?: InjectionToken[];
 
   /**
    * Factory function that returns plugin options.
