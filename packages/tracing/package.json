@@ -1,6 +1,6 @@
 {
   "name": "@nestjs-redisx/tracing",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "OpenTelemetry tracing plugin for NestJS RedisX - distributed tracing for Redis operations with Jaeger/Zipkin support",
   "author": "NestJS RedisX Team",
   "license": "MIT",
