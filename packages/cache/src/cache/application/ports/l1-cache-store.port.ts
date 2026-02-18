@@ -39,9 +39,10 @@ export interface IL1CacheStore {
   has(key: string): Promise<boolean>;
 
   /**
-   * Gets current size of L1 cache.
+   * Gets approximate size of L1 cache.
+   * May include expired entries not yet evicted by get/has/set.
    *
-   * @returns Number of items in cache
+   * @returns Approximate number of items in cache
    */
   size(): Promise<number>;
 

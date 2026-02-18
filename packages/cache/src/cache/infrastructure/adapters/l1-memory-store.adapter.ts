@@ -146,14 +146,8 @@ export class L1MemoryStoreAdapter implements IL1CacheStore {
 
   // eslint-disable-next-line @typescript-eslint/require-await
   async size(): Promise<number> {
-    // Clean expired entries first
-    const now = Date.now();
-    for (const [key, node] of this.cache.entries()) {
-      if (now > node.expiresAt) {
-        void this.delete(key);
-      }
-    }
-
+    // O(1): returns approximate size (may include expired entries not yet evicted by get/has/set).
+    // Expired entries are cleaned lazily on access, not eagerly here.
     return this.cache.size;
   }
 
