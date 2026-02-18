@@ -34,6 +34,7 @@ interface IDecoratorCacheService {
       tags?: string[];
       strategy?: 'l1-only' | 'l2-only' | 'l1-l2';
       swr?: { enabled?: boolean; staleTime?: number };
+      unless?: (result: unknown) => boolean;
     },
   ): Promise<T>;
   invalidateTags(tags: string[]): Promise<number>;
@@ -202,7 +203,7 @@ export function Cached(options: ICachedOptions = {}): MethodDecorator {
         return originalMethod.apply(this, args);
       }
 
-      // Check condition (before execution)
+      // Check condition (before execution) — if false, bypass cache entirely
       if (options.condition && !options.condition(...args)) {
         return originalMethod.apply(this, args);
       }
@@ -210,30 +211,23 @@ export function Cached(options: ICachedOptions = {}): MethodDecorator {
       // Build cache key with context enrichment
       const key = buildCacheKey(this, propertyKey.toString(), args, options);
 
-      // Try to get from cache
+      // Resolve tags (static array or function of args)
+      const tags = typeof options.tags === 'function' ? options.tags(...args) : options.tags;
+
+      // Delegate to getOrSet — stampede protection is handled internally
       try {
-        const cached = await cacheService.get(key);
-
-        if (cached !== null) {
-          return cached;
-        }
+        return await cacheService.getOrSet(key, () => originalMethod.apply(this, args), {
+          ttl: options.ttl,
+          tags,
+          strategy: options.strategy,
+          swr: options.swr,
+          unless: options.unless ? (result: unknown) => options.unless!(result, ...args) : undefined,
+        });
       } catch (error) {
-        logger.error(`@Cached: Cache get error for key ${key}:`, error);
-        // Fall through to execute method
+        logger.error(`@Cached: getOrSet error for key ${key}:`, error);
+        // Fail-open: execute method without cache
+        return originalMethod.apply(this, args);
       }
-
-      // Cache miss - execute method
-      const result = await originalMethod.apply(this, args);
-
-      // Check unless (after execution)
-      if (options.unless?.(result, ...args)) {
-        return result;
-      }
-
-      // Cache the result
-      await cacheResult(cacheService, key, result, options, args);
-
-      return result;
     };
 
     // Preserve original method name
@@ -335,7 +329,7 @@ function sanitizeForKey(value: string): string {
  * Interpolates key template with arguments.
  */
 function interpolateKey(template: string, args: unknown[]): string {
-  return template.replace(/\{(\d+)\}/g, (match, index: string) => {
+  return template.replace(/\{(\d+)}/g, (match, index: string) => {
     const argIndex = parseInt(index, 10);
     if (argIndex < args.length) {
       return serializeArg(args[argIndex]);
@@ -365,35 +359,4 @@ function serializeArg(arg: unknown): string {
   }
 
   return 'unknown';
-}
-
-/**
- * Caches the result.
- */
-async function cacheResult(cacheService: IDecoratorCacheService, key: string, value: unknown, options: ICachedOptions, args: unknown[]): Promise<void> {
-  try {
-    const tags = typeof options.tags === 'function' ? options.tags(...args) : options.tags;
-
-    if (options.swr?.enabled) {
-      await cacheService.getOrSet(
-        key,
-        // eslint-disable-next-line @typescript-eslint/require-await
-        async () => value,
-        {
-          ttl: options.ttl,
-          tags: tags,
-          strategy: options.strategy,
-          swr: options.swr,
-        },
-      );
-    } else {
-      await cacheService.set(key, value, {
-        ttl: options.ttl,
-        tags: tags,
-        strategy: options.strategy,
-      });
-    }
-  } catch (error) {
-    logger.error(`@Cached: Failed to cache result for key ${key}:`, error);
-  }
 }

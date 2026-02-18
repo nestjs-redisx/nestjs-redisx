@@ -129,6 +129,8 @@ export interface ICacheGetOrSetOptions extends ICacheSetOptions {
     staleTime?: number;
   };
   skipStampede?: boolean;
+  /** Skip caching if this function returns true for the loaded value. */
+  unless?: (result: unknown) => boolean;
 }
 
 /**
