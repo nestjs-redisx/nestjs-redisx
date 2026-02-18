@@ -673,6 +673,46 @@ describe('@Cached decorator', () => {
       expect(key1).toBe('items:{"role":"admin","status":"active"}');
     });
 
+    it('should skip undefined values in objects (matches JSON.stringify)', async () => {
+      // Given
+      class Svc {
+        @Cached({ key: 'items:{0}' })
+        async find(filter: Record<string, unknown>) {
+          return [];
+        }
+      }
+
+      // When
+      const svc = new Svc();
+      await svc.find({ a: 1, b: undefined, c: 3 });
+      const key1 = mockCacheService.getOrSet.mock.calls[0][0];
+
+      mockCacheService.getOrSet.mockClear();
+      await svc.find({ a: 1, c: 3 });
+      const key2 = mockCacheService.getOrSet.mock.calls[0][0];
+
+      // Then -- undefined keys are skipped, same as JSON.stringify
+      expect(key1).toBe(key2);
+    });
+
+    it('should serialize undefined in arrays as null (matches JSON.stringify)', async () => {
+      // Given
+      class Svc {
+        @Cached({ key: 'items:{0}' })
+        async find(filter: unknown[]) {
+          return [];
+        }
+      }
+
+      // When
+      const svc = new Svc();
+      await svc.find([1, undefined, 3]);
+      const key = mockCacheService.getOrSet.mock.calls[0][0];
+
+      // Then -- undefined becomes null in arrays, same as JSON.stringify
+      expect(key).toBe('items:[1,null,3]');
+    });
+
     it('should handle arrays in object args deterministically', async () => {
       // Given
       class Svc {

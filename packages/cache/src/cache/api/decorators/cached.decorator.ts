@@ -371,20 +371,38 @@ function stableStringify(value: unknown): string {
     return 'null';
   }
 
+  // Functions and symbols are not serializable (matches JSON.stringify behavior)
+  if (typeof value === 'function' || typeof value === 'symbol') {
+    return 'null';
+  }
+
   if (typeof value !== 'object') {
+    // BigInt throws in JSON.stringify; convert to string for safe key generation
+    if (typeof value === 'bigint') {
+      return String(value);
+    }
     return JSON.stringify(value);
   }
 
+  // Arrays: preserve order, serialize undefined/functions as null (matches JSON.stringify)
   if (Array.isArray(value)) {
-    return '[' + value.map((item) => stableStringify(item)).join(',') + ']';
+    return '[' + value.map((item) => (item === undefined || typeof item === 'function' || typeof item === 'symbol' ? 'null' : stableStringify(item))).join(',') + ']';
   }
 
   if (value instanceof Date) {
     return JSON.stringify(value);
   }
 
+  // Plain objects: sort keys, skip undefined/function/symbol values (matches JSON.stringify)
   const obj = value as Record<string, unknown>;
   const keys = Object.keys(obj).sort();
-  const parts = keys.map((key) => JSON.stringify(key) + ':' + stableStringify(obj[key]));
+  const parts: string[] = [];
+  for (const key of keys) {
+    const v = obj[key];
+    if (v === undefined || typeof v === 'function' || typeof v === 'symbol') {
+      continue; // JSON.stringify skips these in objects
+    }
+    parts.push(JSON.stringify(key) + ':' + stableStringify(v));
+  }
   return '{' + parts.join(',') + '}';
 }
