@@ -572,10 +572,10 @@ export class CacheService implements ICacheService {
       const maxTtl = this.options.l2?.maxTtl ?? 86400;
       const defaultTtl = this.options.l2?.defaultTtl ?? 3600;
       const cacheEntries = entries.map(({ key, value, ttl }) => {
-        const entryTtl = ttl ?? defaultTtl;
+        const entryTtl = Math.min(ttl ?? defaultTtl, maxTtl);
         return {
           key: this.enrichKeyWithContext(this.validateAndNormalizeKey(key)),
-          entry: CacheEntry.create(value, Math.min(entryTtl, maxTtl)),
+          entry: CacheEntry.create(value, entryTtl),
           ttl: entryTtl,
         };
       });
