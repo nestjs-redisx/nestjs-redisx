@@ -359,13 +359,15 @@ export class CacheService implements ICacheService {
         return 0;
       }
 
-      let deletedCount = 0;
+      // Track per-key deletion across both layers
+      const deleted = new Array<boolean>(normalizedKeys.length).fill(false);
 
       // Delete from L1
       if (this.l1Enabled) {
-        for (const key of normalizedKeys) {
-          const deleted = await this.l1Store.delete(key);
-          if (deleted) deletedCount++;
+        for (let i = 0; i < normalizedKeys.length; i++) {
+          if (await this.l1Store.delete(normalizedKeys[i]!)) {
+            deleted[i] = true;
+          }
         }
       }
 
@@ -380,21 +382,17 @@ export class CacheService implements ICacheService {
 
         const results = await pipeline.exec();
 
-        // Count successful deletions from L2
-        let l2Count = 0;
         if (results) {
-          for (const [error, result] of results) {
+          for (let i = 0; i < results.length; i++) {
+            const [error, result] = results[i]!;
             if (!error && typeof result === 'number' && result > 0) {
-              l2Count++;
+              deleted[i] = true;
             }
           }
         }
-
-        // Use maximum of L1 and L2 counts
-        deletedCount = Math.max(deletedCount, l2Count);
       }
 
-      return deletedCount;
+      return deleted.filter(Boolean).length;
     } catch (error) {
       throw new CacheError(`Failed to delete multiple keys: ${(error as Error).message}`, ErrorCode.CACHE_DELETE_FAILED, error as Error);
     }
