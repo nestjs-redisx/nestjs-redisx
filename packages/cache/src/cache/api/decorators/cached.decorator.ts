@@ -293,6 +293,10 @@ function enrichWithContext(key: string, options: ICachedOptions): string {
   for (const ctxKey of contextKeys) {
     const value = pluginOpts.contextProvider.get<string>(ctxKey);
     if (value !== undefined && value !== null) {
+      if (typeof value === 'object') {
+        logger.warn(`Context key "${ctxKey}" has object value, skipping (use primitives for context keys)`);
+        continue;
+      }
       contextMap.set(ctxKey, String(value));
     }
   }
@@ -303,6 +307,10 @@ function enrichWithContext(key: string, options: ICachedOptions): string {
       if (!contextMap.has(name)) {
         const value = pluginOpts.contextProvider.get<string>(name);
         if (value !== undefined && value !== null) {
+          if (typeof value === 'object') {
+            logger.warn(`varyBy key "${name}" has object value, skipping (use primitives for varyBy keys)`);
+            continue;
+          }
           contextMap.set(name, String(value));
         }
       }

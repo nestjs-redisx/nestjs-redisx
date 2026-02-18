@@ -729,6 +729,10 @@ export class CacheService implements ICacheService {
       for (const ctxKey of contextKeys) {
         const value = contextProvider.get<string>(ctxKey);
         if (value !== undefined && value !== null) {
+          if (typeof value === 'object') {
+            this.logger.warn(`Context key "${ctxKey}" has object value, skipping (use primitives for context keys)`);
+            continue;
+          }
           contextMap.set(ctxKey, String(value));
         }
       }
