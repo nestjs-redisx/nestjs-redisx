@@ -5,6 +5,7 @@
 
 import type { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
 import type { IRedisXPlugin, IPluginAsyncOptions } from '@nestjs-redisx/core';
+import { version } from '../package.json';
 import { TRACING_PLUGIN_OPTIONS, TRACING_SERVICE } from './shared/constants';
 import type { ITracingPluginOptions } from './shared/types';
 import { TracingService } from './tracing/application/services/tracing.service';
@@ -62,7 +63,7 @@ const DEFAULT_TRACING_CONFIG: Required<Omit<ITracingPluginOptions, 'isGlobal' | 
  */
 export class TracingPlugin implements IRedisXPlugin {
   readonly name = 'tracing';
-  readonly version = '0.1.0';
+  readonly version: string = version;
   readonly description = 'OpenTelemetry distributed tracing support';
 
   private asyncOptions?: IPluginAsyncOptions<ITracingPluginOptions>;

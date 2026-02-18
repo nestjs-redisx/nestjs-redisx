@@ -7,6 +7,7 @@ import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common'
 import { Reflector } from '@nestjs/core';
 import { IRedisXPlugin, IPluginAsyncOptions } from '@nestjs-redisx/core';
 
+import { version } from '../package.json';
 import { IdempotencyInterceptor } from './idempotency/api/interceptors/idempotency.interceptor';
 import { IdempotencyService } from './idempotency/application/services/idempotency.service';
 import { RedisIdempotencyStoreAdapter } from './idempotency/infrastructure/adapters/redis-idempotency-store.adapter';
@@ -54,7 +55,7 @@ const DEFAULT_IDEMPOTENCY_CONFIG: Required<Omit<IIdempotencyPluginOptions, 'isGl
  */
 export class IdempotencyPlugin implements IRedisXPlugin {
   readonly name = 'idempotency';
-  readonly version = '0.1.0';
+  readonly version: string = version;
   readonly description = 'Request deduplication with response replay for idempotent operations';
 
   private asyncOptions?: IPluginAsyncOptions<IIdempotencyPluginOptions>;

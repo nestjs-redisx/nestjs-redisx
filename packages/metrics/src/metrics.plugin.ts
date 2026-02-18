@@ -5,6 +5,7 @@
 
 import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
 import { IRedisXPlugin, IPluginAsyncOptions } from '@nestjs-redisx/core';
+import { version } from '../package.json';
 import { METRICS_PLUGIN_OPTIONS, METRICS_SERVICE } from './shared/constants';
 import { IMetricsPluginOptions } from './shared/types';
 import { MetricsService } from './metrics/application/services/metrics.service';
@@ -53,7 +54,7 @@ const DEFAULT_METRICS_CONFIG: Required<Omit<IMetricsPluginOptions, 'isGlobal' | 
  */
 export class MetricsPlugin implements IRedisXPlugin {
   readonly name = 'metrics';
-  readonly version = '0.1.0';
+  readonly version: string = version;
   readonly description = 'Prometheus metrics collection and export';
 
   private asyncOptions?: IPluginAsyncOptions<IMetricsPluginOptions>;

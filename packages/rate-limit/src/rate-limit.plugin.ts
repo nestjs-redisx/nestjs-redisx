@@ -7,6 +7,7 @@ import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common'
 import { APP_FILTER, Reflector } from '@nestjs/core';
 import { IRedisXPlugin, IPluginAsyncOptions } from '@nestjs-redisx/core';
 
+import { version } from '../package.json';
 import { RateLimitExceptionFilter } from './rate-limit/api/filters/rate-limit-exception.filter';
 import { RateLimitGuard } from './rate-limit/api/guards/rate-limit.guard';
 import { RateLimitService } from './rate-limit/application/services/rate-limit.service';
@@ -60,7 +61,7 @@ const DEFAULT_RATE_LIMIT_CONFIG: Required<Omit<IRateLimitPluginOptions, 'isGloba
  */
 export class RateLimitPlugin implements IRedisXPlugin {
   readonly name = 'rate-limit';
-  readonly version = '0.1.0';
+  readonly version: string = version;
   readonly description = 'Rate limiting with fixed-window, sliding-window, and token-bucket algorithms';
 
   private asyncOptions?: IPluginAsyncOptions<IRateLimitPluginOptions>;

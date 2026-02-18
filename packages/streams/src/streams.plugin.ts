@@ -6,6 +6,7 @@
 import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
 import { IRedisXPlugin, IPluginAsyncOptions } from '@nestjs-redisx/core';
 
+import { version } from '../package.json';
 import { STREAMS_PLUGIN_OPTIONS, STREAM_PRODUCER, STREAM_CONSUMER, DEAD_LETTER_SERVICE } from './shared/constants';
 import { IStreamsPluginOptions } from './shared/types';
 import { StreamConsumerDiscovery } from './streams/api/discovery/stream-consumer.discovery';
@@ -75,7 +76,7 @@ const DEFAULT_STREAMS_CONFIG: Required<Omit<IStreamsPluginOptions, 'isGlobal'>> 
  */
 export class StreamsPlugin implements IRedisXPlugin {
   readonly name = 'streams';
-  readonly version = '0.1.0';
+  readonly version: string = version;
   readonly description = 'Redis Streams support with consumer groups and DLQ';
 
   private asyncOptions?: IPluginAsyncOptions<IStreamsPluginOptions>;

@@ -7,6 +7,7 @@ import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common'
 import { Reflector } from '@nestjs/core';
 import { IRedisXPlugin, IPluginAsyncOptions } from '@nestjs-redisx/core';
 
+import { version } from '../package.json';
 import { LOCKS_PLUGIN_OPTIONS, LOCK_SERVICE, LOCK_STORE } from './shared/constants';
 import { ILocksPluginOptions } from './shared/types';
 import { LockDecoratorInitializerService } from './lock/application/services/lock-decorator-initializer.service';
@@ -55,7 +56,7 @@ const DEFAULT_LOCKS_CONFIG: Required<Omit<ILocksPluginOptions, 'isGlobal'>> = {
  */
 export class LocksPlugin implements IRedisXPlugin {
   readonly name = 'locks';
-  readonly version = '0.1.0';
+  readonly version: string = version;
   readonly description = 'Distributed locking with auto-renewal and retry strategies';
 
   private asyncOptions?: IPluginAsyncOptions<ILocksPluginOptions>;

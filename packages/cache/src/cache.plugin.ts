@@ -7,6 +7,7 @@ import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common'
 import { Reflector } from '@nestjs/core';
 import { IRedisXPlugin, IPluginAsyncOptions } from '@nestjs-redisx/core';
 
+import { version } from '../package.json';
 import { CacheDecoratorInitializerService } from './cache/application/services/cache-decorator-initializer.service';
 import { CacheService as InternalCacheService } from './cache/application/services/cache.service';
 import { WarmupService } from './cache/application/services/warmup.service';
@@ -27,7 +28,7 @@ import { LuaScriptLoader } from './tags/infrastructure/services/lua-script-loade
 
 export class CachePlugin implements IRedisXPlugin {
   readonly name = 'cache';
-  readonly version = '0.1.0';
+  readonly version: string = version;
   readonly description = 'Advanced caching with L1+L2, anti-stampede, SWR, and tag invalidation';
 
   private asyncOptions?: IPluginAsyncOptions<ICachePluginOptions>;
