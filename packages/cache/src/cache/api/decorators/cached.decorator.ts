@@ -340,6 +340,7 @@ function interpolateKey(template: string, args: unknown[]): string {
 
 /**
  * Serializes argument to string for cache key.
+ * Objects are serialized with sorted keys for deterministic output.
  */
 function serializeArg(arg: unknown): string {
   if (arg === null || arg === undefined) {
@@ -352,11 +353,38 @@ function serializeArg(arg: unknown): string {
 
   if (typeof arg === 'object') {
     try {
-      return JSON.stringify(arg);
+      return stableStringify(arg);
     } catch {
       return 'object';
     }
   }
 
   return 'unknown';
+}
+
+/**
+ * Produces a deterministic JSON string by sorting object keys recursively.
+ * Ensures {b:2, a:1} and {a:1, b:2} produce the same cache key.
+ */
+function stableStringify(value: unknown): string {
+  if (value === null || value === undefined) {
+    return 'null';
+  }
+
+  if (typeof value !== 'object') {
+    return JSON.stringify(value);
+  }
+
+  if (Array.isArray(value)) {
+    return '[' + value.map((item) => stableStringify(item)).join(',') + ']';
+  }
+
+  if (value instanceof Date) {
+    return JSON.stringify(value);
+  }
+
+  const obj = value as Record<string, unknown>;
+  const keys = Object.keys(obj).sort();
+  const parts = keys.map((key) => JSON.stringify(key) + ':' + stableStringify(obj[key]));
+  return '{' + parts.join(',') + '}';
 }

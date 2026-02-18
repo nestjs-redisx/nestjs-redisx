@@ -606,6 +606,95 @@ describe('@Cached decorator', () => {
       expect(mockCacheService.getOrSet).toHaveBeenCalledWith('user:42', expect.any(Function), expect.objectContaining({ tags: ['user:42', 'users'] }));
     });
 
+    it('should produce deterministic keys for object args regardless of key order', async () => {
+      // Given
+      class Svc {
+        @Cached()
+        async find(filter: Record<string, unknown>) {
+          return [];
+        }
+      }
+
+      // When — call with same data, different key order
+      const svc = new Svc();
+      await svc.find({ b: 2, a: 1 });
+      const key1 = mockCacheService.getOrSet.mock.calls[0][0];
+
+      mockCacheService.getOrSet.mockClear();
+      await svc.find({ a: 1, b: 2 });
+      const key2 = mockCacheService.getOrSet.mock.calls[0][0];
+
+      // Then — both produce the same cache key
+      expect(key1).toBe(key2);
+    });
+
+    it('should produce deterministic keys for nested objects', async () => {
+      // Given
+      class Svc {
+        @Cached()
+        async find(filter: Record<string, unknown>) {
+          return [];
+        }
+      }
+
+      // When
+      const svc = new Svc();
+      await svc.find({ z: { b: 2, a: 1 }, a: 'x' });
+      const key1 = mockCacheService.getOrSet.mock.calls[0][0];
+
+      mockCacheService.getOrSet.mockClear();
+      await svc.find({ a: 'x', z: { a: 1, b: 2 } });
+      const key2 = mockCacheService.getOrSet.mock.calls[0][0];
+
+      // Then
+      expect(key1).toBe(key2);
+    });
+
+    it('should produce deterministic keys for object args in key templates', async () => {
+      // Given
+      class Svc {
+        @Cached({ key: 'items:{0}' })
+        async find(filter: Record<string, unknown>) {
+          return [];
+        }
+      }
+
+      // When
+      const svc = new Svc();
+      await svc.find({ status: 'active', role: 'admin' });
+      const key1 = mockCacheService.getOrSet.mock.calls[0][0];
+
+      mockCacheService.getOrSet.mockClear();
+      await svc.find({ role: 'admin', status: 'active' });
+      const key2 = mockCacheService.getOrSet.mock.calls[0][0];
+
+      // Then
+      expect(key1).toBe(key2);
+      expect(key1).toBe('items:{"role":"admin","status":"active"}');
+    });
+
+    it('should handle arrays in object args deterministically', async () => {
+      // Given
+      class Svc {
+        @Cached()
+        async find(filter: Record<string, unknown>) {
+          return [];
+        }
+      }
+
+      // When
+      const svc = new Svc();
+      await svc.find({ ids: [3, 1, 2], active: true });
+      const key1 = mockCacheService.getOrSet.mock.calls[0][0];
+
+      mockCacheService.getOrSet.mockClear();
+      await svc.find({ active: true, ids: [3, 1, 2] });
+      const key2 = mockCacheService.getOrSet.mock.calls[0][0];
+
+      // Then — same key (keys sorted, array order preserved)
+      expect(key1).toBe(key2);
+    });
+
     it('should not pass unless to getOrSet when not configured', async () => {
       // Given
       class Svc {
