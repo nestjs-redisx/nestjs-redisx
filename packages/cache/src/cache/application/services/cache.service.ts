@@ -198,7 +198,7 @@ export class CacheService implements ICacheService {
     const enrichedKey = this.enrichKeyWithContext(normalizedKey, options.varyBy);
 
     // Check if SWR is enabled for this call
-    const swrEnabled = this.swrEnabled && (options.swr?.enabled ?? true);
+    const swrEnabled = options.swr?.enabled ?? this.swrEnabled;
 
     if (swrEnabled) {
       // SWR flow
@@ -217,12 +217,17 @@ export class CacheService implements ICacheService {
               enrichedKey,
               loader,
               async (freshValue) => {
-                // Update cache with fresh data (enrichedKey already contains context)
-                await this.set(enrichedKey, freshValue, {
-                  ttl: options.ttl,
-                  tags: options.tags,
-                  strategy: options.strategy,
-                });
+                // Write proper SWR entry (not CacheEntry) to preserve staleAt/expiresAt metadata
+                const staleTime = options.swr?.staleTime ?? this.options.swr?.defaultStaleTime ?? 60;
+                const ttl = options.ttl ?? this.options.l2?.defaultTtl ?? 3600;
+                const swrEntryNew = this.swrManager.createSwrEntry(freshValue, ttl, staleTime);
+                await this.l2Store.setSwr(enrichedKey, swrEntryNew);
+
+                // Also update L1 for fast reads
+                if (this.l1Enabled) {
+                  const entry = CacheEntry.create(freshValue, ttl);
+                  await this.l1Store.set(enrichedKey, entry, this.options.l1?.ttl);
+                }
               },
               (error) => {
                 this.logger.error(`SWR revalidation failed for key ${enrichedKey}:`, error);
@@ -237,11 +242,13 @@ export class CacheService implements ICacheService {
       // SWR miss or expired - load and cache with SWR metadata
       const value = await this.loadWithStampede(enrichedKey, loader, options);
 
-      const staleTime = options.swr?.staleTime ?? this.options.swr?.defaultStaleTime ?? 60;
-      const ttl = options.ttl ?? this.options.l2?.defaultTtl ?? 3600;
-      const swrEntryNew = this.swrManager.createSwrEntry(value, ttl, staleTime);
+      if (!options.unless?.(value)) {
+        const staleTime = options.swr?.staleTime ?? this.options.swr?.defaultStaleTime ?? 60;
+        const ttl = options.ttl ?? this.options.l2?.defaultTtl ?? 3600;
+        const swrEntryNew = this.swrManager.createSwrEntry(value, ttl, staleTime);
 
-      await this.l2Store.setSwr(enrichedKey, swrEntryNew);
+        await this.l2Store.setSwr(enrichedKey, swrEntryNew);
+      }
 
       return value;
     }
@@ -274,22 +281,27 @@ export class CacheService implements ICacheService {
         return result.value;
       }
 
-      await this.set(key, result.value, {
-        ttl: options.ttl,
-        tags: options.tags,
-        strategy: options.strategy,
-      });
+      if (!options.unless?.(result.value)) {
+        await this.set(key, result.value, {
+          ttl: options.ttl,
+          tags: options.tags,
+          strategy: options.strategy,
+        });
+      }
 
       return result.value;
     }
 
     // No stampede protection - direct load
     const value = await loader();
-    await this.set(key, value, {
-      ttl: options.ttl,
-      tags: options.tags,
-      strategy: options.strategy,
-    });
+
+    if (!options.unless?.(value)) {
+      await this.set(key, value, {
+        ttl: options.ttl,
+        tags: options.tags,
+        strategy: options.strategy,
+      });
+    }
 
     return value;
   }
