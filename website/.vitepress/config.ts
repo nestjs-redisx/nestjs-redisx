@@ -33,6 +33,8 @@ export default withMermaid(
       ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
       ['meta', { name: 'twitter:image', content: OG_IMAGE }],
       ['meta', { name: 'twitter:image:alt', content: 'NestJS RedisX — Redis toolkit for NestJS' }],
+      ['script', { async: '', src: 'https://www.googletagmanager.com/gtag/js?id=G-CBD9YNFMZ2' }],
+      ['script', {}, "window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-CBD9YNFMZ2')"],
     ],
 
     sitemap: {
