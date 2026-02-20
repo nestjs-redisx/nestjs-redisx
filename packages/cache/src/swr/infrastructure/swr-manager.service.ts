@@ -48,6 +48,7 @@ export class SwrManagerService implements ISwrManager {
   }
 
   isStale<T>(entry: SwrEntry<T>): boolean {
+    if (!this.enabled) return false;
     const now = Date.now();
     return now > entry.staleAt;
   }

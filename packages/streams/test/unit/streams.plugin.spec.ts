@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { StreamsPlugin } from '../../src/streams.plugin';
+import { version } from '../../package.json';
 import { STREAMS_PLUGIN_OPTIONS, STREAM_PRODUCER, STREAM_CONSUMER, DEAD_LETTER_SERVICE } from '../../src/shared/constants';
 
 describe('StreamsPlugin', () => {
@@ -9,7 +10,7 @@ describe('StreamsPlugin', () => {
 
     // Then
     expect(plugin.name).toBe('streams');
-    expect(plugin.version).toBe('0.1.0');
+    expect(plugin.version).toBe(version);
     expect(plugin.description).toContain('Redis Streams');
   });
 

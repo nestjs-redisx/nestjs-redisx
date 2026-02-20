@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { TracingPlugin } from '../../src/tracing.plugin';
+import { version } from '../../package.json';
 import { TRACING_PLUGIN_OPTIONS, TRACING_SERVICE } from '../../src/shared/constants';
 
 describe('TracingPlugin', () => {
@@ -9,7 +10,7 @@ describe('TracingPlugin', () => {
 
     // Then
     expect(plugin.name).toBe('tracing');
-    expect(plugin.version).toBe('0.1.0');
+    expect(plugin.version).toBe(version);
     expect(plugin.description).toContain('OpenTelemetry');
   });
 

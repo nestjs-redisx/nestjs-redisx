@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { RateLimitPlugin } from '../../src/rate-limit.plugin';
+import { version } from '../../package.json';
 import { RATE_LIMIT_PLUGIN_OPTIONS, RATE_LIMIT_SERVICE, RATE_LIMIT_STORE } from '../../src/shared/constants';
 import { RateLimitService } from '../../src/rate-limit/application/services/rate-limit.service';
 import { RedisRateLimitStoreAdapter } from '../../src/rate-limit/infrastructure/adapters/redis-rate-limit-store.adapter';
@@ -20,7 +21,7 @@ describe('RateLimitPlugin', () => {
       const plugin = new RateLimitPlugin();
 
       // Then
-      expect(plugin.version).toBe('0.1.0');
+      expect(plugin.version).toBe(version);
     });
 
     it('should have description', () => {

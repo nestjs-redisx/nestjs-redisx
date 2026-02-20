@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { MetricsPlugin } from '../../src/metrics.plugin';
+import { version } from '../../package.json';
 import { METRICS_PLUGIN_OPTIONS, METRICS_SERVICE } from '../../src/shared/constants';
 import { MetricsController } from '../../src/metrics/api/controllers/metrics.controller';
 
@@ -10,7 +11,7 @@ describe('MetricsPlugin', () => {
 
     // Then
     expect(plugin.name).toBe('metrics');
-    expect(plugin.version).toBe('0.1.0');
+    expect(plugin.version).toBe(version);
     expect(plugin.description).toContain('Prometheus');
   });
 

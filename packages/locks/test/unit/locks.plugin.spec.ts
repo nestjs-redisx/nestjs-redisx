@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { LocksPlugin } from '../../src/locks.plugin';
+import { version } from '../../package.json';
 import { LOCKS_PLUGIN_OPTIONS, LOCK_SERVICE, LOCK_STORE } from '../../src/shared/constants';
 import { LockService } from '../../src/lock/application/services/lock.service';
 import { RedisLockStoreAdapter } from '../../src/lock/infrastructure/adapters/redis-lock-store.adapter';
@@ -20,7 +21,7 @@ describe('LocksPlugin', () => {
       const plugin = new LocksPlugin();
 
       // Then
-      expect(plugin.version).toBe('0.1.0');
+      expect(plugin.version).toBe(version);
     });
 
     it('should have description', () => {

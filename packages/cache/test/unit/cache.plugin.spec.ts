@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { CachePlugin } from '../../src/cache.plugin';
+import { version } from '../../package.json';
 import { CACHE_PLUGIN_OPTIONS, CACHE_SERVICE, L1_CACHE_STORE, L2_CACHE_STORE, SERIALIZER, STAMPEDE_PROTECTION, TAG_INDEX, SWR_MANAGER, LUA_SCRIPT_LOADER, INVALIDATION_REGISTRY, EVENT_INVALIDATION_SERVICE } from '../../src/shared/constants';
 
 describe('CachePlugin', () => {
@@ -9,7 +10,7 @@ describe('CachePlugin', () => {
 
     // When/Then
     expect(plugin.name).toBe('cache');
-    expect(plugin.version).toBe('0.1.0');
+    expect(plugin.version).toBe(version);
     expect(plugin.description).toContain('caching');
   });
 

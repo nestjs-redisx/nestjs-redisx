@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { IdempotencyPlugin } from '../../src/idempotency.plugin';
+import { version } from '../../package.json';
 import { IDEMPOTENCY_PLUGIN_OPTIONS, IDEMPOTENCY_SERVICE, IDEMPOTENCY_STORE } from '../../src/shared/constants';
 
 describe('IdempotencyPlugin', () => {
@@ -9,7 +10,7 @@ describe('IdempotencyPlugin', () => {
 
     // Then
     expect(plugin.name).toBe('idempotency');
-    expect(plugin.version).toBe('0.1.0');
+    expect(plugin.version).toBe(version);
     expect(plugin.description).toContain('deduplication');
   });
 
