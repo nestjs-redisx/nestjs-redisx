@@ -76,14 +76,27 @@ jobs:
           REDIS_HOST: localhost
           REDIS_PORT: 6379
 
+      - name: Debug coverage output
+        if: matrix.node == 20
+        run: |
+          echo "=== coverage/ root ==="
+          ls -la ./coverage/ || echo "No coverage directory!"
+          echo "=== looking for reports ==="
+          find ./coverage -maxdepth 1 -type f | head -20
+          echo "=== .tmp file count ==="
+          ls ./coverage/.tmp/ 2>/dev/null | wc -l || echo "No .tmp dir"
+
+      - name: Remove raw V8 thread data
+        if: matrix.node == 20
+        run: rm -rf ./coverage/.tmp
+
       - name: Upload coverage to Codecov
         if: matrix.node == 20
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info
-          disable_search: true
           fail_ci_if_error: false
+          verbose: true
 
       - name: Test summary
         if: always()
