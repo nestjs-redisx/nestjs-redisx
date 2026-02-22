@@ -1,6 +1,6 @@
 {
   "name": "@nestjs-redisx/monorepo",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "description": "Best-in-class Redis module for NestJS with plugin architecture",
   "workspaces": [

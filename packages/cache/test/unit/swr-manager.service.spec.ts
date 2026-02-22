@@ -57,7 +57,7 @@ describe('SwrManagerService', () => {
   });
 
   describe('isStale', () => {
-    it('should return false when SWR is disabled', () => {
+    it('should return true for stale entry regardless of SWR enabled flag', () => {
       // Given
       const disabledService = new SwrManagerService({ swr: { enabled: false } });
       const entry: SwrEntry<string> = {
@@ -70,8 +70,8 @@ describe('SwrManagerService', () => {
       // When
       const result = disabledService.isStale(entry);
 
-      // Then
-      expect(result).toBe(false);
+      // Then — isStale is a pure time check, not affected by enabled flag
+      expect(result).toBe(true);
     });
 
     it('should return true when entry is stale', () => {

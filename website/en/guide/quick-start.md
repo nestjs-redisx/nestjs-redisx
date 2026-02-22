@@ -43,56 +43,53 @@ Update `app.module.ts` with the RedisX configuration:
 import { Module } from '@nestjs/common';
 import { RedisModule } from '@nestjs-redisx/core';
 import { CachePlugin } from '@nestjs-redisx/cache';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
-    RedisModule.forRoot({
-      clients: {
-        host: 'localhost',
-        port: 6379,
-      },
+    RedisModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
       plugins: [
-        new CachePlugin({
-          l1: {
-            enabled: true,
-            maxSize: 1000,
-            ttl: 60000,
-          },
-          l2: {
-            enabled: true,
-            defaultTtl: 3600,
-          },
+        CachePlugin.registerAsync({
+          imports: [ConfigModule],
+          inject: [ConfigService],
+          useFactory: (config: ConfigService) => ({
+            l1: {
+              enabled: true,
+              maxSize: config.get('CACHE_L1_MAX_SIZE', 1000),
+            },
+            l2: {
+              enabled: true,
+              defaultTtl: config.get('CACHE_L2_TTL', 3600),
+            },
+          }),
         }),
       ],
+      useFactory: (config: ConfigService) => ({
+        clients: {
+          host: config.get('REDIS_HOST', 'localhost'),
+          port: config.get('REDIS_PORT', 6379),
+          password: config.get('REDIS_PASSWORD'),
+        },
+      }),
     }),
   ],
 })
 export class AppModule {}
 ```
 
-::: tip Production Configuration
-For production deployments, use `forRootAsync` with environment variables. Plugins also support `registerAsync()` for DI-based configuration:
+::: tip Quick Prototyping
+For local development or quick prototyping, you can use static configuration with `forRoot`:
 ```typescript
-RedisModule.forRootAsync({
-  imports: [ConfigModule],
-  inject: [ConfigService],
+RedisModule.forRoot({
+  clients: { host: 'localhost', port: 6379 },
   plugins: [
-    CachePlugin.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        l1: { maxSize: config.get('CACHE_L1_MAX_SIZE', 1000) },
-        l2: { defaultTtl: config.get('CACHE_L2_TTL', 3600) },
-      }),
+    new CachePlugin({
+      l1: { enabled: true, maxSize: 1000 },
+      l2: { enabled: true, defaultTtl: 3600 },
     }),
   ],
-  useFactory: (config: ConfigService) => ({
-    clients: {
-      host: config.get('REDIS_HOST'),
-      port: config.get('REDIS_PORT'),
-      password: config.get('REDIS_PASSWORD'),
-    },
-  }),
 });
 ```
 :::
