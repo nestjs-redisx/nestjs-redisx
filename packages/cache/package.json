@@ -1,6 +1,6 @@
 {
   "name": "@nestjs-redisx/cache",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Advanced caching plugin for NestJS RedisX with L1+L2, anti-stampede, SWR, and tag invalidation",
   "author": "NestJS RedisX Team",
   "license": "MIT",
