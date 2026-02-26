@@ -668,9 +668,9 @@ describe('@Cached decorator', () => {
       await svc.find({ role: 'admin', status: 'active' });
       const key2 = mockCacheService.getOrSet.mock.calls[0][0];
 
-      // Then
+      // Then — same key regardless of property order, uses hash (no JSON special chars)
       expect(key1).toBe(key2);
-      expect(key1).toBe('items:{"role":"admin","status":"active"}');
+      expect(key1).toMatch(/^items:[a-f0-9]{16}$/);
     });
 
     it('should skip undefined values in objects (matches JSON.stringify)', async () => {
@@ -704,13 +704,18 @@ describe('@Cached decorator', () => {
         }
       }
 
-      // When
+      // When — [1, undefined, 3] and [1, null, 3] should produce same key
       const svc = new Svc();
       await svc.find([1, undefined, 3]);
-      const key = mockCacheService.getOrSet.mock.calls[0][0];
+      const key1 = mockCacheService.getOrSet.mock.calls[0][0];
 
-      // Then -- undefined becomes null in arrays, same as JSON.stringify
-      expect(key).toBe('items:[1,null,3]');
+      mockCacheService.getOrSet.mockClear();
+      await svc.find([1, null, 3]);
+      const key2 = mockCacheService.getOrSet.mock.calls[0][0];
+
+      // Then -- undefined becomes null in arrays (same as JSON.stringify), both hash equally
+      expect(key1).toBe(key2);
+      expect(key1).toMatch(/^items:[a-f0-9]{16}$/);
     });
 
     it('should handle arrays in object args deterministically', async () => {
@@ -733,6 +738,25 @@ describe('@Cached decorator', () => {
 
       // Then — same key (keys sorted, array order preserved)
       expect(key1).toBe(key2);
+    });
+
+    it('should produce CacheKey-valid keys for object arguments', async () => {
+      // Given — this is the P1 bug: object args used to generate JSON with {}",
+      // which failed CacheKey validation and silently disabled caching
+      class Svc {
+        @Cached()
+        async find(filter: Record<string, unknown>) {
+          return [];
+        }
+      }
+
+      // When
+      const svc = new Svc();
+      await svc.find({ status: 'active', role: 'admin' });
+      const key = mockCacheService.getOrSet.mock.calls[0][0] as string;
+
+      // Then — key must only contain CacheKey-valid characters
+      expect(key).toMatch(/^[a-zA-Z0-9\-_:.]+$/);
     });
 
     it('should not pass unless to getOrSet when not configured', async () => {

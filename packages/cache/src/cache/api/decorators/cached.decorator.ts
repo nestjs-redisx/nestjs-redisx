@@ -5,6 +5,8 @@
  * Works on ANY Injectable class methods (services, repositories, etc).
  */
 
+import { createHash } from 'crypto';
+
 import { Logger } from '@nestjs/common';
 import 'reflect-metadata';
 import { CACHE_OPTIONS_KEY } from '../../../shared/constants';
@@ -348,7 +350,9 @@ function interpolateKey(template: string, args: unknown[]): string {
 
 /**
  * Serializes argument to string for cache key.
- * Objects are serialized with sorted keys for deterministic output.
+ * Primitives are used as-is. Objects are deterministically stringified
+ * and then hashed (SHA-256, first 16 hex chars) to produce short,
+ * CacheKey-valid strings without special characters.
  */
 function serializeArg(arg: unknown): string {
   if (arg === null || arg === undefined) {
@@ -361,13 +365,22 @@ function serializeArg(arg: unknown): string {
 
   if (typeof arg === 'object') {
     try {
-      return stableStringify(arg);
+      const stable = stableStringify(arg);
+      return hashForKey(stable);
     } catch {
       return 'object';
     }
   }
 
   return 'unknown';
+}
+
+/**
+ * Produces a short, deterministic, CacheKey-safe hash from a string.
+ * Uses SHA-256 truncated to 16 hex chars (64 bits).
+ */
+function hashForKey(input: string): string {
+  return createHash('sha256').update(input).digest('hex').slice(0, 16);
 }
 
 /**
