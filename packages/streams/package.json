@@ -1,6 +1,6 @@
 {
   "name": "@nestjs-redisx/streams",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Redis Streams plugin for NestJS RedisX with consumer groups, dead-letter queues, and backpressure",
   "author": "NestJS RedisX Team",
   "license": "MIT",

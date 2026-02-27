@@ -1,6 +1,6 @@
 {
   "name": "@nestjs-redisx/idempotency",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Idempotency plugin for NestJS RedisX with request deduplication and response replay",
   "author": "NestJS RedisX Team",
   "license": "MIT",
