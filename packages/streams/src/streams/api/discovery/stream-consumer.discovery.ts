@@ -14,10 +14,10 @@ export class StreamConsumerDiscovery implements OnModuleInit {
   private readonly handles: IConsumerHandle[] = [];
 
   constructor(
-    @Optional() private readonly discoveryService: DiscoveryService | null,
+    @Optional() @Inject(DiscoveryService) private readonly discoveryService: DiscoveryService | null,
     @Inject(STREAM_CONSUMER) private readonly consumerService: IStreamConsumer,
-    private readonly reflector: Reflector,
-    private readonly moduleRef: ModuleRef,
+    @Inject(Reflector) private readonly reflector: Reflector,
+    @Inject(ModuleRef) private readonly moduleRef: ModuleRef,
   ) {}
 
   async onModuleInit(): Promise<void> {

@@ -20,7 +20,7 @@ export class CacheDecoratorInitializerService implements OnModuleInit {
   private readonly logger = new Logger(CacheDecoratorInitializerService.name);
 
   constructor(
-    private readonly moduleRef: ModuleRef,
+    @Inject(ModuleRef) private readonly moduleRef: ModuleRef,
     @Inject(CACHE_SERVICE) private readonly cacheService: ICacheService,
     @Inject(CACHE_PLUGIN_OPTIONS) private readonly pluginOptions: ICachePluginOptions,
     @Optional() @Inject(EVENT_INVALIDATION_SERVICE) private readonly eventInvalidationService?: IEventInvalidationService,

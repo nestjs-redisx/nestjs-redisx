@@ -22,7 +22,7 @@ export class PluginRegistryService implements OnModuleInit, OnModuleDestroy {
     @Inject(REGISTERED_PLUGINS) private readonly plugins: IRedisXPlugin[],
     @Inject(CLIENT_MANAGER) private readonly clientManager: RedisClientManager,
     @Inject(REDIS_MODULE_OPTIONS) private readonly options: IRedisModuleOptions,
-    private readonly moduleRef: ModuleRef,
+    @Inject(ModuleRef) private readonly moduleRef: ModuleRef,
   ) {}
 
   async onModuleInit(): Promise<void> {
