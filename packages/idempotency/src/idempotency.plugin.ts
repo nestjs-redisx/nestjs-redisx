@@ -5,7 +5,7 @@
 
 import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { IRedisXPlugin, IPluginAsyncOptions, CLIENT_MANAGER, RedisClientManager } from '@nestjs-redisx/core';
+import { IRedisXPlugin, IPluginAsyncOptions, CLIENT_MANAGER, REDIS_CLIENTS_INITIALIZATION, RedisClientManager } from '@nestjs-redisx/core';
 
 import { version } from '../package.json';
 import { IdempotencyInterceptor } from './idempotency/api/interceptors/idempotency.interceptor';
@@ -107,10 +107,15 @@ export class IdempotencyPlugin implements IRedisXPlugin {
       // Plugin-specific Redis driver (resolves named client)
       {
         provide: IDEMPOTENCY_REDIS_DRIVER,
-        useFactory: async (manager: RedisClientManager, options: IIdempotencyPluginOptions) => {
-          return await manager.getClient(options.client ?? 'default');
+        useFactory: async (manager: RedisClientManager, _init: void, options: IIdempotencyPluginOptions) => {
+          const clientName = options.client ?? 'default';
+          try {
+            return await manager.getClient(clientName);
+          } catch (error) {
+            throw new Error(`IdempotencyPlugin: Redis client "${clientName}" not found. ` + `Available clients are configured in RedisModule.forRoot({ clients: { ... } }). ` + `Either add a "${clientName}" client or remove the "client" option to use the default connection.`);
+          }
         },
-        inject: [CLIENT_MANAGER, IDEMPOTENCY_PLUGIN_OPTIONS],
+        inject: [CLIENT_MANAGER, REDIS_CLIENTS_INITIALIZATION, IDEMPOTENCY_PLUGIN_OPTIONS],
       },
       { provide: IDEMPOTENCY_STORE, useClass: RedisIdempotencyStoreAdapter },
       { provide: IDEMPOTENCY_SERVICE, useClass: IdempotencyService },

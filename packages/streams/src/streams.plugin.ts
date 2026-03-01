@@ -4,7 +4,7 @@
  */
 
 import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
-import { IRedisXPlugin, IPluginAsyncOptions, CLIENT_MANAGER, RedisClientManager } from '@nestjs-redisx/core';
+import { IRedisXPlugin, IPluginAsyncOptions, CLIENT_MANAGER, REDIS_CLIENTS_INITIALIZATION, RedisClientManager } from '@nestjs-redisx/core';
 
 import { version } from '../package.json';
 import { STREAMS_PLUGIN_OPTIONS, STREAMS_REDIS_DRIVER, STREAM_PRODUCER, STREAM_CONSUMER, DEAD_LETTER_SERVICE } from './shared/constants';
@@ -125,10 +125,15 @@ export class StreamsPlugin implements IRedisXPlugin {
       // Plugin-specific Redis driver (resolves named client)
       {
         provide: STREAMS_REDIS_DRIVER,
-        useFactory: async (manager: RedisClientManager, options: IStreamsPluginOptions) => {
-          return await manager.getClient(options.client ?? 'default');
+        useFactory: async (manager: RedisClientManager, _init: void, options: IStreamsPluginOptions) => {
+          const clientName = options.client ?? 'default';
+          try {
+            return await manager.getClient(clientName);
+          } catch (error) {
+            throw new Error(`StreamsPlugin: Redis client "${clientName}" not found. ` + `Available clients are configured in RedisModule.forRoot({ clients: { ... } }). ` + `Either add a "${clientName}" client or remove the "client" option to use the default connection.`);
+          }
         },
-        inject: [CLIENT_MANAGER, STREAMS_PLUGIN_OPTIONS],
+        inject: [CLIENT_MANAGER, REDIS_CLIENTS_INITIALIZATION, STREAMS_PLUGIN_OPTIONS],
       },
       { provide: DEAD_LETTER_SERVICE, useClass: DeadLetterService },
       { provide: STREAM_PRODUCER, useClass: StreamProducerService },

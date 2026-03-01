@@ -5,7 +5,7 @@
 
 import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { IRedisXPlugin, IPluginAsyncOptions, CLIENT_MANAGER, RedisClientManager } from '@nestjs-redisx/core';
+import { IRedisXPlugin, IPluginAsyncOptions, CLIENT_MANAGER, REDIS_CLIENTS_INITIALIZATION, RedisClientManager } from '@nestjs-redisx/core';
 
 import { version } from '../package.json';
 import { LOCKS_PLUGIN_OPTIONS, LOCK_REDIS_DRIVER, LOCK_SERVICE, LOCK_STORE } from './shared/constants';
@@ -105,10 +105,15 @@ export class LocksPlugin implements IRedisXPlugin {
       // Plugin-specific Redis driver (resolves named client)
       {
         provide: LOCK_REDIS_DRIVER,
-        useFactory: async (manager: RedisClientManager, options: ILocksPluginOptions) => {
-          return await manager.getClient(options.client ?? 'default');
+        useFactory: async (manager: RedisClientManager, _init: void, options: ILocksPluginOptions) => {
+          const clientName = options.client ?? 'default';
+          try {
+            return await manager.getClient(clientName);
+          } catch (error) {
+            throw new Error(`LocksPlugin: Redis client "${clientName}" not found. ` + `Available clients are configured in RedisModule.forRoot({ clients: { ... } }). ` + `Either add a "${clientName}" client or remove the "client" option to use the default connection.`);
+          }
         },
-        inject: [CLIENT_MANAGER, LOCKS_PLUGIN_OPTIONS],
+        inject: [CLIENT_MANAGER, REDIS_CLIENTS_INITIALIZATION, LOCKS_PLUGIN_OPTIONS],
       },
 
       // Store adapter

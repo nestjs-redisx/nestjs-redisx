@@ -5,7 +5,7 @@
 
 import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { IRedisXPlugin, IPluginAsyncOptions, CLIENT_MANAGER, RedisClientManager } from '@nestjs-redisx/core';
+import { IRedisXPlugin, IPluginAsyncOptions, CLIENT_MANAGER, REDIS_CLIENTS_INITIALIZATION, RedisClientManager } from '@nestjs-redisx/core';
 
 import { version } from '../package.json';
 import { CacheDecoratorInitializerService } from './cache/application/services/cache-decorator-initializer.service';
@@ -96,10 +96,15 @@ export class CachePlugin implements IRedisXPlugin {
       // Plugin-specific Redis driver (resolves named client)
       {
         provide: CACHE_REDIS_DRIVER,
-        useFactory: async (manager: RedisClientManager, options: ICachePluginOptions) => {
-          return await manager.getClient(options.client ?? 'default');
+        useFactory: async (manager: RedisClientManager, _init: void, options: ICachePluginOptions) => {
+          const clientName = options.client ?? 'default';
+          try {
+            return await manager.getClient(clientName);
+          } catch (error) {
+            throw new Error(`CachePlugin: Redis client "${clientName}" not found. ` + `Available clients are configured in RedisModule.forRoot({ clients: { ... } }). ` + `Either add a "${clientName}" client or remove the "client" option to use the default connection.`);
+          }
         },
-        inject: [CLIENT_MANAGER, CACHE_PLUGIN_OPTIONS],
+        inject: [CLIENT_MANAGER, REDIS_CLIENTS_INITIALIZATION, CACHE_PLUGIN_OPTIONS],
       },
 
       // Domain services

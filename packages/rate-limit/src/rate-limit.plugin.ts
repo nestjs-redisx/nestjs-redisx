@@ -5,7 +5,7 @@
 
 import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
 import { APP_FILTER, Reflector } from '@nestjs/core';
-import { IRedisXPlugin, IPluginAsyncOptions, CLIENT_MANAGER, RedisClientManager } from '@nestjs-redisx/core';
+import { IRedisXPlugin, IPluginAsyncOptions, CLIENT_MANAGER, REDIS_CLIENTS_INITIALIZATION, RedisClientManager } from '@nestjs-redisx/core';
 
 import { version } from '../package.json';
 import { RateLimitExceptionFilter } from './rate-limit/api/filters/rate-limit-exception.filter';
@@ -114,10 +114,15 @@ export class RateLimitPlugin implements IRedisXPlugin {
       // Plugin-specific Redis driver (resolves named client)
       {
         provide: RATE_LIMIT_REDIS_DRIVER,
-        useFactory: async (manager: RedisClientManager, options: IRateLimitPluginOptions) => {
-          return await manager.getClient(options.client ?? 'default');
+        useFactory: async (manager: RedisClientManager, _init: void, options: IRateLimitPluginOptions) => {
+          const clientName = options.client ?? 'default';
+          try {
+            return await manager.getClient(clientName);
+          } catch (error) {
+            throw new Error(`RateLimitPlugin: Redis client "${clientName}" not found. ` + `Available clients are configured in RedisModule.forRoot({ clients: { ... } }). ` + `Either add a "${clientName}" client or remove the "client" option to use the default connection.`);
+          }
         },
-        inject: [CLIENT_MANAGER, RATE_LIMIT_PLUGIN_OPTIONS],
+        inject: [CLIENT_MANAGER, REDIS_CLIENTS_INITIALIZATION, RATE_LIMIT_PLUGIN_OPTIONS],
       },
       { provide: RATE_LIMIT_STORE, useClass: RedisRateLimitStoreAdapter },
       { provide: RATE_LIMIT_SERVICE, useClass: RateLimitService },
