@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { CachePlugin } from '../../src/cache.plugin';
 import { version } from '../../package.json';
-import { CACHE_PLUGIN_OPTIONS, CACHE_SERVICE, L1_CACHE_STORE, L2_CACHE_STORE, SERIALIZER, STAMPEDE_PROTECTION, TAG_INDEX, SWR_MANAGER, LUA_SCRIPT_LOADER, INVALIDATION_REGISTRY, EVENT_INVALIDATION_SERVICE } from '../../src/shared/constants';
+import { CACHE_PLUGIN_OPTIONS, CACHE_REDIS_DRIVER, CACHE_SERVICE, L1_CACHE_STORE, L2_CACHE_STORE, SERIALIZER, STAMPEDE_PROTECTION, TAG_INDEX, SWR_MANAGER, LUA_SCRIPT_LOADER, INVALIDATION_REGISTRY, EVENT_INVALIDATION_SERVICE } from '../../src/shared/constants';
+import { CLIENT_MANAGER, REDIS_CLIENTS_INITIALIZATION } from '@nestjs-redisx/core';
 
 describe('CachePlugin', () => {
   it('should have correct metadata', () => {
@@ -237,6 +238,79 @@ describe('CachePlugin', () => {
       const configProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === CACHE_PLUGIN_OPTIONS);
       const config = (configProvider as any).useValue;
       expect(config.invalidation?.rules).toEqual([]);
+    });
+  });
+
+  describe('per-plugin client selection', () => {
+    it('should include CACHE_REDIS_DRIVER provider in getProviders()', () => {
+      // Given
+      const plugin = new CachePlugin();
+
+      // When
+      const providers = plugin.getProviders();
+      const driverProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === CACHE_REDIS_DRIVER);
+
+      // Then
+      expect(driverProvider).toBeDefined();
+      expect(driverProvider).toHaveProperty('useFactory');
+      expect((driverProvider as any).inject).toContain(CLIENT_MANAGER);
+      expect((driverProvider as any).inject).toContain(REDIS_CLIENTS_INITIALIZATION);
+      expect((driverProvider as any).inject).toContain(CACHE_PLUGIN_OPTIONS);
+    });
+
+    it('should use default client name when client option not specified', () => {
+      // Given
+      const plugin = new CachePlugin();
+
+      // When
+      const providers = plugin.getProviders();
+      const configProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === CACHE_PLUGIN_OPTIONS);
+
+      // Then
+      expect((configProvider as any).useValue.client).toBeUndefined();
+    });
+
+    it('should pass custom client name through options', () => {
+      // Given
+      const plugin = new CachePlugin({ client: 'cache-dedicated' });
+
+      // When
+      const providers = plugin.getProviders();
+      const configProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === CACHE_PLUGIN_OPTIONS);
+
+      // Then
+      expect((configProvider as any).useValue.client).toBe('cache-dedicated');
+    });
+
+    it('should work with registerAsync and preserve client option', async () => {
+      // Given
+      const plugin = CachePlugin.registerAsync({
+        useFactory: () => ({ client: 'async-cache' }),
+      });
+
+      // When
+      const providers = plugin.getProviders();
+      const configProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === CACHE_PLUGIN_OPTIONS);
+      const config = await (configProvider as any).useFactory();
+
+      // Then
+      expect(config.client).toBe('async-cache');
+    });
+
+    it('should throw descriptive error when client name is invalid', async () => {
+      // Given
+      const plugin = new CachePlugin({ client: 'nonexistent' });
+      const providers = plugin.getProviders();
+      const driverProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === CACHE_REDIS_DRIVER);
+      const factory = (driverProvider as any).useFactory;
+      const mockManager = {
+        getClient: () => {
+          throw new Error('Client not found');
+        },
+      };
+
+      // When/Then
+      await expect(factory(mockManager, undefined, { client: 'nonexistent' })).rejects.toThrow('CachePlugin: Redis client "nonexistent" not found');
     });
   });
 });

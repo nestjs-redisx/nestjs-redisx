@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { LocksPlugin } from '../../src/locks.plugin';
 import { version } from '../../package.json';
-import { LOCKS_PLUGIN_OPTIONS, LOCK_SERVICE, LOCK_STORE } from '../../src/shared/constants';
+import { LOCKS_PLUGIN_OPTIONS, LOCK_SERVICE, LOCK_STORE, LOCK_REDIS_DRIVER } from '../../src/shared/constants';
 import { LockService } from '../../src/lock/application/services/lock.service';
 import { RedisLockStoreAdapter } from '../../src/lock/infrastructure/adapters/redis-lock-store.adapter';
+import { CLIENT_MANAGER, REDIS_CLIENTS_INITIALIZATION } from '@nestjs-redisx/core';
 import type { ILocksPluginOptions } from '../../src/shared/types';
 
 describe('LocksPlugin', () => {
@@ -307,6 +308,79 @@ describe('LocksPlugin', () => {
 
       // Then
       expect(plugin).toBeInstanceOf(LocksPlugin);
+    });
+  });
+
+  describe('per-plugin client selection', () => {
+    it('should include LOCK_REDIS_DRIVER provider in getProviders()', () => {
+      // Given
+      const plugin = new LocksPlugin();
+
+      // When
+      const providers = plugin.getProviders();
+      const driverProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === LOCK_REDIS_DRIVER);
+
+      // Then
+      expect(driverProvider).toBeDefined();
+      expect(driverProvider).toHaveProperty('useFactory');
+      expect((driverProvider as any).inject).toContain(CLIENT_MANAGER);
+      expect((driverProvider as any).inject).toContain(REDIS_CLIENTS_INITIALIZATION);
+      expect((driverProvider as any).inject).toContain(LOCKS_PLUGIN_OPTIONS);
+    });
+
+    it('should use default client name when client option not specified', () => {
+      // Given
+      const plugin = new LocksPlugin();
+
+      // When
+      const providers = plugin.getProviders();
+      const configProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === LOCKS_PLUGIN_OPTIONS);
+
+      // Then
+      expect((configProvider as any).useValue.client).toBeUndefined();
+    });
+
+    it('should pass custom client name through options', () => {
+      // Given
+      const plugin = new LocksPlugin({ client: 'locks-dedicated' });
+
+      // When
+      const providers = plugin.getProviders();
+      const configProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === LOCKS_PLUGIN_OPTIONS);
+
+      // Then
+      expect((configProvider as any).useValue.client).toBe('locks-dedicated');
+    });
+
+    it('should work with registerAsync and preserve client option', async () => {
+      // Given
+      const plugin = LocksPlugin.registerAsync({
+        useFactory: () => ({ client: 'async-locks' }),
+      });
+
+      // When
+      const providers = plugin.getProviders();
+      const configProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === LOCKS_PLUGIN_OPTIONS);
+      const config = await (configProvider as any).useFactory();
+
+      // Then
+      expect(config.client).toBe('async-locks');
+    });
+
+    it('should throw descriptive error when client name is invalid', async () => {
+      // Given
+      const plugin = new LocksPlugin({ client: 'nonexistent' });
+      const providers = plugin.getProviders();
+      const driverProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === LOCK_REDIS_DRIVER);
+      const factory = (driverProvider as any).useFactory;
+      const mockManager = {
+        getClient: () => {
+          throw new Error('Client not found');
+        },
+      };
+
+      // When/Then
+      await expect(factory(mockManager, undefined, { client: 'nonexistent' })).rejects.toThrow('LocksPlugin: Redis client "nonexistent" not found');
     });
   });
 });

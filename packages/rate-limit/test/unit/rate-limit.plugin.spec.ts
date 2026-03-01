@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { RateLimitPlugin } from '../../src/rate-limit.plugin';
 import { version } from '../../package.json';
-import { RATE_LIMIT_PLUGIN_OPTIONS, RATE_LIMIT_SERVICE, RATE_LIMIT_STORE } from '../../src/shared/constants';
+import { RATE_LIMIT_PLUGIN_OPTIONS, RATE_LIMIT_SERVICE, RATE_LIMIT_STORE, RATE_LIMIT_REDIS_DRIVER } from '../../src/shared/constants';
 import { RateLimitService } from '../../src/rate-limit/application/services/rate-limit.service';
 import { RedisRateLimitStoreAdapter } from '../../src/rate-limit/infrastructure/adapters/redis-rate-limit-store.adapter';
+import { CLIENT_MANAGER, REDIS_CLIENTS_INITIALIZATION } from '@nestjs-redisx/core';
 import type { IRateLimitPluginOptions } from '../../src/shared/types';
 
 describe('RateLimitPlugin', () => {
@@ -208,6 +209,79 @@ describe('RateLimitPlugin', () => {
       expect(exports).toHaveLength(3);
       expect(exports).toContain(RATE_LIMIT_PLUGIN_OPTIONS);
       expect(exports).toContain(RATE_LIMIT_SERVICE);
+    });
+  });
+
+  describe('per-plugin client selection', () => {
+    it('should include RATE_LIMIT_REDIS_DRIVER provider in getProviders()', () => {
+      // Given
+      const plugin = new RateLimitPlugin();
+
+      // When
+      const providers = plugin.getProviders();
+      const driverProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === RATE_LIMIT_REDIS_DRIVER);
+
+      // Then
+      expect(driverProvider).toBeDefined();
+      expect(driverProvider).toHaveProperty('useFactory');
+      expect((driverProvider as any).inject).toContain(CLIENT_MANAGER);
+      expect((driverProvider as any).inject).toContain(REDIS_CLIENTS_INITIALIZATION);
+      expect((driverProvider as any).inject).toContain(RATE_LIMIT_PLUGIN_OPTIONS);
+    });
+
+    it('should use default client name when client option not specified', () => {
+      // Given
+      const plugin = new RateLimitPlugin();
+
+      // When
+      const providers = plugin.getProviders();
+      const configProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === RATE_LIMIT_PLUGIN_OPTIONS);
+
+      // Then
+      expect((configProvider as any).useValue.client).toBeUndefined();
+    });
+
+    it('should pass custom client name through options', () => {
+      // Given
+      const plugin = new RateLimitPlugin({ client: 'ratelimit-dedicated' });
+
+      // When
+      const providers = plugin.getProviders();
+      const configProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === RATE_LIMIT_PLUGIN_OPTIONS);
+
+      // Then
+      expect((configProvider as any).useValue.client).toBe('ratelimit-dedicated');
+    });
+
+    it('should work with registerAsync and preserve client option', async () => {
+      // Given
+      const plugin = RateLimitPlugin.registerAsync({
+        useFactory: () => ({ client: 'async-ratelimit' }),
+      });
+
+      // When
+      const providers = plugin.getProviders();
+      const configProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === RATE_LIMIT_PLUGIN_OPTIONS);
+      const config = await (configProvider as any).useFactory();
+
+      // Then
+      expect(config.client).toBe('async-ratelimit');
+    });
+
+    it('should throw descriptive error when client name is invalid', async () => {
+      // Given
+      const plugin = new RateLimitPlugin({ client: 'nonexistent' });
+      const providers = plugin.getProviders();
+      const driverProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === RATE_LIMIT_REDIS_DRIVER);
+      const factory = (driverProvider as any).useFactory;
+      const mockManager = {
+        getClient: () => {
+          throw new Error('Client not found');
+        },
+      };
+
+      // When/Then
+      await expect(factory(mockManager, undefined, { client: 'nonexistent' })).rejects.toThrow('RateLimitPlugin: Redis client "nonexistent" not found');
     });
   });
 });

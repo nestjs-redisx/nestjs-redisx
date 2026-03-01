@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { StreamsPlugin } from '../../src/streams.plugin';
 import { version } from '../../package.json';
-import { STREAMS_PLUGIN_OPTIONS, STREAM_PRODUCER, STREAM_CONSUMER, DEAD_LETTER_SERVICE } from '../../src/shared/constants';
+import { STREAMS_PLUGIN_OPTIONS, STREAM_PRODUCER, STREAM_CONSUMER, DEAD_LETTER_SERVICE, STREAMS_REDIS_DRIVER } from '../../src/shared/constants';
+import { CLIENT_MANAGER, REDIS_CLIENTS_INITIALIZATION } from '@nestjs-redisx/core';
 
 describe('StreamsPlugin', () => {
   it('should have correct metadata', () => {
@@ -184,6 +185,79 @@ describe('StreamsPlugin', () => {
       dlq: { enabled: false },
       retry: { maxRetries: 10 },
       trim: { maxLen: 200000 },
+    });
+  });
+
+  describe('per-plugin client selection', () => {
+    it('should include STREAMS_REDIS_DRIVER provider in getProviders()', () => {
+      // Given
+      const plugin = new StreamsPlugin();
+
+      // When
+      const providers = plugin.getProviders();
+      const driverProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === STREAMS_REDIS_DRIVER);
+
+      // Then
+      expect(driverProvider).toBeDefined();
+      expect(driverProvider).toHaveProperty('useFactory');
+      expect((driverProvider as any).inject).toContain(CLIENT_MANAGER);
+      expect((driverProvider as any).inject).toContain(REDIS_CLIENTS_INITIALIZATION);
+      expect((driverProvider as any).inject).toContain(STREAMS_PLUGIN_OPTIONS);
+    });
+
+    it('should use default client name when client option not specified', () => {
+      // Given
+      const plugin = new StreamsPlugin();
+
+      // When
+      const providers = plugin.getProviders();
+      const configProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === STREAMS_PLUGIN_OPTIONS);
+
+      // Then
+      expect((configProvider as any).useValue.client).toBeUndefined();
+    });
+
+    it('should pass custom client name through options', () => {
+      // Given
+      const plugin = new StreamsPlugin({ client: 'streams-dedicated' });
+
+      // When
+      const providers = plugin.getProviders();
+      const configProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === STREAMS_PLUGIN_OPTIONS);
+
+      // Then
+      expect((configProvider as any).useValue.client).toBe('streams-dedicated');
+    });
+
+    it('should work with registerAsync and preserve client option', async () => {
+      // Given
+      const plugin = StreamsPlugin.registerAsync({
+        useFactory: () => ({ client: 'async-streams' }),
+      });
+
+      // When
+      const providers = plugin.getProviders();
+      const configProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === STREAMS_PLUGIN_OPTIONS);
+      const config = await (configProvider as any).useFactory();
+
+      // Then
+      expect(config.client).toBe('async-streams');
+    });
+
+    it('should throw descriptive error when client name is invalid', async () => {
+      // Given
+      const plugin = new StreamsPlugin({ client: 'nonexistent' });
+      const providers = plugin.getProviders();
+      const driverProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === STREAMS_REDIS_DRIVER);
+      const factory = (driverProvider as any).useFactory;
+      const mockManager = {
+        getClient: () => {
+          throw new Error('Client not found');
+        },
+      };
+
+      // When/Then
+      await expect(factory(mockManager, undefined, { client: 'nonexistent' })).rejects.toThrow('StreamsPlugin: Redis client "nonexistent" not found');
     });
   });
 });
