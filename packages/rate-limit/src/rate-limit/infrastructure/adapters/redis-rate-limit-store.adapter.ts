@@ -1,6 +1,7 @@
 import { Injectable, Inject, OnModuleInit } from '@nestjs/common';
-import { IRedisDriver, REDIS_DRIVER } from '@nestjs-redisx/core';
+import { IRedisDriver } from '@nestjs-redisx/core';
 
+import { RATE_LIMIT_REDIS_DRIVER } from '../../../shared/constants';
 import { RateLimitScriptError } from '../../../shared/errors';
 import { IRateLimitResult } from '../../../shared/types';
 import { IRateLimitStore } from '../../application/ports/rate-limit-store.port';
@@ -16,7 +17,7 @@ export class RedisRateLimitStoreAdapter implements IRateLimitStore, OnModuleInit
   private slidingWindowSha: string | null = null;
   private tokenBucketSha: string | null = null;
 
-  constructor(@Inject(REDIS_DRIVER) private readonly driver: IRedisDriver) {}
+  constructor(@Inject(RATE_LIMIT_REDIS_DRIVER) private readonly driver: IRedisDriver) {}
 
   /**
    * Pre-load Lua scripts on module initialization.

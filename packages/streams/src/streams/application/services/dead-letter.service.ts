@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { REDIS_DRIVER, IRedisDriver } from '@nestjs-redisx/core';
+import { IRedisDriver } from '@nestjs-redisx/core';
 
-import { STREAMS_PLUGIN_OPTIONS } from '../../../shared/constants';
+import { STREAMS_REDIS_DRIVER, STREAMS_PLUGIN_OPTIONS } from '../../../shared/constants';
 import { IStreamsPluginOptions, IDlqMessage } from '../../../shared/types';
 import { IDeadLetterService } from '../ports/dead-letter.port';
 
@@ -11,7 +11,7 @@ const DEFAULT_DLQ_FETCH_COUNT = 100;
 @Injectable()
 export class DeadLetterService implements IDeadLetterService {
   constructor(
-    @Inject(REDIS_DRIVER) private readonly driver: IRedisDriver,
+    @Inject(STREAMS_REDIS_DRIVER) private readonly driver: IRedisDriver,
     @Inject(STREAMS_PLUGIN_OPTIONS)
     private readonly config: IStreamsPluginOptions,
   ) {}

@@ -238,8 +238,8 @@ describe('LocksPlugin', () => {
       const providers = plugin.getProviders();
 
       // Then
-      // 3 config/store/service + Reflector + LockDecoratorInitializerService
-      expect(providers).toHaveLength(5);
+      // 3 config/store/service + driver + Reflector + LockDecoratorInitializerService
+      expect(providers).toHaveLength(6);
     });
   });
 

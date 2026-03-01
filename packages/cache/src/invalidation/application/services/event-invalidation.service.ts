@@ -7,10 +7,10 @@ import { createHash } from 'crypto';
 import { EventEmitter } from 'events';
 
 import { Injectable, Inject, Logger, OnModuleInit } from '@nestjs/common';
-import { REDIS_DRIVER, IRedisDriver } from '@nestjs-redisx/core';
+import { IRedisDriver } from '@nestjs-redisx/core';
 
 import { ICacheService } from '../../../cache/application/ports/cache-service.port';
-import { CACHE_PLUGIN_OPTIONS, CACHE_SERVICE, INVALIDATION_REGISTRY } from '../../../shared/constants';
+import { CACHE_REDIS_DRIVER, CACHE_PLUGIN_OPTIONS, CACHE_SERVICE, INVALIDATION_REGISTRY } from '../../../shared/constants';
 import { ICachePluginOptions } from '../../../shared/types';
 import { IEventInvalidationService, InvalidationHandler, IInvalidationResult } from '../ports/event-invalidation.port';
 import { IInvalidationRegistry } from '../ports/invalidation-registry.port';
@@ -25,7 +25,7 @@ export class EventInvalidationService implements IEventInvalidationService, OnMo
     @Inject(INVALIDATION_REGISTRY)
     private readonly registry: IInvalidationRegistry,
     @Inject(CACHE_SERVICE) private readonly cacheService: ICacheService,
-    @Inject(REDIS_DRIVER) private readonly driver: IRedisDriver,
+    @Inject(CACHE_REDIS_DRIVER) private readonly driver: IRedisDriver,
     @Inject(CACHE_PLUGIN_OPTIONS) private readonly config: ICachePluginOptions,
   ) {}
 

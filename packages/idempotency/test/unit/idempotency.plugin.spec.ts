@@ -51,8 +51,8 @@ describe('IdempotencyPlugin', () => {
     const providers = plugin.getProviders();
 
     // Then
-    // Options, Store, Service, Reflector, IdempotencyInterceptor
-    expect(providers).toHaveLength(5);
+    // Options, Driver, Store, Service, Reflector, IdempotencyInterceptor
+    expect(providers).toHaveLength(6);
   });
 
   it('should export service and interceptor', () => {

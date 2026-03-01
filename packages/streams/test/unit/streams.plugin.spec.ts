@@ -145,8 +145,8 @@ describe('StreamsPlugin', () => {
     // When
     const providers = plugin.getProviders();
 
-    // Then
-    expect(providers).toHaveLength(5);
+    // Then (Options, Driver, DLQ, Producer, Consumer, Discovery)
+    expect(providers).toHaveLength(6);
   });
 
   it('should export producer, consumer, and DLQ service', () => {

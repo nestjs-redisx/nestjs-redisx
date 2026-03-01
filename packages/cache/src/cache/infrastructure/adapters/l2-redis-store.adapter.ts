@@ -3,9 +3,9 @@
  */
 
 import { Injectable, Inject } from '@nestjs/common';
-import { REDIS_DRIVER, IRedisDriver, ErrorCode } from '@nestjs-redisx/core';
+import { IRedisDriver, ErrorCode } from '@nestjs-redisx/core';
 
-import { CACHE_PLUGIN_OPTIONS, SERIALIZER } from '../../../shared/constants';
+import { CACHE_REDIS_DRIVER, CACHE_PLUGIN_OPTIONS, SERIALIZER } from '../../../shared/constants';
 import { CacheError } from '../../../shared/errors';
 import { ICachePluginOptions, ScanResult, SwrEntry } from '../../../shared/types';
 import { IL2CacheStore } from '../../application/ports/l2-cache-store.port';
@@ -23,7 +23,7 @@ export class L2RedisStoreAdapter implements IL2CacheStore {
   private misses = 0;
 
   constructor(
-    @Inject(REDIS_DRIVER) private readonly driver: IRedisDriver,
+    @Inject(CACHE_REDIS_DRIVER) private readonly driver: IRedisDriver,
     @Inject(CACHE_PLUGIN_OPTIONS) private readonly options: ICachePluginOptions,
     @Inject(SERIALIZER) private readonly serializer: Serializer,
   ) {

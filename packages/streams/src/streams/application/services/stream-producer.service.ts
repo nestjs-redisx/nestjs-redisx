@@ -1,7 +1,7 @@
 import { Injectable, Inject, Optional } from '@nestjs/common';
-import { REDIS_DRIVER, IRedisDriver } from '@nestjs-redisx/core';
+import { IRedisDriver } from '@nestjs-redisx/core';
 
-import { STREAMS_PLUGIN_OPTIONS } from '../../../shared/constants';
+import { STREAMS_REDIS_DRIVER, STREAMS_PLUGIN_OPTIONS } from '../../../shared/constants';
 import { StreamPublishError } from '../../../shared/errors';
 import { IStreamsPluginOptions, IPublishOptions, IStreamInfo } from '../../../shared/types';
 import { IStreamProducer } from '../ports/stream-producer.port';
@@ -18,7 +18,7 @@ interface IMetricsService {
 @Injectable()
 export class StreamProducerService implements IStreamProducer {
   constructor(
-    @Inject(REDIS_DRIVER) private readonly driver: IRedisDriver,
+    @Inject(STREAMS_REDIS_DRIVER) private readonly driver: IRedisDriver,
     @Inject(STREAMS_PLUGIN_OPTIONS)
     private readonly config: IStreamsPluginOptions,
     @Optional() @Inject(METRICS_SERVICE) private readonly metrics?: IMetricsService,

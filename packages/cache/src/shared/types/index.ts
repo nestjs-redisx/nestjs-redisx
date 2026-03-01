@@ -11,6 +11,9 @@ export interface ICachePluginOptions {
   /** Make module global */
   isGlobal?: boolean; // default: false
 
+  /** Named Redis client to use. @default 'default' */
+  client?: string;
+
   /** L1 in-memory cache config */
   l1?: {
     enabled?: boolean; // default: true

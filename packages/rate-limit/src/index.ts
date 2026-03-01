@@ -23,7 +23,7 @@ export type { IRateLimitPluginOptions, RateLimitConfig, RateLimitResult, RateLim
 export { RateLimitError, RateLimitExceededError, RateLimitScriptError } from './shared/errors';
 
 // Constants
-export { RATE_LIMIT_PLUGIN_OPTIONS, RATE_LIMIT_SERVICE, RATE_LIMIT_STORE } from './shared/constants';
+export { RATE_LIMIT_PLUGIN_OPTIONS, RATE_LIMIT_REDIS_DRIVER, RATE_LIMIT_SERVICE, RATE_LIMIT_STORE } from './shared/constants';
 
 // Strategies
 export type { IRateLimitStrategy, IStrategyConfig } from './rate-limit/domain/strategies/rate-limit-strategy.interface';

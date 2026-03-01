@@ -10,6 +10,9 @@ export interface IIdempotencyPluginOptions {
    */
   isGlobal?: boolean;
 
+  /** Named Redis client to use. @default 'default' */
+  client?: string;
+
   /** Default TTL for idempotency records in seconds. @default 86400 (24 hours) */
   defaultTtl?: number;
 

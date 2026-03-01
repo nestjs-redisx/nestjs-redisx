@@ -18,4 +18,4 @@ export type { ILocksPluginOptions, LocksPluginOptions, ILockOptions } from './sh
 export { LockError, LockAcquisitionError, LockNotOwnedError, LockExtensionError, LockExpiredError } from './shared/errors';
 
 // Constants
-export { LOCK_SERVICE, LOCKS_PLUGIN_OPTIONS } from './shared/constants';
+export { LOCK_SERVICE, LOCK_REDIS_DRIVER, LOCKS_PLUGIN_OPTIONS } from './shared/constants';

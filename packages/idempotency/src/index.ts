@@ -21,4 +21,4 @@ export type { IIdempotencyPluginOptions, IIdempotencyRecord, IIdempotencyCheckRe
 export { IdempotencyError, IdempotencyKeyRequiredError, IdempotencyFingerprintMismatchError, IdempotencyTimeoutError, IdempotencyFailedError, IdempotencyRecordNotFoundError } from './shared/errors';
 
 // Constants
-export { IDEMPOTENCY_PLUGIN_OPTIONS, IDEMPOTENCY_SERVICE, IDEMPOTENCY_STORE } from './shared/constants';
+export { IDEMPOTENCY_PLUGIN_OPTIONS, IDEMPOTENCY_REDIS_DRIVER, IDEMPOTENCY_SERVICE, IDEMPOTENCY_STORE } from './shared/constants';

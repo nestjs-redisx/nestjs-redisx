@@ -21,6 +21,12 @@ export const INVALIDATION_RULES_INIT = Symbol.for('INVALIDATION_RULES_INIT');
 export const AMQP_CONNECTION = Symbol.for('AMQP_CONNECTION');
 
 /**
+ * Plugin-specific Redis driver token.
+ * Resolves to the named client specified in plugin options.
+ */
+export const CACHE_REDIS_DRIVER = Symbol.for('CACHE_REDIS_DRIVER');
+
+/**
  * Metadata keys for decorators.
  */
 export const CACHE_OPTIONS_KEY = 'cache:options';

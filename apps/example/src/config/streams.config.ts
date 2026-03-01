@@ -8,6 +8,7 @@ import { IStreamsPluginOptions } from '@nestjs-redisx/streams';
 export const streamsConfig = (
   config: ConfigService,
 ): IStreamsPluginOptions => ({
+  client: 'streams',
   consumer: {
     batchSize: 10,
     blockTimeout: 5000,

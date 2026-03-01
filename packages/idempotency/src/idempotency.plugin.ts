@@ -5,16 +5,16 @@
 
 import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { IRedisXPlugin, IPluginAsyncOptions } from '@nestjs-redisx/core';
+import { IRedisXPlugin, IPluginAsyncOptions, CLIENT_MANAGER, RedisClientManager } from '@nestjs-redisx/core';
 
 import { version } from '../package.json';
 import { IdempotencyInterceptor } from './idempotency/api/interceptors/idempotency.interceptor';
 import { IdempotencyService } from './idempotency/application/services/idempotency.service';
 import { RedisIdempotencyStoreAdapter } from './idempotency/infrastructure/adapters/redis-idempotency-store.adapter';
-import { IDEMPOTENCY_PLUGIN_OPTIONS, IDEMPOTENCY_SERVICE, IDEMPOTENCY_STORE } from './shared/constants';
+import { IDEMPOTENCY_PLUGIN_OPTIONS, IDEMPOTENCY_REDIS_DRIVER, IDEMPOTENCY_SERVICE, IDEMPOTENCY_STORE } from './shared/constants';
 import { IIdempotencyPluginOptions } from './shared/types';
 
-const DEFAULT_IDEMPOTENCY_CONFIG: Required<Omit<IIdempotencyPluginOptions, 'isGlobal' | 'fingerprintGenerator'>> = {
+const DEFAULT_IDEMPOTENCY_CONFIG: Required<Omit<IIdempotencyPluginOptions, 'isGlobal' | 'client' | 'fingerprintGenerator'>> = {
   defaultTtl: 86400,
   keyPrefix: 'idempotency:',
   headerName: 'Idempotency-Key',
@@ -70,6 +70,7 @@ export class IdempotencyPlugin implements IRedisXPlugin {
 
   private static mergeDefaults(options: IIdempotencyPluginOptions): IIdempotencyPluginOptions {
     return {
+      client: options.client,
       defaultTtl: options.defaultTtl ?? DEFAULT_IDEMPOTENCY_CONFIG.defaultTtl,
       keyPrefix: options.keyPrefix ?? DEFAULT_IDEMPOTENCY_CONFIG.keyPrefix,
       headerName: options.headerName ?? DEFAULT_IDEMPOTENCY_CONFIG.headerName,
@@ -103,6 +104,14 @@ export class IdempotencyPlugin implements IRedisXPlugin {
 
     return [
       optionsProvider,
+      // Plugin-specific Redis driver (resolves named client)
+      {
+        provide: IDEMPOTENCY_REDIS_DRIVER,
+        useFactory: async (manager: RedisClientManager, options: IIdempotencyPluginOptions) => {
+          return await manager.getClient(options.client ?? 'default');
+        },
+        inject: [CLIENT_MANAGER, IDEMPOTENCY_PLUGIN_OPTIONS],
+      },
       { provide: IDEMPOTENCY_STORE, useClass: RedisIdempotencyStoreAdapter },
       { provide: IDEMPOTENCY_SERVICE, useClass: IdempotencyService },
       // Reflector is needed for @Idempotent decorator metadata

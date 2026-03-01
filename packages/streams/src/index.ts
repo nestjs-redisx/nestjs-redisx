@@ -24,4 +24,4 @@ export type { IStreamsPluginOptions, IStreamsPluginOptions as StreamsPluginOptio
 export { StreamError, StreamPublishError, StreamConsumeError, StreamGroupError } from './shared/errors';
 
 // Constants
-export { STREAM_PRODUCER, STREAM_CONSUMER, DEAD_LETTER_SERVICE, STREAMS_PLUGIN_OPTIONS } from './shared/constants';
+export { STREAM_PRODUCER, STREAM_CONSUMER, DEAD_LETTER_SERVICE, STREAMS_PLUGIN_OPTIONS, STREAMS_REDIS_DRIVER } from './shared/constants';

@@ -4,17 +4,17 @@
  */
 
 import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
-import { IRedisXPlugin, IPluginAsyncOptions } from '@nestjs-redisx/core';
+import { IRedisXPlugin, IPluginAsyncOptions, CLIENT_MANAGER, RedisClientManager } from '@nestjs-redisx/core';
 
 import { version } from '../package.json';
-import { STREAMS_PLUGIN_OPTIONS, STREAM_PRODUCER, STREAM_CONSUMER, DEAD_LETTER_SERVICE } from './shared/constants';
+import { STREAMS_PLUGIN_OPTIONS, STREAMS_REDIS_DRIVER, STREAM_PRODUCER, STREAM_CONSUMER, DEAD_LETTER_SERVICE } from './shared/constants';
 import { IStreamsPluginOptions } from './shared/types';
 import { StreamConsumerDiscovery } from './streams/api/discovery/stream-consumer.discovery';
 import { DeadLetterService } from './streams/application/services/dead-letter.service';
 import { StreamConsumerService } from './streams/application/services/stream-consumer.service';
 import { StreamProducerService } from './streams/application/services/stream-producer.service';
 
-const DEFAULT_STREAMS_CONFIG: Required<Omit<IStreamsPluginOptions, 'isGlobal'>> = {
+const DEFAULT_STREAMS_CONFIG: Required<Omit<IStreamsPluginOptions, 'isGlobal' | 'client'>> = {
   keyPrefix: 'stream:',
   consumer: {
     batchSize: 10,
@@ -91,6 +91,7 @@ export class StreamsPlugin implements IRedisXPlugin {
 
   private static mergeDefaults(options: IStreamsPluginOptions): IStreamsPluginOptions {
     return {
+      client: options.client,
       keyPrefix: options.keyPrefix ?? DEFAULT_STREAMS_CONFIG.keyPrefix,
       consumer: { ...DEFAULT_STREAMS_CONFIG.consumer, ...options.consumer },
       producer: { ...DEFAULT_STREAMS_CONFIG.producer, ...options.producer },
@@ -119,7 +120,21 @@ export class StreamsPlugin implements IRedisXPlugin {
           useValue: StreamsPlugin.mergeDefaults(this.options),
         };
 
-    return [optionsProvider, { provide: DEAD_LETTER_SERVICE, useClass: DeadLetterService }, { provide: STREAM_PRODUCER, useClass: StreamProducerService }, { provide: STREAM_CONSUMER, useClass: StreamConsumerService }, StreamConsumerDiscovery];
+    return [
+      optionsProvider,
+      // Plugin-specific Redis driver (resolves named client)
+      {
+        provide: STREAMS_REDIS_DRIVER,
+        useFactory: async (manager: RedisClientManager, options: IStreamsPluginOptions) => {
+          return await manager.getClient(options.client ?? 'default');
+        },
+        inject: [CLIENT_MANAGER, STREAMS_PLUGIN_OPTIONS],
+      },
+      { provide: DEAD_LETTER_SERVICE, useClass: DeadLetterService },
+      { provide: STREAM_PRODUCER, useClass: StreamProducerService },
+      { provide: STREAM_CONSUMER, useClass: StreamConsumerService },
+      StreamConsumerDiscovery,
+    ];
   }
 
   getExports(): Array<string | symbol | Provider> {

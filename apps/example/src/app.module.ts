@@ -110,7 +110,9 @@ import { IntegrationDemoModule } from './demo/integration/integration-demo.modul
         }),
 
         // StreamsPlugin — Redis Streams with consumer groups and DLQ
+        // Uses dedicated 'streams' client to avoid blocking the shared connection
         new StreamsPlugin({
+          client: 'streams',
           consumer: { batchSize: 10 },
         }),
       ],

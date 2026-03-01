@@ -4,9 +4,9 @@
  */
 
 import { Injectable, Inject, Logger, Optional } from '@nestjs/common';
-import { REDIS_DRIVER, IRedisDriver, ErrorCode } from '@nestjs-redisx/core';
+import { IRedisDriver, ErrorCode } from '@nestjs-redisx/core';
 
-import { L1_CACHE_STORE, L2_CACHE_STORE, STAMPEDE_PROTECTION, TAG_INDEX, SWR_MANAGER, CACHE_PLUGIN_OPTIONS } from '../../../shared/constants';
+import { CACHE_REDIS_DRIVER, L1_CACHE_STORE, L2_CACHE_STORE, STAMPEDE_PROTECTION, TAG_INDEX, SWR_MANAGER, CACHE_PLUGIN_OPTIONS } from '../../../shared/constants';
 import { CacheError, CacheKeyError } from '../../../shared/errors';
 import { CacheSetOptions, CacheGetOrSetOptions, CacheStats, ICachePluginOptions } from '../../../shared/types';
 import { IStampedeProtection } from '../../../stampede/application/ports/stampede-protection.port';
@@ -56,7 +56,7 @@ export class CacheService implements ICacheService {
   private readonly keyPrefix: string;
 
   constructor(
-    @Inject(REDIS_DRIVER) private readonly driver: IRedisDriver,
+    @Inject(CACHE_REDIS_DRIVER) private readonly driver: IRedisDriver,
     @Inject(L1_CACHE_STORE) private readonly l1Store: IL1CacheStore,
     @Inject(L2_CACHE_STORE) private readonly l2Store: IL2CacheStore,
     @Inject(STAMPEDE_PROTECTION) private readonly stampede: IStampedeProtection,

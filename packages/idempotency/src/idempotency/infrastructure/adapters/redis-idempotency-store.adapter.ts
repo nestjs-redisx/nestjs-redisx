@@ -1,6 +1,7 @@
 import { Injectable, Inject, OnModuleInit } from '@nestjs/common';
-import { IRedisDriver, REDIS_DRIVER } from '@nestjs-redisx/core';
+import { IRedisDriver } from '@nestjs-redisx/core';
 
+import { IDEMPOTENCY_REDIS_DRIVER } from '../../../shared/constants';
 import { IIdempotencyRecord } from '../../../shared/types';
 import { IIdempotencyStore, ICheckAndLockResult, ICompleteData } from '../../application/ports/idempotency-store.port';
 import { CHECK_AND_LOCK_SCRIPT } from '../scripts/lua-scripts';
@@ -12,7 +13,7 @@ import { CHECK_AND_LOCK_SCRIPT } from '../scripts/lua-scripts';
 export class RedisIdempotencyStoreAdapter implements IIdempotencyStore, OnModuleInit {
   private checkAndLockSha: string | null = null;
 
-  constructor(@Inject(REDIS_DRIVER) private readonly driver: IRedisDriver) {}
+  constructor(@Inject(IDEMPOTENCY_REDIS_DRIVER) private readonly driver: IRedisDriver) {}
 
   /**
    * Pre-load Lua script on module initialization

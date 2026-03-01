@@ -7,9 +7,9 @@
  */
 
 import { Injectable, Inject, Logger } from '@nestjs/common';
-import { REDIS_DRIVER, IRedisDriver } from '@nestjs-redisx/core';
+import { IRedisDriver } from '@nestjs-redisx/core';
 
-import { CACHE_PLUGIN_OPTIONS } from '../../shared/constants';
+import { CACHE_REDIS_DRIVER, CACHE_PLUGIN_OPTIONS } from '../../shared/constants';
 import { StampedeError, LoaderError } from '../../shared/errors';
 import { ICachePluginOptions, IStampedeResult, IStampedeStats } from '../../shared/types';
 import { IStampedeProtection } from '../application/ports/stampede-protection.port';
@@ -48,7 +48,7 @@ export class StampedeProtectionService implements IStampedeProtection {
   constructor(
     @Inject(CACHE_PLUGIN_OPTIONS)
     private readonly options: ICachePluginOptions,
-    @Inject(REDIS_DRIVER)
+    @Inject(CACHE_REDIS_DRIVER)
     private readonly driver: IRedisDriver,
   ) {
     this.lockTimeout = options.stampede?.lockTimeout ?? 5000;

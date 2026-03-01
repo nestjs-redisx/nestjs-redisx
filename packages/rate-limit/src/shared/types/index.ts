@@ -17,6 +17,12 @@ export interface IRateLimitPluginOptions {
   isGlobal?: boolean;
 
   /**
+   * Named Redis client to use.
+   * @default 'default'
+   */
+  client?: string;
+
+  /**
    * Default algorithm.
    * @default 'sliding-window'
    */

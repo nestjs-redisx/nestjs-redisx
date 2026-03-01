@@ -5,6 +5,9 @@ export interface IStreamsPluginOptions {
    */
   isGlobal?: boolean;
 
+  /** Named Redis client to use. @default 'default' */
+  client?: string;
+
   keyPrefix?: string; // default: 'stream:'
 
   consumer?: {

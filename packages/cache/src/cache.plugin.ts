@@ -5,7 +5,7 @@
 
 import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { IRedisXPlugin, IPluginAsyncOptions } from '@nestjs-redisx/core';
+import { IRedisXPlugin, IPluginAsyncOptions, CLIENT_MANAGER, RedisClientManager } from '@nestjs-redisx/core';
 
 import { version } from '../package.json';
 import { CacheDecoratorInitializerService } from './cache/application/services/cache-decorator-initializer.service';
@@ -19,7 +19,7 @@ import { EventInvalidationService } from './invalidation/application/services/ev
 import { InvalidationRegistryService } from './invalidation/application/services/invalidation-registry.service';
 import { InvalidationRule } from './invalidation/domain/entities/invalidation-rule.entity';
 import { AMQPEventSourceAdapter } from './invalidation/infrastructure/adapters/amqp-event-source.adapter';
-import { CACHE_PLUGIN_OPTIONS, CACHE_SERVICE, DEFAULT_CACHE_CONFIG, INVALIDATION_REGISTRY, EVENT_INVALIDATION_SERVICE, INVALIDATION_RULES_INIT, L1_CACHE_STORE, L2_CACHE_STORE, STAMPEDE_PROTECTION, TAG_INDEX, SWR_MANAGER, SERIALIZER, LUA_SCRIPT_LOADER } from './shared/constants';
+import { CACHE_PLUGIN_OPTIONS, CACHE_REDIS_DRIVER, CACHE_SERVICE, DEFAULT_CACHE_CONFIG, INVALIDATION_REGISTRY, EVENT_INVALIDATION_SERVICE, INVALIDATION_RULES_INIT, L1_CACHE_STORE, L2_CACHE_STORE, STAMPEDE_PROTECTION, TAG_INDEX, SWR_MANAGER, SERIALIZER, LUA_SCRIPT_LOADER } from './shared/constants';
 import { ICachePluginOptions } from './shared/types';
 import { StampedeProtectionService } from './stampede/infrastructure/stampede-protection.service';
 import { SwrManagerService } from './swr/infrastructure/swr-manager.service';
@@ -58,6 +58,7 @@ export class CachePlugin implements IRedisXPlugin {
 
   private static mergeDefaults(options: ICachePluginOptions): ICachePluginOptions {
     return {
+      client: options.client,
       l1: { ...DEFAULT_CACHE_CONFIG.l1, ...options.l1 },
       l2: { ...DEFAULT_CACHE_CONFIG.l2, ...options.l2 },
       stampede: { ...DEFAULT_CACHE_CONFIG.stampede, ...options.stampede },
@@ -91,6 +92,15 @@ export class CachePlugin implements IRedisXPlugin {
 
     return [
       optionsProvider,
+
+      // Plugin-specific Redis driver (resolves named client)
+      {
+        provide: CACHE_REDIS_DRIVER,
+        useFactory: async (manager: RedisClientManager, options: ICachePluginOptions) => {
+          return await manager.getClient(options.client ?? 'default');
+        },
+        inject: [CLIENT_MANAGER, CACHE_PLUGIN_OPTIONS],
+      },
 
       // Domain services
       {

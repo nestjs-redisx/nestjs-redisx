@@ -179,8 +179,8 @@ describe('RateLimitPlugin', () => {
       const providers = plugin.getProviders();
 
       // Then
-      // Options, Store, Service, Reflector, RateLimitGuard, ExceptionFilter
-      expect(providers).toHaveLength(6);
+      // Options, Driver, Store, Service, Reflector, RateLimitGuard, ExceptionFilter
+      expect(providers).toHaveLength(7);
     });
   });
 

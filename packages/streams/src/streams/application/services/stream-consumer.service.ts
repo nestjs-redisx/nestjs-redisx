@@ -1,8 +1,8 @@
 import { Injectable, Inject, OnModuleDestroy, Optional } from '@nestjs/common';
-import { REDIS_DRIVER, IRedisDriver } from '@nestjs-redisx/core';
+import { IRedisDriver } from '@nestjs-redisx/core';
 
 import { ConsumerInstance } from './consumer-instance';
-import { STREAMS_PLUGIN_OPTIONS, DEAD_LETTER_SERVICE } from '../../../shared/constants';
+import { STREAMS_REDIS_DRIVER, STREAMS_PLUGIN_OPTIONS, DEAD_LETTER_SERVICE } from '../../../shared/constants';
 import { IStreamsPluginOptions, MessageHandler, IConsumeOptions, IConsumerHandle, IPendingInfo, IStreamMessage } from '../../../shared/types';
 import { IDeadLetterService } from '../ports/dead-letter.port';
 import { IStreamConsumer } from '../ports/stream-consumer.port';
@@ -21,7 +21,7 @@ export class StreamConsumerService implements IStreamConsumer, OnModuleDestroy {
   private readonly consumers = new Map<string, ConsumerInstance<unknown>>();
 
   constructor(
-    @Inject(REDIS_DRIVER) private readonly driver: IRedisDriver,
+    @Inject(STREAMS_REDIS_DRIVER) private readonly driver: IRedisDriver,
     @Inject(STREAMS_PLUGIN_OPTIONS)
     private readonly config: IStreamsPluginOptions,
     @Inject(DEAD_LETTER_SERVICE) private readonly dlqService: IDeadLetterService,

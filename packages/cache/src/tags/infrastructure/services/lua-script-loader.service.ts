@@ -7,7 +7,9 @@
  */
 
 import { Injectable, Inject, OnModuleInit, Logger } from '@nestjs/common';
-import { REDIS_DRIVER, IRedisDriver } from '@nestjs-redisx/core';
+import { IRedisDriver } from '@nestjs-redisx/core';
+
+import { CACHE_REDIS_DRIVER } from '../../../shared/constants';
 
 import { ADD_KEY_TO_TAGS_SCRIPT, INVALIDATE_TAG_SCRIPT } from '../scripts/lua-scripts';
 
@@ -24,7 +26,7 @@ export class LuaScriptLoader implements OnModuleInit {
   private readonly logger = new Logger(LuaScriptLoader.name);
   private readonly scriptShas = new Map<string, string>();
 
-  constructor(@Inject(REDIS_DRIVER) private readonly driver: IRedisDriver) {}
+  constructor(@Inject(CACHE_REDIS_DRIVER) private readonly driver: IRedisDriver) {}
 
   async onModuleInit(): Promise<void> {
     await this.loadScripts();

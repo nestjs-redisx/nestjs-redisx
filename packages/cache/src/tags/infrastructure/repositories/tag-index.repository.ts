@@ -4,11 +4,11 @@
  */
 
 import { Injectable, Inject } from '@nestjs/common';
-import { REDIS_DRIVER, IRedisDriver } from '@nestjs-redisx/core';
+import { IRedisDriver } from '@nestjs-redisx/core';
 
 import { Tag } from '../../../cache/domain/value-objects/tag.vo';
 import { Tags } from '../../../cache/domain/value-objects/tags.vo';
-import { CACHE_PLUGIN_OPTIONS, LUA_SCRIPT_LOADER } from '../../../shared/constants';
+import { CACHE_REDIS_DRIVER, CACHE_PLUGIN_OPTIONS, LUA_SCRIPT_LOADER } from '../../../shared/constants';
 import { TagInvalidationError } from '../../../shared/errors';
 import { ICachePluginOptions } from '../../../shared/types';
 import { ITagIndex } from '../../application/ports/tag-index.port';
@@ -22,7 +22,7 @@ export class TagIndexRepository implements ITagIndex {
   private readonly tagPrefix: string;
 
   constructor(
-    @Inject(REDIS_DRIVER) private readonly driver: IRedisDriver,
+    @Inject(CACHE_REDIS_DRIVER) private readonly driver: IRedisDriver,
     @Inject(CACHE_PLUGIN_OPTIONS) private readonly options: ICachePluginOptions,
     @Inject(LUA_SCRIPT_LOADER) private readonly luaLoader: LuaScriptLoader,
   ) {

@@ -1,6 +1,7 @@
 import { Injectable, Inject, OnModuleInit } from '@nestjs/common';
-import { IRedisDriver, REDIS_DRIVER } from '@nestjs-redisx/core';
+import { IRedisDriver } from '@nestjs-redisx/core';
 
+import { LOCK_REDIS_DRIVER } from '../../../shared/constants';
 import { ILockStore } from '../../application/ports/lock-store.port';
 import { RELEASE_LOCK_SCRIPT, EXTEND_LOCK_SCRIPT } from '../scripts/lua-scripts';
 
@@ -16,7 +17,7 @@ export class RedisLockStoreAdapter implements ILockStore, OnModuleInit {
   private releaseSha: string | null = null;
   private extendSha: string | null = null;
 
-  constructor(@Inject(REDIS_DRIVER) private readonly driver: IRedisDriver) {}
+  constructor(@Inject(LOCK_REDIS_DRIVER) private readonly driver: IRedisDriver) {}
 
   /**
    * Lifecycle hook: loads Lua scripts into Redis on initialization.

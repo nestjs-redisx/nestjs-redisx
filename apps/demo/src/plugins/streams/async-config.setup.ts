@@ -11,6 +11,7 @@ import { StreamsPlugin } from '@nestjs-redisx/streams';
       inject: [ConfigService],
       plugins: [
         new StreamsPlugin({
+          client: process.env.STREAMS_CLIENT || 'default',
           consumer: {
             batchSize: parseInt(process.env.STREAMS_BATCH_SIZE || '10', 10),
             concurrency: parseInt(process.env.STREAMS_CONCURRENCY || '1', 10),

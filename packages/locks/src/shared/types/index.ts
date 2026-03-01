@@ -4,6 +4,12 @@
  */
 export interface ILocksPluginOptions {
   /**
+   * Named Redis client to use.
+   * @default 'default'
+   */
+  client?: string;
+
+  /**
    * Default TTL for locks in milliseconds
    * @default 30000
    */

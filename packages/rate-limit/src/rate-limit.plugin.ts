@@ -5,17 +5,17 @@
 
 import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
 import { APP_FILTER, Reflector } from '@nestjs/core';
-import { IRedisXPlugin, IPluginAsyncOptions } from '@nestjs-redisx/core';
+import { IRedisXPlugin, IPluginAsyncOptions, CLIENT_MANAGER, RedisClientManager } from '@nestjs-redisx/core';
 
 import { version } from '../package.json';
 import { RateLimitExceptionFilter } from './rate-limit/api/filters/rate-limit-exception.filter';
 import { RateLimitGuard } from './rate-limit/api/guards/rate-limit.guard';
 import { RateLimitService } from './rate-limit/application/services/rate-limit.service';
 import { RedisRateLimitStoreAdapter } from './rate-limit/infrastructure/adapters/redis-rate-limit-store.adapter';
-import { RATE_LIMIT_PLUGIN_OPTIONS, RATE_LIMIT_SERVICE, RATE_LIMIT_STORE } from './shared/constants';
+import { RATE_LIMIT_PLUGIN_OPTIONS, RATE_LIMIT_REDIS_DRIVER, RATE_LIMIT_SERVICE, RATE_LIMIT_STORE } from './shared/constants';
 import { IRateLimitPluginOptions } from './shared/types';
 
-const DEFAULT_RATE_LIMIT_CONFIG: Required<Omit<IRateLimitPluginOptions, 'isGlobal' | 'skip' | 'errorFactory'>> = {
+const DEFAULT_RATE_LIMIT_CONFIG: Required<Omit<IRateLimitPluginOptions, 'isGlobal' | 'client' | 'skip' | 'errorFactory'>> = {
   defaultAlgorithm: 'sliding-window',
   defaultPoints: 100,
   defaultDuration: 60,
@@ -76,6 +76,7 @@ export class RateLimitPlugin implements IRedisXPlugin {
 
   private static mergeDefaults(options: IRateLimitPluginOptions): IRateLimitPluginOptions {
     return {
+      client: options.client,
       defaultAlgorithm: options.defaultAlgorithm ?? DEFAULT_RATE_LIMIT_CONFIG.defaultAlgorithm,
       defaultPoints: options.defaultPoints ?? DEFAULT_RATE_LIMIT_CONFIG.defaultPoints,
       defaultDuration: options.defaultDuration ?? DEFAULT_RATE_LIMIT_CONFIG.defaultDuration,
@@ -110,6 +111,14 @@ export class RateLimitPlugin implements IRedisXPlugin {
 
     return [
       optionsProvider,
+      // Plugin-specific Redis driver (resolves named client)
+      {
+        provide: RATE_LIMIT_REDIS_DRIVER,
+        useFactory: async (manager: RedisClientManager, options: IRateLimitPluginOptions) => {
+          return await manager.getClient(options.client ?? 'default');
+        },
+        inject: [CLIENT_MANAGER, RATE_LIMIT_PLUGIN_OPTIONS],
+      },
       { provide: RATE_LIMIT_STORE, useClass: RedisRateLimitStoreAdapter },
       { provide: RATE_LIMIT_SERVICE, useClass: RateLimitService },
       // Reflector is needed for @RateLimit decorator metadata

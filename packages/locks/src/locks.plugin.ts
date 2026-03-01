@@ -5,16 +5,16 @@
 
 import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { IRedisXPlugin, IPluginAsyncOptions } from '@nestjs-redisx/core';
+import { IRedisXPlugin, IPluginAsyncOptions, CLIENT_MANAGER, RedisClientManager } from '@nestjs-redisx/core';
 
 import { version } from '../package.json';
-import { LOCKS_PLUGIN_OPTIONS, LOCK_SERVICE, LOCK_STORE } from './shared/constants';
+import { LOCKS_PLUGIN_OPTIONS, LOCK_REDIS_DRIVER, LOCK_SERVICE, LOCK_STORE } from './shared/constants';
 import { ILocksPluginOptions } from './shared/types';
 import { LockDecoratorInitializerService } from './lock/application/services/lock-decorator-initializer.service';
 import { LockService } from './lock/application/services/lock.service';
 import { RedisLockStoreAdapter } from './lock/infrastructure/adapters/redis-lock-store.adapter';
 
-const DEFAULT_LOCKS_CONFIG: Required<Omit<ILocksPluginOptions, 'isGlobal'>> = {
+const DEFAULT_LOCKS_CONFIG: Required<Omit<ILocksPluginOptions, 'isGlobal' | 'client'>> = {
   defaultTtl: 30000,
   maxTtl: 300000,
   keyPrefix: '_lock:',
@@ -71,6 +71,7 @@ export class LocksPlugin implements IRedisXPlugin {
 
   private static mergeDefaults(options: ILocksPluginOptions): ILocksPluginOptions {
     return {
+      client: options.client,
       defaultTtl: options.defaultTtl ?? DEFAULT_LOCKS_CONFIG.defaultTtl,
       maxTtl: options.maxTtl ?? DEFAULT_LOCKS_CONFIG.maxTtl,
       keyPrefix: options.keyPrefix ?? DEFAULT_LOCKS_CONFIG.keyPrefix,
@@ -100,6 +101,15 @@ export class LocksPlugin implements IRedisXPlugin {
 
     return [
       optionsProvider,
+
+      // Plugin-specific Redis driver (resolves named client)
+      {
+        provide: LOCK_REDIS_DRIVER,
+        useFactory: async (manager: RedisClientManager, options: ILocksPluginOptions) => {
+          return await manager.getClient(options.client ?? 'default');
+        },
+        inject: [CLIENT_MANAGER, LOCKS_PLUGIN_OPTIONS],
+      },
 
       // Store adapter
       {

@@ -103,13 +103,25 @@ export const redisConfig = (config: ConfigService): IRedisModuleOptions => {
   }
 
   // Standalone (default)
+  // Named clients: 'default' for general use, 'streams' for blocking XREADGROUP
   return {
     clients: {
-      type: 'single',
-      host: config.get<string>('REDIS_HOST', 'localhost'),
-      port: config.get<number>('REDIS_PORT', 6379),
-      password: config.get<string>('REDIS_PASSWORD'),
-      db: config.get<number>('REDIS_DB', 0),
+      default: {
+        type: 'single' as const,
+        host: config.get<string>('REDIS_HOST', 'localhost'),
+        port: config.get<number>('REDIS_PORT', 6379),
+        password: config.get<string>('REDIS_PASSWORD'),
+        db: config.get<number>('REDIS_DB', 0),
+        commandTimeout: 5000,
+      },
+      streams: {
+        type: 'single' as const,
+        host: config.get<string>('REDIS_HOST', 'localhost'),
+        port: config.get<number>('REDIS_PORT', 6379),
+        password: config.get<string>('REDIS_PASSWORD'),
+        db: config.get<number>('REDIS_DB', 0),
+        commandTimeout: 30000,
+      },
     },
     global: {
       driver,
