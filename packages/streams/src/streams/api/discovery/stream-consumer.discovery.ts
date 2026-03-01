@@ -37,11 +37,12 @@ export class StreamConsumerDiscovery implements OnModuleInit {
 
       const prototype = Object.getPrototypeOf(instance);
       for (const methodName of Object.getOwnPropertyNames(prototype)) {
-        const method = prototype[methodName];
-        if (typeof method !== 'function') {
+        const descriptor = Object.getOwnPropertyDescriptor(prototype, methodName);
+        if (!descriptor || typeof descriptor.value !== 'function') {
           continue;
         }
 
+        const method = descriptor.value;
         const options = this.reflector.get<IStreamConsumerOptions & { methodName: string }>(STREAM_CONSUMER_METADATA, method);
         if (options) {
           await this.registerConsumer(instance, methodName, options);
