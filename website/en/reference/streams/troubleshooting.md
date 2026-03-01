@@ -413,6 +413,50 @@ RedisModule.forRoot({
 })
 ```
 
+## XREADGROUP Timeout Errors
+
+### Problem: Command "XREADGROUP" failed: Command timed out
+
+**Symptoms:**
+- Error: `CommandError: Command "XREADGROUP" failed: Command timed out`
+- Error loop in consumer logs
+- Messages not being consumed
+
+**Cause:**
+
+`XREADGROUP BLOCK 5000` is a blocking Redis command that holds the connection for up to 5 seconds. If your `commandTimeout` is <= `blockTimeout`, the command times out before it can return results.
+
+**Solution 1: Dedicated client (recommended)**
+
+Use a separate Redis connection for Streams with a higher `commandTimeout`:
+
+<<< @/apps/demo/src/plugins/streams/dedicated-client.setup.ts{typescript}
+
+**Solution 2: Adjust timeouts on shared connection**
+
+If you cannot use a dedicated client, ensure `commandTimeout > blockTimeout`:
+
+```typescript
+RedisModule.forRoot({
+  clients: {
+    host: 'localhost',
+    port: 6379,
+    commandTimeout: 10000,  // Must be > blockTimeout
+  },
+  plugins: [
+    new StreamsPlugin({
+      consumer: {
+        blockTimeout: 5000,  // Must be < commandTimeout
+      },
+    }),
+  ],
+})
+```
+
+::: warning
+Solution 2 increases timeout for ALL Redis operations, not just Streams. This can mask real timeout issues in cache/locks/rate-limit operations. Solution 1 (dedicated client) is strongly recommended for production.
+:::
+
 ## Performance Issues
 
 ### Problem: Slow message processing

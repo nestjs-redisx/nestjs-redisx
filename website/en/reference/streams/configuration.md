@@ -23,7 +23,24 @@ For type-safe configuration via NestJS DI:
 
 <<< @/apps/demo/src/plugins/streams/register-async.setup.ts{typescript}
 
+## Dedicated Redis Client
+
+`XREADGROUP BLOCK` holds the connection for the full `blockTimeout` duration. If Streams shares a connection with cache, locks, or rate limiting, blocking commands can trigger `commandTimeout` errors on the shared connection. A dedicated client with a higher `commandTimeout` isolates blocking commands from the rest of your application.
+
+<<< @/apps/demo/src/plugins/streams/dedicated-client.setup.ts{typescript}
+
+::: warning Timeout Configuration
+When using a shared connection (no `client` option), ensure `commandTimeout > blockTimeout` in your Redis config. Otherwise XREADGROUP will timeout before it can return results. Using a dedicated client is the recommended approach.
+:::
+
 ## Configuration Options
+
+### Plugin Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `client` | `string` | `'default'` | Named Redis client to use. Configure clients in `RedisModule.forRoot({ clients: { ... } })`. Use a dedicated client for Streams to avoid blocking the shared connection. |
+| `keyPrefix` | `string` | `'stream:'` | Prefix for all stream keys |
 
 ### Consumer Options
 
@@ -171,6 +188,9 @@ interface TrimOptions {
 
 ```typescript
 new StreamsPlugin({
+  // Use dedicated Redis client for blocking commands
+  client: 'streams',
+
   // Consumer configuration
   consumer: {
     batchSize: 50,

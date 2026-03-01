@@ -56,6 +56,28 @@ RedisModule.forRootAsync({
 
 <<< @/apps/demo/src/core/multiple-clients/client-manager-admin.usage.ts{typescript}
 
+## Per-Plugin Client Selection
+
+Any plugin that uses Redis can target a specific named client via the `client` option. This enables connection isolation between plugins — especially important for `StreamsPlugin`, which uses blocking `XREADGROUP` commands that can hold a connection for seconds at a time.
+
+<<< @/apps/demo/src/core/multiple-clients/plugin-clients.setup.ts{typescript}
+
+All plugins that connect to Redis support the `client` option:
+
+| Plugin | Token | Default |
+|--------|-------|---------|
+| CachePlugin | `CACHE_REDIS_DRIVER` | `'default'` |
+| LocksPlugin | `LOCK_REDIS_DRIVER` | `'default'` |
+| RateLimitPlugin | `RATE_LIMIT_REDIS_DRIVER` | `'default'` |
+| IdempotencyPlugin | `IDEMPOTENCY_REDIS_DRIVER` | `'default'` |
+| StreamsPlugin | `STREAMS_REDIS_DRIVER` | `'default'` |
+| MetricsPlugin | — | No Redis connection |
+| TracingPlugin | — | No Redis connection |
+
+::: tip
+If `client` is not specified, plugins use the `'default'` client. Existing configurations work without changes.
+:::
+
 ## Client Patterns
 
 ### Read/Write Separation
