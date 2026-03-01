@@ -1,6 +1,6 @@
 {
   "name": "@nestjs-redisx/core",
-  "version": "1.0.5",
+  "version": "1.1.0",
   "description": "Core module with driver abstraction and plugin system for NestJS RedisX",
   "author": "NestJS RedisX Contributors",
   "license": "MIT",
