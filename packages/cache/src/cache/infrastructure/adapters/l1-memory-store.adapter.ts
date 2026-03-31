@@ -73,7 +73,7 @@ export class L1MemoryStoreAdapter implements IL1CacheStore {
     if (existingNode) {
       // Update existing node
       existingNode.entry = entry;
-      existingNode.expiresAt = Date.now() + (ttl ?? this.defaultTtl);
+      existingNode.expiresAt = Date.now() + (ttl !== undefined ? ttl * 1000 : this.defaultTtl);
 
       if (this.evictionPolicy === 'lru') {
         this.moveToFront(existingNode);
@@ -92,7 +92,7 @@ export class L1MemoryStoreAdapter implements IL1CacheStore {
         entry,
         prev: null,
         next: this.head,
-        expiresAt: Date.now() + (ttl ?? this.defaultTtl),
+        expiresAt: Date.now() + (ttl !== undefined ? ttl * 1000 : this.defaultTtl),
         frequency: 1,
       };
 

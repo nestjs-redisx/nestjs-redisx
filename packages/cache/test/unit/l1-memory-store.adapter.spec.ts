@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { L1MemoryStoreAdapter } from '../../src/cache/infrastructure/adapters/l1-memory-store.adapter';
 
 describe('L1MemoryStoreAdapter', () => {
@@ -184,6 +184,70 @@ describe('L1MemoryStoreAdapter', () => {
       expect(key1?.value).toBe('value1'); // Still present
       expect(key2).toBeNull(); // Evicted
       expect(key4?.value).toBe('value4');
+    });
+  });
+
+  describe('TTL expiration', () => {
+    it('should expire entry after explicit ttl (in seconds)', async () => {
+      // Given
+      const ttlSeconds = 5;
+      await store.set('key1', 'value1', ttlSeconds);
+
+      // When — advance time past TTL
+      vi.spyOn(Date, 'now').mockReturnValue(Date.now() + ttlSeconds * 1000 + 1);
+      const result = await store.get('key1');
+
+      // Then
+      expect(result).toBeNull();
+      vi.restoreAllMocks();
+    });
+
+    it('should NOT expire entry before explicit ttl elapses', async () => {
+      // Given
+      const now = Date.now();
+      vi.spyOn(Date, 'now').mockReturnValue(now);
+      const ttlSeconds = 5;
+      await store.set('key1', 'value1', ttlSeconds);
+
+      // When — advance time to just before TTL
+      vi.spyOn(Date, 'now').mockReturnValue(now + ttlSeconds * 1000 - 1);
+      const result = await store.get('key1');
+
+      // Then
+      expect(result).not.toBeNull();
+      vi.restoreAllMocks();
+    });
+
+    it('should use defaultTtl when ttl not provided', async () => {
+      // Given — store has defaultTtl of 60s (from constructor)
+      const now = Date.now();
+      vi.spyOn(Date, 'now').mockReturnValue(now);
+      await store.set('key1', 'value1');
+
+      // When — advance time past defaultTtl
+      vi.spyOn(Date, 'now').mockReturnValue(now + 60 * 1000 + 1);
+      const result = await store.get('key1');
+
+      // Then
+      expect(result).toBeNull();
+      vi.restoreAllMocks();
+    });
+
+    it('should keep entry alive when updated with new ttl', async () => {
+      // Given
+      const now = Date.now();
+      vi.spyOn(Date, 'now').mockReturnValue(now);
+      await store.set('key1', 'value1', 5);
+
+      // When — update with longer ttl
+      vi.spyOn(Date, 'now').mockReturnValue(now + 3000);
+      await store.set('key1', 'value2', 10);
+
+      // Then — original ttl would have expired, but new ttl keeps it alive
+      vi.spyOn(Date, 'now').mockReturnValue(now + 8000);
+      const result = await store.get('key1');
+      expect(result).not.toBeNull();
+      vi.restoreAllMocks();
     });
   });
 
