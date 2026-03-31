@@ -284,4 +284,36 @@ describe('RateLimitPlugin', () => {
       await expect(factory(mockManager, undefined, { client: 'nonexistent' })).rejects.toThrow('RateLimitPlugin: Redis client "nonexistent" not found');
     });
   });
+
+  describe('registerAsync', () => {
+    it('should create plugin with async options', () => {
+      const plugin = RateLimitPlugin.registerAsync({ useFactory: () => ({}), inject: [] });
+      expect(plugin).toBeInstanceOf(RateLimitPlugin);
+      expect(plugin.name).toBe('rate-limit');
+    });
+
+    it('should return imports from async options', () => {
+      class ConfigModule {}
+      const plugin = RateLimitPlugin.registerAsync({ imports: [ConfigModule], useFactory: () => ({}), inject: [] } as any);
+      expect(plugin.getImports!()).toEqual([ConfigModule]);
+    });
+
+    it('should return empty imports when no async options', () => {
+      const plugin = new RateLimitPlugin();
+      expect(plugin.getImports!()).toEqual([]);
+    });
+
+    it('should return async provider with useFactory', async () => {
+      const plugin = RateLimitPlugin.registerAsync({
+        useFactory: () => ({ defaultPoints: 50 }),
+        inject: ['ConfigService'],
+      });
+      const providers = plugin.getProviders();
+      const optionsProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === RATE_LIMIT_PLUGIN_OPTIONS) as any;
+      expect(optionsProvider.useFactory).toBeDefined();
+      const result = await optionsProvider.useFactory({});
+      expect(result.defaultPoints).toBe(50);
+      expect(result.keyPrefix).toBe('rl:');
+    });
+  });
 });

@@ -383,4 +383,37 @@ describe('LocksPlugin', () => {
       await expect(factory(mockManager, undefined, { client: 'nonexistent' })).rejects.toThrow('LocksPlugin: Redis client "nonexistent" not found');
     });
   });
+
+  describe('registerAsync', () => {
+    it('should create plugin with async options', () => {
+      const plugin = LocksPlugin.registerAsync({ useFactory: () => ({}), inject: [] });
+      expect(plugin).toBeInstanceOf(LocksPlugin);
+      expect(plugin.name).toBe('locks');
+    });
+
+    it('should return imports from async options', () => {
+      class ConfigModule {}
+      const plugin = LocksPlugin.registerAsync({ imports: [ConfigModule], useFactory: () => ({}), inject: [] } as any);
+      expect(plugin.getImports!()).toEqual([ConfigModule]);
+    });
+
+    it('should return empty imports when no async options', () => {
+      const plugin = new LocksPlugin();
+      expect(plugin.getImports!()).toEqual([]);
+    });
+
+    it('should return async provider with useFactory', async () => {
+      const plugin = LocksPlugin.registerAsync({
+        useFactory: () => ({ defaultTtl: 5000 }),
+        inject: ['ConfigService'],
+      });
+      const providers = plugin.getProviders();
+      const optionsProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === LOCKS_PLUGIN_OPTIONS) as any;
+      expect(optionsProvider.useFactory).toBeDefined();
+      expect(optionsProvider.inject).toEqual(['ConfigService']);
+      const result = await optionsProvider.useFactory({});
+      expect(result.defaultTtl).toBe(5000);
+      expect(result.keyPrefix).toBe('_lock:');
+    });
+  });
 });

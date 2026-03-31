@@ -178,4 +178,89 @@ describe('MetricsPlugin', () => {
     // Then
     expect((config as any).useValue.collectInterval).toBe(30000);
   });
+
+  describe('registerAsync', () => {
+    it('should create plugin with async options', () => {
+      // Given
+      const asyncOptions = {
+        useFactory: () => ({ enabled: true }),
+        inject: [],
+      };
+
+      // When
+      const plugin = MetricsPlugin.registerAsync(asyncOptions as any);
+
+      // Then
+      expect(plugin).toBeInstanceOf(MetricsPlugin);
+      expect(plugin.name).toBe('metrics');
+    });
+
+    it('should return imports from async options', () => {
+      // Given
+      class ConfigModule {}
+      const asyncOptions = {
+        imports: [ConfigModule],
+        useFactory: () => ({ enabled: true }),
+        inject: [],
+      };
+      const plugin = MetricsPlugin.registerAsync(asyncOptions as any);
+
+      // When
+      const imports = plugin.getImports!();
+
+      // Then
+      expect(imports).toEqual([ConfigModule]);
+    });
+
+    it('should return empty imports when no async imports', () => {
+      // Given
+      const plugin = new MetricsPlugin();
+
+      // When
+      const imports = plugin.getImports!();
+
+      // Then
+      expect(imports).toEqual([]);
+    });
+
+    it('should default inject to empty array when not provided', async () => {
+      // Given
+      const plugin = MetricsPlugin.registerAsync({
+        useFactory: () => ({ enabled: true }),
+      } as any);
+
+      // When
+      const providers = plugin.getProviders();
+      const optionsProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === METRICS_PLUGIN_OPTIONS) as any;
+
+      // Then
+      expect(optionsProvider.inject).toEqual([]);
+    });
+
+    it('should return async provider with useFactory', async () => {
+      // Given
+      const asyncOptions = {
+        useFactory: (configService: any) => ({ enabled: false, prefix: 'async_' }),
+        inject: ['ConfigService'],
+      };
+      const plugin = MetricsPlugin.registerAsync(asyncOptions as any);
+
+      // When
+      const providers = plugin.getProviders();
+      const optionsProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === METRICS_PLUGIN_OPTIONS) as any;
+
+      // Then
+      expect(optionsProvider.useFactory).toBeDefined();
+      expect(optionsProvider.inject).toEqual(['ConfigService']);
+
+      // Verify factory merges defaults
+      const result = await optionsProvider.useFactory({});
+      expect(result).toMatchObject({
+        enabled: false,
+        prefix: 'async_',
+        exposeEndpoint: true,
+        endpoint: '/metrics',
+      });
+    });
+  });
 });

@@ -181,6 +181,91 @@ describe('TracingPlugin', () => {
     expect((config as any).useValue.pluginTracing).toBe(false);
   });
 
+  describe('registerAsync', () => {
+    it('should create plugin with async options', () => {
+      // Given
+      const asyncOptions = {
+        useFactory: () => ({ enabled: true }),
+        inject: [],
+      };
+
+      // When
+      const plugin = TracingPlugin.registerAsync(asyncOptions as any);
+
+      // Then
+      expect(plugin).toBeInstanceOf(TracingPlugin);
+      expect(plugin.name).toBe('tracing');
+    });
+
+    it('should return imports from async options', () => {
+      // Given
+      class ConfigModule {}
+      const asyncOptions = {
+        imports: [ConfigModule],
+        useFactory: () => ({ enabled: true }),
+        inject: [],
+      };
+      const plugin = TracingPlugin.registerAsync(asyncOptions as any);
+
+      // When
+      const imports = plugin.getImports!();
+
+      // Then
+      expect(imports).toEqual([ConfigModule]);
+    });
+
+    it('should return empty imports when no async options', () => {
+      // Given
+      const plugin = new TracingPlugin();
+
+      // When
+      const imports = plugin.getImports!();
+
+      // Then
+      expect(imports).toEqual([]);
+    });
+
+    it('should default inject to empty array when not provided', async () => {
+      // Given
+      const plugin = TracingPlugin.registerAsync({
+        useFactory: () => ({ enabled: true }),
+      } as any);
+
+      // When
+      const providers = plugin.getProviders();
+      const optionsProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === TRACING_PLUGIN_OPTIONS) as any;
+
+      // Then
+      expect(optionsProvider.inject).toEqual([]);
+    });
+
+    it('should return async provider with useFactory', async () => {
+      // Given
+      const asyncOptions = {
+        useFactory: () => ({ enabled: false, serviceName: 'async-svc' }),
+        inject: ['ConfigService'],
+      };
+      const plugin = TracingPlugin.registerAsync(asyncOptions as any);
+
+      // When
+      const providers = plugin.getProviders();
+      const optionsProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === TRACING_PLUGIN_OPTIONS) as any;
+
+      // Then
+      expect(optionsProvider.useFactory).toBeDefined();
+      expect(optionsProvider.inject).toEqual(['ConfigService']);
+
+      // Verify factory merges defaults
+      const result = await optionsProvider.useFactory();
+      expect(result).toMatchObject({
+        enabled: false,
+        serviceName: 'async-svc',
+        sampleRate: 1.0,
+        traceRedisCommands: true,
+      });
+    });
+  });
+
   it('should configure all options together', () => {
     // Given
     const plugin = new TracingPlugin({

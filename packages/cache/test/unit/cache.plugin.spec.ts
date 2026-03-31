@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { CachePlugin } from '../../src/cache.plugin';
 import { version } from '../../package.json';
-import { CACHE_PLUGIN_OPTIONS, CACHE_REDIS_DRIVER, CACHE_SERVICE, L1_CACHE_STORE, L2_CACHE_STORE, SERIALIZER, STAMPEDE_PROTECTION, TAG_INDEX, SWR_MANAGER, LUA_SCRIPT_LOADER, INVALIDATION_REGISTRY, EVENT_INVALIDATION_SERVICE } from '../../src/shared/constants';
+import { CACHE_PLUGIN_OPTIONS, CACHE_REDIS_DRIVER, CACHE_SERVICE, L1_CACHE_STORE, L2_CACHE_STORE, SERIALIZER, STAMPEDE_PROTECTION, TAG_INDEX, SWR_MANAGER, LUA_SCRIPT_LOADER, INVALIDATION_REGISTRY, INVALIDATION_RULES_INIT, EVENT_INVALIDATION_SERVICE } from '../../src/shared/constants';
 import { CLIENT_MANAGER, REDIS_CLIENTS_INITIALIZATION } from '@nestjs-redisx/core';
 
 describe('CachePlugin', () => {
@@ -238,6 +238,62 @@ describe('CachePlugin', () => {
       const configProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === CACHE_PLUGIN_OPTIONS);
       const config = (configProvider as any).useValue;
       expect(config.invalidation?.rules).toEqual([]);
+    });
+  });
+
+  describe('invalidation rules factory', () => {
+    it('should register rules when config has invalidation rules', () => {
+      // Given
+      const plugin = new CachePlugin({
+        invalidation: {
+          enabled: true,
+          rules: [{ event: 'user.updated', invalidateTags: ['users'] }],
+        },
+      });
+      const providers = plugin.getProviders();
+      const rulesProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === INVALIDATION_RULES_INIT) as any;
+      const mockRegistry = { registerMany: vi.fn() };
+
+      // When
+      const result = rulesProvider.useFactory(mockRegistry, {
+        invalidation: {
+          rules: [{ event: 'user.updated', invalidateTags: ['users'] }],
+        },
+      });
+
+      // Then
+      expect(result).toBe(true);
+      expect(mockRegistry.registerMany).toHaveBeenCalledWith(expect.any(Array));
+    });
+
+    it('should not register rules when config has no invalidation', () => {
+      // Given
+      const plugin = new CachePlugin();
+      const providers = plugin.getProviders();
+      const rulesProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === INVALIDATION_RULES_INIT) as any;
+      const mockRegistry = { registerMany: vi.fn() };
+
+      // When
+      const result = rulesProvider.useFactory(mockRegistry, {});
+
+      // Then
+      expect(result).toBe(true);
+      expect(mockRegistry.registerMany).not.toHaveBeenCalled();
+    });
+
+    it('should not register rules when rules array is empty', () => {
+      // Given
+      const plugin = new CachePlugin({ invalidation: { rules: [] } });
+      const providers = plugin.getProviders();
+      const rulesProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === INVALIDATION_RULES_INIT) as any;
+      const mockRegistry = { registerMany: vi.fn() };
+
+      // When
+      const result = rulesProvider.useFactory(mockRegistry, { invalidation: { rules: [] } });
+
+      // Then
+      expect(result).toBe(true);
+      expect(mockRegistry.registerMany).not.toHaveBeenCalled();
     });
   });
 

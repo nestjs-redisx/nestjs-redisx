@@ -260,4 +260,35 @@ describe('StreamsPlugin', () => {
       await expect(factory(mockManager, undefined, { client: 'nonexistent' })).rejects.toThrow('StreamsPlugin: Redis client "nonexistent" not found');
     });
   });
+
+  describe('registerAsync', () => {
+    it('should create plugin with async options', () => {
+      const plugin = StreamsPlugin.registerAsync({ useFactory: () => ({}), inject: [] });
+      expect(plugin).toBeInstanceOf(StreamsPlugin);
+      expect(plugin.name).toBe('streams');
+    });
+
+    it('should return imports from async options', () => {
+      class ConfigModule {}
+      const plugin = StreamsPlugin.registerAsync({ imports: [ConfigModule], useFactory: () => ({}), inject: [] } as any);
+      expect(plugin.getImports!()).toEqual([ConfigModule]);
+    });
+
+    it('should return empty imports when no async options', () => {
+      const plugin = new StreamsPlugin();
+      expect(plugin.getImports!()).toEqual([]);
+    });
+
+    it('should return async provider with useFactory', async () => {
+      const plugin = StreamsPlugin.registerAsync({
+        useFactory: () => ({ keyPrefix: 'custom:' }),
+        inject: ['ConfigService'],
+      });
+      const providers = plugin.getProviders();
+      const optionsProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === STREAMS_PLUGIN_OPTIONS) as any;
+      expect(optionsProvider.useFactory).toBeDefined();
+      const result = await optionsProvider.useFactory({});
+      expect(result.keyPrefix).toBe('custom:');
+    });
+  });
 });

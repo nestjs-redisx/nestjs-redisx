@@ -34,6 +34,31 @@ describe('StreamConsumerDiscovery', () => {
     mockModuleRef = {};
   });
 
+  it('should warn and skip when DiscoveryService is not available', async () => {
+    // Given
+    const discovery = new StreamConsumerDiscovery(null as any, mockConsumerService, reflector, mockModuleRef);
+
+    // When
+    await discovery.onModuleInit();
+
+    // Then — should not throw, no consumers registered
+    expect(mockConsumerService.createGroup).not.toHaveBeenCalled();
+  });
+
+  it('should skip providers with null instance', async () => {
+    // Given
+    const discoveryService = {
+      getProviders: vi.fn().mockReturnValue([{ instance: null }, { instance: undefined }]),
+    };
+    const discovery = new StreamConsumerDiscovery(discoveryService as any, mockConsumerService, reflector, mockModuleRef);
+
+    // When
+    await discovery.onModuleInit();
+
+    // Then
+    expect(mockConsumerService.createGroup).not.toHaveBeenCalled();
+  });
+
   it('should not crash on providers with getter properties', async () => {
     // Given
     const getterSpy = vi.fn(() => {

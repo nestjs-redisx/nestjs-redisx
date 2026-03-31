@@ -141,4 +141,36 @@ describe('IdempotencyPlugin', () => {
       await expect(factory(mockManager, undefined, { client: 'nonexistent' })).rejects.toThrow('IdempotencyPlugin: Redis client "nonexistent" not found');
     });
   });
+
+  describe('registerAsync', () => {
+    it('should create plugin with async options', () => {
+      const plugin = IdempotencyPlugin.registerAsync({ useFactory: () => ({}), inject: [] });
+      expect(plugin).toBeInstanceOf(IdempotencyPlugin);
+      expect(plugin.name).toBe('idempotency');
+    });
+
+    it('should return imports from async options', () => {
+      class ConfigModule {}
+      const plugin = IdempotencyPlugin.registerAsync({ imports: [ConfigModule], useFactory: () => ({}), inject: [] } as any);
+      expect(plugin.getImports!()).toEqual([ConfigModule]);
+    });
+
+    it('should return empty imports when no async options', () => {
+      const plugin = new IdempotencyPlugin();
+      expect(plugin.getImports!()).toEqual([]);
+    });
+
+    it('should return async provider with useFactory', async () => {
+      const plugin = IdempotencyPlugin.registerAsync({
+        useFactory: () => ({ defaultTtl: 3600 }),
+        inject: ['ConfigService'],
+      });
+      const providers = plugin.getProviders();
+      const optionsProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === IDEMPOTENCY_PLUGIN_OPTIONS) as any;
+      expect(optionsProvider.useFactory).toBeDefined();
+      const result = await optionsProvider.useFactory({});
+      expect(result.defaultTtl).toBe(3600);
+      expect(result.keyPrefix).toBe('idempotency:');
+    });
+  });
 });
