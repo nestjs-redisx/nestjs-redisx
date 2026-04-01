@@ -46,6 +46,14 @@ export class ApiController {
 
 Full documentation: [nestjs-redisx.dev/en/reference/rate-limit/](https://nestjs-redisx.dev/en/reference/rate-limit/)
 
+## Using with AI Assistants
+
+For better code generation with AI tools (Cursor, Claude Code, GitHub Copilot, etc.), point your agent to the full API reference:
+
+```
+https://nestjs-redisx.dev/llms-full.txt
+```
+
 ## License
 
 MIT

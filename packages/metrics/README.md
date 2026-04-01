@@ -41,6 +41,14 @@ export class AppModule {}
 
 Full documentation: [nestjs-redisx.dev/en/reference/metrics/](https://nestjs-redisx.dev/en/reference/metrics/)
 
+## Using with AI Assistants
+
+For better code generation with AI tools (Cursor, Claude Code, GitHub Copilot, etc.), point your agent to the full API reference:
+
+```
+https://nestjs-redisx.dev/llms-full.txt
+```
+
 ## License
 
 MIT
