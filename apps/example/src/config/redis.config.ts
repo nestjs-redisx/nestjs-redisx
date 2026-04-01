@@ -43,7 +43,7 @@ export const redisConfig = (config: ConfigService): IRedisModuleOptions => {
             port: config.get<number>('REDIS_NODE_3_PORT', 7003),
           },
         ],
-        password: config.get<string>('REDIS_PASSWORD'),
+        password: config.get<string>('REDIS_PASSWORD') || undefined,
         clusterOptions: {
           // NAT mapping for Docker bridge network
           // Maps internal Docker IPs to localhost ports
@@ -85,7 +85,7 @@ export const redisConfig = (config: ConfigService): IRedisModuleOptions => {
             port: config.get<number>('REDIS_SENTINEL_3_PORT', 26381),
           },
         ],
-        password: config.get<string>('REDIS_PASSWORD'),
+        password: config.get<string>('REDIS_PASSWORD') || undefined,
         sentinelOptions: {
           // NAT mapping for Docker bridge network (ioredis only)
           // node-redis doesn't support natMap for sentinel
@@ -110,7 +110,7 @@ export const redisConfig = (config: ConfigService): IRedisModuleOptions => {
         type: 'single' as const,
         host: config.get<string>('REDIS_HOST', 'localhost'),
         port: config.get<number>('REDIS_PORT', 6379),
-        password: config.get<string>('REDIS_PASSWORD'),
+        password: config.get<string>('REDIS_PASSWORD') || undefined,
         db: config.get<number>('REDIS_DB', 0),
         commandTimeout: 5000,
       },
@@ -118,7 +118,7 @@ export const redisConfig = (config: ConfigService): IRedisModuleOptions => {
         type: 'single' as const,
         host: config.get<string>('REDIS_HOST', 'localhost'),
         port: config.get<number>('REDIS_PORT', 6379),
-        password: config.get<string>('REDIS_PASSWORD'),
+        password: config.get<string>('REDIS_PASSWORD') || undefined,
         db: config.get<number>('REDIS_DB', 0),
         commandTimeout: 30000,
       },

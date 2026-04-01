@@ -422,14 +422,12 @@ export interface IRedisModuleAsyncOptions extends Pick<ModuleMetadata, 'imports'
   /**
    * Factory function returning options.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  useFactory?: (...args: any[]) => Promise<IRedisModuleOptions> | IRedisModuleOptions;
+  useFactory?: (...args: unknown[]) => Promise<IRedisModuleOptions> | IRedisModuleOptions;
 
   /**
    * Dependencies to inject into factory.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  inject?: any[];
+  inject?: unknown[];
 
   /**
    * Use existing provider.
