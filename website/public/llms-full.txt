@@ -4,7 +4,7 @@
 
 ## Installation
 
-Requirements: Node.js 20+, NestJS 10+, Redis 6+, TypeScript 5+.
+Requirements: Node.js 18+, NestJS 10+, Redis 6+, TypeScript 5+.
 
 Install core and your preferred Redis driver:
 
@@ -48,7 +48,7 @@ import { LocksPlugin } from '@nestjs-redisx/locks';
       },
       plugins: [
         new CachePlugin({
-          l1: { maxSize: 1000, ttl: 60000 },
+          l1: { maxSize: 1000, ttl: 60 },
           l2: { defaultTtl: 3600 },
         }),
         new LocksPlugin({ defaultTtl: 30000 }),
@@ -169,7 +169,7 @@ new CachePlugin({
   l1: {
     enabled: true,
     maxSize: 1000,       // max entries in memory
-    ttl: 60000,          // L1 TTL in milliseconds
+    ttl: 60,             // L1 TTL in seconds
   },
   l2: {
     enabled: true,
@@ -360,9 +360,9 @@ Multiple algorithms for API protection: fixed window, sliding window, token buck
 
 ```typescript
 new RateLimitPlugin({
-  algorithm: 'sliding-window',  // 'fixed-window' | 'sliding-window' | 'token-bucket'
-  points: 100,                   // max requests
-  window: 60,                    // time window in seconds
+  defaultAlgorithm: 'sliding-window',  // 'fixed-window' | 'sliding-window' | 'token-bucket'
+  defaultPoints: 100,                   // max requests
+  defaultDuration: 60,                  // time window in seconds
   keyPrefix: 'rl:',
 })
 ```
@@ -377,11 +377,11 @@ import { RateLimitGuard } from '@nestjs-redisx/rate-limit';
 @UseGuards(RateLimitGuard)
 export class ApiController {
   @Get('data')
-  @RateLimit({ points: 100, window: 60 })
+  @RateLimit({ points: 100, duration: 60 })
   getData() { }
 
   @Post('submit')
-  @RateLimit({ points: 10, window: 60, algorithm: 'token-bucket' })
+  @RateLimit({ points: 10, duration: 60, algorithm: 'token-bucket' })
   submit() { }
 }
 ```
@@ -393,7 +393,7 @@ Default: by IP address. Custom:
 ```typescript
 @RateLimit({
   points: 100,
-  window: 60,
+  duration: 60,
   keyGenerator: (req) => req.user?.id ?? req.ip,
 })
 ```
@@ -599,13 +599,13 @@ export class PaymentService {
 ```typescript
 // Global: 1000 req/min for all users
 @UseGuards(RateLimitGuard)
-@RateLimit({ points: 1000, window: 60 })
+@RateLimit({ points: 1000, duration: 60 })
 @Controller('api')
 export class ApiController {
 
   // Endpoint-specific: 10 req/min for expensive operations
   @Post('export')
-  @RateLimit({ points: 10, window: 60 })
+  @RateLimit({ points: 10, duration: 60 })
   exportData() { }
 
   // Per-user rate limiting

@@ -46,6 +46,14 @@ export class AppService {
 
 Full documentation: [nestjs-redisx.dev/en/reference/core/](https://nestjs-redisx.dev/en/reference/core/)
 
+## Using with AI Assistants
+
+For better code generation with AI tools (Cursor, Claude Code, GitHub Copilot, etc.), point your agent to the full API reference:
+
+```
+https://nestjs-redisx.dev/llms-full.txt
+```
+
 ## License
 
 MIT
