@@ -1047,5 +1047,24 @@ describe('IoRedisAdapter', () => {
       const adapter = new IoRedisAdapter(config);
       await expect(adapter.disconnect()).resolves.not.toThrow();
     });
+
+    it('should not throw when client is nulled between quit rejection and catch block', async () => {
+      // Simulates a concurrent handler nulling the client while quit() is awaited.
+      const { adapter, mockClient } = createConnectedAdapter(
+        {},
+        {
+          quit: vi.fn().mockImplementation(async () => {
+            // Concurrent handler nulls the internal client reference
+            (adapter as unknown as { client: unknown }).client = null;
+            throw new Error('Connection lost during quit');
+          }),
+          disconnect: vi.fn(),
+        },
+      );
+
+      await expect(adapter.disconnect()).resolves.not.toThrow();
+      expect(mockClient.quit).toHaveBeenCalled();
+      expect(adapter.getClient()).toBeNull();
+    });
   });
 });
