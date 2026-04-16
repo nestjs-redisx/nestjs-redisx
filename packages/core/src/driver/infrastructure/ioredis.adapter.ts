@@ -92,8 +92,9 @@ export class IoRedisAdapter extends BaseRedisDriver {
     try {
       await this.client.quit();
     } catch {
-      // Force disconnect on error
-      this.client.disconnect();
+      // Force disconnect on error. Guard against null in case a concurrent
+      // error/reconnect handler cleared the client between quit() and this catch.
+      this.client?.disconnect();
     } finally {
       this.client = null;
     }
