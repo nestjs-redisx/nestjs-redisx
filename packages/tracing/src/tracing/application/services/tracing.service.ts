@@ -59,8 +59,23 @@ export class TracingService implements ITracingService, OnModuleInit, OnModuleDe
   }
 
   async onModuleDestroy(): Promise<void> {
-    if (this.provider) {
-      await this.provider.shutdown();
+    if (!this.provider) return;
+
+    // Span export can fail or hang at shutdown if the collector is down (e.g.
+    // in tests or with an unreachable OTLP endpoint). A best-effort flush must
+    // not take down — or even noticeably slow down — application shutdown, so
+    // race the provider shutdown against a short timeout and swallow failures.
+    const shutdownTimeoutMs = 2_000;
+    try {
+      await Promise.race([
+        this.provider.shutdown(),
+        new Promise<void>((resolve) => {
+          const timer = setTimeout(resolve, shutdownTimeoutMs);
+          if (typeof timer.unref === 'function') timer.unref();
+        }),
+      ]);
+    } catch (error) {
+      this.logger.warn(`Tracing provider shutdown failed: ${(error as Error)?.message ?? error}`);
     }
   }
 
