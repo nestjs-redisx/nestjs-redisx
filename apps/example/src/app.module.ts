@@ -117,7 +117,7 @@ import { IntegrationDemoModule } from './demo/integration/integration-demo.modul
         // Uses dedicated 'streams' client to avoid blocking the shared connection
         new StreamsPlugin({
           client: 'streams',
-          consumer: { batchSize: 10 },
+          consumer: { batchSize: 10, blockTimeout: 1000 },
         }),
       ],
       // useFactory ONLY for connection config loaded via ConfigService

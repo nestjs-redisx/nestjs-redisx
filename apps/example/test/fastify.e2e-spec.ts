@@ -31,10 +31,8 @@ describe('Rate limit + idempotency (Fastify)', () => {
   }, 60_000);
 
   afterAll(async () => {
-    try {
-      if (app) await app.close();
-    } catch {
-      // Swallow streams-consumer shutdown noise unrelated to the tested plugins.
+    if (app) {
+      await app.close();
     }
   });
 
