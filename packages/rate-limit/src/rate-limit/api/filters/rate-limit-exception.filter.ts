@@ -1,4 +1,5 @@
-import { Catch, ExceptionFilter, ArgumentsHost, HttpStatus } from '@nestjs/common';
+import { Catch, ExceptionFilter, ArgumentsHost, HttpStatus, Inject } from '@nestjs/common';
+import { HttpAdapterHost } from '@nestjs/core';
 
 import { RateLimitExceededError } from '../../../shared/errors';
 
@@ -8,16 +9,21 @@ import { RateLimitExceededError } from '../../../shared/errors';
  */
 @Catch(RateLimitExceededError)
 export class RateLimitExceptionFilter implements ExceptionFilter {
+  constructor(@Inject(HttpAdapterHost) private readonly adapterHost: HttpAdapterHost) {}
+
   /**
    * Catch rate limit exceeded error and format response.
    */
   catch(exception: RateLimitExceededError, host: ArgumentsHost): void {
-    const ctx = host.switchToHttp();
-    const response = ctx.getResponse();
+    const httpAdapter = this.adapterHost.httpAdapter;
+    if (!httpAdapter) {
+      throw new Error('RateLimitExceptionFilter: HttpAdapterHost is not initialized. Ensure the NestJS application has bootstrapped with an HTTP adapter before handling requests.');
+    }
 
+    const response = host.switchToHttp().getResponse();
     const result = exception.result;
 
-    response.status(HttpStatus.TOO_MANY_REQUESTS).header('Retry-After', exception.retryAfter.toString()).json({
+    const body = {
       statusCode: HttpStatus.TOO_MANY_REQUESTS,
       message: exception.message,
       error: 'Too Many Requests',
@@ -25,6 +31,9 @@ export class RateLimitExceptionFilter implements ExceptionFilter {
       limit: result?.limit,
       remaining: result?.remaining,
       reset: result?.reset,
-    });
+    };
+
+    httpAdapter.setHeader(response, 'Retry-After', exception.retryAfter.toString());
+    httpAdapter.reply(response, body, HttpStatus.TOO_MANY_REQUESTS);
   }
 }

@@ -3,21 +3,25 @@ import type { ArgumentsHost } from '@nestjs/common';
 import { HttpStatus } from '@nestjs/common';
 import { RateLimitExceptionFilter } from '../../src/rate-limit/api/filters/rate-limit-exception.filter';
 import { RateLimitExceededError } from '../../src/shared/errors';
-import type { RateLimitResult } from '../../src/shared/types';
+import type { IRateLimitResult } from '../../src/shared/types';
 
 describe('RateLimitExceptionFilter', () => {
   let filter: RateLimitExceptionFilter;
   let mockResponse: MockedObject<any>;
   let mockHost: MockedObject<ArgumentsHost>;
+  let mockHttpAdapter: { setHeader: ReturnType<typeof vi.fn>; reply: ReturnType<typeof vi.fn> };
+  let mockAdapterHost: { httpAdapter: typeof mockHttpAdapter };
 
   beforeEach(() => {
-    filter = new RateLimitExceptionFilter();
-
-    mockResponse = {
-      status: vi.fn().mockReturnThis(),
-      header: vi.fn().mockReturnThis(),
-      json: vi.fn().mockReturnThis(),
+    mockHttpAdapter = {
+      setHeader: vi.fn(),
+      reply: vi.fn(),
     };
+    mockAdapterHost = { httpAdapter: mockHttpAdapter };
+
+    filter = new RateLimitExceptionFilter(mockAdapterHost as any);
+
+    mockResponse = {};
 
     mockHost = {
       switchToHttp: vi.fn().mockReturnValue({
@@ -43,7 +47,7 @@ describe('RateLimitExceptionFilter', () => {
     filter.catch(error, mockHost);
 
     // Then
-    expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.TOO_MANY_REQUESTS);
+    expect(mockHttpAdapter.reply).toHaveBeenCalledWith(mockResponse, expect.any(Object), HttpStatus.TOO_MANY_REQUESTS);
   });
 
   it('should set Retry-After header', () => {
@@ -62,7 +66,7 @@ describe('RateLimitExceptionFilter', () => {
     filter.catch(error, mockHost);
 
     // Then
-    expect(mockResponse.header).toHaveBeenCalledWith('Retry-After', '45');
+    expect(mockHttpAdapter.setHeader).toHaveBeenCalledWith(mockResponse, 'Retry-After', '45');
   });
 
   it('should return JSON response with error details', () => {
@@ -81,15 +85,19 @@ describe('RateLimitExceptionFilter', () => {
     filter.catch(error, mockHost);
 
     // Then
-    expect(mockResponse.json).toHaveBeenCalledWith({
-      statusCode: 429,
-      message: 'Rate limit exceeded for API',
-      error: 'Too Many Requests',
-      retryAfter: 60,
-      limit: 50,
-      remaining: 0,
-      reset: 1706400000,
-    });
+    expect(mockHttpAdapter.reply).toHaveBeenCalledWith(
+      mockResponse,
+      {
+        statusCode: 429,
+        message: 'Rate limit exceeded for API',
+        error: 'Too Many Requests',
+        retryAfter: 60,
+        limit: 50,
+        remaining: 0,
+        reset: 1706400000,
+      },
+      HttpStatus.TOO_MANY_REQUESTS,
+    );
   });
 
   it('should include result data in response', () => {
@@ -108,10 +116,10 @@ describe('RateLimitExceptionFilter', () => {
     filter.catch(error, mockHost);
 
     // Then
-    const jsonCall = mockResponse.json.mock.calls[0][0];
-    expect(jsonCall.limit).toBe(200);
-    expect(jsonCall.remaining).toBe(0);
-    expect(jsonCall.reset).toBe(1706400120);
+    const body = mockHttpAdapter.reply.mock.calls[0][1];
+    expect(body.limit).toBe(200);
+    expect(body.remaining).toBe(0);
+    expect(body.reset).toBe(1706400120);
   });
 
   it('should handle error without result', () => {
@@ -129,10 +137,10 @@ describe('RateLimitExceptionFilter', () => {
     filter.catch(error, mockHost);
 
     // Then
-    expect(mockResponse.json).toHaveBeenCalled();
+    expect(mockHttpAdapter.reply).toHaveBeenCalled();
   });
 
-  it('should call all response methods', () => {
+  it('should call setHeader and reply on the http adapter', () => {
     // Given
     const result: IRateLimitResult = {
       allowed: false,
@@ -148,8 +156,7 @@ describe('RateLimitExceptionFilter', () => {
     filter.catch(error, mockHost);
 
     // Then
-    expect(mockResponse.status).toHaveBeenCalled();
-    expect(mockResponse.header).toHaveBeenCalled();
-    expect(mockResponse.json).toHaveBeenCalled();
+    expect(mockHttpAdapter.setHeader).toHaveBeenCalled();
+    expect(mockHttpAdapter.reply).toHaveBeenCalled();
   });
 });

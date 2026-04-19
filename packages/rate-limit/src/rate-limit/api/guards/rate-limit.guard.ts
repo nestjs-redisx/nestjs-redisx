@@ -1,5 +1,5 @@
 import { Injectable, CanActivate, ExecutionContext, Inject, Optional } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
+import { HttpAdapterHost, Reflector } from '@nestjs/core';
 
 import { RATE_LIMIT_SERVICE, RATE_LIMIT_PLUGIN_OPTIONS } from '../../../shared/constants';
 import { RateLimitExceededError } from '../../../shared/errors';
@@ -41,6 +41,7 @@ export class RateLimitGuard implements CanActivate {
     @Inject(RATE_LIMIT_PLUGIN_OPTIONS)
     private readonly config: IRateLimitPluginOptions,
     @Inject(Reflector) private readonly reflector: Reflector,
+    @Inject(HttpAdapterHost) private readonly adapterHost: HttpAdapterHost,
     @Optional() @Inject(METRICS_SERVICE) private readonly metrics?: IMetricsService,
     @Optional() @Inject(TRACING_SERVICE) private readonly tracing?: ITracingService,
   ) {}
@@ -188,6 +189,11 @@ export class RateLimitGuard implements CanActivate {
       return;
     }
 
+    const httpAdapter = this.adapterHost.httpAdapter;
+    if (!httpAdapter) {
+      throw new Error('RateLimitGuard: HttpAdapterHost is not initialized. Ensure the NestJS application has bootstrapped with an HTTP adapter before handling requests.');
+    }
+
     const response = context.switchToHttp().getResponse();
     const headers = this.config.headers ?? {};
 
@@ -196,12 +202,12 @@ export class RateLimitGuard implements CanActivate {
     const resetHeader = headers.reset ?? 'X-RateLimit-Reset';
     const retryAfterHeader = headers.retryAfter ?? 'Retry-After';
 
-    response.header(limitHeader, result.limit.toString());
-    response.header(remainingHeader, result.remaining.toString());
-    response.header(resetHeader, result.reset.toString());
+    httpAdapter.setHeader(response, limitHeader, result.limit.toString());
+    httpAdapter.setHeader(response, remainingHeader, result.remaining.toString());
+    httpAdapter.setHeader(response, resetHeader, result.reset.toString());
 
     if (!result.allowed && result.retryAfter) {
-      response.header(retryAfterHeader, result.retryAfter.toString());
+      httpAdapter.setHeader(response, retryAfterHeader, result.retryAfter.toString());
     }
   }
 

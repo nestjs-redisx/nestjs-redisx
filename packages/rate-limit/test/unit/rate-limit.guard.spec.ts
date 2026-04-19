@@ -14,6 +14,8 @@ describe('RateLimitGuard', () => {
   let mockContext: MockedObject<ExecutionContext>;
   let mockRequest: any;
   let mockResponse: any;
+  let mockHttpAdapter: { setHeader: ReturnType<typeof vi.fn> };
+  let mockAdapterHost: { httpAdapter: typeof mockHttpAdapter };
   let config: IRateLimitPluginOptions;
 
   const successResult: IRateLimitResult = {
@@ -39,9 +41,13 @@ describe('RateLimitGuard', () => {
       headers: {},
     };
 
-    mockResponse = {
-      header: vi.fn().mockReturnThis(),
+    mockResponse = {};
+
+    mockHttpAdapter = {
+      setHeader: vi.fn(),
     };
+
+    mockAdapterHost = { httpAdapter: mockHttpAdapter };
 
     mockContext = {
       getHandler: vi.fn(),
@@ -74,7 +80,7 @@ describe('RateLimitGuard', () => {
       },
     };
 
-    guard = new RateLimitGuard(mockService, config, mockReflector);
+    guard = new RateLimitGuard(mockService, config, mockReflector, mockAdapterHost as any);
   });
 
   describe('canActivate', () => {
@@ -112,9 +118,9 @@ describe('RateLimitGuard', () => {
       await guard.canActivate(mockContext);
 
       // Then
-      expect(mockResponse.header).toHaveBeenCalledWith('X-RateLimit-Limit', '100');
-      expect(mockResponse.header).toHaveBeenCalledWith('X-RateLimit-Remaining', '99');
-      expect(mockResponse.header).toHaveBeenCalledWith('X-RateLimit-Reset', expect.any(String));
+      expect(mockHttpAdapter.setHeader).toHaveBeenCalledWith(mockResponse, 'X-RateLimit-Limit', '100');
+      expect(mockHttpAdapter.setHeader).toHaveBeenCalledWith(mockResponse, 'X-RateLimit-Remaining', '99');
+      expect(mockHttpAdapter.setHeader).toHaveBeenCalledWith(mockResponse, 'X-RateLimit-Reset', expect.any(String));
     });
 
     it('should set retry-after header when limit exceeded', async () => {
@@ -128,18 +134,18 @@ describe('RateLimitGuard', () => {
         // Expected
       }
 
-      expect(mockResponse.header).toHaveBeenCalledWith('Retry-After', '30');
+      expect(mockHttpAdapter.setHeader).toHaveBeenCalledWith(mockResponse, 'Retry-After', '30');
     });
 
     it('should not set headers when includeHeaders is false', async () => {
       // Given
-      const guardWithoutHeaders = new RateLimitGuard(mockService, { ...config, includeHeaders: false }, mockReflector);
+      const guardWithoutHeaders = new RateLimitGuard(mockService, { ...config, includeHeaders: false }, mockReflector, mockAdapterHost as any);
 
       // When
       await guardWithoutHeaders.canActivate(mockContext);
 
       // Then
-      expect(mockResponse.header).not.toHaveBeenCalled();
+      expect(mockHttpAdapter.setHeader).not.toHaveBeenCalled();
     });
   });
 
@@ -279,7 +285,7 @@ describe('RateLimitGuard', () => {
     it('should skip rate limiting when module skip returns true', async () => {
       // Given
       const skipFn = vi.fn().mockResolvedValue(true);
-      const guardWithSkip = new RateLimitGuard(mockService, { ...config, skip: skipFn }, mockReflector);
+      const guardWithSkip = new RateLimitGuard(mockService, { ...config, skip: skipFn }, mockReflector, mockAdapterHost as any);
 
       // When
       const result = await guardWithSkip.canActivate(mockContext);
@@ -324,7 +330,7 @@ describe('RateLimitGuard', () => {
       mockService.check.mockResolvedValue(failedResult);
       const customError = new Error('Custom module error');
       const errorFactory = vi.fn().mockReturnValue(customError);
-      const guardWithFactory = new RateLimitGuard(mockService, { ...config, errorFactory }, mockReflector);
+      const guardWithFactory = new RateLimitGuard(mockService, { ...config, errorFactory }, mockReflector, mockAdapterHost as any);
 
       // When/Then
       await expect(guardWithFactory.canActivate(mockContext)).rejects.toThrow('Custom module error');
@@ -405,15 +411,16 @@ describe('RateLimitGuard', () => {
           },
         },
         mockReflector,
+        mockAdapterHost as any,
       );
 
       // When
       await guardWithCustomHeaders.canActivate(mockContext);
 
       // Then
-      expect(mockResponse.header).toHaveBeenCalledWith('X-Custom-Limit', '100');
-      expect(mockResponse.header).toHaveBeenCalledWith('X-Custom-Remaining', '99');
-      expect(mockResponse.header).toHaveBeenCalledWith('X-Custom-Reset', expect.any(String));
+      expect(mockHttpAdapter.setHeader).toHaveBeenCalledWith(mockResponse, 'X-Custom-Limit', '100');
+      expect(mockHttpAdapter.setHeader).toHaveBeenCalledWith(mockResponse, 'X-Custom-Remaining', '99');
+      expect(mockHttpAdapter.setHeader).toHaveBeenCalledWith(mockResponse, 'X-Custom-Reset', expect.any(String));
     });
   });
 });
