@@ -1,4 +1,4 @@
-import { Injectable, Inject, OnModuleDestroy, Optional } from '@nestjs/common';
+import { Injectable, Inject, Logger, OnApplicationShutdown, Optional } from '@nestjs/common';
 import { IRedisDriver } from '@nestjs-redisx/core';
 
 import { ConsumerInstance } from './consumer-instance';
@@ -17,8 +17,10 @@ interface IMetricsService {
 }
 
 @Injectable()
-export class StreamConsumerService implements IStreamConsumer, OnModuleDestroy {
+export class StreamConsumerService implements IStreamConsumer, OnApplicationShutdown {
+  private readonly logger = new Logger(StreamConsumerService.name);
   private readonly consumers = new Map<string, ConsumerInstance<unknown>>();
+  private shutdownPromise?: Promise<void>;
 
   constructor(
     @Inject(STREAMS_REDIS_DRIVER) private readonly driver: IRedisDriver,
@@ -28,8 +30,28 @@ export class StreamConsumerService implements IStreamConsumer, OnModuleDestroy {
     @Optional() @Inject(METRICS_SERVICE) private readonly metrics?: IMetricsService,
   ) {}
 
-  async onModuleDestroy(): Promise<void> {
-    await Promise.all(Array.from(this.consumers.values()).map((c) => c.stop()));
+  async onApplicationShutdown(): Promise<void> {
+    // Idempotent: coalesce concurrent / repeated calls onto the same promise so
+    // double-close does not restart the drain or produce diverging timeouts.
+    if (this.shutdownPromise) {
+      return this.shutdownPromise;
+    }
+    this.shutdownPromise = this.drainConsumers();
+    return this.shutdownPromise;
+  }
+
+  private async drainConsumers(): Promise<void> {
+    const timeoutMs = this.config.shutdownTimeoutMs ?? 10_000;
+    const instances = Array.from(this.consumers.values());
+    this.consumers.clear();
+
+    await Promise.all(
+      instances.map((c) =>
+        c.stop(timeoutMs).catch((error: unknown) => {
+          this.logger.error(`Failed to stop stream consumer: ${(error as Error).message}`);
+        }),
+      ),
+    );
   }
 
   consume<T>(stream: string, group: string, consumer: string, handler: MessageHandler<T>, options: IConsumeOptions = {}): IConsumerHandle {
@@ -66,7 +88,7 @@ export class StreamConsumerService implements IStreamConsumer, OnModuleDestroy {
   async stop(handle: IConsumerHandle): Promise<void> {
     const instance = this.consumers.get(handle.id);
     if (instance) {
-      await instance.stop();
+      await instance.stop(this.config.shutdownTimeoutMs ?? 10_000);
       this.consumers.delete(handle.id);
     }
   }

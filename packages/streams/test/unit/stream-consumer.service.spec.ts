@@ -295,15 +295,15 @@ describe('StreamConsumerService', () => {
     });
   });
 
-  describe('onModuleDestroy', () => {
-    it('should stop all consumers on module destroy', async () => {
+  describe('onApplicationShutdown', () => {
+    it('should stop all consumers on shutdown', async () => {
       // Given
       const handler = vi.fn();
       const handle1 = service.consume('orders', 'processors', 'worker-1', handler);
       const handle2 = service.consume('events', 'listeners', 'listener-1', handler);
 
       // When
-      await service.onModuleDestroy();
+      await service.onApplicationShutdown();
 
       // Then - consumers should be stopped and removed
       await service.stop(handle1); // Should not throw (already removed)
@@ -314,7 +314,21 @@ describe('StreamConsumerService', () => {
       // Given - no consumers
 
       // When/Then - should not throw
-      await expect(service.onModuleDestroy()).resolves.not.toThrow();
+      await expect(service.onApplicationShutdown()).resolves.not.toThrow();
+    });
+
+    it('should be idempotent under repeated calls', async () => {
+      // Given
+      const handler = vi.fn();
+      service.consume('orders', 'processors', 'worker-1', handler);
+
+      // When — double shutdown must not throw or diverge
+      const first = service.onApplicationShutdown();
+      const second = service.onApplicationShutdown();
+
+      // Then — both calls resolve, and the second one rides on the same drain
+      await expect(first).resolves.toBeUndefined();
+      await expect(second).resolves.toBeUndefined();
     });
   });
 });

@@ -8,6 +8,15 @@ export interface IStreamsPluginOptions {
   /** Named Redis client to use. @default 'default' */
   client?: string;
 
+  /**
+   * Maximum time to wait (in ms) for in-flight message processing and consumer
+   * loops to drain during application shutdown. After this window the consumer
+   * service returns even if some messages are still being handled, allowing the
+   * process to exit; a warning is logged for each consumer that did not finish.
+   * @default 10000
+   */
+  shutdownTimeoutMs?: number;
+
   keyPrefix?: string; // default: 'stream:'
 
   consumer?: {

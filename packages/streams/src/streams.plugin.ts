@@ -15,6 +15,7 @@ import { StreamConsumerService } from './streams/application/services/stream-con
 import { StreamProducerService } from './streams/application/services/stream-producer.service';
 
 const DEFAULT_STREAMS_CONFIG: Required<Omit<IStreamsPluginOptions, 'isGlobal' | 'client'>> = {
+  shutdownTimeoutMs: 10_000,
   keyPrefix: 'stream:',
   consumer: {
     batchSize: 10,
@@ -92,6 +93,7 @@ export class StreamsPlugin implements IRedisXPlugin {
   private static mergeDefaults(options: IStreamsPluginOptions): IStreamsPluginOptions {
     return {
       client: options.client,
+      shutdownTimeoutMs: options.shutdownTimeoutMs ?? DEFAULT_STREAMS_CONFIG.shutdownTimeoutMs,
       keyPrefix: options.keyPrefix ?? DEFAULT_STREAMS_CONFIG.keyPrefix,
       consumer: { ...DEFAULT_STREAMS_CONFIG.consumer, ...options.consumer },
       producer: { ...DEFAULT_STREAMS_CONFIG.producer, ...options.producer },

@@ -163,6 +163,9 @@ describe('ConsumerInstance', () => {
       const handler = vi.fn().mockRejectedValue(new Error('handler-fail'));
       config.handler = handler;
       const instance = new ConsumerInstance(driver, dlqService, config, metrics);
+      // Simulate a running consumer so processMessage does not treat a handler
+      // error as a shutdown-path short-circuit.
+      (instance as any).running = true;
       const spy = vi.spyOn(instance as any, 'handleFailure').mockResolvedValue(undefined);
 
       // When
@@ -171,6 +174,20 @@ describe('ConsumerInstance', () => {
       // Then
       expect(spy).toHaveBeenCalledWith('1700000000000-0', { x: 1 }, 2, expect.any(Error));
       expect(metrics.incrementCounter).toHaveBeenCalledWith('redisx_stream_messages_consumed_total', expect.objectContaining({ status: 'error' }));
+    });
+
+    it('should skip handleFailure during shutdown (running=false)', async () => {
+      // Given a consumer that is not running (post-shutdown) and a handler that rejects
+      const handler = vi.fn().mockRejectedValue(new Error('handler-fail'));
+      config.handler = handler;
+      const instance = new ConsumerInstance(driver, dlqService, config, metrics);
+      const spy = vi.spyOn(instance as any, 'handleFailure');
+
+      // When
+      await (instance as any).processMessage('1700000000000-0', { data: JSON.stringify({ x: 1 }) });
+
+      // Then — the failure path is skipped so no retry / DLQ work hits a torn-down driver
+      expect(spy).not.toHaveBeenCalled();
     });
 
     it('should work without metrics (metrics undefined)', async () => {
