@@ -30,6 +30,10 @@ import { streamsConfig } from './config/streams.config';
 import { metricsConfig } from './config/metrics.config';
 import { tracingConfig } from './config/tracing.config';
 
+// Root controller
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+
 // Demo modules
 import { CoreDemoModule } from './demo/core/core-demo.module';
 import { CacheDemoModule } from './demo/cache/cache-demo.module';
@@ -130,5 +134,7 @@ import { IntegrationDemoModule } from './demo/integration/integration-demo.modul
     TracingDemoModule,
     IntegrationDemoModule,
   ],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}
