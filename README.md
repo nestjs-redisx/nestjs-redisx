@@ -36,6 +36,7 @@
 - Coverage tracked via [Codecov](https://codecov.io/gh/nestjs-redisx/nestjs-redisx)
 - Pack-test validates every package installs and works from tarball
 - Compatibility tested across Node 18/20, NestJS 10/11, Redis 6.2/7.x
+- Works with both Express and Fastify adapters
 
 [Testing details](https://nestjs-redisx.dev/en/guide/operations/testing-overview/) | [Compatibility matrix](https://nestjs-redisx.dev/en/guide/operations/compatibility/)
 

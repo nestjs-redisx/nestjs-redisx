@@ -102,6 +102,10 @@ X-RateLimit-Reset: 1706123456
 Retry-After: 45
 ```
 
+## HTTP adapter compatibility
+
+Works with both Express (`@nestjs/platform-express`) and Fastify (`@nestjs/platform-fastify`) adapters. Internally uses `HttpAdapterHost` from `@nestjs/core` for transport-agnostic request/response handling. Tested on both adapters in CI.
+
 ## Algorithm Comparison
 
 | Algorithm | Description | Best For |

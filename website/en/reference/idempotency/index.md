@@ -67,6 +67,10 @@ curl -X POST https://api.example.com/payments \
 # Returns cached response: {"id": "pay_123", "status": "completed"}
 ```
 
+## HTTP adapter compatibility
+
+Works with both Express (`@nestjs/platform-express`) and Fastify (`@nestjs/platform-fastify`) adapters. Internally uses `HttpAdapterHost` from `@nestjs/core` for transport-agnostic request/response handling. Tested on both adapters in CI.
+
 ## Request Flow
 
 ```mermaid
