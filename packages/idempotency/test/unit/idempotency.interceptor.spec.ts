@@ -16,23 +16,35 @@ describe('IdempotencyInterceptor', () => {
   let mockNext: MockedObject<CallHandler>;
   let mockRequest: any;
   let mockResponse: any;
+  let mockHttpAdapter: {
+    setHeader: ReturnType<typeof vi.fn>;
+    status: ReturnType<typeof vi.fn>;
+    getRequestUrl: ReturnType<typeof vi.fn>;
+  };
+  let mockAdapterHost: { httpAdapter: typeof mockHttpAdapter };
   let config: IIdempotencyPluginOptions;
 
   beforeEach(() => {
     mockRequest = {
       headers: {},
       method: 'POST',
-      path: '/api/test',
+      url: '/api/test',
       body: { data: 'test' },
       query: {},
     };
 
     mockResponse = {
       statusCode: 200,
-      status: vi.fn().mockReturnThis(),
-      setHeader: vi.fn().mockReturnThis(),
       getHeader: vi.fn(),
     };
+
+    mockHttpAdapter = {
+      setHeader: vi.fn(),
+      status: vi.fn(),
+      getRequestUrl: vi.fn((req: { url?: string }) => req?.url ?? ''),
+    };
+
+    mockAdapterHost = { httpAdapter: mockHttpAdapter };
 
     mockContext = {
       switchToHttp: vi.fn().mockReturnValue({
@@ -66,7 +78,7 @@ describe('IdempotencyInterceptor', () => {
       fingerprintFields: ['method', 'path', 'body'],
     };
 
-    interceptor = new IdempotencyInterceptor(mockService, config, mockReflector);
+    interceptor = new IdempotencyInterceptor(mockService, config, mockReflector, mockAdapterHost as any);
   });
 
   describe('new request', () => {
@@ -129,7 +141,7 @@ describe('IdempotencyInterceptor', () => {
 
       // Then
       expect(data).toEqual({ id: 123 });
-      expect(mockResponse.status).toHaveBeenCalledWith(201);
+      expect(mockHttpAdapter.status).toHaveBeenCalledWith(mockResponse, 201);
       expect(mockNext.handle).not.toHaveBeenCalled();
     });
 
@@ -152,8 +164,8 @@ describe('IdempotencyInterceptor', () => {
       await new Promise((resolve) => result.subscribe(resolve));
 
       // Then
-      expect(mockResponse.setHeader).toHaveBeenCalledWith('Content-Type', 'application/json');
-      expect(mockResponse.setHeader).toHaveBeenCalledWith('X-Custom', 'value');
+      expect(mockHttpAdapter.setHeader).toHaveBeenCalledWith(mockResponse, 'Content-Type', 'application/json');
+      expect(mockHttpAdapter.setHeader).toHaveBeenCalledWith(mockResponse, 'X-Custom', 'value');
     });
   });
 
@@ -263,7 +275,7 @@ describe('IdempotencyInterceptor', () => {
       config.headerName = 'X-Request-ID';
       mockRequest.headers['x-request-id'] = 'custom-key';
       mockService.checkAndLock.mockResolvedValue({ isNew: true });
-      interceptor = new IdempotencyInterceptor(mockService, config, mockReflector);
+      interceptor = new IdempotencyInterceptor(mockService, config, mockReflector, mockAdapterHost as any);
 
       // When
       const result = await interceptor.intercept(mockContext, mockNext);
@@ -328,7 +340,7 @@ describe('IdempotencyInterceptor', () => {
       // Given
       mockRequest.headers['idempotency-key'] = 'key11';
       config.fingerprintGenerator = vi.fn().mockReturnValue('custom-fingerprint');
-      interceptor = new IdempotencyInterceptor(mockService, config, mockReflector);
+      interceptor = new IdempotencyInterceptor(mockService, config, mockReflector, mockAdapterHost as any);
       mockService.checkAndLock.mockResolvedValue({ isNew: true });
 
       // When

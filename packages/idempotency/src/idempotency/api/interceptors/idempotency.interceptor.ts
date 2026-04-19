@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 
 import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Inject } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
+import { HttpAdapterHost, Reflector } from '@nestjs/core';
 import { Observable, of } from 'rxjs';
 import { tap } from 'rxjs/operators';
 
@@ -11,22 +11,13 @@ import { IIdempotencyPluginOptions, IIdempotencyRecord } from '../../../shared/t
 import { IIdempotencyService } from '../../application/ports/idempotency-service.port';
 import { IDEMPOTENT_OPTIONS, IIdempotentOptions } from '../decorators/idempotent.decorator';
 
-/**
- * HTTP response interface for interceptor use.
- */
-interface IHttpResponse {
-  status(code: number): this;
-  statusCode: number;
-  setHeader(name: string, value: string): void;
-  getHeader(name: string): string | number | string[] | undefined;
-}
-
 @Injectable()
 export class IdempotencyInterceptor implements NestInterceptor {
   constructor(
     @Inject(IDEMPOTENCY_SERVICE) private readonly idempotencyService: IIdempotencyService,
     @Inject(IDEMPOTENCY_PLUGIN_OPTIONS) private readonly config: IIdempotencyPluginOptions,
     @Inject(Reflector) private readonly reflector: Reflector,
+    @Inject(HttpAdapterHost) private readonly adapterHost: HttpAdapterHost,
   ) {}
 
   async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<unknown>> {
@@ -109,7 +100,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
     const parts: string[] = [];
 
     if (fields.includes('method')) parts.push(request.method);
-    if (fields.includes('path')) parts.push(request.path);
+    if (fields.includes('path')) parts.push(this.getRequestPath(request));
     if (fields.includes('body')) parts.push(JSON.stringify(request.body ?? {}));
     if (fields.includes('query')) parts.push(JSON.stringify(request.query ?? {}));
 
@@ -117,17 +108,28 @@ export class IdempotencyInterceptor implements NestInterceptor {
     return this.hash(data);
   }
 
+  private getRequestPath(request: unknown): string {
+    const httpAdapter = this.adapterHost.httpAdapter;
+    const req = request as { path?: string; url?: string };
+    return httpAdapter?.getRequestUrl?.(request) ?? req.url ?? req.path ?? '';
+  }
+
   private hash(data: string): string {
     return createHash('sha256').update(data).digest('hex');
   }
 
-  private replayResponse(response: IHttpResponse, record: IIdempotencyRecord): Observable<unknown> {
-    response.status(record.statusCode ?? 200);
+  private replayResponse(response: unknown, record: IIdempotencyRecord): Observable<unknown> {
+    const httpAdapter = this.adapterHost.httpAdapter;
+    if (!httpAdapter) {
+      throw new Error('IdempotencyInterceptor: HttpAdapterHost is not initialized. Ensure the NestJS application has bootstrapped with an HTTP adapter before handling requests.');
+    }
+
+    httpAdapter.status(response, record.statusCode ?? 200);
 
     if (record.headers) {
       const headers = JSON.parse(record.headers);
       for (const [key, value] of Object.entries(headers)) {
-        response.setHeader(key, value as string);
+        httpAdapter.setHeader(response, key, value as string);
       }
     }
 
@@ -135,12 +137,12 @@ export class IdempotencyInterceptor implements NestInterceptor {
     return of(body);
   }
 
-  private extractHeaders(response: IHttpResponse, options: IIdempotentOptions): Record<string, string> | undefined {
+  private extractHeaders(response: { getHeader?: (name: string) => string | number | string[] | undefined }, options: IIdempotentOptions): Record<string, string> | undefined {
     if (!options.cacheHeaders?.length) return undefined;
 
     const headers: Record<string, string> = {};
     for (const name of options.cacheHeaders) {
-      const value = response.getHeader(name);
+      const value = response.getHeader?.(name);
       if (value) headers[name] = String(value);
     }
 
