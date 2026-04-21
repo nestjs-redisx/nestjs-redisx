@@ -1,6 +1,6 @@
 ---
-title: RedisService
-description: High-level Redis operations API
+title: 'RedisService API — Core Module | NestJS RedisX'
+description: 'Reference for RedisService high-level helpers: ping, isConnected, get/set, del, pipelines, and delegating to named clients across NestJS services.'
 ---
 
 # RedisService

@@ -1,6 +1,6 @@
 ---
-title: Health Monitoring
-description: Connection health checks, auto-reconnection, and statistics
+title: 'Health Checks and Reconnection — Core | NestJS RedisX'
+description: 'Monitor Redis connections with ConnectionStatus, IHealthStatus, Terminus indicators, Prometheus counters, and auto-reconnection in NestJS applications.'
 ---
 
 # Health Monitoring

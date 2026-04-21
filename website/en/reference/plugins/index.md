@@ -1,6 +1,6 @@
 ---
-title: Plugins Overview
-description: Overview of all NestJS RedisX plugins
+title: 'Available Plugins — NestJS RedisX Ecosystem | NestJS RedisX'
+description: 'Catalogue of NestJS RedisX plugins: CachePlugin, LocksPlugin, RateLimitPlugin, IdempotencyPlugin, StreamsPlugin, MetricsPlugin, and TracingPlugin for Redis.'
 ---
 
 # Plugins Overview

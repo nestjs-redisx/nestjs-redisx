@@ -1,6 +1,6 @@
 ---
-title: Multiple Clients
-description: Managing multiple named Redis connections
+title: 'Managing Multiple Named Clients — Core | NestJS RedisX'
+description: 'Register multiple named Redis clients in NestJS with RedisModule, resolve them through ClientManager, and isolate cache, session, and queue workloads.'
 ---
 
 # Multiple Clients

@@ -1,6 +1,6 @@
 ---
-title: Driver Abstraction
-description: Switch between ioredis and node-redis without code changes
+title: 'ioredis vs node-redis Driver Abstraction — Core | NestJS RedisX'
+description: 'Compare ioredis and node-redis drivers behind the REDIS_DRIVER token, swap IRedisDriver implementations, and keep NestJS application code unchanged.'
 ---
 
 # Driver Abstraction

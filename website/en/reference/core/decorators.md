@@ -1,6 +1,6 @@
 ---
-title: Decorators
-description: "@InjectRedis decorator for dependency injection"
+title: 'InjectRedis Decorator — Core Module | NestJS RedisX'
+description: 'Reference for the @InjectRedis decorator in NestJS: inject default and named Redis drivers, combine with RedisService, and wire low-level clients via DI.'
 ---
 
 # Decorators

@@ -1,6 +1,6 @@
 ---
-title: Connection Types
-description: Single, Cluster, and Sentinel connection configurations
+title: 'Single, Cluster, and Sentinel Topologies — Core | NestJS RedisX'
+description: 'Set up Redis single-instance, Cluster, and Sentinel topologies in NestJS with ConnectionConfig, TLS, replica routing, and failover-ready configuration.'
 ---
 
 # Connection Types

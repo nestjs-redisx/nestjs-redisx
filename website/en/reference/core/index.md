@@ -1,6 +1,6 @@
 ---
-title: Core Module
-description: Foundation of NestJS RedisX with driver abstraction, multi-client support, and plugin system
+title: '@nestjs-redisx/core Package Introduction | NestJS RedisX'
+description: 'Introduction to @nestjs-redisx/core: RedisModule, RedisService, driver abstraction, multi-client management, connection topologies, and the plugin system.'
 ---
 
 # Core Module

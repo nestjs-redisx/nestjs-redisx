@@ -1,6 +1,6 @@
 ---
-title: Error Handling
-description: Structured error system with error codes, hierarchy, and JSON serialization
+title: 'RedisXError Handling — Core Module | NestJS RedisX'
+description: 'Reference for RedisXError, ErrorCode enum, is()/isAnyOf() helpers, cause chaining, and JSON serialization for structured NestJS Redis error handling.'
 ---
 
 # Error Handling

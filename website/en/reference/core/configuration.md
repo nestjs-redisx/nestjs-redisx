@@ -1,6 +1,6 @@
 ---
-title: Configuration
-description: Complete configuration reference for Core module
+title: 'RedisModule Configuration — Core Module | NestJS RedisX'
+description: 'Configure RedisModule.forRoot and forRootAsync options, including IRedisModuleOptions, named clients, plugins array, retries, and ConfigService factories.'
 ---
 
 # Configuration

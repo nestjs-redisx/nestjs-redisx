@@ -1,6 +1,6 @@
 ---
-title: Plugin System
-description: Extensible plugin architecture with lifecycle hooks and dependency management
+title: 'IRedisXPlugin Architecture — Core Module | NestJS RedisX'
+description: 'A deep dive into the IRedisXPlugin contract, PluginRegistryService, onRegister/onModuleInit/onModuleDestroy hooks, and dependency-ordered plugin loading.'
 ---
 
 # Plugin System

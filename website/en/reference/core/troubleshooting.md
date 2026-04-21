@@ -1,6 +1,6 @@
 ---
-title: Troubleshooting
-description: Common issues and solutions for Core module
+title: 'Core Module Troubleshooting Guide | NestJS RedisX'
+description: 'Troubleshoot RedisModule connection failures, ECONNREFUSED errors, Cluster misconfiguration, Sentinel discovery issues, and driver mismatches in NestJS apps.'
 ---
 
 # Troubleshooting

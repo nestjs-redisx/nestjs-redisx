@@ -1,6 +1,6 @@
 ---
-title: Reference
-description: Complete API reference for NestJS RedisX
+title: 'Plugin Reference Overview | NestJS RedisX'
+description: 'Reference for the NestJS RedisX core module and plugin ecosystem covering RedisModule, RedisService, drivers, health checks, and plugin APIs.'
 ---
 
 # Reference
