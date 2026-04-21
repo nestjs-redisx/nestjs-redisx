@@ -1,6 +1,6 @@
 ---
-title: Service API
-description: Programmatic lock management with LockService
+title: 'LockService API Reference — Locks Plugin | NestJS RedisX'
+description: 'Reference for LOCK_SERVICE: acquire, tryAcquire, withLock, release, and extend methods for programmatic Redis locking in NestJS providers.'
 ---
 
 # Service API

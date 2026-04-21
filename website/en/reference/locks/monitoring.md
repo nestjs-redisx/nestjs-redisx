@@ -1,6 +1,6 @@
 ---
-title: Monitoring
-description: Metrics, logging, and debugging locks
+title: 'Monitoring and Metrics — Locks Plugin | NestJS RedisX'
+description: 'Monitor Redis lock acquisitions, wait time, hold duration, and active counts via Prometheus redisx_lock_* metrics and LockService logging hooks.'
 ---
 
 # Monitoring

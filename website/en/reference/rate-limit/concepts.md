@@ -1,6 +1,6 @@
 ---
-title: Core Concepts
-description: Understanding rate limiting, windows, tokens, and keys
+title: 'Core Concepts — Rate Limit Plugin | NestJS RedisX'
+description: 'Understand throttling fundamentals: rate limit keys, points, durations, refill rates, and window semantics behind NestJS Redis rate limiting.'
 ---
 
 # Core Concepts

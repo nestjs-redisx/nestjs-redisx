@@ -1,6 +1,6 @@
 ---
-title: Serializers
-description: Data serialization options for cache storage
+title: 'Cache Serializers Reference — Cache Plugin | NestJS RedisX'
+description: 'Serialize L2 Redis values with JsonSerializer or MsgpackSerializer, implement ISerializer, and override the SERIALIZER provider for binary-safe caching.'
 ---
 
 # Serializers

@@ -1,6 +1,6 @@
 ---
-title: Patterns
-description: Common distributed lock patterns
+title: 'Lock Patterns — Locks Plugin | NestJS RedisX'
+description: 'Implement mutex, leader election, resource pool, and distributed semaphore patterns with @WithLock and LockService in NestJS Redis apps.'
 ---
 
 # Patterns

@@ -1,6 +1,6 @@
 ---
-title: Response Headers
-description: X-RateLimit headers and client-side handling
+title: 'Response Headers — Rate Limit Plugin | NestJS RedisX'
+description: 'Send X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, and Retry-After headers from NestJS Redis rate limit responses to clients.'
 ---
 
 # Response Headers

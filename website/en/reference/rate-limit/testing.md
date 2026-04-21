@@ -1,6 +1,6 @@
 ---
-title: Testing
-description: Testing rate-limited endpoints and services
+title: 'Testing Guide — Rate Limit Plugin | NestJS RedisX'
+description: 'Test rate-limited NestJS controllers by mocking RATE_LIMIT_SERVICE with Vitest, stubbing check results, and asserting 429 throttling behavior.'
 ---
 
 # Testing

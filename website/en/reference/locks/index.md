@@ -1,6 +1,6 @@
 ---
-title: Locks Plugin
-description: Distributed locking with auto-renewal for NestJS applications
+title: 'Introduction — Locks Plugin | NestJS RedisX'
+description: 'Coordinate critical sections across NestJS instances with @nestjs-redisx/locks: Redis-backed mutexes, @WithLock, auto-renewal, and retry logic.'
 ---
 
 # Locks Plugin

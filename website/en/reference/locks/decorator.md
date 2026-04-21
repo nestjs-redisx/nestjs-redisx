@@ -1,6 +1,6 @@
 ---
-title: "@WithLock Decorator"
-description: Declarative distributed locking with method decorators
+title: '@WithLock Decorator — Locks Plugin | NestJS RedisX'
+description: 'Apply distributed Redis locks declaratively with @WithLock: dynamic key builders, TTL, waitTimeout, autoRenew, and onLockFailed strategies.'
 ---
 
 # @WithLock Decorator

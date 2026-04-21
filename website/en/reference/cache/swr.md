@@ -1,6 +1,6 @@
 ---
-title: Stale-While-Revalidate
-description: Serve stale data while refreshing in the background
+title: 'Stale-While-Revalidate Guide — Cache Plugin | NestJS RedisX'
+description: 'Guide to SWR in @nestjs-redisx/cache: staleTime windows, cachedAt and expiresAt metadata, background revalidation, and choosing when to serve stale data.'
 ---
 
 # Stale-While-Revalidate (SWR)

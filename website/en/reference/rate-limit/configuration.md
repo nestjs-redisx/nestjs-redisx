@@ -1,6 +1,6 @@
 ---
-title: Configuration
-description: Complete configuration reference for Rate Limit Plugin
+title: 'Configuration Reference — Rate Limit Plugin | NestJS RedisX'
+description: 'Configure RateLimitPlugin: defaultAlgorithm, defaultPoints, defaultDuration, keyPrefix, custom extractors, and includeHeaders in NestJS Redis apps.'
 ---
 
 # Configuration

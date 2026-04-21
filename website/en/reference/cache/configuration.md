@@ -1,6 +1,6 @@
 ---
-title: Configuration
-description: Complete configuration reference for Cache Plugin
+title: 'Configuration Reference — Cache Plugin | NestJS RedisX'
+description: 'Configure CachePlugin with l1 and l2 options, TTLs, eviction policies, stampede, SWR, varyBy, contextKeys, and keyPrefix for NestJS Redis caching.'
 ---
 
 # Configuration

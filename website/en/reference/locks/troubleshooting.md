@@ -1,6 +1,6 @@
 ---
-title: Troubleshooting
-description: Common issues and solutions
+title: 'Troubleshooting Guide — Locks Plugin | NestJS RedisX'
+description: 'Troubleshoot stuck Redis locks, LockAcquisitionError, premature expiry, renewal loops, and token mismatches when using @nestjs-redisx/locks.'
 ---
 
 # Troubleshooting

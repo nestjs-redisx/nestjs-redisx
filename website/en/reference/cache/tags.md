@@ -1,6 +1,6 @@
 ---
-title: Tag-Based Invalidation
-description: Group and invalidate cache entries by tags
+title: 'Tag-Based Invalidation — Cache Plugin | NestJS RedisX'
+description: 'Invalidate groups of Redis cache entries with tag SETs, SMEMBERS lookups, and the @InvalidateTags decorator or CacheService.invalidateTags() method.'
 ---
 
 # Tag-Based Invalidation

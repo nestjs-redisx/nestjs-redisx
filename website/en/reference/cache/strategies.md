@@ -1,6 +1,6 @@
 ---
-title: Eviction Strategies
-description: Memory management and cache eviction policies
+title: 'L1 Eviction Strategies — Cache Plugin | NestJS RedisX'
+description: 'Compare LRU and LFU eviction policies, lazy TTL cleanup, and maxSize tuning for the in-memory L1 tier of @nestjs-redisx/cache on top of Redis.'
 ---
 
 # Eviction Strategies

@@ -1,6 +1,6 @@
 ---
-title: Recipes
-description: Common caching patterns and real-world examples
+title: 'Cache Recipes and Patterns — Cache Plugin | NestJS RedisX'
+description: 'Implement cache-aside with getOrSet, cache.wrap helpers, @Cached patterns, tag invalidation, and multi-tenant keys for real-world NestJS Redis caching.'
 ---
 
 # Recipes

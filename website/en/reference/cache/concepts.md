@@ -1,6 +1,6 @@
 ---
-title: Core Concepts
-description: Understanding L1/L2 cache layers, TTL, keys, strategies, and cache flow
+title: 'L1 and L2 Cache Concepts — Cache Plugin | NestJS RedisX'
+description: 'Understand L1 memory plus L2 Redis layers, TTLs, key formatting, read/write flow, and strategy selection inside the @nestjs-redisx/cache plugin.'
 ---
 
 # Core Concepts

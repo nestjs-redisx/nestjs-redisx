@@ -1,6 +1,6 @@
 ---
-title: Troubleshooting
-description: Common issues and solutions
+title: 'Cache Plugin Troubleshooting Guide | NestJS RedisX'
+description: 'Troubleshoot Cache Plugin issues: missed hits, unregistered plugins, @Cached vs @Cacheable key placeholders, invalidation gaps, and Redis connection errors.'
 ---
 
 # Troubleshooting

@@ -1,6 +1,6 @@
 ---
-title: Testing
-description: Testing services that use locks
+title: 'Testing Guide — Locks Plugin | NestJS RedisX'
+description: 'Test NestJS services that rely on LOCK_SERVICE using Vitest mocks, stubbed ILock objects, and Testcontainers-backed integration checks.'
 ---
 
 # Testing

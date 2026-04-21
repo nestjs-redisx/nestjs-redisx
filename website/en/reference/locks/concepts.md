@@ -1,6 +1,6 @@
 ---
-title: Core Concepts
-description: Understanding distributed locks, tokens, TTL, and lock safety
+title: 'Core Concepts — Locks Plugin | NestJS RedisX'
+description: 'Understand distributed locks in Redis: ownership tokens, TTL semantics, lease expiry, safety guarantees, and key naming for NestJS services.'
 ---
 
 # Core Concepts

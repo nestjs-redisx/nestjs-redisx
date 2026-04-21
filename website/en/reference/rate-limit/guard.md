@@ -1,6 +1,6 @@
 ---
-title: RateLimitGuard
-description: Manual guard application and ordering
+title: 'RateLimitGuard — Rate Limit Plugin | NestJS RedisX'
+description: 'Apply RateLimitGuard manually with @UseGuards, order it after AuthGuard, and combine it with @RateLimit metadata on NestJS controllers.'
 ---
 
 # RateLimitGuard

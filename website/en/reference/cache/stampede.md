@@ -1,6 +1,6 @@
 ---
-title: Anti-Stampede Protection
-description: Prevent cache stampede and thundering herd problems
+title: 'Anti-Stampede Protection — Cache Plugin | NestJS RedisX'
+description: 'Prevent cache stampede with in-process singleflight coalescing and distributed SET NX EX locks under _stampede: keys across NestJS Redis instances.'
 ---
 
 # Anti-Stampede Protection

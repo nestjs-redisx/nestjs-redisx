@@ -1,6 +1,6 @@
 ---
-title: Configuration
-description: Complete configuration reference for Locks Plugin
+title: 'Configuration Reference — Locks Plugin | NestJS RedisX'
+description: 'Configure LocksPlugin options including defaultTtl, maxTtl, keyPrefix, autoRenew, retry backoff, and onLockFailed strategy in NestJS Redis apps.'
 ---
 
 # Configuration

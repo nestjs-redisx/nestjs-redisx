@@ -1,6 +1,6 @@
 ---
-title: Key Extraction
-description: Identify clients for rate limiting - IP, User, API Key, Custom
+title: 'Key Extraction — Rate Limit Plugin | NestJS RedisX'
+description: 'Extract rate limit keys from IP, user ID, API key, headers, or custom functions and honor X-Forwarded-For in NestJS Redis throttling setups.'
 ---
 
 # Key Extraction

@@ -1,6 +1,6 @@
 ---
-title: Testing
-description: Testing cached services and cache behavior
+title: 'Testing Cached Services — Cache Plugin | NestJS RedisX'
+description: 'Test NestJS services that use CacheService and CACHE_SERVICE with Vitest MockedObject, Given-When-Then specs, and stub loaders for deterministic behavior.'
 ---
 
 # Testing

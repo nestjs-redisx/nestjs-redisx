@@ -1,6 +1,6 @@
 ---
-title: Service API
-description: Programmatic cache access with CacheService
+title: 'CacheService API Reference — Cache Plugin | NestJS RedisX'
+description: 'Reference for CacheService and CACHE_SERVICE token: get, set, getOrSet, wrap, getMany, setMany, invalidateTags, and TTL helpers for programmatic caching.'
 ---
 
 # Service API

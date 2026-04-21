@@ -1,6 +1,6 @@
 ---
-title: Algorithms
-description: Deep dive into Fixed Window, Sliding Window, and Token Bucket
+title: 'Algorithms — Rate Limit Plugin | NestJS RedisX'
+description: 'Compare fixed window, sliding window, and token bucket algorithms in @nestjs-redisx/rate-limit: memory, accuracy, burst control, and trade-offs.'
 ---
 
 # Rate Limiting Algorithms

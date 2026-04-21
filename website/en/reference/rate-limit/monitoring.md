@@ -1,6 +1,6 @@
 ---
-title: Monitoring
-description: Metrics, logging, and observability for rate limiting
+title: 'Monitoring and Metrics — Rate Limit Plugin | NestJS RedisX'
+description: 'Observe NestJS rate limiting via redisx_ratelimit_requests_total counters, Prometheus queries, Grafana dashboards, and structured request logs.'
 ---
 
 # Monitoring

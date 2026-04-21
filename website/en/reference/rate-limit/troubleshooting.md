@@ -1,6 +1,6 @@
 ---
-title: Troubleshooting
-description: Common issues and solutions
+title: 'Troubleshooting Guide — Rate Limit Plugin | NestJS RedisX'
+description: 'Diagnose missing 429 responses, absent X-RateLimit headers, wrong key extraction, and plugin registration issues in @nestjs-redisx/rate-limit.'
 ---
 
 # Troubleshooting

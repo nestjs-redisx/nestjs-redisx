@@ -1,6 +1,6 @@
 ---
-title: "@RateLimit Decorator"
-description: Declarative rate limiting with method and class decorators
+title: '@RateLimit Decorator — Rate Limit Plugin | NestJS RedisX'
+description: 'Apply throttling declaratively with @RateLimit: points, duration, algorithm, key extractors, skip predicates, and custom errorFactory in NestJS.'
 ---
 
 # @RateLimit Decorator

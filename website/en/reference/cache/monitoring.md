@@ -1,6 +1,6 @@
 ---
-title: Monitoring
-description: Metrics, logging, and debugging cache performance
+title: 'Monitoring Cache Performance — Cache Plugin | NestJS RedisX'
+description: 'Monitor hit ratios, stampede prevention, and L1/L2 sizes with CacheService.getStats(), structured logs, and Prometheus metrics from MetricsPlugin.'
 ---
 
 # Monitoring

@@ -1,6 +1,6 @@
 ---
-title: Auto-Renewal
-description: Automatic lock extension for long-running operations
+title: 'Auto-Renewal — Locks Plugin | NestJS RedisX'
+description: 'Renew Redis lock TTL automatically during long-running NestJS jobs with configurable intervalFraction and heartbeat failure callbacks.'
 ---
 
 # Auto-Renewal

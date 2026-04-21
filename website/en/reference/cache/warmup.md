@@ -1,6 +1,6 @@
 ---
-title: Cache Warming
-description: Pre-populate cache on application startup
+title: 'Cache Warmup on Startup — Cache Plugin | NestJS RedisX'
+description: 'Pre-warm Redis caches during NestJS OnModuleInit with WarmupService, chunked Promise.allSettled loaders, per-key TTLs, tags, and SWR-aware metadata.'
 ---
 
 # Cache Warming

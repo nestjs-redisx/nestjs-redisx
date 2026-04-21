@@ -1,6 +1,6 @@
 ---
-title: Service API
-description: Programmatic rate limiting with RateLimitService
+title: 'RateLimitService API — Rate Limit Plugin | NestJS RedisX'
+description: 'Reference for RATE_LIMIT_SERVICE: check, peek, reset, and getState methods returning remaining points, reset time, and retryAfter in NestJS.'
 ---
 
 # Service API

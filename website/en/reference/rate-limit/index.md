@@ -1,6 +1,6 @@
 ---
-title: Rate Limit Plugin
-description: API rate limiting with multiple algorithms for NestJS applications
+title: 'Overview — Rate Limit Plugin | NestJS RedisX'
+description: 'Protect NestJS APIs with @nestjs-redisx/rate-limit: sliding window, token bucket, and fixed window algorithms backed by Redis with @RateLimit.'
 ---
 
 # Rate Limit Plugin

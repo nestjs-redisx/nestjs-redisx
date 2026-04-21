@@ -1,6 +1,6 @@
 ---
-title: Cache Plugin
-description: Two-tier caching with anti-stampede protection for NestJS applications
+title: '@nestjs-redisx/cache Plugin Introduction | NestJS RedisX'
+description: 'Introduction to CachePlugin for NestJS: two-tier L1/L2 Redis caching, stampede protection, SWR, tag invalidation, and descriptor-based @Cached decorators.'
 ---
 
 # Cache Plugin

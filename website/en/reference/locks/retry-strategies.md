@@ -1,6 +1,6 @@
 ---
-title: Retry Strategies
-description: Retry configuration and exponential backoff
+title: 'Retry Strategies — Locks Plugin | NestJS RedisX'
+description: 'Tune Redis lock acquisition retries: exponential backoff, initialDelay, multiplier, maxDelay caps, jitter, and maxRetries on NestJS services.'
 ---
 
 # Retry Strategies

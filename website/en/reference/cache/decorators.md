@@ -1,6 +1,6 @@
 ---
-title: Decorators
-description: "Cached, Cacheable, CacheEvict, CachePut, InvalidateTags, and InvalidateOn decorator reference"
+title: 'Cache Decorators Reference — Cache Plugin | NestJS RedisX'
+description: 'Reference for @Cached, @Cacheable, @CacheEvict, @CachePut, @InvalidateTags, and @InvalidateOn decorators with proxy-based and Spring-style metadata flows.'
 ---
 
 # Decorators
