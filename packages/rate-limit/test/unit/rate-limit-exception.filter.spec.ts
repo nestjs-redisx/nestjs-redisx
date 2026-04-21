@@ -159,4 +159,40 @@ describe('RateLimitExceptionFilter', () => {
     expect(mockHttpAdapter.setHeader).toHaveBeenCalled();
     expect(mockHttpAdapter.reply).toHaveBeenCalled();
   });
+
+  describe('uninitialized HttpAdapterHost', () => {
+    it('should throw when httpAdapter is null', () => {
+      // Given
+      const filterWithoutAdapter = new RateLimitExceptionFilter({ httpAdapter: null } as any);
+      const result: IRateLimitResult = {
+        allowed: false,
+        limit: 100,
+        remaining: 0,
+        reset: 1706400000,
+        current: 100,
+        retryAfter: 30,
+      };
+      const error = new RateLimitExceededError('Rate limit exceeded', result);
+
+      // When/Then
+      expect(() => filterWithoutAdapter.catch(error, mockHost)).toThrow(/HttpAdapterHost is not initialized/);
+    });
+
+    it('should throw when httpAdapter is undefined', () => {
+      // Given
+      const filterWithoutAdapter = new RateLimitExceptionFilter({ httpAdapter: undefined } as any);
+      const result: IRateLimitResult = {
+        allowed: false,
+        limit: 100,
+        remaining: 0,
+        reset: 1706400000,
+        current: 100,
+        retryAfter: 30,
+      };
+      const error = new RateLimitExceededError('Rate limit exceeded', result);
+
+      // When/Then
+      expect(() => filterWithoutAdapter.catch(error, mockHost)).toThrow(/HttpAdapterHost is not initialized/);
+    });
+  });
 });
