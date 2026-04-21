@@ -1,6 +1,6 @@
 ---
-title: Patterns
-description: Common streaming patterns and architectures
+title: 'Streaming Architecture Patterns — Streams Plugin | NestJS RedisX'
+description: 'Implement fan-out, work queues, event sourcing, saga, priority queues, and pipelines on Redis Streams using consumer groups in NestJS microservices.'
 ---
 
 # Patterns

@@ -1,6 +1,6 @@
 ---
-title: Message Handling
-description: ACK, NACK, retry logic, and error handling
+title: 'Message Handling Lifecycle — Streams Plugin | NestJS RedisX'
+description: 'Acknowledge Redis Stream messages with message.ack and reject, manage PEL entries, exponential backoff retries, and error boundaries in NestJS consumers.'
 ---
 
 # Message Handling

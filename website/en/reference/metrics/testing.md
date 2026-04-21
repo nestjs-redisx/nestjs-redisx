@@ -1,6 +1,6 @@
 ---
-title: Testing
-description: Testing metrics collection and custom metrics
+title: 'Testing Guide — Metrics Plugin | NestJS RedisX'
+description: 'Test NestJS services that collect Redis metrics with Vitest — mock IMetricsService, assert counter and histogram calls, and follow Given-When-Then.'
 ---
 
 # Testing

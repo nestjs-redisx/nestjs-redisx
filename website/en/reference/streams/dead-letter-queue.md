@@ -1,6 +1,6 @@
 ---
-title: Dead Letter Queue
-description: Handle failed messages with Dead Letter Queue
+title: 'Dead Letter Queue Setup — Streams Plugin | NestJS RedisX'
+description: 'Set up DLQ for Redis Streams in NestJS: enable dlq streamSuffix, maxLen, maxRetries, inspect failed messages, and replay DLQ entries back to the main stream.'
 ---
 
 # Dead Letter Queue

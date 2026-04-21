@@ -1,6 +1,6 @@
 ---
-title: Recipes
-description: Real-world metrics patterns and examples
+title: 'Recipes — Metrics Plugin | NestJS RedisX'
+description: 'Practical metrics recipes for NestJS Redis — HTTP request histograms, e-commerce order counters, inventory gauges, and background job queue depth tracking.'
 ---
 
 # Recipes

@@ -1,6 +1,6 @@
 ---
-title: Configuration
-description: Streams plugin configuration reference
+title: 'Configuration Reference — Streams Plugin | NestJS RedisX'
+description: 'Configure StreamsPlugin client, keyPrefix, consumer batchSize, blockTimeout, dedicated Redis connections, and DLQ options in NestJS forRootAsync setups.'
 ---
 
 # Configuration

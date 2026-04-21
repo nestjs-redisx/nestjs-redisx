@@ -1,6 +1,6 @@
 ---
-title: Plugin Tracing
-description: Automatic tracing for Cache, Locks, Rate Limit, and Streams plugins
+title: 'Automatic Plugin Tracing — Tracing Plugin | NestJS RedisX'
+description: 'Automatic span creation for Cache, Locks, Rate Limit, Streams, and Idempotency plugins — span names, attributes, and parent-child nesting in NestJS.'
 ---
 
 # Plugin Tracing

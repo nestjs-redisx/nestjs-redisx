@@ -1,6 +1,6 @@
 ---
-title: Recipes
-description: Real-world tracing patterns and examples
+title: 'Recipes — Tracing Plugin | NestJS RedisX'
+description: 'Practical tracing recipes for NestJS Redis — order processing workflows, user registration flows, and batch jobs with nested spans and recordException.'
 ---
 
 # Recipes

@@ -1,6 +1,6 @@
 ---
-title: Exporters
-description: Configure trace exporters for different backends
+title: 'Trace Exporters — Tracing Plugin | NestJS RedisX'
+description: 'Export spans from NestJS Redis apps to Jaeger, Zipkin, Grafana Tempo, and OTLP collectors — compare HTTP versus gRPC transports and console output.'
 ---
 
 # Exporters

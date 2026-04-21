@@ -1,6 +1,6 @@
 ---
-title: Testing
-description: Testing stream producers and consumers
+title: 'Testing Strategies — Streams Plugin | NestJS RedisX'
+description: 'Test NestJS Redis Streams with Vitest: mock STREAM_PRODUCER publish, simulate IStreamMessage ack flows, and run consumer groups against real Redis fixtures.'
 ---
 
 # Testing

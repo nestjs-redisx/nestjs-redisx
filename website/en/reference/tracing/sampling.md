@@ -1,6 +1,6 @@
 ---
-title: Sampling
-description: Control which traces to collect
+title: 'Sampling Strategies — Tracing Plugin | NestJS RedisX'
+description: 'Sample traces with AlwaysOn, AlwaysOff, TraceIdRatioBased, and ParentBased samplers to control volume and cost in NestJS Redis OpenTelemetry setups.'
 ---
 
 # Sampling

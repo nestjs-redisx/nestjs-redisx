@@ -1,6 +1,6 @@
 ---
-title: Client Guide
-description: Client-side implementation for idempotent requests
+title: 'Client Integration Guide — Idempotency Plugin | NestJS RedisX'
+description: 'Guide to generating Idempotency-Key headers, UUID v4 keys, retry loops, and exponential backoff for clients calling NestJS Redis idempotent endpoints.'
 ---
 
 # Client Guide

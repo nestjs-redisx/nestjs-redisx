@@ -1,6 +1,6 @@
 ---
-title: Troubleshooting
-description: Debug common metrics issues
+title: 'Troubleshooting — Metrics Plugin | NestJS RedisX'
+description: 'Troubleshoot empty /metrics endpoints, missing Prometheus scrapes, high cardinality labels, and counter drift in NestJS Redis deployments.'
 ---
 
 # Troubleshooting

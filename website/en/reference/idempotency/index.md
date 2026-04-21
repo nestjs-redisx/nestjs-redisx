@@ -1,6 +1,6 @@
 ---
-title: Idempotency Plugin
-description: Request deduplication and exactly-once execution for NestJS applications
+title: 'Overview — Idempotency Plugin | NestJS RedisX'
+description: 'Deduplicate HTTP requests and guarantee exactly-once execution in NestJS with @nestjs-redisx/idempotency, Idempotency-Key headers, fingerprints, and replay.'
 ---
 
 # Idempotency Plugin

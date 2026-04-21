@@ -1,6 +1,6 @@
 ---
-title: "@Idempotent Decorator"
-description: Declarative idempotency with method decorators
+title: "@Idempotent Decorator API — Idempotency Plugin | NestJS RedisX"
+description: 'Implement declarative idempotency with @Idempotent, controlling ttl, cacheHeaders, keyExtractor, fingerprintFields, and skip options on NestJS controllers.'
 ---
 
 # @Idempotent Decorator

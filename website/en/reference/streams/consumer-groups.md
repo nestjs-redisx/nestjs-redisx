@@ -1,6 +1,6 @@
 ---
-title: Consumer Groups
-description: Managing consumer groups for work distribution
+title: 'Consumer Groups — Streams Plugin | NestJS RedisX'
+description: 'Manage Redis consumer groups with @StreamConsumer: XGROUP CREATE, starting offsets, load balancing, pending entry lists, and horizontal scaling in NestJS.'
 ---
 
 # Consumer Groups

@@ -1,6 +1,6 @@
 ---
-title: Backpressure
-description: Control message processing rate and resource usage
+title: 'Backpressure Control — Streams Plugin | NestJS RedisX'
+description: 'Scale Redis Streams consumers in NestJS by tuning batchSize, concurrency, blockTimeout, and semaphore patterns to throttle throughput without dropping work.'
 ---
 
 # Backpressure

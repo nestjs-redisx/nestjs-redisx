@@ -1,6 +1,6 @@
 ---
-title: Core Concepts
-description: Understanding Prometheus metric types and best practices
+title: 'Core Concepts — Metrics Plugin | NestJS RedisX'
+description: 'Understand Prometheus metric types — counter, gauge, histogram, summary — labels, cardinality, and naming conventions for Redis observability in NestJS.'
 ---
 
 # Core Concepts

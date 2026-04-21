@@ -1,6 +1,6 @@
 ---
-title: Recipes
-description: Real-world idempotency patterns and examples
+title: 'Production Recipes — Idempotency Plugin | NestJS RedisX'
+description: 'Reference for idempotent payments, order creation, webhook handlers, subscription flows, and money transfers using @Idempotent on NestJS Redis stacks.'
 ---
 
 # Recipes

@@ -1,6 +1,6 @@
 ---
-title: Fingerprinting
-description: Request fingerprinting and validation
+title: 'Request Fingerprinting — Idempotency Plugin | NestJS RedisX'
+description: 'A deep dive into SHA-256 request fingerprints, fingerprintFields, validateFingerprint, and custom fingerprintGenerator to detect key reuse in NestJS on Redis.'
 ---
 
 # Fingerprinting

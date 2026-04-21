@@ -1,6 +1,6 @@
 ---
-title: Core Concepts
-description: Understanding idempotency, keys, fingerprints, and response replay
+title: 'Core Concepts — Idempotency Plugin | NestJS RedisX'
+description: 'Understand idempotency keys, request fingerprints, response replay, and TTL semantics that power exactly-once execution in NestJS on Redis.'
 ---
 
 # Core Concepts

@@ -1,6 +1,6 @@
 ---
-title: Recipes
-description: Real-world streaming use cases and examples
+title: 'Production Recipes — Streams Plugin | NestJS RedisX'
+description: 'Reference for Redis Streams recipes in NestJS: order pipelines, notification fan-out, analytics projections, audit logs, webhook delivery, and image queues.'
 ---
 
 # Recipes

@@ -1,6 +1,6 @@
 ---
-title: Core Concepts
-description: Understanding Redis Streams fundamentals
+title: 'Core Concepts — Streams Plugin | NestJS RedisX'
+description: 'Understand Redis Streams fundamentals: message IDs, append-only logs, XADD, XREADGROUP, consumer groups, PEL, and at-least-once delivery in NestJS.'
 ---
 
 # Core Concepts

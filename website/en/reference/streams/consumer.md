@@ -1,6 +1,6 @@
 ---
-title: Consumer API
-description: Consuming messages from Redis Streams with decorators and service
+title: 'Consumer API Reference — Streams Plugin | NestJS RedisX'
+description: 'Consume Redis Streams with @StreamConsumer: configure stream, group, batchSize, blockTimeout, maxRetries, and IStreamMessage ack handlers in NestJS services.'
 ---
 
 # Consumer API

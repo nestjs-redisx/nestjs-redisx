@@ -1,6 +1,6 @@
 ---
-title: Configuration
-description: Complete configuration reference for Idempotency Plugin
+title: 'Configuration Reference — Idempotency Plugin | NestJS RedisX'
+description: 'Reference for IdempotencyPlugin options: defaultTtl, keyPrefix, headerName, lockTimeout, waitTimeout, fingerprintFields, and custom generators in NestJS.'
 ---
 
 # Configuration

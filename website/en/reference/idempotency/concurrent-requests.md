@@ -1,6 +1,6 @@
 ---
-title: Concurrent Requests
-description: Handling simultaneous requests with same idempotency key
+title: 'Concurrent Request Handling — Idempotency Plugin | NestJS RedisX'
+description: 'Handle simultaneous requests sharing one Idempotency-Key with Redis locks, poll-and-wait semantics, lockTimeout, and waitTimeout options in NestJS.'
 ---
 
 # Concurrent Requests

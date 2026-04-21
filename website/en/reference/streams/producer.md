@@ -1,6 +1,6 @@
 ---
-title: Producer API
-description: Publishing messages to Redis Streams
+title: 'Producer API Reference — Streams Plugin | NestJS RedisX'
+description: 'Publish Redis Stream messages in NestJS via STREAM_PRODUCER: use publish, publishBatch, XADD options, maxLen trimming, and getStreamInfo metadata calls.'
 ---
 
 # Producer API

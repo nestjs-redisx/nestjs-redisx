@@ -1,6 +1,6 @@
 ---
-title: Troubleshooting
-description: Common issues and solutions
+title: 'Troubleshooting Guide — Streams Plugin | NestJS RedisX'
+description: 'Troubleshoot Redis Streams in NestJS: missing XGROUP, XREADGROUP blocking timeouts, pending entries, duplicate deliveries, and DLQ overflow investigation.'
 ---
 
 # Troubleshooting

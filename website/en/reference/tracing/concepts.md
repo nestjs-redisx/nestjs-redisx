@@ -1,6 +1,6 @@
 ---
-title: Core Concepts
-description: Understanding distributed tracing fundamentals
+title: 'Core Concepts — Tracing Plugin | NestJS RedisX'
+description: 'Understand traces, spans, context propagation, attributes, and events in OpenTelemetry for diagnosing Redis latency across NestJS microservices.'
 ---
 
 # Core Concepts

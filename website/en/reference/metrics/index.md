@@ -1,6 +1,6 @@
 ---
-title: Metrics Plugin
-description: Prometheus metrics for Redis operations in NestJS applications
+title: 'Overview — @nestjs-redisx/metrics | NestJS RedisX'
+description: 'Collect Prometheus-format metrics for Redis operations in NestJS — automatic plugin instrumentation, /metrics endpoint, histograms, counters, and gauges.'
 ---
 
 # Metrics Plugin

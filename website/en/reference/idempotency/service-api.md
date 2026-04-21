@@ -1,6 +1,6 @@
 ---
-title: Service API
-description: Programmatic idempotency with IdempotencyService
+title: 'IdempotencyService API — Idempotency Plugin | NestJS RedisX'
+description: 'Reference for IDEMPOTENCY_SERVICE programmatic control: checkAndLock, complete, fail, get, and delete methods for custom idempotent flows in NestJS.'
 ---
 
 # Service API

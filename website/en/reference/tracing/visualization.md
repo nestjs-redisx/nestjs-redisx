@@ -1,6 +1,6 @@
 ---
-title: Visualization
-description: Visualize and analyze traces with Jaeger and Grafana
+title: 'Trace Visualization — Tracing Plugin | NestJS RedisX'
+description: 'Visualize Redis traces with Jaeger UI and Grafana Tempo — analyze span timelines, service dependencies, and latency distributions from NestJS apps.'
 ---
 
 # Visualization

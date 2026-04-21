@@ -1,6 +1,6 @@
 ---
-title: Plugin Metrics
-description: Metrics automatically collected from other plugins
+title: 'Built-in Plugin Metrics — Metrics Plugin | NestJS RedisX'
+description: 'Reference for metrics auto-emitted by Cache, Locks, Rate Limit, Streams, and Idempotency plugins — names, labels, and PromQL queries for NestJS Redis.'
 ---
 
 # Plugin Metrics

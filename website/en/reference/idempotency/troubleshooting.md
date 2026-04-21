@@ -1,6 +1,6 @@
 ---
-title: Troubleshooting
-description: Common issues and solutions
+title: 'Troubleshooting Guide — Idempotency Plugin | NestJS RedisX'
+description: 'Troubleshoot fingerprint mismatch 422s, lock wait timeouts, Idempotency-Key header parsing, and stuck records in the NestJS Redis idempotency plugin.'
 ---
 
 # Troubleshooting

@@ -1,6 +1,6 @@
 ---
-title: Header Caching
-description: Cache and replay response headers with idempotent requests
+title: 'Response Header Caching — Idempotency Plugin | NestJS RedisX'
+description: 'Replay Location, ETag, and custom response headers alongside bodies using cacheHeaders on @Idempotent for consistent NestJS retries backed by Redis.'
 ---
 
 # Header Caching

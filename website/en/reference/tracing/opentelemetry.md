@@ -1,6 +1,6 @@
 ---
-title: OpenTelemetry
-description: OpenTelemetry SDK integration and instrumentation
+title: 'OpenTelemetry Integration — Tracing Plugin | NestJS RedisX'
+description: 'Integrate NestJS RedisX with the OpenTelemetry SDK, @opentelemetry/api, OTel Collector, and auto-instrumentations for HTTP, databases, and messaging.'
 ---
 
 # OpenTelemetry

@@ -1,6 +1,6 @@
 ---
-title: Tracing Plugin
-description: Distributed tracing for Redis operations with OpenTelemetry
+title: 'Overview — @nestjs-redisx/tracing | NestJS RedisX'
+description: 'Trace Redis commands, cache, locks, and rate-limit operations in NestJS with OpenTelemetry spans, OTLP exporters, and parent-based context propagation.'
 ---
 
 # Tracing Plugin

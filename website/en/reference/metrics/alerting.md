@@ -1,6 +1,6 @@
 ---
-title: Alerting
-description: Set up alerts for Redis and application metrics
+title: 'Alerting Rules — Metrics Plugin | NestJS RedisX'
+description: 'Configure Prometheus AlertManager rules for Redis cache hit rate, lock contention, error counters, and latency thresholds in NestJS applications.'
 ---
 
 # Alerting

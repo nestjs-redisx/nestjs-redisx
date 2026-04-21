@@ -1,6 +1,6 @@
 ---
-title: Testing
-description: Testing idempotent endpoints and services
+title: 'Testing Strategies — Idempotency Plugin | NestJS RedisX'
+description: 'Test NestJS idempotent endpoints with Vitest, mocking IDEMPOTENCY_SERVICE checkAndLock and complete, plus ioredis-mock for integration coverage.'
 ---
 
 # Testing

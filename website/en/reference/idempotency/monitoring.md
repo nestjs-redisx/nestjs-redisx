@@ -1,6 +1,6 @@
 ---
-title: Monitoring
-description: Metrics, logging, and debugging idempotency
+title: 'Monitoring and Metrics — Idempotency Plugin | NestJS RedisX'
+description: 'Monitor redisx_idempotency_requests_total counters, duration histograms, replay vs mismatch status, and Grafana queries for NestJS idempotent endpoints.'
 ---
 
 # Monitoring

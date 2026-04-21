@@ -1,6 +1,6 @@
 ---
-title: Testing
-description: Testing traced services and span creation
+title: 'Testing Guide — Tracing Plugin | NestJS RedisX'
+description: 'Test NestJS services that create spans with Vitest — mock ITracingService, stub withSpan, and assert span attributes, events, and exception recording.'
 ---
 
 # Testing

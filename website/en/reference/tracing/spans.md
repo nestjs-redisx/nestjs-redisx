@@ -1,6 +1,6 @@
 ---
-title: Spans
-description: Create and manage custom spans
+title: 'Custom Spans — @nestjs-redisx/tracing | NestJS RedisX'
+description: 'Create custom spans with ITracingService and withSpan in NestJS — set attributes, add events, record exceptions, and select span kinds around Redis.'
 ---
 
 # Spans

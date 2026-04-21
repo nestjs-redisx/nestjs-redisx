@@ -1,6 +1,6 @@
 ---
-title: Troubleshooting
-description: Debug common tracing issues
+title: 'Troubleshooting — Tracing Plugin | NestJS RedisX'
+description: 'Troubleshoot missing spans, broken context propagation, failing OTLP exports, and sampler misconfiguration in NestJS Redis OpenTelemetry pipelines.'
 ---
 
 # Troubleshooting

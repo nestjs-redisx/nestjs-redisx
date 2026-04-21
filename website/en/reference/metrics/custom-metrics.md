@@ -1,6 +1,6 @@
 ---
-title: Custom Metrics
-description: Create and track custom application metrics
+title: 'Custom Metrics — @nestjs-redisx/metrics | NestJS RedisX'
+description: 'Instrument NestJS services with custom counters, gauges, and histograms via IMetricsService — register metrics, add labels, and observe Redis workloads.'
 ---
 
 # Custom Metrics

@@ -1,6 +1,6 @@
 ---
-title: Configuration
-description: Complete configuration reference for Metrics Plugin
+title: 'Configuration Reference — Metrics Plugin | NestJS RedisX'
+description: 'Reference for MetricsPlugin options — prefix, default labels, histogram buckets, endpoint path, and Prometheus registry setup for NestJS Redis apps.'
 ---
 
 # Configuration

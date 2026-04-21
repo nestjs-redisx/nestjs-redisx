@@ -1,6 +1,6 @@
 ---
-title: Monitoring
-description: Metrics, logging, and debugging streams
+title: 'Monitoring and Metrics — Streams Plugin | NestJS RedisX'
+description: 'Monitor Redis Streams health with redisx_stream_messages_consumed_total, consumer lag, PEL size, DLQ depth, and Grafana queries for NestJS deployments.'
 ---
 
 # Monitoring

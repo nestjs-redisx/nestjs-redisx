@@ -1,6 +1,6 @@
 ---
-title: Prometheus Integration
-description: Configure Prometheus to scrape metrics
+title: 'Prometheus Scraping — Metrics Plugin | NestJS RedisX'
+description: 'Expose the /metrics endpoint and configure Prometheus scrape_configs, relabeling, and service discovery for NestJS Redis instances in production.'
 ---
 
 # Prometheus Integration

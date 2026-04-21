@@ -1,6 +1,6 @@
 ---
-title: Streams Plugin
-description: Event streaming with Redis Streams for NestJS applications
+title: 'Overview — Streams Plugin | NestJS RedisX'
+description: 'Build event-driven NestJS apps on Redis Streams with @nestjs-redisx/streams: consumer groups, @StreamConsumer, producer API, retries, and dead letter queues.'
 ---
 
 # Streams Plugin

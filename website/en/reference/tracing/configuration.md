@@ -1,6 +1,6 @@
 ---
-title: Configuration
-description: Configure distributed tracing for Redis operations
+title: 'Configuration Reference — Tracing Plugin | NestJS RedisX'
+description: 'Reference for ITracingPluginOptions — service name, OTLP endpoint, Jaeger/Zipkin/console exporters, samplers, and headers for NestJS Redis tracing.'
 ---
 
 # Configuration
