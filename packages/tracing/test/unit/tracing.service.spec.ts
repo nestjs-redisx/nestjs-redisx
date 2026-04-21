@@ -476,6 +476,49 @@ describe('TracingService', () => {
       // When/Then - should not throw
       await expect(service.onModuleDestroy()).resolves.not.toThrow();
     });
+
+    it('should be a no-op when tracing is disabled (provider is null)', async () => {
+      // Given — disabled service with no initialized provider
+      const disabledService = new TracingService({ enabled: false });
+
+      // When
+      await disabledService.onModuleDestroy();
+
+      // Then — no provider was created or torn down
+      expect((disabledService as any).provider).toBeNull();
+    });
+
+    it('should swallow errors thrown by provider.shutdown()', async () => {
+      // Given
+      service.onModuleInit();
+      const provider = (service as any).provider;
+      provider.shutdown = vi.fn().mockRejectedValue(new Error('collector unreachable'));
+      const warnSpy = vi.spyOn((service as any).logger, 'warn').mockImplementation(() => {});
+
+      // When/Then — a failing collector must not take down app.close()
+      await expect(service.onModuleDestroy()).resolves.toBeUndefined();
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('collector unreachable'));
+    });
+
+    it('should return within the bounded timeout when provider.shutdown() hangs', async () => {
+      // Given — provider whose shutdown never resolves
+      service.onModuleInit();
+      const provider = (service as any).provider;
+      provider.shutdown = vi.fn().mockReturnValue(new Promise<void>(() => {}));
+
+      vi.useFakeTimers();
+      try {
+        // When
+        const destroyPromise = service.onModuleDestroy();
+        await vi.advanceTimersByTimeAsync(2_000);
+
+        // Then — the shutdown race is bounded so app.close() cannot hang on a
+        // dead collector
+        await expect(destroyPromise).resolves.toBeUndefined();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   describe('sampling strategies', () => {
