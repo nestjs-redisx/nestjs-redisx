@@ -407,5 +407,84 @@ describe('ConsumerInstance', () => {
       // Then
       expect((instance as any).running).toBe(false);
     });
+
+    it('should be a no-op when stop() is called before start()', async () => {
+      // Given — a consumer that has never been started
+      const instance = new ConsumerInstance(driver, dlqService, config, metrics);
+
+      // When
+      await expect(instance.stop()).resolves.toBeUndefined();
+
+      // Then — no group created, no polling, nothing to tear down
+      expect((instance as any).running).toBe(false);
+      expect((instance as any).pollPromise).toBeUndefined();
+      expect(driver.xgroupCreate).not.toHaveBeenCalled();
+    });
+
+    it('should be idempotent when stop() is called twice after start()', async () => {
+      // Given
+      const instance = new ConsumerInstance(driver, dlqService, config, metrics);
+      await instance.start();
+
+      // When
+      await instance.stop();
+      const secondStop = instance.stop();
+
+      // Then — the second stop returns immediately because running=false and
+      // pollPromise has already been cleared by the first stop.
+      await expect(secondStop).resolves.toBeUndefined();
+      expect((instance as any).running).toBe(false);
+      expect((instance as any).pollPromise).toBeUndefined();
+    });
+  });
+
+  describe('shutdown error detection', () => {
+    const SHUTDOWN_HINTS = ['Connection is closed', 'Connection closed', 'Client is closed', 'The client is closed', 'Driver is not connected', 'DRIVER_NOT_CONNECTED', 'ECONNRESET', 'ECONNREFUSED'];
+
+    it.each(SHUTDOWN_HINTS)('should short-circuit processMessage when handler throws error containing "%s"', async (hint) => {
+      // Given a handler that rejects with a shutdown-style teardown error
+      const handler = vi.fn().mockRejectedValue(new Error(`redis client error: ${hint} during teardown`));
+      config.handler = handler;
+      const instance = new ConsumerInstance(driver, dlqService, config, metrics);
+      (instance as any).running = true;
+      const spy = vi.spyOn(instance as any, 'handleFailure');
+
+      // When
+      await (instance as any).processMessage('1700000000000-0', { data: JSON.stringify({ x: 1 }) });
+
+      // Then — no retry / DLQ work kicked off, because the driver is tearing down
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('should fall through to handleFailure for unrelated errors', async () => {
+      // Given
+      const handler = vi.fn().mockRejectedValue(new Error('Foo bar baz'));
+      config.handler = handler;
+      const instance = new ConsumerInstance(driver, dlqService, config, metrics);
+      (instance as any).running = true;
+      const spy = vi.spyOn(instance as any, 'handleFailure').mockResolvedValue(undefined);
+
+      // When
+      await (instance as any).processMessage('1700000000000-0', { data: JSON.stringify({ x: 1 }), _attempt: '1' });
+
+      // Then — a plain error is not a shutdown signal, so handleFailure runs
+      expect(spy).toHaveBeenCalledWith('1700000000000-0', { x: 1 }, 1, expect.any(Error));
+    });
+
+    it.each(SHUTDOWN_HINTS)('should break poll loop without retry delay when xreadgroup rejects with "%s"', async (hint) => {
+      // Given
+      const instance = new ConsumerInstance(driver, dlqService, config, metrics);
+      driver.xreadgroup.mockRejectedValueOnce(new Error(`xreadgroup failed: ${hint}`));
+      (instance as any).running = true;
+      (instance as any).shutdownSignal = new Promise(() => {
+        // never resolves — forces the loop to terminate via the shutdown-hint path
+      });
+
+      // When
+      await (instance as any).poll();
+
+      // Then — only the single rejecting call happened; no 1s retry delay was taken
+      expect(driver.xreadgroup).toHaveBeenCalledTimes(1);
+    });
   });
 });
