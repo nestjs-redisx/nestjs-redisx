@@ -1,6 +1,6 @@
 ---
-title: Distributed Coordination
-description: When to use Locks vs Idempotency vs Database constraints
+title: 'Coordination Patterns — NestJS RedisX Concepts | NestJS RedisX'
+description: 'Understand when to reach for Redis distributed locks, idempotency keys, or database constraints in NestJS RedisX to prevent race conditions and double writes.'
 ---
 
 # Distributed Coordination

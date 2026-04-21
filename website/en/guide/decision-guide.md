@@ -1,6 +1,6 @@
 ---
-title: Decision Guide
-description: Quick guide to choosing the right NestJS RedisX plugins
+title: 'Choosing the Right Plugins in NestJS RedisX | NestJS RedisX'
+description: 'Compare Cache, Locks, Rate Limit, Idempotency, Streams, Metrics, and Tracing plugins to pick the right NestJS RedisX tool for your Redis use case.'
 ---
 
 # Decision Guide

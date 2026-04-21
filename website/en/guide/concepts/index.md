@@ -1,6 +1,6 @@
 ---
-title: Concepts
-description: Core concepts and mental models for NestJS RedisX
+title: 'Core Concepts Overview — NestJS RedisX Guide | NestJS RedisX'
+description: 'Guide to NestJS RedisX mental models covering two-tier caching, coordination, rate limiting algorithms, event streaming, and observability strategy.'
 ---
 
 # Concepts

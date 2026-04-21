@@ -1,6 +1,6 @@
 ---
-title: Failure Modes
-description: Graceful degradation when Redis is unavailable
+title: 'Failure Modes — NestJS RedisX Architecture | NestJS RedisX'
+description: 'Plan graceful degradation when Redis drops: understand default plugin fallbacks, circuit breakers, and fail-open vs fail-closed strategies in NestJS apps.'
 ---
 
 # Failure Modes

@@ -1,6 +1,6 @@
 ---
-title: Testing Strategy
-description: Unit, integration, and contract testing for NestJS RedisX
+title: 'Testing Strategy for NestJS RedisX Apps | NestJS RedisX'
+description: 'Structure unit, integration, and end-to-end tests for NestJS RedisX with Vitest, Testcontainers for Redis, mocked drivers, and contract tests across plugins.'
 ---
 
 # Testing Strategy

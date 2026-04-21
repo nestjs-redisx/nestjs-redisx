@@ -1,6 +1,6 @@
 ---
-title: Debugging
-description: Tools and techniques for debugging RedisX issues
+title: 'Troubleshooting and Debugging Tools | NestJS RedisX'
+description: 'Debug NestJS RedisX with redis-cli inspection, SLOWLOG, MONITOR, Node diagnostics, and plugin tracing to locate cache, lock, and stream production issues.'
 ---
 
 # Debugging

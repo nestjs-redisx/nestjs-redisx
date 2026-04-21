@@ -1,6 +1,6 @@
 ---
-title: Two-Tier Caching
-description: Understanding L1 (in-memory) and L2 (Redis) cache layers
+title: 'Two-Tier Caching — NestJS RedisX Concepts | NestJS RedisX'
+description: 'Understand the two-tier cache model in NestJS RedisX: choose between L1 in-memory and L2 Redis layers, balance latency and consistency, and size each tier.'
 ---
 
 # Two-Tier Caching

@@ -1,6 +1,6 @@
 ---
-title: Operations Guide
-description: Production operations for NestJS RedisX — monitoring, alerting, and runbooks
+title: 'Operations Overview — NestJS RedisX Operations | NestJS RedisX'
+description: 'Guide to production operations for SRE and DevOps teams running NestJS RedisX, covering monitoring, alerting, capacity planning, and incident runbooks.'
 ---
 
 # Operations Guide

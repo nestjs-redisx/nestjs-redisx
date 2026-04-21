@@ -1,6 +1,6 @@
 ---
-title: Security
-description: TLS, ACL, data classification, and security best practices
+title: 'Security — NestJS RedisX Architecture | NestJS RedisX'
+description: 'Secure Redis with NestJS RedisX: enable TLS, configure ACL users, classify sensitive data, rotate credentials, and harden networks for production workloads.'
 ---
 
 # Security

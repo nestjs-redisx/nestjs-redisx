@@ -1,6 +1,6 @@
 ---
-title: Rate Limiting Strategies
-description: Choosing the right rate limiting algorithm for your use case
+title: 'Rate Limiting Algorithms — NestJS RedisX Concepts | NestJS RedisX'
+description: 'Compare fixed window, sliding window, token bucket, and leaky bucket rate limiting algorithms in NestJS RedisX and match each to API and billing scenarios.'
 ---
 
 # Rate Limiting Strategies

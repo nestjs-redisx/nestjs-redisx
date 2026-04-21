@@ -1,6 +1,6 @@
 ---
-title: API Protection
-description: Multi-tier rate limiting for public APIs
+title: 'Multi-Tier API Rate Limit Protection Recipe | NestJS RedisX'
+description: 'Implement multi-tier rate limiting with global IP, per-user, and per-endpoint quotas combined with response caching to protect public NestJS REST APIs.'
 ---
 
 # API Protection

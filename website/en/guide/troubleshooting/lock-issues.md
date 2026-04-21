@@ -1,6 +1,6 @@
 ---
-title: Lock Issues
-description: Troubleshoot distributed lock problems
+title: 'Troubleshooting Distributed Lock Issues | NestJS RedisX'
+description: 'Handle LockTimeoutException errors, contention hot spots, stale holders, and auto-renew failures when using the @WithLock decorator in NestJS RedisX.'
 ---
 
 # Lock Issues

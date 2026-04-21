@@ -1,6 +1,6 @@
 ---
-title: Observability Strategy
-description: What to monitor, what to alert on, and why
+title: 'Observability Strategy — NestJS RedisX Concepts | NestJS RedisX'
+description: 'Plan observability for NestJS RedisX: choose the right counters, histograms, and gauges, wire logs and traces, and define SLOs and alerting thresholds.'
 ---
 
 # Observability Strategy

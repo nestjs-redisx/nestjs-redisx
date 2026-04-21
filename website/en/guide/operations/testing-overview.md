@@ -1,6 +1,6 @@
 ---
-title: 'Testing Overview — NestJS RedisX'
-description: 'Test suite structure, coverage targets, and quality assurance for NestJS RedisX.'
+title: 'Testing Overview — NestJS RedisX Operations | NestJS RedisX'
+description: 'Understand the unit, integration, and E2E test suite, Vitest coverage targets, CI workflow, and quality gates across all eight NestJS RedisX packages.'
 ---
 
 # Testing Overview

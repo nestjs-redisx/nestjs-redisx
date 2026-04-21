@@ -1,6 +1,6 @@
 ---
-title: Integration Guide
-description: Migration guides and tooling setup for NestJS RedisX
+title: 'Integration Hub and Migration Guides | NestJS RedisX'
+description: 'Reference for NestJS RedisX integration guides covering migration from cache-manager and ioredis, NestJS patterns, testing, Prometheus, and OpenTelemetry.'
 ---
 
 # Integration Guide

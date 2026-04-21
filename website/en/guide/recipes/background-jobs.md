@@ -1,6 +1,6 @@
 ---
-title: Background Jobs
-description: Reliable async processing with Redis Streams
+title: 'Background Jobs with Redis Streams Recipe | NestJS RedisX'
+description: 'Build reliable async workers with Redis Streams consumer groups, automatic retries, dead-letter queues, and graceful shutdown in NestJS RedisX services.'
 ---
 
 # Background Jobs

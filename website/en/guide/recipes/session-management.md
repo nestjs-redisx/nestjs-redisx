@@ -1,6 +1,6 @@
 ---
-title: Session Management
-description: Distributed sessions with sliding expiration
+title: 'Distributed Session Management Recipe | NestJS RedisX'
+description: 'Handle Redis-backed user sessions with sliding TTL, session-id rotation, and multi-instance sharing using the cache plugin from NestJS RedisX services.'
 ---
 
 # Session Management

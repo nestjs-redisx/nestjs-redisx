@@ -1,6 +1,6 @@
 ---
-title: Prometheus & Grafana Setup
-description: Complete observability setup with metrics and dashboards
+title: 'Prometheus and Grafana with NestJS RedisX | NestJS RedisX'
+description: 'Configure Prometheus scraping, Grafana dashboards, and AlertManager rules for NestJS RedisX metrics exposed via the MetricsPlugin and /metrics endpoint.'
 ---
 
 # Prometheus & Grafana Setup

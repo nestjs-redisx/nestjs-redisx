@@ -1,6 +1,6 @@
 ---
-title: Performance Issues
-description: Troubleshoot latency and throughput problems
+title: 'Troubleshooting Performance Bottlenecks | NestJS RedisX'
+description: 'Tune Redis latency, throughput, slow Lua scripts, memory pressure, and connection pool saturation affecting NestJS RedisX cache, locks, and streams plugins.'
 ---
 
 # Performance Issues

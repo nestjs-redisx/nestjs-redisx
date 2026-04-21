@@ -1,6 +1,6 @@
 ---
-title: Tuning
-description: Configuration profiles for different workloads
+title: 'Tuning Profiles — NestJS RedisX Architecture | NestJS RedisX'
+description: 'Tune NestJS RedisX for your workload with baseline, low-latency, high-throughput, and memory-constrained profiles covering cache, locks, and rate limits.'
 ---
 
 # Tuning

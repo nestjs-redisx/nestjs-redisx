@@ -1,6 +1,6 @@
 ---
-title: OpenTelemetry Setup
-description: Distributed tracing with OpenTelemetry and Jaeger
+title: 'OpenTelemetry Integration with NestJS RedisX | NestJS RedisX'
+description: 'Set up OpenTelemetry distributed tracing in NestJS RedisX apps with the TracingPlugin, OTEL collector, Jaeger or Grafana Tempo, and trace context propagation.'
 ---
 
 # OpenTelemetry Setup

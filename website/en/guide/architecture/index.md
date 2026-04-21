@@ -1,6 +1,6 @@
 ---
-title: Architecture
-description: System design patterns for NestJS RedisX
+title: 'Architecture Overview — NestJS RedisX Guide | NestJS RedisX'
+description: 'A deep dive into the NestJS RedisX architecture index: key naming, multi-tenancy, deployment topologies, tuning, security, and connection management.'
 ---
 
 # Architecture

@@ -1,6 +1,6 @@
 ---
-title: Migration from cache-manager
-description: Migrate from @nestjs/cache-manager to NestJS RedisX
+title: 'Migrating cache-manager to NestJS RedisX | NestJS RedisX'
+description: 'Migrate from @nestjs/cache-manager to NestJS RedisX: replace providers, adopt the @Cached decorator, enable L1+L2 layers, and unlock tag-based invalidation.'
 ---
 
 # Migration from @nestjs/cache-manager

@@ -1,6 +1,6 @@
 ---
-title: Event Streaming
-description: Redis Streams vs message queues - when to use what
+title: 'Event Streaming Patterns — NestJS RedisX Concepts | NestJS RedisX'
+description: 'A deep dive into Redis Streams with NestJS RedisX: compare streams with pub/sub and brokers, design consumer groups, and handle replay, DLQ, and backpressure.'
 ---
 
 # Event Streaming

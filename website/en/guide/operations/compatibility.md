@@ -1,6 +1,6 @@
 ---
-title: 'Compatibility Matrix — NestJS RedisX'
-description: 'Supported versions of Node.js, NestJS, Redis, and Redis drivers for NestJS RedisX.'
+title: 'Compatibility Matrix — NestJS RedisX Operations | NestJS RedisX'
+description: 'Reference for supported Node.js, NestJS, and Redis versions plus ioredis and node-redis driver compatibility across standalone, Sentinel, and Cluster.'
 ---
 
 # Compatibility Matrix

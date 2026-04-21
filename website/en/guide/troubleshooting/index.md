@@ -1,6 +1,6 @@
 ---
-title: Troubleshooting Guide
-description: Debug common issues with NestJS RedisX
+title: 'Troubleshooting Overview and Decision Tree | NestJS RedisX'
+description: 'Resolve cache, lock, connection, and performance problems in NestJS RedisX via a decision tree that guides you to the right troubleshooting runbook fast.'
 ---
 
 # Troubleshooting Guide

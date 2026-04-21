@@ -1,6 +1,6 @@
 ---
-title: CQRS Invalidation
-description: Event-driven cache invalidation with tags
+title: 'Event-Driven CQRS Cache Invalidation Recipe | NestJS RedisX'
+description: 'Implement event-driven tag-based cache invalidation between CQRS command and query handlers using the @nestjs-redisx/cache plugin and NestJS EventBus.'
 ---
 
 # CQRS Invalidation

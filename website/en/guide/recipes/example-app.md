@@ -1,6 +1,6 @@
 ---
-title: Example Application
-description: Complete working application demonstrating all RedisX patterns
+title: 'Full Example E-Commerce Application Recipe | NestJS RedisX'
+description: 'Reference for a complete NestJS e-commerce API combining cache, locks, rate limit, idempotency, streams, metrics, and tracing plugins from NestJS RedisX.'
 ---
 
 # Example Application

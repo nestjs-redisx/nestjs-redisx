@@ -1,6 +1,6 @@
 ---
-title: Guarantees
-description: Formal semantics and guarantees of NestJS RedisX
+title: 'Guarantees — NestJS RedisX Architecture | NestJS RedisX'
+description: 'Reference for NestJS RedisX formal semantics: at-least-once delivery, lease ownership, bounded cache staleness, and atomicity across locks and streams.'
 ---
 
 # Guarantees

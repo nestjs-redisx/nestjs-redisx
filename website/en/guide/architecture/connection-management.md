@@ -1,6 +1,6 @@
 ---
-title: Connection Management
-description: Connection pools, timeouts, and retry configuration
+title: 'Connections — NestJS RedisX Architecture | NestJS RedisX'
+description: 'Tune Redis connection pools, timeouts, retry strategies, and keepalive for NestJS RedisX in production, with sizing formulas and pipelining guidance.'
 ---
 
 # Connection Management

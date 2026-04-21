@@ -1,6 +1,6 @@
 ---
-title: Cache Issues
-description: Troubleshoot common cache problems
+title: 'Troubleshooting Cache Issues in NestJS RedisX | NestJS RedisX'
+description: 'Diagnose missing @Cached hits, stale data, serialization failures, tag invalidation bugs, and low hit rate symptoms in the NestJS RedisX cache plugin.'
 ---
 
 # Cache Issues

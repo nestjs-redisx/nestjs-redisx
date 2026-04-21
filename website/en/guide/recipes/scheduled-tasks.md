@@ -1,6 +1,6 @@
 ---
-title: Scheduled Tasks
-description: Prevent duplicate cron execution with locks
+title: 'Scheduled Cron Tasks with Locks Recipe | NestJS RedisX'
+description: 'Set up singleton cron jobs across multiple NestJS instances with distributed locks and @WithLock to prevent duplicate scheduled task execution on Redis.'
 ---
 
 # Scheduled Tasks

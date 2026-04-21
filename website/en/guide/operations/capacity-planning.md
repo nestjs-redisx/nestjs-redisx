@@ -1,6 +1,6 @@
 ---
-title: Capacity Planning
-description: Memory, key cardinality, and scaling guidelines
+title: 'Capacity Planning — NestJS RedisX Operations | NestJS RedisX'
+description: 'Plan Redis memory, key cardinality, throughput, and connection pool sizing for cache, locks, and streams workloads in NestJS RedisX production clusters.'
 ---
 
 # Capacity Planning

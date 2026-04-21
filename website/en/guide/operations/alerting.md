@@ -1,6 +1,6 @@
 ---
-title: Alerting
-description: Alert rules and thresholds for NestJS RedisX
+title: 'Alerting Rules — NestJS RedisX Operations | NestJS RedisX'
+description: 'Configure Prometheus alert rules for Redis connection loss, cache hit rate, lock contention, and stream consumer lag in NestJS RedisX deployments.'
 ---
 
 # Alerting

@@ -1,6 +1,6 @@
 ---
-title: Runbooks
-description: Incident response procedures for common RedisX issues
+title: 'Incident Runbooks — NestJS RedisX Operations | NestJS RedisX'
+description: 'Step-by-step on-call runbooks for Redis connection loss, cache stampede, lock contention, stream lag, and memory pressure incidents in NestJS RedisX.'
 ---
 
 # Runbooks

@@ -1,6 +1,6 @@
 ---
-title: Installation
-description: Install NestJS RedisX and its dependencies
+title: 'Installing Packages and Dependencies | NestJS RedisX'
+description: 'Install NestJS RedisX core and plugins with ioredis or node-redis, configure Node.js and TypeScript prerequisites, and spin up Redis for local development.'
 ---
 
 # Installation

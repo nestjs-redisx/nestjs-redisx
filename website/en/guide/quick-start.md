@@ -1,6 +1,6 @@
 ---
-title: Quick Start
-description: Get started with NestJS RedisX in minutes
+title: 'Quick Start with NestJS RedisX Plugins | NestJS RedisX'
+description: 'Set up your first NestJS RedisX app: configure RedisModule, register CachePlugin, and add the @Cached decorator to a controller in just a few steps.'
 ---
 
 # Quick Start

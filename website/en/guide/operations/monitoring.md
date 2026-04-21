@@ -1,6 +1,6 @@
 ---
-title: Monitoring
-description: Key metrics, dashboards, and SLOs for production monitoring
+title: 'Production Monitoring — NestJS RedisX Operations | NestJS RedisX'
+description: 'Monitor cache hit rate, lock wait times, rate limit rejections, and stream lag with Prometheus metrics, Grafana dashboards, and SLOs for NestJS RedisX.'
 ---
 
 # Monitoring

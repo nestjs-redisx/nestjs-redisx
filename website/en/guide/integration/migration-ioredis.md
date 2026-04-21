@@ -1,6 +1,6 @@
 ---
-title: Migration from ioredis
-description: Migrate from raw ioredis to NestJS RedisX patterns
+title: 'Migrating ioredis Code to NestJS RedisX | NestJS RedisX'
+description: 'Move raw ioredis code onto NestJS RedisX: replace manual caching, locks, and rate limiting with decorators while still accessing the underlying ioredis client.'
 ---
 
 # Migration from ioredis

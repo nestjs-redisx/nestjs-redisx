@@ -1,6 +1,6 @@
 ---
-title: Key Naming
-description: Redis key naming conventions and patterns
+title: 'Key Naming — NestJS RedisX Architecture | NestJS RedisX'
+description: 'Design consistent Redis key naming conventions for NestJS RedisX apps: service, tenant, entity, and id segments with TTL tagging and namespace patterns.'
 ---
 
 # Key Naming

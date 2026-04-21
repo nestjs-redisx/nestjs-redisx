@@ -1,6 +1,6 @@
 ---
-title: Webhook Delivery
-description: Reliable webhook processing with idempotency
+title: 'Reliable Inbound Webhook Delivery Recipe | NestJS RedisX'
+description: 'Process third-party webhooks exactly once in NestJS controllers using the idempotency plugin, signature verification, and Redis Streams retry queues.'
 ---
 
 # Webhook Delivery

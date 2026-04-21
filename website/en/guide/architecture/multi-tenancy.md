@@ -1,6 +1,6 @@
 ---
-title: Multi-Tenancy
-description: Tenant isolation strategies with Redis
+title: 'Multi-Tenancy — NestJS RedisX Architecture | NestJS RedisX'
+description: 'Compare Redis multi-tenant isolation strategies in NestJS RedisX, from key prefixes and database numbers to dedicated Redis instances and quota enforcement.'
 ---
 
 # Multi-Tenancy

@@ -1,6 +1,6 @@
 ---
-title: Guide
-description: Learn NestJS RedisX concepts, architecture, and best practices
+title: 'Developer Guide Overview for NestJS RedisX | NestJS RedisX'
+description: 'Reference for the NestJS RedisX developer guide covering plugin philosophy, Redis architecture patterns, concepts, integrations, and decision paths.'
 ---
 
 # NestJS RedisX Guide

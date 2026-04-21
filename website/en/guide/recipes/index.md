@@ -1,6 +1,6 @@
 ---
-title: Recipes
-description: Copy-paste solutions for common scenarios
+title: 'Recipes Index for Common Scenarios | NestJS RedisX'
+description: 'Guide to production-ready NestJS RedisX recipes for payments, webhooks, login throttling, CQRS invalidation, scheduled tasks, sessions, and background jobs.'
 ---
 
 # Recipes

@@ -1,6 +1,6 @@
 ---
-title: Payment Processing
-description: Prevent double charges with Idempotency + Locks
+title: 'Payment Idempotency Recipe for NestJS RedisX | NestJS RedisX'
+description: 'Prevent duplicate charges during client retries by combining the idempotency and locks plugins to safely process payments against NestJS payment gateways.'
 ---
 
 # Payment Processing

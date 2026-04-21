@@ -1,6 +1,6 @@
 ---
-title: Login Throttling
-description: Protect against brute force attacks
+title: 'Login Brute-Force Throttling Recipe | NestJS RedisX'
+description: 'Secure NestJS authentication endpoints from credential-stuffing attacks using progressive IP, per-username rate limits, and failure-count lockouts in Redis.'
 ---
 
 # Login Throttling

@@ -1,6 +1,6 @@
 ---
-title: NestJS Patterns
-description: Using RedisX with Guards, Interceptors, and Filters
+title: 'NestJS Guards and Interceptors with RedisX | NestJS RedisX'
+description: 'Implement NestJS guards, interceptors, pipes, and filters powered by NestJS RedisX plugins for rate limiting, caching, idempotency, and distributed locks.'
 ---
 
 # NestJS Patterns
