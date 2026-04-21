@@ -415,4 +415,118 @@ describe('IdempotencyInterceptor', () => {
       );
     });
   });
+
+  describe('replayResponse adapter guard', () => {
+    it('should throw when httpAdapter is null during replay', async () => {
+      // Given
+      const interceptorWithoutAdapter = new IdempotencyInterceptor(mockService, config, mockReflector, { httpAdapter: null } as any);
+      mockRequest.headers['idempotency-key'] = 'replay-null';
+      const record: IIdempotencyRecord = {
+        status: 'completed',
+        fingerprint: 'fp',
+        statusCode: 200,
+        response: JSON.stringify({ replayed: true }),
+        createdAt: Date.now(),
+        completedAt: Date.now(),
+      };
+      mockService.checkAndLock.mockResolvedValue({ isNew: false, record });
+
+      // When/Then
+      await expect(interceptorWithoutAdapter.intercept(mockContext, mockNext)).rejects.toThrow(/HttpAdapterHost is not initialized/);
+    });
+
+    it('should throw when httpAdapter is undefined during replay', async () => {
+      // Given
+      const interceptorWithoutAdapter = new IdempotencyInterceptor(mockService, config, mockReflector, { httpAdapter: undefined } as any);
+      mockRequest.headers['idempotency-key'] = 'replay-undefined';
+      const record: IIdempotencyRecord = {
+        status: 'completed',
+        fingerprint: 'fp',
+        statusCode: 200,
+        response: JSON.stringify({ replayed: true }),
+        createdAt: Date.now(),
+        completedAt: Date.now(),
+      };
+      mockService.checkAndLock.mockResolvedValue({ isNew: false, record });
+
+      // When/Then
+      await expect(interceptorWithoutAdapter.intercept(mockContext, mockNext)).rejects.toThrow(/HttpAdapterHost is not initialized/);
+    });
+  });
+
+  describe('getRequestPath fallback', () => {
+    it('should use request.url when httpAdapter.getRequestUrl returns undefined', () => {
+      // Given
+      mockHttpAdapter.getRequestUrl.mockReturnValue(undefined);
+      const request = { url: '/fallback/url', path: '/fallback/path' };
+
+      // When
+      const path = (interceptor as any).getRequestPath(request);
+
+      // Then
+      expect(path).toBe('/fallback/url');
+    });
+
+    it('should use request.path when getRequestUrl and url are missing', () => {
+      // Given
+      mockHttpAdapter.getRequestUrl.mockReturnValue(undefined);
+      const request = { path: '/only/path' };
+
+      // When
+      const path = (interceptor as any).getRequestPath(request);
+
+      // Then
+      expect(path).toBe('/only/path');
+    });
+
+    it('should return empty string when request has neither url nor path', () => {
+      // Given
+      mockHttpAdapter.getRequestUrl.mockReturnValue(undefined);
+      const request = {};
+
+      // When
+      const path = (interceptor as any).getRequestPath(request);
+
+      // Then
+      expect(path).toBe('');
+    });
+
+    it('should return empty string when httpAdapter has no getRequestUrl and request is empty', () => {
+      // Given
+      const adapterWithoutGetUrl = { setHeader: vi.fn(), status: vi.fn() };
+      const localInterceptor = new IdempotencyInterceptor(mockService, config, mockReflector, { httpAdapter: adapterWithoutGetUrl } as any);
+
+      // When
+      const path = (localInterceptor as any).getRequestPath({});
+
+      // Then
+      expect(path).toBe('');
+    });
+
+    it('should prefer httpAdapter.getRequestUrl over request.url in fingerprint', async () => {
+      // Given
+      mockRequest.headers['idempotency-key'] = 'adapter-path-key';
+      mockRequest.url = '/raw/url';
+      mockHttpAdapter.getRequestUrl.mockReturnValue('/resolved/by/adapter');
+      mockService.checkAndLock.mockResolvedValue({ isNew: true });
+
+      // When
+      const resultFromAdapter = await interceptor.intercept(mockContext, mockNext);
+      await new Promise((resolve) => resultFromAdapter.subscribe(resolve));
+      const fingerprintFromAdapter = mockService.checkAndLock.mock.calls[0][1];
+
+      // And given — same request but adapter now returns undefined, so it falls back to raw url
+      mockService.checkAndLock.mockClear();
+      mockHttpAdapter.getRequestUrl.mockReturnValue(undefined);
+      mockService.checkAndLock.mockResolvedValue({ isNew: true });
+
+      const resultFromUrl = await interceptor.intercept(mockContext, mockNext);
+      await new Promise((resolve) => resultFromUrl.subscribe(resolve));
+      const fingerprintFromUrl = mockService.checkAndLock.mock.calls[0][1];
+
+      // Then — different paths produce different fingerprints
+      expect(fingerprintFromAdapter).not.toBe(fingerprintFromUrl);
+      expect(mockHttpAdapter.getRequestUrl).toHaveBeenCalledWith(mockRequest);
+    });
+  });
 });
