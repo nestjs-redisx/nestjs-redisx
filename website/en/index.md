@@ -1,7 +1,7 @@
 ---
 layout: home
 title: 'NestJS RedisX — Modular Redis Toolkit for NestJS'
-description: 'Production-ready Redis module for NestJS with L1+L2 caching, distributed locks, rate limiting, idempotency, streams, and observability. Plugin architecture, TypeScript-first.'
+description: 'Production Redis toolkit for NestJS: L1+L2 cache, distributed locks, rate limiting, idempotency, streams, metrics, and OpenTelemetry tracing plugins.'
 
 hero:
   name: "NestJS RedisX"

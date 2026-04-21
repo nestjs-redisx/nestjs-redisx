@@ -1,6 +1,7 @@
 ---
 layout: page
-title: NestJS RedisX
+title: 'NestJS RedisX — Redis Plugins and Toolkit for NestJS'
+description: 'Official documentation portal for NestJS RedisX — Redis cache, locks, rate-limit, idempotency, streams, metrics, and tracing plugins for NestJS apps.'
 ---
 
 <script setup>
