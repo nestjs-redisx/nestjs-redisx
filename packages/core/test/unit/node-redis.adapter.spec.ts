@@ -649,11 +649,31 @@ describe('NodeRedisAdapter', () => {
       expect(adapter).toBeInstanceOf(NodeRedisAdapter);
     });
 
+    it('should apply ACL authentication with username', () => {
+      // Given
+      const config: ConnectionConfig = {
+        type: 'single',
+        host: 'redis.example.com',
+        port: 6379,
+        username: 'app-user',
+        password: 'secure-password',
+        db: 0,
+      };
+
+      // When
+      const adapter = new NodeRedisAdapter(config);
+
+      // Then
+      expect(adapter).toBeInstanceOf(NodeRedisAdapter);
+    });
+
     it('should apply cluster options', () => {
       // Given
       const config: ConnectionConfig = {
         type: 'cluster',
         nodes: [{ host: 'localhost', port: 7000 }],
+        username: 'app-user',
+        password: 'secret',
         clusterOptions: {
           maxRedirections: 32,
           scaleReads: 'slave',
@@ -673,6 +693,7 @@ describe('NodeRedisAdapter', () => {
         type: 'sentinel',
         sentinels: [{ host: 'localhost', port: 26379 }],
         name: 'mymaster',
+        username: 'app-user',
         password: 'secret',
       };
 

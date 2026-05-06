@@ -12,6 +12,11 @@ import { IRedisXPlugin } from '../plugin/domain/interfaces';
  */
 export interface IBaseConnectionConfig {
   /**
+   * Username for authentication (Redis 6.0+).
+   */
+  username?: string;
+
+  /**
    * Password for authentication.
    */
   password?: string;

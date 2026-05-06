@@ -107,7 +107,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
         await (this.client as RedisSentinelType).close();
       } else {
         // Single and cluster clients have quit()
-        await (this.client as RedisClientType | RedisClusterType).quit();
+        await this.client.quit();
       }
     } catch {
       // Force disconnect on error
@@ -134,8 +134,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
       if (this.isSentinel) {
         // Sentinel uses .use() to get a client from the pool
         return await (this.client as RedisSentinelType).use(async (client) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          return await (client as any).sendCommand([command, ...prefixedArgs]);
+          return await client.sendCommand([command, ...prefixedArgs]);
         });
       }
 
@@ -166,7 +165,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
       return new NodeRedisSentinelPipelineAdapter(this.client as RedisSentinelType, this.keyPrefix);
     }
 
-    return new NodeRedisPipelineAdapter(this.client as RedisClientType | RedisClusterType, this.keyPrefix);
+    return new NodeRedisPipelineAdapter(this.client, this.keyPrefix);
   }
 
   protected createMulti(): IMulti {
@@ -178,7 +177,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
       return new NodeRedisSentinelMultiAdapter(this.client as RedisSentinelType, this.keyPrefix);
     }
 
-    return new NodeRedisMultiAdapter(this.client as RedisClientType | RedisClusterType, this.keyPrefix);
+    return new NodeRedisMultiAdapter(this.client, this.keyPrefix);
   }
 
   /**
@@ -316,6 +315,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
         connectTimeout: config.connectTimeout ?? 10000,
         reconnectStrategy: config.retryStrategy ? (retries) => config.retryStrategy?.(retries) ?? false : this.getDefaultReconnectStrategy(),
       },
+      username: config.username,
       password: config.password,
       database: config.db ?? 0,
       commandsQueueMaxLength: config.enableOfflineQueue === false ? 0 : undefined,
@@ -350,6 +350,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
         },
       })),
       defaults: {
+        username: config.username,
         password: config.password,
         database: config.db ?? 0,
         socket: {
@@ -408,6 +409,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
 
     // Node client options (for connecting to actual Redis nodes)
     const nodeClientOptions: RedisClientOptions = {
+      username: sentinelConfig.username,
       password: sentinelConfig.password,
       database: sentinelConfig.db ?? 0,
       socket: {
@@ -466,7 +468,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
 
     await sentinel.connect();
 
-    return sentinel as RedisSentinelType;
+    return sentinel;
   }
 
   /**
@@ -478,7 +480,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
         await (this.client as RedisSentinelType)?.close();
       } else if (this.client) {
         // Single and cluster clients have disconnect()
-        await (this.client as RedisClientType | RedisClusterType).disconnect();
+        await this.client.disconnect();
       }
     } catch {
       // Ignore disconnect errors
@@ -852,8 +854,7 @@ class NodeRedisSentinelPipelineAdapter implements IPipeline {
       const multi = client.multi();
 
       for (const { command, args } of this.commands) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (multi as any).addCommand([command, ...args.map(String)]);
+        multi.addCommand([command, ...args.map(String)]);
       }
 
       try {
