@@ -108,6 +108,51 @@ describe('Node-Redis Driver Integration', () => {
     });
   });
 
+  describe('Username Authentication', () => {
+    const username = `testuser:${Date.now()}`;
+    const password = 'P@ssw0rd123!';
+
+    afterAll(async () => {
+      try {
+        await (driver as any).executeCommand('ACL', 'DELUSER', username);
+      } catch {
+        // Ignore cleanup errors
+      }
+    });
+
+    it('should authenticate using username and password', async () => {
+      // Given
+      await (driver as any).executeCommand('ACL', 'SETUSER', username, 'on', `>${password}`, '~*', '+@all');
+
+      const authConfig: ISingleConnectionConfig = {
+        type: 'single',
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+        username,
+        password,
+        connectTimeout: 10000,
+      };
+
+      const authDriver = createDriver(authConfig, { type: 'node-redis' });
+
+      try {
+        await authDriver.connect();
+
+        // When
+        const whoami = await (authDriver as any).executeCommand('ACL', 'WHOAMI');
+        const result = await authDriver.ping();
+
+        // Then
+        expect(String(whoami)).toBe(username);
+        expect(result).toBe('PONG');
+      } finally {
+        if (authDriver.isConnected()) {
+          await authDriver.disconnect();
+        }
+      }
+    });
+  });
+
   describe('Set Options', () => {
     it('should set with expiration (EX)', async () => {
       // Given
