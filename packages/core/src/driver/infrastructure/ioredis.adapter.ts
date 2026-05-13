@@ -151,6 +151,7 @@ export class IoRedisAdapter extends BaseRedisDriver {
     const options: RedisOptions = {
       host: config.host ?? 'localhost',
       port: config.port ?? 6379,
+      username: config.username,
       password: config.password,
       db: config.db ?? 0,
       keyPrefix: config.keyPrefix,
@@ -189,6 +190,7 @@ export class IoRedisAdapter extends BaseRedisDriver {
 
     const options: ClusterOptions = {
       redisOptions: {
+        username: config.username,
         password: config.password,
         db: config.db ?? 0,
         keyPrefix: config.keyPrefix,
@@ -218,6 +220,7 @@ export class IoRedisAdapter extends BaseRedisDriver {
     const options: RedisOptions = {
       sentinels: config.sentinels,
       name: config.name,
+      username: config.username,
       password: config.password,
       db: config.db ?? 0,
       keyPrefix: config.keyPrefix,

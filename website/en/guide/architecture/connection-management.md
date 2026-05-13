@@ -130,6 +130,88 @@ Prevent connection drops in cloud environments:
 }
 ```
 
+## Authentication
+
+### Basic Authentication (Redis 5.x and earlier)
+
+```typescript
+{
+  host: 'redis',
+  port: 6379,
+  password: process.env.REDIS_PASSWORD,
+}
+```
+
+### ACL Authentication (Redis 6.0+)
+
+Redis 6.0 introduced ACL (Access Control Lists) with username/password authentication:
+
+```typescript
+{
+  host: 'redis.example.com',
+  port: 6379,
+  username: process.env.REDIS_USERNAME,  // ACL username
+  password: process.env.REDIS_PASSWORD,  // ACL password
+}
+```
+
+### Server-Side ACL Configuration
+
+```
+# redis.conf or ACL file
+user app-user on >secure-password ~cache:* ~lock:* +@read +@write -@admin
+user migration-user on >migration-password ~* +@all
+```
+
+### Role-Based Access Pattern
+
+```typescript
+// Application with restricted permissions
+RedisModule.forRoot({
+  clients: {
+    app: {
+      host: 'redis',
+      port: 6379,
+      username: 'app-user',
+      password: process.env.APP_REDIS_PASSWORD,
+    },
+  },
+})
+
+// Admin connection with full permissions
+const adminClient = createClient({
+  host: 'redis',
+  port: 6379,
+  username: 'admin-user',
+  password: process.env.ADMIN_REDIS_PASSWORD,
+});
+```
+
+### Secrets Management
+
+```typescript
+// AWS Secrets Manager example
+import { SecretsManager } from '@aws-sdk/client-secrets-manager';
+
+async function getRedisCredentials() {
+  const sm = new SecretsManager({});
+  const secret = await sm.getSecretValue({ 
+    SecretId: 'redis-credentials' 
+  });
+  return JSON.parse(secret.SecretString);
+}
+
+// Use in module
+RedisModule.forRootAsync({
+  useFactory: async () => {
+    const { host, port, username, password } = await getRedisCredentials();
+    return {
+      clients: { host, port, username, password },
+    };
+  },
+})
+```
+
 ## TLS Configuration
 
 ```typescript

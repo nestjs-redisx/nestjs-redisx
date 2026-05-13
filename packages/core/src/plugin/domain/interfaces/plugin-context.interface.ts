@@ -119,6 +119,7 @@ export interface IRedisXConfig {
 export interface IClientConfig {
   host?: string;
   port?: number;
+  username?: string;
   password?: string;
   db?: number;
   keyPrefix?: string;

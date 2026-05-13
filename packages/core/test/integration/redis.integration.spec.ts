@@ -28,7 +28,7 @@ describeIntegration('Redis Integration Tests', () => {
   };
 
   beforeAll(async () => {
-    driver = createDriver(config, 'ioredis');
+    driver = createDriver(config, { type: 'ioredis' });
     await driver.connect();
   });
 
@@ -52,6 +52,51 @@ describeIntegration('Redis Integration Tests', () => {
 
       // Then
       expect(connected).toBe(true);
+    });
+  });
+
+  describe('Username Authentication', () => {
+    const username = `testuser:${Date.now()}`;
+    const password = 'P@ssw0rd123!';
+
+    afterAll(async () => {
+      try {
+        await (driver as any).executeCommand('ACL', 'DELUSER', username);
+      } catch {
+        // Ignore cleanup errors
+      }
+    });
+
+    it('should authenticate using username and password', async () => {
+      // Given
+      await (driver as any).executeCommand('ACL', 'SETUSER', username, 'on', `>${password}`, '~*', '+@all');
+
+      const authConfig: ISingleConnectionConfig = {
+        type: 'single',
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+        username,
+        password,
+        db: 0,
+      };
+
+      const authDriver = createDriver(authConfig, { type: 'ioredis' });
+
+      try {
+        await authDriver.connect();
+
+        // When
+        const whoami = await (authDriver as any).executeCommand('ACL', 'WHOAMI');
+        const result = await authDriver.ping();
+
+        // Then
+        expect(String(whoami)).toBe(username);
+        expect(result).toBe('PONG');
+      } finally {
+        if (authDriver.isConnected()) {
+          await authDriver.disconnect();
+        }
+      }
     });
   });
 
@@ -389,7 +434,7 @@ describeIntegration('Redis Integration Tests', () => {
 
       // When - iterate through all scan results (SCAN doesn't guarantee all keys in one call)
       const allKeys: string[] = [];
-      let cursor = '0';
+      let cursor = 0;
       do {
         const result = await driver.scan(cursor, {
           match: `${prefix}:*`,
@@ -398,9 +443,9 @@ describeIntegration('Redis Integration Tests', () => {
         expect(result).toBeDefined();
         expect(Array.isArray(result)).toBe(true);
         expect(result).toHaveLength(2);
-        cursor = result[0];
+        cursor = Number(result[0]);
         allKeys.push(...(result[1] as string[]));
-      } while (cursor !== '0');
+      } while (cursor !== 0);
 
       // Then
       expect(allKeys.length).toBeGreaterThan(0);

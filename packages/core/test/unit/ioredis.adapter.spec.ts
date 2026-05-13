@@ -113,6 +113,19 @@ describe('IoRedisAdapter', () => {
       expect(adapter).toBeInstanceOf(IoRedisAdapter);
     });
 
+    it('should handle ACL authentication with username', () => {
+      const config: ConnectionConfig = {
+        type: 'single',
+        host: 'redis.example.com',
+        port: 6379,
+        username: 'app-user',
+        password: 'secure-password',
+        db: 0,
+      };
+      const adapter = new IoRedisAdapter(config);
+      expect(adapter).toBeInstanceOf(IoRedisAdapter);
+    });
+
     it('should handle cluster configuration with options', () => {
       const config: ConnectionConfig = {
         type: 'cluster',
@@ -121,6 +134,7 @@ describe('IoRedisAdapter', () => {
           { host: 'localhost', port: 7001 },
           { host: 'localhost', port: 7002 },
         ],
+        username: 'app-user',
         password: 'secret',
         db: 0,
         clusterOptions: {
@@ -143,6 +157,7 @@ describe('IoRedisAdapter', () => {
           { host: 'localhost', port: 26380 },
         ],
         name: 'mymaster',
+        username: 'app-user',
         password: 'secret',
         db: 0,
         sentinelOptions: {
