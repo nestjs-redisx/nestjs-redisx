@@ -107,7 +107,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
         await (this.client as RedisSentinelType).close();
       } else {
         // Single and cluster clients have quit()
-        await this.client.quit();
+        await (this.client as RedisClientType | RedisClusterType).quit();
       }
     } catch {
       // Force disconnect on error
@@ -134,7 +134,8 @@ export class NodeRedisAdapter extends BaseRedisDriver {
       if (this.isSentinel) {
         // Sentinel uses .use() to get a client from the pool
         return await (this.client as RedisSentinelType).use(async (client) => {
-          return await client.sendCommand([command, ...prefixedArgs]);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          return await (client as any).sendCommand([command, ...prefixedArgs]);
         });
       }
 
@@ -165,7 +166,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
       return new NodeRedisSentinelPipelineAdapter(this.client as RedisSentinelType, this.keyPrefix);
     }
 
-    return new NodeRedisPipelineAdapter(this.client, this.keyPrefix);
+    return new NodeRedisPipelineAdapter(this.client as RedisClientType | RedisClusterType, this.keyPrefix);
   }
 
   protected createMulti(): IMulti {
@@ -177,7 +178,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
       return new NodeRedisSentinelMultiAdapter(this.client as RedisSentinelType, this.keyPrefix);
     }
 
-    return new NodeRedisMultiAdapter(this.client, this.keyPrefix);
+    return new NodeRedisMultiAdapter(this.client as RedisClientType | RedisClusterType, this.keyPrefix);
   }
 
   /**
@@ -468,7 +469,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
 
     await sentinel.connect();
 
-    return sentinel;
+    return sentinel as RedisSentinelType;
   }
 
   /**
@@ -480,7 +481,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
         await (this.client as RedisSentinelType)?.close();
       } else if (this.client) {
         // Single and cluster clients have disconnect()
-        await this.client.disconnect();
+        await (this.client as RedisClientType | RedisClusterType).disconnect();
       }
     } catch {
       // Ignore disconnect errors
@@ -854,7 +855,8 @@ class NodeRedisSentinelPipelineAdapter implements IPipeline {
       const multi = client.multi();
 
       for (const { command, args } of this.commands) {
-        multi.addCommand([command, ...args.map(String)]);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (multi as any).addCommand([command, ...args.map(String)]);
       }
 
       try {
