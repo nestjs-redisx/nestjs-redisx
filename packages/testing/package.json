@@ -58,6 +58,7 @@
     "@nestjs-redisx/idempotency": "^1.4.0",
     "@nestjs-redisx/locks": "^1.4.0",
     "@nestjs-redisx/rate-limit": "^1.4.0",
+    "@nestjs-redisx/streams": "^1.4.0",
     "@nestjs/testing": "^9.0.0 || ^10.0.0 || ^11.0.0",
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",

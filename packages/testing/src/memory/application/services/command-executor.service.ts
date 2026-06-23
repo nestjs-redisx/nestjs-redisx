@@ -1,6 +1,7 @@
 import { createHash } from 'crypto';
 
 import { MemoryStore } from '../../domain/store/memory-store';
+import { StreamEntry, compareIds } from '../../domain/store/stream-value';
 import { LuaInterpreter } from '../../domain/lua/lua-interpreter';
 import { MemoryDriverError } from '../../../shared/errors';
 import { ICommandExecutor } from '../ports/command-executor.port';
@@ -271,6 +272,34 @@ export class CommandExecutor implements ICommandExecutor {
         return [...zset.values()].filter((s) => this.inRange(s, min, max)).length;
       }
 
+      // --- streams ---
+      case 'XADD':
+        return this.cmdXadd(args);
+      case 'XLEN':
+        return this.store.read(this.str(args[0]), 'stream')?.len() ?? 0;
+      case 'XRANGE':
+        return this.cmdXrange(args, false);
+      case 'XREVRANGE':
+        return this.cmdXrange(args, true);
+      case 'XDEL':
+        return this.store.read(this.str(args[0]), 'stream')?.del(args.slice(1).map((i) => this.str(i))) ?? 0;
+      case 'XTRIM':
+        return this.cmdXtrim(args);
+      case 'XINFO':
+        return this.cmdXinfo(args);
+      case 'XGROUP':
+        return this.cmdXgroup(args);
+      case 'XREADGROUP':
+        return this.cmdXreadgroup(args);
+      case 'XREAD':
+        return this.cmdXread(args);
+      case 'XACK':
+        return this.cmdXack(args);
+      case 'XPENDING':
+        return this.cmdXpending(args);
+      case 'XCLAIM':
+        return this.cmdXclaim(args);
+
       // --- scripting ---
       case 'SCRIPT':
         if (this.str(args[0]).toUpperCase() === 'LOAD') {
@@ -467,6 +496,209 @@ export class CommandExecutor implements ICommandExecutor {
       if (withScores) out.push(String(score));
     }
     return out;
+  }
+
+  // --- stream helpers -------------------------------------------------------
+
+  /** Formats a stream entry as the Redis reply shape `[id, [field, value, ...]]`. */
+  private entryReply(entry: StreamEntry): [string, string[]] {
+    return [entry.id, entry.fields];
+  }
+
+  private cmdXadd(args: unknown[]): string | null {
+    const key = this.str(args[0]);
+    let i = 1;
+    let noMkStream = false;
+    let maxLen: number | undefined;
+    let minId: string | undefined;
+    for (; i < args.length; ) {
+      const opt = this.str(args[i]).toUpperCase();
+      if (opt === 'NOMKSTREAM') {
+        noMkStream = true;
+        i += 1;
+      } else if (opt === 'MAXLEN') {
+        i += 1;
+        if (this.str(args[i]) === '~' || this.str(args[i]) === '=') i += 1;
+        maxLen = this.num(args[i]);
+        i += 1;
+      } else if (opt === 'MINID') {
+        i += 1;
+        if (this.str(args[i]) === '~' || this.str(args[i]) === '=') i += 1;
+        minId = this.str(args[i]);
+        i += 1;
+      } else {
+        break;
+      }
+    }
+    const id = this.str(args[i]);
+    const fields = args.slice(i + 1).map((f) => this.str(f));
+
+    if (noMkStream && !this.store.has(key)) return null;
+    const stream = this.store.readOrCreate(key, 'stream');
+    const newId = stream.add(id, fields, this.store.now());
+    if (maxLen !== undefined) stream.trimMaxLen(maxLen);
+    if (minId !== undefined) {
+      const toDelete = stream
+        .range('-', '+')
+        .filter((e) => compareIds(e.id, minId) < 0)
+        .map((e) => e.id);
+      stream.del(toDelete);
+    }
+    return newId;
+  }
+
+  private cmdXrange(args: unknown[], reverse: boolean): Array<[string, string[]]> {
+    const stream = this.store.read(this.str(args[0]), 'stream');
+    if (!stream) return [];
+    // XRANGE: start, end. XREVRANGE: end, start (swapped).
+    const start = reverse ? this.str(args[2]) : this.str(args[1]);
+    const end = reverse ? this.str(args[1]) : this.str(args[2]);
+    let count: number | undefined;
+    for (let i = 3; i < args.length; i++) {
+      if (this.str(args[i]).toUpperCase() === 'COUNT') count = this.num(args[++i]);
+    }
+    return stream.range(start, end, count, reverse).map((e) => this.entryReply(e));
+  }
+
+  private cmdXtrim(args: unknown[]): number {
+    const stream = this.store.read(this.str(args[0]), 'stream');
+    if (!stream) return 0;
+    let i = 1;
+    const strategy = this.str(args[i]).toUpperCase();
+    i += 1;
+    if (this.str(args[i]) === '~' || this.str(args[i]) === '=') i += 1;
+    if (strategy !== 'MAXLEN') throw new MemoryDriverError(`XTRIM strategy not supported: ${strategy}`);
+    return stream.trimMaxLen(this.num(args[i]));
+  }
+
+  private cmdXinfo(args: unknown[]): unknown[] {
+    const sub = this.str(args[0]).toUpperCase();
+    if (sub !== 'STREAM') throw new MemoryDriverError(`XINFO subcommand not supported: ${sub}`);
+    const stream = this.store.read(this.str(args[1]), 'stream');
+    if (!stream) throw new MemoryDriverError('ERR no such key');
+    const all = stream.range('-', '+');
+    const first = all[0];
+    const last = all[all.length - 1];
+    return ['length', stream.len(), 'radix-tree-keys', 1, 'radix-tree-nodes', 2, 'last-generated-id', stream.lastId, 'groups', stream.groups.size, 'first-entry', first ? this.entryReply(first) : null, 'last-entry', last ? this.entryReply(last) : null];
+  }
+
+  private cmdXgroup(args: unknown[]): unknown {
+    const sub = this.str(args[0]).toUpperCase();
+    const key = this.str(args[1]);
+    const group = this.str(args[2]);
+    if (sub === 'CREATE') {
+      const id = this.str(args[3]);
+      const mkstream = args[4] !== undefined && this.str(args[4]).toUpperCase() === 'MKSTREAM';
+      if (!this.store.has(key)) {
+        if (!mkstream) throw new MemoryDriverError('ERR The XGROUP subcommand requires the key to exist. Note that for CREATE you may want to use the MKSTREAM option to create an empty stream automatically.');
+        this.store.readOrCreate(key, 'stream');
+      }
+      this.store.read(key, 'stream')!.createGroup(group, id);
+      return OK;
+    }
+    if (sub === 'DESTROY') return this.store.read(key, 'stream')?.destroyGroup(group) ?? 0;
+    if (sub === 'DELCONSUMER') return this.store.read(key, 'stream')?.delConsumer(group, this.str(args[3])) ?? 0;
+    if (sub === 'SETID') {
+      this.store.read(key, 'stream')?.setGroupId(group, this.str(args[3]));
+      return OK;
+    }
+    throw new MemoryDriverError(`XGROUP subcommand not supported: ${sub}`);
+  }
+
+  /** Parses the trailing `STREAMS key... id...` section into key/id pairs. */
+  private parseStreamsSection(args: unknown[], fromIndex: number): { count?: number; pairs: Array<[string, string]> } {
+    let count: number | undefined;
+    let i = fromIndex;
+    for (; i < args.length; i++) {
+      const tok = this.str(args[i]).toUpperCase();
+      if (tok === 'STREAMS') {
+        i += 1;
+        break;
+      }
+      if (tok === 'COUNT') count = this.num(args[++i]);
+      else if (tok === 'BLOCK')
+        i += 1; // ignored — the in-memory driver never blocks
+      else if (tok === 'NOACK') continue;
+    }
+    const rest = args.slice(i).map((a) => this.str(a));
+    const half = rest.length / 2;
+    const keys = rest.slice(0, half);
+    const ids = rest.slice(half);
+    return { count, pairs: keys.map((k, idx) => [k, ids[idx]!]) };
+  }
+
+  private cmdXreadgroup(args: unknown[]): unknown {
+    // GROUP <group> <consumer> [COUNT n] [BLOCK ms] [NOACK] STREAMS key... id...
+    const group = this.str(args[1]);
+    const consumer = this.str(args[2]);
+    const noAck = args.slice(3).some((a) => this.str(a).toUpperCase() === 'NOACK');
+    const { count, pairs } = this.parseStreamsSection(args, 3);
+    const now = this.store.now();
+    const out: Array<[string, Array<[string, string[]]>]> = [];
+    for (const [key, id] of pairs) {
+      const stream = this.store.read(key, 'stream');
+      if (!stream) continue;
+      const entries = stream.readGroup(group, consumer, id, now, count, noAck);
+      if (entries.length > 0) out.push([key, entries.map((e) => this.entryReply(e))]);
+    }
+    return out.length > 0 ? out : null;
+  }
+
+  private cmdXread(args: unknown[]): unknown {
+    const { count, pairs } = this.parseStreamsSection(args, 0);
+    const out: Array<[string, Array<[string, string[]]>]> = [];
+    for (const [key, id] of pairs) {
+      const stream = this.store.read(key, 'stream');
+      if (!stream) continue;
+      const entries = stream.readAfter(id, count);
+      if (entries.length > 0) out.push([key, entries.map((e) => this.entryReply(e))]);
+    }
+    return out.length > 0 ? out : null;
+  }
+
+  private cmdXack(args: unknown[]): number {
+    const stream = this.store.read(this.str(args[0]), 'stream');
+    const group = this.str(args[1]);
+    if (!stream?.groups.has(group)) return 0;
+    return stream.ack(
+      group,
+      args.slice(2).map((i) => this.str(i)),
+    );
+  }
+
+  private cmdXpending(args: unknown[]): unknown {
+    const stream = this.store.read(this.str(args[0]), 'stream');
+    const group = this.str(args[1]);
+    const now = this.store.now();
+    if (args.length <= 2) {
+      // Summary form: [count, minId, maxId, [[consumer, countStr], ...] | nil]
+      if (!stream?.groups.has(group)) return [0, null, null, null];
+      const s = stream.pendingSummary(group);
+      return [s.count, s.minId, s.maxId, s.consumers.length > 0 ? s.consumers.map(([name, c]) => [name, String(c)]) : null];
+    }
+    // Range form: [key, group, start, end, count, (consumer)?]
+    if (!stream?.groups.has(group)) return [];
+    const start = this.str(args[2]);
+    const end = this.str(args[3]);
+    const count = this.num(args[4]);
+    const consumer = args[5] !== undefined ? this.str(args[5]) : undefined;
+    return stream.pendingRange(group, start, end, count, now, consumer).map((p) => [p.id, p.consumer, p.idleTime, p.deliveryCount]);
+  }
+
+  private cmdXclaim(args: unknown[]): Array<[string, string[]]> {
+    const stream = this.store.read(this.str(args[0]), 'stream');
+    const group = this.str(args[1]);
+    if (!stream?.groups.has(group)) return [];
+    const consumer = this.str(args[2]);
+    const minIdle = this.num(args[3]);
+    // Remaining args are ids until an option keyword appears (IDLE/TIME/RETRYCOUNT/FORCE/JUSTID).
+    const ids: string[] = [];
+    for (let i = 4; i < args.length; i++) {
+      const tok = this.str(args[i]);
+      if (['IDLE', 'TIME', 'RETRYCOUNT', 'FORCE', 'JUSTID', 'LASTID'].includes(tok.toUpperCase())) break;
+      ids.push(tok);
+    }
+    return stream.claim(group, consumer, minIdle, ids, this.store.now()).map((e) => this.entryReply(e));
   }
 
   private runScript(source: string, args: unknown[]): unknown {

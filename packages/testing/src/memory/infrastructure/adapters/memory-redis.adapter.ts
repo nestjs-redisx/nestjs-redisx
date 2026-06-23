@@ -131,8 +131,24 @@ export class MemoryRedisAdapter extends BaseRedisDriver {
     return Promise.resolve();
   }
 
-  protected executeCommand(command: string, ...args: unknown[]): Promise<unknown> {
-    return Promise.resolve(this.executor.execute(command, args));
+  protected async executeCommand(command: string, ...args: unknown[]): Promise<unknown> {
+    const result = this.executor.execute(command, args);
+
+    // The in-memory driver never truly blocks, but a blocking XREAD/XREADGROUP
+    // poll loop with no data would otherwise hot-spin on microtasks and starve
+    // the event loop. When such a call comes back empty, yield with a short real
+    // (macrotask) delay so producers and timers can run between polls.
+    const cmd = command.toUpperCase();
+    if (result === null && (cmd === 'XREADGROUP' || cmd === 'XREAD')) {
+      const blockIdx = args.findIndex((a) => String(a).toUpperCase() === 'BLOCK');
+      if (blockIdx !== -1) {
+        const blockMs = Number(args[blockIdx + 1]);
+        const delay = Number.isFinite(blockMs) && blockMs > 0 ? Math.min(blockMs, 20) : 20;
+        await new Promise<void>((resolve) => setTimeout(resolve, delay));
+      }
+    }
+
+    return result;
   }
 
   protected createPipeline(): IPipeline {

@@ -332,6 +332,187 @@ describe('CommandExecutor', () => {
     });
   });
 
+  describe('streams', () => {
+    it('XADD generates monotonic ids and XLEN counts entries', () => {
+      const id1 = run('XADD', 's', '*', 'data', 'a') as string;
+      const id2 = run('XADD', 's', '*', 'data', 'b') as string;
+      expect(id1).toMatch(/^\d+-\d+$/);
+      expect(run('XLEN', 's')).toBe(2);
+      // id2 must sort after id1
+      expect([id1, id2].slice().sort()).toEqual([id1, id2]);
+    });
+
+    it('XADD with an explicit id and rejects non-monotonic ids', () => {
+      expect(run('XADD', 's', '5-0', 'k', 'v')).toBe('5-0');
+      expect(run('XADD', 's', '5-1', 'k', 'v')).toBe('5-1');
+      expect(() => run('XADD', 's', '3-0', 'k', 'v')).toThrow(MemoryDriverError);
+    });
+
+    it('XADD NOMKSTREAM returns null when the stream is missing', () => {
+      expect(run('XADD', 'missing', 'NOMKSTREAM', '*', 'k', 'v')).toBeNull();
+      expect(run('EXISTS', 'missing')).toBe(0);
+    });
+
+    it('XADD MAXLEN trims to the newest entries', () => {
+      run('XADD', 's', '1-0', 'k', 'v');
+      run('XADD', 's', '2-0', 'k', 'v');
+      run('XADD', 's', 'MAXLEN', '2', '3-0', 'k', 'v'); // options precede the id
+      expect(run('XLEN', 's')).toBe(2);
+    });
+
+    it('XADD MINID drops entries older than the given id', () => {
+      run('XADD', 's', '1-0', 'k', 'v');
+      run('XADD', 's', '2-0', 'k', 'v');
+      run('XADD', 's', 'MINID', '2', '3-0', 'k', 'v'); // options precede the id
+      const ids = (run('XRANGE', 's', '-', '+') as Array<[string, string[]]>).map(([id]) => id);
+      expect(ids).not.toContain('1-0');
+    });
+
+    it('XRANGE / XREVRANGE with bounds and COUNT', () => {
+      run('XADD', 's', '1-0', 'f', '1');
+      run('XADD', 's', '2-0', 'f', '2');
+      run('XADD', 's', '3-0', 'f', '3');
+      expect(run('XRANGE', 's', '-', '+')).toEqual([
+        ['1-0', ['f', '1']],
+        ['2-0', ['f', '2']],
+        ['3-0', ['f', '3']],
+      ]);
+      expect(run('XRANGE', 's', '2', '+')).toEqual([
+        ['2-0', ['f', '2']],
+        ['3-0', ['f', '3']],
+      ]);
+      expect(run('XRANGE', 's', '-', '+', 'COUNT', 1)).toEqual([['1-0', ['f', '1']]]);
+      expect(run('XREVRANGE', 's', '+', '-', 'COUNT', 1)).toEqual([['3-0', ['f', '3']]]);
+      expect(run('XRANGE', 'missing', '-', '+')).toEqual([]);
+    });
+
+    it('XDEL removes entries; XTRIM trims', () => {
+      run('XADD', 's', '1-0', 'f', '1');
+      run('XADD', 's', '2-0', 'f', '2');
+      expect(run('XDEL', 's', '1-0', 'nope')).toBe(1);
+      run('XADD', 's', '3-0', 'f', '3');
+      expect(run('XTRIM', 's', 'MAXLEN', '~', '1')).toBe(1);
+      expect(run('XLEN', 's')).toBe(1);
+      expect(run('XDEL', 'missing', '1-0')).toBe(0);
+    });
+
+    it('XINFO STREAM reports length, last id, and first/last entries', () => {
+      run('XADD', 's', '1-0', 'f', '1');
+      run('XADD', 's', '2-0', 'f', '2');
+      const info = run('XINFO', 'STREAM', 's') as unknown[];
+      const map: Record<string, unknown> = {};
+      for (let i = 0; i < info.length; i += 2) map[String(info[i])] = info[i + 1];
+      expect(map['length']).toBe(2);
+      expect(map['last-generated-id']).toBe('2-0');
+      expect(map['first-entry']).toEqual(['1-0', ['f', '1']]);
+      expect(() => run('XINFO', 'STREAM', 'missing')).toThrow(MemoryDriverError);
+    });
+
+    it('XGROUP CREATE/DESTROY/SETID/DELCONSUMER with MKSTREAM and BUSYGROUP', () => {
+      expect(run('XGROUP', 'CREATE', 's', 'g', '$', 'MKSTREAM')).toBe('OK');
+      expect(run('TYPE', 's')).toBe('stream');
+      expect(() => run('XGROUP', 'CREATE', 's', 'g', '$')).toThrow(/BUSYGROUP/);
+      expect(() => run('XGROUP', 'CREATE', 'nostream', 'g', '$')).toThrow(MemoryDriverError);
+      expect(run('XGROUP', 'SETID', 's', 'g', '0')).toBe('OK');
+      expect(run('XGROUP', 'DELCONSUMER', 's', 'g', 'c1')).toBe(0);
+      expect(run('XGROUP', 'DESTROY', 's', 'g')).toBe(1);
+      expect(run('XGROUP', 'DESTROY', 's', 'g')).toBe(0);
+    });
+
+    it('XREADGROUP delivers new messages, tracks PEL, and re-reads history', () => {
+      run('XADD', 's', '1-0', 'f', '1');
+      run('XADD', 's', '2-0', 'f', '2');
+      run('XGROUP', 'CREATE', 's', 'g', '0');
+
+      // '>' delivers all new entries and adds them to the PEL
+      const fresh = run('XREADGROUP', 'GROUP', 'g', 'c1', 'COUNT', 10, 'STREAMS', 's', '>');
+      expect(fresh).toEqual([
+        [
+          's',
+          [
+            ['1-0', ['f', '1']],
+            ['2-0', ['f', '2']],
+          ],
+        ],
+      ]);
+
+      // a second '>' read finds nothing new -> null
+      expect(run('XREADGROUP', 'GROUP', 'g', 'c1', 'STREAMS', 's', '>')).toBeNull();
+
+      // history re-read (id '0') returns this consumer's still-pending entries
+      const history = run('XREADGROUP', 'GROUP', 'g', 'c1', 'STREAMS', 's', '0') as Array<[string, unknown[]]>;
+      expect(history[0]![1]).toHaveLength(2);
+    });
+
+    it('XREADGROUP NOACK does not populate the PEL', () => {
+      run('XADD', 's', '1-0', 'f', '1');
+      run('XGROUP', 'CREATE', 's', 'g', '0');
+      run('XREADGROUP', 'GROUP', 'g', 'c1', 'NOACK', 'STREAMS', 's', '>');
+      expect(run('XPENDING', 's', 'g')).toEqual([0, null, null, null]);
+    });
+
+    it('XACK acknowledges pending entries and is 0 for unknown group', () => {
+      run('XADD', 's', '1-0', 'f', '1');
+      run('XGROUP', 'CREATE', 's', 'g', '0');
+      run('XREADGROUP', 'GROUP', 'g', 'c1', 'STREAMS', 's', '>');
+      expect(run('XACK', 's', 'g', '1-0')).toBe(1);
+      expect(run('XACK', 's', 'g', '1-0')).toBe(0);
+      expect(run('XACK', 's', 'nogroup', '1-0')).toBe(0);
+      expect(run('XACK', 'missing', 'g', '1-0')).toBe(0);
+    });
+
+    it('XPENDING summary and range', () => {
+      run('XADD', 's', '1-0', 'f', '1');
+      run('XADD', 's', '2-0', 'f', '2');
+      run('XGROUP', 'CREATE', 's', 'g', '0');
+      run('XREADGROUP', 'GROUP', 'g', 'c1', 'STREAMS', 's', '>');
+
+      const summary = run('XPENDING', 's', 'g') as unknown[];
+      expect(summary[0]).toBe(2);
+      expect(summary[1]).toBe('1-0');
+      expect(summary[2]).toBe('2-0');
+      expect(summary[3]).toEqual([['c1', '2']]);
+
+      const range = run('XPENDING', 's', 'g', '-', '+', 10) as Array<[string, string, number, number]>;
+      expect(range).toHaveLength(2);
+      expect(range[0]![0]).toBe('1-0');
+      expect(range[0]![1]).toBe('c1');
+      expect(range[0]![3]).toBe(1); // delivery count
+    });
+
+    it('XCLAIM reassigns idle pending entries to another consumer', () => {
+      run('XADD', 's', '1-0', 'f', '1');
+      run('XGROUP', 'CREATE', 's', 'g', '0');
+      run('XREADGROUP', 'GROUP', 'g', 'c1', 'STREAMS', 's', '>');
+
+      // minIdle 0 claims immediately; entry returned and reassigned to c2
+      const claimed = run('XCLAIM', 's', 'g', 'c2', 0, '1-0');
+      expect(claimed).toEqual([['1-0', ['f', '1']]]);
+
+      const range = run('XPENDING', 's', 'g', '-', '+', 10) as Array<[string, string, number, number]>;
+      expect(range[0]![1]).toBe('c2'); // now owned by c2
+      expect(range[0]![3]).toBe(2); // delivery count incremented
+
+      // high minIdle does not claim
+      expect(run('XCLAIM', 's', 'g', 'c3', 999999, '1-0')).toEqual([]);
+      expect(run('XCLAIM', 'missing', 'g', 'c', 0, '1-0')).toEqual([]);
+    });
+
+    it('XREAD returns entries after the given id', () => {
+      run('XADD', 's', '1-0', 'f', '1');
+      run('XADD', 's', '2-0', 'f', '2');
+      expect(run('XREAD', 'STREAMS', 's', '1-0')).toEqual([['s', [['2-0', ['f', '2']]]]]);
+      expect(run('XREAD', 'STREAMS', 's', '2-0')).toBeNull();
+    });
+
+    it('rejects unsupported stream subcommands', () => {
+      expect(() => run('XINFO', 'GROUPS', 's')).toThrow(MemoryDriverError);
+      expect(() => run('XGROUP', 'CREATECONSUMER', 's', 'g', 'c')).toThrow(MemoryDriverError);
+      run('XADD', 's', '1-0', 'f', '1');
+      expect(() => run('XTRIM', 's', 'MINID', '1')).toThrow(MemoryDriverError);
+    });
+  });
+
   describe('scripting', () => {
     const SCRIPT = "return redis.call('GET', KEYS[1])";
 

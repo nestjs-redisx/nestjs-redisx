@@ -1,15 +1,16 @@
 import { WrongTypeError } from '../../../shared/errors';
+import { StreamValue } from './stream-value';
 
 /**
- * Tagged union of the Redis value types the in-memory store supports (Phase 1).
- * Streams are added in Phase 2.
+ * Tagged union of the Redis value types the in-memory store supports:
+ * string, hash, set, sorted set, list (Phase 1) and stream (Phase 2).
  */
-export type StoredValue = { kind: 'string'; value: string } | { kind: 'hash'; value: Map<string, string> } | { kind: 'set'; value: Set<string> } | { kind: 'zset'; value: Map<string, number> } | { kind: 'list'; value: string[] };
+export type StoredValue = { kind: 'string'; value: string } | { kind: 'hash'; value: Map<string, string> } | { kind: 'set'; value: Set<string> } | { kind: 'zset'; value: Map<string, number> } | { kind: 'list'; value: string[] } | { kind: 'stream'; value: StreamValue };
 
 export type RedisValueKind = StoredValue['kind'];
 
 /** The concrete value type backing a given Redis kind. */
-export type ValueOfKind<K extends RedisValueKind> = K extends 'string' ? string : K extends 'hash' ? Map<string, string> : K extends 'set' ? Set<string> : K extends 'zset' ? Map<string, number> : K extends 'list' ? string[] : never;
+export type ValueOfKind<K extends RedisValueKind> = K extends 'string' ? string : K extends 'hash' ? Map<string, string> : K extends 'set' ? Set<string> : K extends 'zset' ? Map<string, number> : K extends 'list' ? string[] : K extends 'stream' ? StreamValue : never;
 
 type Entry = {
   data: StoredValue;
@@ -124,6 +125,8 @@ export class MemoryStore {
         return new Map<string, number>();
       case 'list':
         return [];
+      case 'stream':
+        return new StreamValue();
     }
   }
 }

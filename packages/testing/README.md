@@ -53,9 +53,11 @@ RedisModule.forRoot({
 
 ## Scope
 
-Phase 1 supports the data structures and scripting used by the cache, locks,
-rate-limit, and idempotency plugins (strings, hashes, sets, sorted sets, lists,
-keys/TTL, and a bounded Lua interpreter). Redis Streams are planned for Phase 2.
+Supports the data structures and scripting used by the cache, locks, rate-limit,
+idempotency, and streams plugins: strings, hashes, sets, sorted sets, lists,
+streams (with consumer groups, PEL, `XACK`/`XCLAIM`/`XPENDING`), keys/TTL, and a
+bounded Lua interpreter. Single-node semantics only — no cluster cross-slot or
+Pub/Sub, and blocking reads return promptly rather than waiting.
 
 ## Documentation
 

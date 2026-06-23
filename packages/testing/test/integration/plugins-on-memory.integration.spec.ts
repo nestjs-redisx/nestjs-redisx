@@ -5,6 +5,7 @@ import { LocksPlugin, LOCK_SERVICE, type ILockService, LockAcquisitionError } fr
 import { CachePlugin, CACHE_SERVICE, type ICacheService } from '@nestjs-redisx/cache';
 import { RateLimitPlugin, RATE_LIMIT_SERVICE, type IRateLimitService } from '@nestjs-redisx/rate-limit';
 import { IdempotencyPlugin, IDEMPOTENCY_SERVICE, type IIdempotencyService } from '@nestjs-redisx/idempotency';
+import { StreamsPlugin, STREAM_PRODUCER, STREAM_CONSUMER, type IStreamProducer, type IStreamConsumer, type ConsumerHandle } from '@nestjs-redisx/streams';
 
 import { RedisTestingModule } from '../../src';
 import { MEMORY_DRIVER_TYPE } from '../../src';
@@ -199,6 +200,68 @@ describe('Plugins on the in-memory driver (no Redis)', () => {
       const mismatch = await idem.checkAndLock('pay:1', 'fp-b');
       expect(mismatch.isNew).toBe(false);
       expect(mismatch.fingerprintMismatch).toBe(true);
+    });
+  });
+
+  describe('StreamsPlugin', () => {
+    it('round-trips messages producer → consumer group → ack (no Redis)', async () => {
+      // Given
+      app = await Test.createTestingModule({
+        imports: [
+          RedisModule.forRoot({
+            clients: { type: 'single', host: 'x', port: 1 },
+            global: { driver: MEMORY_DRIVER_TYPE },
+            plugins: [new StreamsPlugin()],
+          }),
+        ],
+      }).compile();
+      await app.init();
+      const producer = app.get<IStreamProducer>(STREAM_PRODUCER);
+      const consumer = app.get<IStreamConsumer>(STREAM_CONSUMER);
+
+      // When — a consumer group subscribes and the producer publishes two messages
+      const received: Array<{ n: number }> = [];
+      let resolveDone: () => void;
+      const done = new Promise<void>((resolve) => {
+        resolveDone = resolve;
+      });
+      const handle: ConsumerHandle = consumer.consume<{ n: number }>('orders', 'g1', 'c1', async (msg) => {
+        received.push(msg.data);
+        if (received.length >= 2) resolveDone();
+      });
+
+      await producer.publish('orders', { n: 1 });
+      await producer.publish('orders', { n: 2 });
+
+      // Then — both are delivered and processed
+      await Promise.race([done, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout waiting for stream messages')), 4000))]);
+      await consumer.stop(handle);
+
+      expect(received).toEqual([{ n: 1 }, { n: 2 }]);
+
+      // And after ACK there are no pending entries left
+      const pending = await consumer.getPending('orders', 'g1');
+      expect(pending.count).toBe(0);
+    });
+
+    it('exposes stream info via the producer service', async () => {
+      app = await Test.createTestingModule({
+        imports: [
+          RedisModule.forRoot({
+            clients: { type: 'single', host: 'x', port: 1 },
+            global: { driver: MEMORY_DRIVER_TYPE },
+            plugins: [new StreamsPlugin()],
+          }),
+        ],
+      }).compile();
+      await app.init();
+      const producer = app.get<IStreamProducer>(STREAM_PRODUCER);
+
+      await producer.publish('events', { a: 1 });
+      await producer.publish('events', { a: 2 });
+
+      const info = await producer.getStreamInfo('events');
+      expect(info.length).toBe(2);
     });
   });
 

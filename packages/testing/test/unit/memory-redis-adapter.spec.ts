@@ -71,6 +71,26 @@ describe('MemoryRedisAdapter', () => {
     });
   });
 
+  describe('streams', () => {
+    it('round-trips through the inherited high-level stream API', async () => {
+      const id = await adapter.xadd('s', '*', { data: 'hello' });
+      expect(id).toMatch(/^\d+-\d+$/);
+      expect(await adapter.xlen('s')).toBe(1);
+
+      await adapter.xgroupCreate('s', 'g', '0', true);
+      const read = await adapter.xreadgroup('g', 'c1', [{ key: 's', id: '>' }], { count: 10 });
+      expect(read).toEqual([{ key: 's', entries: [{ id, fields: { data: 'hello' } }] }]);
+
+      expect(await adapter.xack('s', 'g', id)).toBe(1);
+    });
+
+    it('treats a blocking read on an empty stream as non-blocking (returns null)', async () => {
+      await adapter.xgroupCreate('s', 'g', '$', true);
+      const res = await adapter.xreadgroup('g', 'c1', [{ key: 's', id: '>' }], { count: 10, block: 10 });
+      expect(res).toBeNull();
+    });
+  });
+
   describe('multi / transaction', () => {
     it('executes queued commands on exec', async () => {
       const results = await adapter.multi().set('a', '1').get('a').exec();
