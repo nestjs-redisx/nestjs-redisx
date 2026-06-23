@@ -327,8 +327,13 @@ export interface IRedisClientOptions {
 
 /**
  * Driver type for Redis connections.
+ *
+ * Built-in: 'ioredis' (default), 'node-redis'. Custom driver types registered
+ * via `registerDriver()` (e.g. 'memory' from @nestjs-redisx/testing) are also
+ * accepted — the string union keeps autocomplete for built-ins while allowing
+ * registered types.
  */
-export type DriverType = 'ioredis' | 'node-redis';
+export type DriverType = 'ioredis' | 'node-redis' | (string & {});
 
 /**
  * Global module configuration options.

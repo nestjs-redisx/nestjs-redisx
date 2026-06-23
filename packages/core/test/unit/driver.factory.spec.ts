@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { createDriver, createDrivers, detectAvailableDriver, getRecommendedDriver, DriverFactory } from '../../src/driver/application/driver.factory';
+import { createDriver, createDrivers, detectAvailableDriver, getRecommendedDriver, DriverFactory, registerDriver } from '../../src/driver/application/driver.factory';
 import { IoRedisAdapter } from '../../src/driver/infrastructure/ioredis.adapter';
 import { NodeRedisAdapter } from '../../src/driver/infrastructure/node-redis.adapter';
 import { ConnectionConfig } from '../../src/types';
+import { IRedisDriver } from '../../src/interfaces';
 
 describe('DriverFactory', () => {
   let singleConfig: ConnectionConfig;
@@ -359,6 +360,33 @@ describe('DriverFactory', () => {
 
       // Then
       expect(driver).toBeInstanceOf(IoRedisAdapter);
+    });
+  });
+
+  describe('registerDriver (custom driver registry)', () => {
+    it('should construct a registered custom driver via createDriver', () => {
+      // Given
+      const fake = { _fake: true } as unknown as IRedisDriver;
+      const factory = vi.fn().mockReturnValue(fake);
+      registerDriver('memory-test', factory);
+
+      // When
+      const driver = createDriver({ type: 'memory-test' } as unknown as ConnectionConfig, { type: 'memory-test' });
+
+      // Then
+      expect(driver).toBe(fake);
+      expect(factory).toHaveBeenCalledTimes(1);
+    });
+
+    it('should refuse to override a built-in driver type', () => {
+      // When / Then
+      expect(() => registerDriver('ioredis', () => ({}) as unknown as IRedisDriver)).toThrow(/Cannot override built-in/);
+      expect(() => registerDriver('node-redis', () => ({}) as unknown as IRedisDriver)).toThrow(/Cannot override built-in/);
+    });
+
+    it('should still throw for an unknown, unregistered driver type', () => {
+      // When / Then
+      expect(() => createDriver(singleConfig, { type: 'does-not-exist' })).toThrow(/Unsupported driver type/);
     });
   });
 });

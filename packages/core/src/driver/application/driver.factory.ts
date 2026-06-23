@@ -22,6 +22,32 @@ export interface IDriverFactoryOptions {
 }
 
 /**
+ * Factory function for a custom driver implementation.
+ */
+export type DriverFactoryFn = (config: ConnectionConfig, options?: IDriverFactoryOptions) => IRedisDriver;
+
+/**
+ * Registry of custom driver types beyond the built-in ioredis/node-redis.
+ * Lets first-party packages (e.g. @nestjs-redisx/testing) plug in another
+ * IRedisDriver implementation without modifying core.
+ */
+const driverRegistry = new Map<string, DriverFactoryFn>();
+
+/**
+ * Registers a custom driver type so `createDriver({ type })` — and therefore
+ * `RedisModule.forRoot({ clients: { type } })` — can construct it.
+ *
+ * @param type - Driver type identifier (e.g. 'memory'). Built-in types cannot be overridden.
+ * @param factory - Function that builds the driver from a connection config.
+ */
+export function registerDriver(type: string, factory: DriverFactoryFn): void {
+  if (type === 'ioredis' || type === 'node-redis') {
+    throw new RedisXError(`Cannot override built-in driver type: ${type}`, ErrorCode.CFG_INVALID, undefined, { driverType: type });
+  }
+  driverRegistry.set(type, factory);
+}
+
+/**
  * Factory for creating Redis drivers.
  *
  * Creates driver instances based on configuration.
@@ -54,8 +80,14 @@ export function createDriver(config: ConnectionConfig, options?: IDriverFactoryO
     case 'node-redis':
       return new NodeRedisAdapter(config, { enableLogging });
 
-    default:
-      throw new RedisXError(`Unsupported driver type: ${driverType}. Supported types: ioredis, node-redis`, ErrorCode.CFG_INVALID, undefined, { driverType });
+    default: {
+      const factory = driverRegistry.get(driverType);
+      if (factory) {
+        return factory(config, { enableLogging });
+      }
+      const known = ['ioredis', 'node-redis', ...driverRegistry.keys()].join(', ');
+      throw new RedisXError(`Unsupported driver type: ${driverType}. Supported types: ${known}`, ErrorCode.CFG_INVALID, undefined, { driverType });
+    }
   }
 }
 
