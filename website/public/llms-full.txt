@@ -571,6 +571,56 @@ new TracingPlugin({
 
 Each Redis span includes: `db.system: "redis"`, `db.operation`, `db.redis.key`, `redisx.plugin` (cache/locks/rate-limit), `redisx.cache.hit` (boolean), `redisx.duration_ms`.
 
+## Testing Utilities
+
+`@nestjs-redisx/testing` provides an in-memory Redis driver so you can unit-test code that uses the cache, locks, rate-limit, and idempotency plugins **without a running Redis**. The plugins run their real production code — including their Lua scripts — against an in-memory keyspace. Install it as a devDependency: `npm install -D @nestjs-redisx/testing`.
+
+### RedisTestingModule (recommended)
+
+```typescript
+import { Test } from '@nestjs/testing';
+import { RedisTestingModule } from '@nestjs-redisx/testing';
+import { CachePlugin, CACHE_SERVICE, ICacheService } from '@nestjs-redisx/cache';
+
+const app = await Test.createTestingModule({
+  imports: [RedisTestingModule.forRoot({ plugins: [new CachePlugin()] })],
+}).compile();
+await app.init();
+const cache = app.get<ICacheService>(CACHE_SERVICE);
+// cache.getOrSet(...) runs the real cache code against the in-memory driver
+```
+
+`RedisTestingModule.forRoot(options?)` and `RedisTestingModule.forRootAsync(options)` wrap `RedisModule` and force `global.driver = 'memory'`. `clients` is optional (the driver never connects).
+
+### global.driver option
+
+Alternatively configure `RedisModule` directly. Importing `@nestjs-redisx/testing` registers the `'memory'` driver as a side effect:
+
+```typescript
+import '@nestjs-redisx/testing';
+import { RedisModule } from '@nestjs-redisx/core';
+
+RedisModule.forRoot({
+  clients: { type: 'single', host: 'localhost', port: 6379 }, // host/port ignored
+  global: { driver: 'memory' },
+  plugins: [/* ... */],
+});
+```
+
+`registerMemoryDriver()` can be called explicitly (idempotent) to register the driver with the core registry.
+
+### Supported commands
+
+Strings (`GET`/`SET`/`SETEX`/`SETNX`/`APPEND`/`STRLEN`/`INCR`/`INCRBY`/`DECR`/`DECRBY`/`MGET`/`MSET`), keys & TTL (`DEL`/`UNLINK`/`EXISTS`/`EXPIRE`/`PEXPIRE`/`EXPIREAT`/`PEXPIREAT`/`PERSIST`/`TTL`/`PTTL`/`TYPE`/`KEYS`/`SCAN`), hashes (`HSET`/`HMSET`/`HGET`/`HMGET`/`HGETALL`/`HDEL`/`HEXISTS`/`HLEN`/`HKEYS`/`HVALS`/`HINCRBY`), sets (`SADD`/`SREM`/`SMEMBERS`/`SISMEMBER`/`SCARD`), sorted sets (`ZADD`/`ZREM`/`ZCARD`/`ZSCORE`/`ZRANGE`/`ZRANGEBYSCORE`/`ZREMRANGEBYSCORE`/`ZCOUNT`), lists (`LPUSH`/`RPUSH`/`LPOP`/`RPOP`/`LLEN`/`LRANGE`/`LINDEX`/`LREM`), scripting (`EVAL`/`EVALSHA`/`SCRIPT LOAD`), server (`PING`/`DBSIZE`/`FLUSHDB`/`FLUSHALL`). TTL uses lazy expiry. A built-in Lua interpreter runs the plugins' atomic scripts.
+
+### Seeding & inspecting state
+
+Cast the injected `REDIS_DRIVER` to `MemoryRedisAdapter` and call `getStore()` to reach the in-memory `MemoryStore` (`writeString`, `read`, `flush`, `keys`, TTL helpers) for arranging or resetting state in tests.
+
+### Exports & limitations
+
+Exports: `RedisTestingModule`, `registerMemoryDriver`, `MemoryRedisAdapter`, `MemoryStore`, `CommandExecutor`, `LuaInterpreter`, `MEMORY_DRIVER_TYPE`, `IMemoryDriverOptions`, and errors `MemoryDriverError` / `LuaExecutionError` / `WrongTypeError`. Limitations: Streams are not yet implemented (Phase 1); single-node semantics only; unsupported commands or Lua constructs fail loudly rather than returning wrong results; it is a correctness tool, not a performance simulator.
+
 ## Complete API Reference
 
 Every public service method, grouped by injection token. Inject the token to use the programmatic API (decorators wrap these same services).

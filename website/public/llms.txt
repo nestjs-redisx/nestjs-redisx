@@ -84,6 +84,14 @@ NestJS RedisX is designed for production NestJS applications that need Redis bey
 - [Spans](https://nestjs-redisx.dev/en/reference/tracing/spans): Redis command spans with db.system, db.operation, and plugin-specific attributes.
 - [Exporters](https://nestjs-redisx.dev/en/reference/tracing/exporters): OTLP, Jaeger, Zipkin, and Console exporter configuration.
 
+## Testing Utilities
+
+- [Testing Overview](https://nestjs-redisx.dev/en/reference/testing/): In-memory Redis driver for unit tests — run the real cache/locks/rate-limit/idempotency plugins (and their Lua scripts) with no Redis.
+- [Configuration](https://nestjs-redisx.dev/en/reference/testing/configuration): RedisTestingModule wrapper, the global.driver='memory' option, registerMemoryDriver, and IMemoryDriverOptions.
+- [In-Memory Driver](https://nestjs-redisx.dev/en/reference/testing/memory-driver): Supported commands (strings/hash/set/zset/list/keys/TTL/scripting), the bounded Lua subset, and limitations.
+- [Testing Plugins](https://nestjs-redisx.dev/en/reference/testing/testing-plugins): Patterns for cache, locks, rate-limit, idempotency; seeding and inspecting state via getStore().
+- [Troubleshooting](https://nestjs-redisx.dev/en/reference/testing/troubleshooting): Unsupported driver type, unimplemented commands, and Lua execution errors.
+
 ## Concepts
 
 - [Two-Tier Caching](https://nestjs-redisx.dev/en/guide/concepts/two-tier-caching): How L1 memory + L2 Redis caching works, when to use SWR, and cache coherence.

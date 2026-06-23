@@ -79,6 +79,12 @@ Self-contained feature modules for common Redis use cases.
 | [Metrics](./metrics/) | Prometheus metrics export |
 | [Tracing](./tracing/) | OpenTelemetry distributed tracing |
 
+## Testing
+
+| Package | Description |
+|---------|-------------|
+| [Testing Utilities](./testing/) | In-memory Redis driver for unit tests — no Redis required |
+
 ## Architecture
 
 ```mermaid

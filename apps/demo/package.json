@@ -21,6 +21,7 @@
     "@nestjs-redisx/streams": "^1.0.0",
     "@nestjs-redisx/metrics": "^1.0.0",
     "@nestjs-redisx/tracing": "^1.0.0",
+    "@nestjs-redisx/testing": "^1.0.0",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^4.0.2",
     "@nestjs/event-emitter": "^2.0.0",

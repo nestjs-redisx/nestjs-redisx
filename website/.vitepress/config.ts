@@ -72,7 +72,7 @@ export default withMermaid(
         integration: 'Integration', operations: 'Operations', troubleshooting: 'Troubleshooting',
         core: 'Core', cache: 'Cache', locks: 'Locks', 'rate-limit': 'Rate Limit',
         idempotency: 'Idempotency', streams: 'Streams', metrics: 'Metrics',
-        tracing: 'Tracing', plugins: 'Plugins',
+        tracing: 'Tracing', testing: 'Testing', plugins: 'Plugins',
       };
       const parts = slug.split('/').filter(Boolean);
       if (parts.length >= 2) {
@@ -428,6 +428,17 @@ export default withMermaid(
               { text: 'Testing', link: '/en/reference/tracing/testing' },
               { text: 'Recipes', link: '/en/reference/tracing/recipes' },
               { text: 'Troubleshooting', link: '/en/reference/tracing/troubleshooting' },
+            ],
+          },
+          {
+            text: 'Testing',
+            collapsed: true,
+            items: [
+              { text: 'Overview', link: '/en/reference/testing/' },
+              { text: 'Configuration', link: '/en/reference/testing/configuration' },
+              { text: 'In-Memory Driver', link: '/en/reference/testing/memory-driver' },
+              { text: 'Testing Plugins', link: '/en/reference/testing/testing-plugins' },
+              { text: 'Troubleshooting', link: '/en/reference/testing/troubleshooting' },
             ],
           },
         ],

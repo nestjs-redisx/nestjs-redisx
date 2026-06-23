@@ -110,6 +110,7 @@ export class UserService {
 | [@nestjs-redisx/streams](https://nestjs-redisx.dev/en/reference/streams/) | Redis Streams with consumer groups and DLQ | [![npm](https://img.shields.io/npm/v/@nestjs-redisx/streams)](https://www.npmjs.com/package/@nestjs-redisx/streams) |
 | [@nestjs-redisx/metrics](https://nestjs-redisx.dev/en/reference/metrics/) | Prometheus metrics for Redis operations | [![npm](https://img.shields.io/npm/v/@nestjs-redisx/metrics)](https://www.npmjs.com/package/@nestjs-redisx/metrics) |
 | [@nestjs-redisx/tracing](https://nestjs-redisx.dev/en/reference/tracing/) | OpenTelemetry distributed tracing | [![npm](https://img.shields.io/npm/v/@nestjs-redisx/tracing)](https://www.npmjs.com/package/@nestjs-redisx/tracing) |
+| [@nestjs-redisx/testing](https://nestjs-redisx.dev/en/reference/testing/) | In-memory Redis driver for unit tests (no Redis required) | [![npm](https://img.shields.io/npm/v/@nestjs-redisx/testing)](https://www.npmjs.com/package/@nestjs-redisx/testing) |
 
 ## Comparison
 
