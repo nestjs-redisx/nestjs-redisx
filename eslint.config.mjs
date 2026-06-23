@@ -23,6 +23,7 @@ export default tseslint.config(
       'apps/**',
       '**/*.d.ts',
       '**/test-cluster-connection.js',
+      'scripts/**',
     ],
   },
 
