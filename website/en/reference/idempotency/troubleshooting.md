@@ -131,9 +131,9 @@ fetch('/api/payments', {
 
 Requests that arrive **without** an idempotency key are passed straight through — the
 interceptor skips deduplication when no key is present. There is no "require key" enforcement
-to disable, and `errorPolicy` does not control this (it is currently a no-op; see
-[Configuration](./configuration)). If you want a missing key to be an error, enforce it in your
-own validation/guard.
+to disable, and `errorPolicy` does not affect this (it governs store-unavailable behavior, not
+key presence; see [Configuration](./configuration)). If you want a missing key to be an error,
+enforce it in your own validation/guard.
 
 ## Timeout Errors
 
@@ -299,11 +299,11 @@ RedisModule.forRoot({
 })
 ```
 
-::: warning No fail-open today
-There is **no** working fail-open mode. The `errorPolicy: 'fail-open'` option is accepted but
-**not honored** — the interceptor does not catch Redis errors, so if Redis is unavailable the
-request fails hard (surfacing as HTTP 500) regardless of `errorPolicy`. Keep Redis healthy and
-monitored; do not rely on `errorPolicy` for availability. See
+::: tip Choose fail-open vs fail-closed
+By default (`errorPolicy: 'fail-closed'`) an unreachable store causes the request to be
+rejected — the store error propagates and surfaces as a server error. If availability matters
+more than deduplication, set `errorPolicy: 'fail-open'` so the request proceeds without
+idempotency protection (a warning is logged) while Redis is down. See
 [Configuration](./configuration).
 :::
 
@@ -390,7 +390,7 @@ with no error. You only need your own filter if you want different statuses or a
 | `IdempotencyTimeoutError` | 409 | Concurrent request waited longer than `waitTimeout` | Increase timeouts; speed up handler |
 | `IdempotencyKeyRequiredError` | 400 | Idempotency key required but not provided | Send an `Idempotency-Key` header |
 | Missing key | n/a (passed through) | No idempotency key on the request | Deduplication is skipped; send a key to enable it |
-| Redis error / unexpected | 500 | Redis unavailable (no fail-open) or unmapped error | Keep Redis healthy; `errorPolicy` does not help |
+| Redis error / unexpected | 500 | Store unavailable with `fail-closed` (default), or unmapped error | Keep Redis healthy; set `errorPolicy: 'fail-open'` to proceed during outages |
 
 ## Debug Checklist
 

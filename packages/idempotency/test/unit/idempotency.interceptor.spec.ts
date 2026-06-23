@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, type MockedObject } from 'vitest';
 import type { ExecutionContext, CallHandler } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { of, throwError } from 'rxjs';
+import { of, throwError, firstValueFrom } from 'rxjs';
 import { IdempotencyInterceptor } from '../../src/idempotency/api/interceptors/idempotency.interceptor';
 import type { IIdempotencyService } from '../../src/idempotency/application/ports/idempotency-service.port';
 import type { IIdempotencyPluginOptions, IIdempotencyRecord } from '../../src/shared/types';
@@ -79,6 +79,42 @@ describe('IdempotencyInterceptor', () => {
     };
 
     interceptor = new IdempotencyInterceptor(mockService, config, mockReflector, mockAdapterHost as any);
+  });
+
+  describe('errorPolicy (store unavailable)', () => {
+    beforeEach(() => {
+      mockRequest.headers['idempotency-key'] = 'key-store-down';
+      mockService.checkAndLock.mockRejectedValue(new Error('Redis connection refused'));
+    });
+
+    it('should proceed without idempotency when errorPolicy is fail-open', async () => {
+      // Given
+      const interceptorFailOpen = new IdempotencyInterceptor(mockService, { ...config, errorPolicy: 'fail-open' }, mockReflector, mockAdapterHost as any);
+
+      // When
+      const result$ = await interceptorFailOpen.intercept(mockContext, mockNext);
+      const result = await firstValueFrom(result$);
+
+      // Then - the handler still runs and its result is returned
+      expect(mockNext.handle).toHaveBeenCalled();
+      expect(result).toEqual({ result: 'success' });
+    });
+
+    it('should propagate the error when errorPolicy is fail-closed', async () => {
+      // Given
+      const interceptorFailClosed = new IdempotencyInterceptor(mockService, { ...config, errorPolicy: 'fail-closed' }, mockReflector, mockAdapterHost as any);
+
+      // When/Then
+      await expect(interceptorFailClosed.intercept(mockContext, mockNext)).rejects.toThrow('Redis connection refused');
+      expect(mockNext.handle).not.toHaveBeenCalled();
+    });
+
+    it('should default to fail-closed when errorPolicy is not set', async () => {
+      // Given - config has no errorPolicy (default behavior)
+
+      // When/Then
+      await expect(interceptor.intercept(mockContext, mockNext)).rejects.toThrow('Redis connection refused');
+    });
   });
 
   describe('new request', () => {

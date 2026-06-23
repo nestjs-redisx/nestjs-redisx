@@ -54,12 +54,14 @@ new IdempotencyPlugin({
 })
 ```
 
-::: warning `errorPolicy` is currently NOT honored
-The `errorPolicy` option (`'fail-open'` / `'fail-closed'`) is accepted by the plugin but is
-**not read anywhere** in the current implementation. The interceptor does not wrap Redis
-operations in error handling, so if Redis is unavailable the request **fails hard regardless
-of this setting** — there is no fail-open resilience today. Do not rely on `errorPolicy` to
-keep requests flowing when Redis is down.
+::: tip `errorPolicy` controls behavior when the store is unavailable
+The `errorPolicy` option decides what happens if the idempotency store (Redis) cannot be
+reached on the gating `checkAndLock` call:
+
+- `'fail-closed'` (default) — the request is **rejected** (the store error propagates). Use this
+  when correctness matters more than availability (e.g. payments).
+- `'fail-open'` — the request **proceeds without idempotency protection** (a warning is logged).
+  Use this when availability matters more than deduplication during an outage.
 :::
 
 ## Configuration by Use Case
@@ -96,8 +98,9 @@ new IdempotencyPlugin({
 })
 
 // Note: requests without an idempotency key are simply passed through
-// (the interceptor skips them) — there is no "require key" enforcement and
-// no errorPolicy behavior to configure here.
+// (the interceptor skips them) — there is no "require key" enforcement.
+// errorPolicy: 'fail-open' can be added here to keep webhooks flowing
+// even if Redis is temporarily unavailable.
 ```
 
 ## Async Configuration with registerAsync

@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 
-import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Inject } from '@nestjs/common';
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Inject, Logger } from '@nestjs/common';
 import { HttpAdapterHost, Reflector } from '@nestjs/core';
 import { Observable, of } from 'rxjs';
 import { tap } from 'rxjs/operators';
@@ -13,6 +13,8 @@ import { IDEMPOTENT_OPTIONS, IIdempotentOptions } from '../decorators/idempotent
 
 @Injectable()
 export class IdempotencyInterceptor implements NestInterceptor {
+  private readonly logger = new Logger(IdempotencyInterceptor.name);
+
   constructor(
     @Inject(IDEMPOTENCY_SERVICE) private readonly idempotencyService: IIdempotencyService,
     @Inject(IDEMPOTENCY_PLUGIN_OPTIONS) private readonly config: IIdempotencyPluginOptions,
@@ -36,9 +38,21 @@ export class IdempotencyInterceptor implements NestInterceptor {
 
     const fingerprint = await this.generateFingerprint(context, options);
 
-    const checkResult = await this.idempotencyService.checkAndLock(key, fingerprint, {
-      ttl: options.ttl,
-    });
+    let checkResult: Awaited<ReturnType<typeof this.idempotencyService.checkAndLock>>;
+    try {
+      checkResult = await this.idempotencyService.checkAndLock(key, fingerprint, {
+        ttl: options.ttl,
+      });
+    } catch (error) {
+      // The idempotency store is unavailable (e.g. Redis is down). Honor the
+      // configured errorPolicy: 'fail-open' proceeds without idempotency
+      // protection, 'fail-closed' (default) rejects by propagating the error.
+      if ((this.config.errorPolicy ?? 'fail-closed') === 'fail-open') {
+        this.logger.warn(`Idempotency store unavailable for key "${key}"; proceeding without idempotency (fail-open): ${(error as Error).message}`);
+        return next.handle();
+      }
+      throw error;
+    }
 
     if (!checkResult.isNew) {
       if (checkResult.fingerprintMismatch) {
