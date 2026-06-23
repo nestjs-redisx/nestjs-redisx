@@ -7,6 +7,32 @@ description: 'Acknowledge Redis Stream messages with message.ack and reject, man
 
 Handle message acknowledgment, retries, and errors.
 
+## Handler Contract
+
+The consumer runtime wraps every handler call and decides the message's fate
+from how the handler **completes**:
+
+- **Handler returns normally → the message is auto-ACKed.** You do not need to
+  call `message.ack()` yourself; calling it explicitly is harmless (it just
+  ACKs again).
+- **Handler throws → the runtime runs the failure path** (exponential-backoff
+  retry, then DLQ once attempts reach `maxRetries`). Re-throwing is the simplest
+  way to trigger a retry.
+
+`message.ack()` and `message.reject()` remain available for explicit control —
+for example to reject without throwing, or to ACK a poison message so it is not
+retried. The examples below use them for clarity, but a handler that simply
+returns (success) or throws (failure) is fully supported.
+
+```typescript
+// Minimal handler — return = ack, throw = retry/DLQ
+@StreamConsumer({ stream: 'orders', group: 'processors' })
+async handle(message: IStreamMessage<Order>): Promise<void> {
+  await this.orderService.process(message.data); // throws → retried
+  // normal return → auto-ACKed
+}
+```
+
 ## Message Lifecycle
 
 ```mermaid
@@ -380,10 +406,13 @@ async handle(message: IStreamMessage<Notification[]>): Promise<void> {
 
 ## Best Practices
 
-**1. Always ACK or Reject:**
+**1. Let outcome drive the message, or be explicit:**
 
 ```typescript
-// ✅ Good - explicit handling
+// ✅ Good - rely on the handler contract: return = ack, throw = retry
+await process();   // throws → retried/DLQ'd; returns → auto-ACKed
+
+// ✅ Also good - explicit handling when you need finer control
 try {
   await process();
   await message.ack();
@@ -391,8 +420,12 @@ try {
   await message.reject(error);
 }
 
-// ❌ Bad - no ACK/reject, message stuck in pending list
-await process();  // What if this fails?
+// ⚠️ Caution - swallowing the error makes failures look like success
+try {
+  await process();
+} catch {
+  // no rethrow, no reject → message is auto-ACKed and the failure is lost
+}
 ```
 
 **2. Make handlers idempotent:**

@@ -1,6 +1,6 @@
 ---
 title: '@WithLock Decorator — Locks Plugin | NestJS RedisX'
-description: 'Apply distributed Redis locks declaratively with @WithLock: dynamic key builders, TTL, waitTimeout, autoRenew, and onLockFailed strategies.'
+description: 'Apply distributed Redis locks declaratively with @WithLock: dynamic key builders, TTL, autoRenew, retry-based waiting, and onLockFailed strategies.'
 ---
 
 # @WithLock Decorator
@@ -17,11 +17,20 @@ Declarative locking — add distributed locks with a single decorator.
 interface IWithLockOptions {
   key: string | ((...args: unknown[]) => string);  // Lock key or key builder
   ttl?: number;                                     // Lock TTL (ms)
-  waitTimeout?: number;                             // Max wait time (ms)
+  waitTimeout?: number;                             // Accepted but NOT honored — see note
   autoRenew?: boolean;                              // Enable auto-renewal
   onLockFailed?: 'throw' | 'skip' | ((key: string) => Error);  // Failure strategy
 }
 ```
+
+::: warning `waitTimeout` is not honored
+`waitTimeout` is accepted by `@WithLock` (and by `LockService.acquire()`) for
+backward compatibility, but it has **no effect**. How long acquisition waits is
+governed entirely by the retry config (`retry.maxRetries`, `retry.initialDelay`,
+`retry.multiplier`, `retry.maxDelay`) — the service retries with exponential
+backoff and throws once retries are exhausted; it does not enforce a wall-clock
+wait limit. To bound waiting, tune the retry options.
+:::
 
 ## Key Patterns
 

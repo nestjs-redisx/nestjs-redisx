@@ -112,12 +112,11 @@ console.log(messageIds);
 
 ### Performance
 
-Batch publishing uses Redis pipeline:
-
-```
-Single publish (3 messages): 3 round trips
-Batch publish (3 messages): 1 round trip
-```
+`publishBatch()` issues one `XADD` per message **sequentially** (there is no
+pipelining yet — stream commands are not batched into a single round trip). Its
+value over calling `publish()` in a loop is convenience and a single error
+boundary, not fewer network round trips: publishing N messages still costs N
+round trips.
 
 ## getStreamInfo()
 

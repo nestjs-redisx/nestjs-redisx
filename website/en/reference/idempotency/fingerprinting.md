@@ -226,7 +226,7 @@ Body: { amount: 100 }
 POST /payments
 Idempotency-Key: pay-123
 Body: { amount: 200 }
-→ Error 422: Fingerprint mismatch
+→ Error: Fingerprint mismatch (surfaces as HTTP 500 by default — see below)
 ```
 
 ### Disable Validation
@@ -243,20 +243,20 @@ Disabling fingerprint validation can lead to incorrect behavior if clients reuse
 
 ## Handling Mismatches
 
-### Error Response
+### Default Error Response
+
+On a fingerprint mismatch the plugin throws `IdempotencyFingerprintMismatchError`. This extends
+`RedisXError` (a plain `Error`), **not** `HttpException`, and the plugin registers **no**
+exception filter for it — so by default it surfaces as a generic **HTTP 500**:
 
 ```http
-HTTP/1.1 422 Unprocessable Entity
-Content-Type: application/json
-
-{
-  "statusCode": 422,
-  "error": "Fingerprint Mismatch",
-  "message": "Idempotency key reused with different request data"
-}
+HTTP/1.1 500 Internal Server Error
 ```
 
-### Custom Error Handler
+To return a meaningful 4xx (e.g. 422) you must register your own exception filter, as shown
+next.
+
+### Custom Error Handler (to return 422)
 
 ```typescript
 import { IdempotencyFingerprintMismatchError } from '@nestjs-redisx/idempotency';

@@ -41,7 +41,9 @@ new CachePlugin({
     enabled: true,            // Enable anti-stampede (default: true)
     lockTimeout: 5000,        // Lock TTL in ms (default: 5000)
     waitTimeout: 10000,       // Max wait time in ms (default: 10000)
-    fallback: 'load',         // 'load' | 'error' | 'null' (default: 'load')
+    // fallback: NOT IMPLEMENTED — this option is currently inert (ignored).
+    // On stampede timeout the service ALWAYS throws StampedeError regardless
+    // of this value. See "stampede.fallback" note below.
   },
 
   // Stale-While-Revalidate
@@ -101,7 +103,47 @@ new CachePlugin({
 })
 ```
 
+## Allowed Key and Tag Characters
+
+::: warning Cache keys and tags are validated — invalid characters throw
+Cache **keys** may contain only the following characters: `A-Z a-z 0-9 - _ : .`
+(alphanumerics, hyphen, underscore, colon, dot). Whitespace and any other
+character are rejected. A violating key throws a `CacheKeyError`. This
+validation **cannot be disabled**.
+
+Cache **tags** are stricter: they are normalized to **lowercase** and may
+contain only `a-z 0-9 - _ : .`. Uppercase letters are lowercased
+automatically; any other invalid character throws `CacheError`. Tags are also
+limited to 128 characters.
+
+These rules apply to every cache operation, including keys produced by the
+`@Cached` / `@Cacheable` decorators after placeholder interpolation.
+:::
+
+## Failure Policy (fail-open vs fail-closed)
+
+The cache service treats read and write failures differently:
+
+- **Reads fail-open.** `get`, `has`, `ttl`, `getMany`, `getKeysByTag`, and
+  invalid keys passed to reads do **not** throw. On a Redis error (or invalid
+  key) the operation logs a warning and returns a miss (`null` / `false` /
+  `[]` / `-1`). For `getOrSet`, a read failure falls through to the loader.
+- **Writes fail-closed.** `set`, `delete`, `deleteMany`, `setMany`, `clear`,
+  `invalidateTag(s)`, `invalidateByPattern`, and the write-back step of
+  `getOrSet` **throw** on failure (`CacheError` / `CacheKeyError`). An invalid
+  key passed to a write throws `CacheKeyError`.
+
 ## Option Details
+
+### `stampede.fallback`
+
+::: danger Currently inert
+The `fallback` option (`'load' | 'error' | 'null'`) is defined in the type but
+is **not read by the implementation**. Regardless of its value, when stampede
+protection times out (loader exceeds `lockTimeout`, or a waiter exceeds
+`waitTimeout`) the service **always throws `StampedeError`**. Do not rely on
+`fallback` to change this behavior.
+:::
 
 ### `isGlobal`
 

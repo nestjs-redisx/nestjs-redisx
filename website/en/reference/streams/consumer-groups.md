@@ -180,30 +180,16 @@ console.log({
 
 Claim messages from dead or slow consumers.
 
-### Auto-Claim via Module Config
+::: warning No automatic claiming
+There is **no background auto-claim**. The consumer poll loop only reads new
+messages via `XREADGROUP '>'` — it never scans the PEL for idle/orphaned
+entries. Messages left pending by a crashed consumer are **not** reclaimed
+automatically; you must call `claimIdle()` yourself (for example from a cron
+job or a periodic task).
 
-Configure the idle timeout for claiming abandoned messages at the module level:
-
-```typescript
-new StreamsPlugin({
-  consumer: {
-    claimIdleTimeout: 30000,  // Claim messages idle > 30s
-  },
-})
-```
-
-The consumer decorator works as usual:
-
-```typescript
-@StreamConsumer({
-  stream: 'orders',
-  group: 'processors',
-})
-async handle(message: IStreamMessage<Order>) {
-  await this.process(message.data);
-  await message.ack();
-}
-```
+The `claimIdleTimeout` consumer option is currently inert — it is not read by
+the runtime and does not enable any automatic claiming.
+:::
 
 ### Manual Claim
 
@@ -302,14 +288,17 @@ Deleting a group removes all pending message tracking. Messages remain in the st
 'consumers'
 ```
 
-**2. Set appropriate idle timeout:**
+**2. Pick an appropriate min-idle time when claiming manually:**
+
+Pass the idle threshold directly to `claimIdle()` (the `claimIdleTimeout`
+config option is inert and does not enable automatic claiming):
 
 ```typescript
 // For fast operations (< 1s)
-claimIdleTimeout: 10000  // 10 seconds
+await consumer.claimIdle('orders', 'processors', 'worker-recovery', 10000);   // 10s idle
 
 // For slow operations (minutes)
-claimIdleTimeout: 300000  // 5 minutes
+await consumer.claimIdle('orders', 'processors', 'worker-recovery', 300000);  // 5min idle
 ```
 
 **3. Monitor pending messages:**

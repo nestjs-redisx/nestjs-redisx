@@ -247,7 +247,17 @@ function isRetryable(error) {
 
 ## Handling Errors
 
-### Fingerprint Mismatch (422)
+::: warning Default server status is 500, not 4xx
+Out of the box, the idempotency plugin surfaces all of its errors as **HTTP 500** —
+`IdempotencyFingerprintMismatchError`, `IdempotencyFailedError` and `IdempotencyTimeoutError`
+all extend a plain `Error` and the plugin registers no exception filter. The `422` / `408`
+statuses below only apply if the **server** has registered exception filters to remap these
+errors (see the [Fingerprinting](./fingerprinting#custom-error-handler-to-return-422) and
+[Troubleshooting](./troubleshooting) guides). If your server uses the defaults, branch on
+`500` and inspect the error payload/message instead.
+:::
+
+### Fingerprint Mismatch (422, if a filter is configured)
 
 ```javascript
 try {
@@ -262,7 +272,7 @@ try {
 }
 ```
 
-### Timeout (408)
+### Timeout (408, if a filter is configured)
 
 ```javascript
 try {

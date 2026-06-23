@@ -44,6 +44,14 @@ interface IRateLimitResult {
 
 Get human-readable state for monitoring:
 
+::: warning Token-bucket returns placeholder state
+`getState()` (like `peek()`) reads current state without consuming. It returns **accurate**
+values only for the `fixed-window` and `sliding-window` algorithms. For the **`token-bucket`**
+algorithm it currently returns **placeholder** data (`allowed: true`, `remaining` equal to
+capacity, `current: 0`) regardless of the real bucket level. Do not rely on `getState()` /
+`peek()` for token-bucket dashboards or decisions.
+:::
+
 ```typescript
 async getStatus(userId: string): Promise<{ current: number; limit: number; resetAt: Date }> {
   const state = await this.rateLimitService.getState(`user:${userId}`, {
@@ -78,6 +86,13 @@ async upgradeToPremium(userId: string): Promise<void> {
 ## peek() Method
 
 Check status without consuming:
+
+::: warning Token-bucket returns placeholder state
+`peek()` returns **accurate** values only for the `fixed-window` and `sliding-window`
+algorithms. For the **`token-bucket`** algorithm it currently returns **placeholder** data
+(`allowed: true`, `remaining` equal to capacity, `current: 0`) regardless of the real bucket
+level — it does not read the bucket. Do not rely on `peek()` for token-bucket.
+:::
 
 ```typescript
 async getRateLimitStatus(userId: string): Promise<RateLimitStatus> {

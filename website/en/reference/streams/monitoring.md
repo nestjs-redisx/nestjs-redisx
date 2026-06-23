@@ -92,10 +92,13 @@ stream_length{stream="orders"}
 stream_consumer_lag{stream="orders",group="processors"}
 ```
 
-**DLQ Size (custom):**
+**DLQ rate:**
+
+There is no DLQ-size gauge; messages moved to the DLQ are counted on the shared
+consumed counter with `status="dead_letter"`.
 
 ```yaml
-increase(stream_dlq_size{stream="orders"}[1h])
+increase(redisx_stream_messages_consumed_total{stream="orders",status="dead_letter"}[1h])
 ```
 
 ### Alert Rules (built-in)
@@ -162,7 +165,7 @@ Using custom metrics from your collector (see examples above):
 
 ```yaml
 - alert: DLQGrowing
-  expr: increase(stream_dlq_size[1h]) > 10
+  expr: increase(redisx_stream_messages_consumed_total{status="dead_letter"}[1h]) > 10
   for: 5m
   labels:
     severity: critical

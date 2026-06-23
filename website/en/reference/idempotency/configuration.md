@@ -51,10 +51,16 @@ new IdempotencyPlugin({
       .digest('hex');
   },
 
-  // Error Handling
-  errorPolicy: 'fail-closed',
 })
 ```
+
+::: warning `errorPolicy` is currently NOT honored
+The `errorPolicy` option (`'fail-open'` / `'fail-closed'`) is accepted by the plugin but is
+**not read anywhere** in the current implementation. The interceptor does not wrap Redis
+operations in error handling, so if Redis is unavailable the request **fails hard regardless
+of this setting** — there is no fail-open resilience today. Do not rely on `errorPolicy` to
+keep requests flowing when Redis is down.
+:::
 
 ## Configuration by Use Case
 
@@ -66,7 +72,6 @@ new IdempotencyPlugin({
   lockTimeout: 60000,        // 1 minute (payments can be slow)
   waitTimeout: 120000,       // 2 minutes
   validateFingerprint: true, // Strict validation
-  errorPolicy: 'fail-closed',
 })
 ```
 
@@ -88,8 +93,11 @@ new IdempotencyPlugin({
   defaultTtl: 86400,
   headerName: 'X-Webhook-ID',  // Custom header
   validateFingerprint: false,  // Body may vary
-  errorPolicy: 'fail-open',    // Don't require key
 })
+
+// Note: requests without an idempotency key are simply passed through
+// (the interceptor skips them) — there is no "require key" enforcement and
+// no errorPolicy behavior to configure here.
 ```
 
 ## Async Configuration with registerAsync

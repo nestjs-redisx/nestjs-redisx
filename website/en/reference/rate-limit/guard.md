@@ -7,6 +7,29 @@ description: 'Apply RateLimitGuard manually with @UseGuards, order it after Auth
 
 Use RateLimitGuard for fine-grained control.
 
+::: danger Do NOT double-bind the guard
+The `@RateLimit()` decorator **already binds `RateLimitGuard`** for you (it applies
+`UseGuards(RateLimitGuard)` internally). If you ALSO register the same guard globally via
+`{ provide: APP_GUARD, useClass: RateLimitGuard }`, NestJS does **not** deduplicate it —
+the guard runs **twice** on decorated routes and the limit is **consumed twice per request**
+(e.g. a `points: 10` limit effectively becomes 5).
+
+Pick **one** approach:
+
+- **Per-route:** Use `@RateLimit()` on each route. Do NOT register `APP_GUARD`.
+- **Global:** Register `RateLimitGuard` once via `APP_GUARD` and do NOT also add `@RateLimit()`
+  on routes you want limited (use `@RateLimit()` only where you need per-route overrides on
+  routes that are NOT otherwise covered — but be aware those routes will be double-counted).
+:::
+
+::: warning A globally-registered guard rate-limits EVERY endpoint by IP
+With `APP_GUARD`, the guard runs on **all** routes, including those with no `@RateLimit()`
+metadata. A route without metadata receives empty options, is **not** skipped, and is limited
+using the default key extractor (`ip`) and the default `points`/`duration` from plugin options.
+This means health checks, static assets, SSR routes, and every other endpoint are rate-limited
+by client IP. To exempt routes, use the `skip` option (see [Skipping Rate Limits](#skipping-rate-limits)).
+:::
+
 ## Manual Guard Application
 
 ```typescript
@@ -77,6 +100,17 @@ Apply to all endpoints via module (required for DI):
 ::: warning
 Do not use `app.useGlobalGuards(new RateLimitGuard())` — the guard requires DI
 (RateLimitService, Reflector, module options). Use `APP_GUARD` with `useClass` instead.
+:::
+
+::: danger Do NOT combine global registration with `@RateLimit()`
+When the guard is registered globally, do **not** also add `@RateLimit()` to routes — the
+decorator binds the guard a second time and the limit is consumed twice. With a global guard,
+configure per-route limits is not safe via `@RateLimit()`; instead rely on the default
+plugin-level `points`/`duration` and use `skip` to exempt routes. If you need different limits
+per route, prefer the **per-route** approach (no `APP_GUARD`, `@RateLimit()` only).
+
+Also remember: a global guard limits **every** endpoint by IP by default, including
+health/static/SSR routes.
 :::
 
 ## Skipping Rate Limits

@@ -60,13 +60,15 @@ async handle(message: IStreamMessage<Order>): Promise<void> {
 }
 ```
 
-**Flow:**
+**Flow:** with `maxRetries: 3`, a message is DLQ'd once its attempt counter
+**reaches** `maxRetries` (the failure path runs `if (attempt >= maxRetries)`).
+So there are 3 processing attempts total, and the message goes to the DLQ on the
+3rd failure — not the 4th:
 
 ```
-Attempt 1: Fail → Retry
-Attempt 2: Fail → Retry
-Attempt 3: Fail → Retry
-Attempt 4: Fail → Move to orders:dlq
+Attempt 1: Fail (1 < 3) → re-add as attempt 2
+Attempt 2: Fail (2 < 3) → re-add as attempt 3
+Attempt 3: Fail (3 >= 3) → Move to orders:dlq
 ```
 
 ### DLQ Stream Name
@@ -210,19 +212,28 @@ Read DLQ messages and process differently based on error type:
 
 ### Prometheus Metrics
 
+The plugin does **not** emit a dedicated DLQ metric. Built-in DLQ counts are
+exposed on the shared consumed counter as
+`redisx_stream_messages_consumed_total{status="dead_letter"}`. The example below
+shows how to register your **own** custom `prom-client` counters/gauges
+(`redisx_stream_dlq_total` / `redisx_stream_dlq_size`) if you want a dedicated
+DLQ metric — those names are defined by your code, not by the plugin.
+
 <<< @/apps/demo/src/plugins/streams/monitoring-dlq-metrics.usage.ts{typescript}
 
 ### Grafana Dashboard
 
 ```yaml
-# DLQ message rate
-rate(redisx_stream_dlq_total[5m])
+# DLQ message rate — messages moved to the DLQ are counted on the shared
+# consumed counter with status="dead_letter" (there is no dedicated
+# redisx_stream_dlq_total / _size metric).
+rate(redisx_stream_messages_consumed_total{status="dead_letter"}[5m])
 
-# Current DLQ size
-redisx_stream_dlq_size
+# Cumulative count of messages sent to the DLQ
+sum(redisx_stream_messages_consumed_total{status="dead_letter"})
 
-# Alert: High DLQ size
-redisx_stream_dlq_size > 100
+# Alert: High DLQ rate
+rate(redisx_stream_messages_consumed_total{status="dead_letter"}[5m]) > 1
 ```
 
 ## Best Practices

@@ -129,11 +129,11 @@ RedisModule.forRoot({
 Inject a specific client:
 
 ```typescript
-import { InjectRedis } from '@nestjs-redisx/core';
+import { InjectRedis, IRedisDriver } from '@nestjs-redisx/core';
 
 @Injectable()
 export class SessionService {
-  constructor(@InjectRedis('sessions') private readonly redis: RedisService) {}
+  constructor(@InjectRedis('sessions') private readonly redis: IRedisDriver) {}
 }
 ```
 
@@ -256,11 +256,14 @@ export class MyService {
 
   async example() {
     // Get with loader (cache-aside pattern)
-    const user = await this.cache.get('user:123', {
-      loader: () => this.db.findUser('123'),
-      ttl: 300,
-      tags: ['users', 'user:123'],
-    });
+    const user = await this.cache.getOrSet(
+      'user:123',
+      () => this.db.findUser('123'),
+      { ttl: 300, tags: ['users', 'user:123'] },
+    );
+
+    // Plain get (key only, no loader)
+    const cached = await this.cache.get('user:123');
 
     // Manual set
     await this.cache.set('key', value, { ttl: 3600 });
@@ -322,7 +325,7 @@ import { WithLock } from '@nestjs-redisx/locks';
 
 @Injectable()
 export class OrderService {
-  @WithLock('order:{0}', { ttl: 30000 })
+  @WithLock({ key: 'order:{0}', ttl: 30000 })
   async processOrder(orderId: string): Promise<Order> {
     // Only one instance processes this order at a time
     return this.doProcess(orderId);
@@ -394,17 +397,23 @@ Default: by IP address. Custom:
 @RateLimit({
   points: 100,
   duration: 60,
-  keyGenerator: (req) => req.user?.id ?? req.ip,
+  key: (ctx) => {
+    const req = ctx.switchToHttp().getRequest();
+    return req.user?.id ?? req.ip;
+  },
 })
 ```
 
 ### Skip Rate Limiting
 
+Skipping is configured via the `skip` predicate on `@RateLimit` (there is no
+separate `@SkipRateLimit` decorator):
+
 ```typescript
-import { SkipRateLimit } from '@nestjs-redisx/rate-limit';
+import { RateLimit } from '@nestjs-redisx/rate-limit';
 
 @Get('health')
-@SkipRateLimit()
+@RateLimit({ points: 100, duration: 60, skip: () => true })
 healthCheck() { return { status: 'ok' }; }
 ```
 
@@ -466,7 +475,7 @@ new StreamsPlugin({
   consumer: {
     groupName: 'my-service',
     consumerName: 'instance-1',
-    blockTime: 5000,           // ms to block waiting for messages
+    blockTimeout: 5000,        // ms to block waiting for messages
     batchSize: 10,             // messages per read
     maxRetries: 3,             // retries before DLQ
   },
@@ -476,11 +485,11 @@ new StreamsPlugin({
 ### Publishing Messages
 
 ```typescript
-import { STREAMS_SERVICE, IStreamsService } from '@nestjs-redisx/streams';
+import { STREAM_PRODUCER, IStreamProducer } from '@nestjs-redisx/streams';
 
 @Injectable()
 export class OrderService {
-  constructor(@Inject(STREAMS_SERVICE) private readonly streams: IStreamsService) {}
+  constructor(@Inject(STREAM_PRODUCER) private readonly streams: IStreamProducer) {}
 
   async createOrder(order: Order) {
     await this.streams.publish('orders', {
@@ -612,8 +621,8 @@ export class ApiController {
   @Get('data')
   @RateLimit({
     points: 100,
-    window: 60,
-    keyGenerator: (req) => `user:${req.user.id}`,
+    duration: 60,
+    key: (ctx) => `user:${ctx.switchToHttp().getRequest().user.id}`,
   })
   getData() { }
 }
@@ -625,7 +634,7 @@ export class ApiController {
 // Producer
 @Injectable()
 export class JobService {
-  constructor(@Inject(STREAMS_SERVICE) private streams: IStreamsService) {}
+  constructor(@Inject(STREAM_PRODUCER) private streams: IStreamProducer) {}
 
   async enqueue(job: Job) {
     await this.streams.publish('jobs', { type: job.type, payload: job.data });

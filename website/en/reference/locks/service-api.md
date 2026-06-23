@@ -223,7 +223,10 @@ try {
   }
 } catch (error) {
   if (error instanceof LockAcquisitionError) {
-    // Could not acquire lock after all retries
+    // Could not acquire lock after all retries.
+    // NOTE: error.reason is always 'timeout' in practice — although the type
+    // declares 'timeout' | 'held' | 'error', the service only ever throws with
+    // 'timeout' (after retries are exhausted).
     console.error('Lock busy:', error.lockKey, error.reason);
   } else if (error instanceof LockNotOwnedError) {
     // Tried to release a lock not owned by this token

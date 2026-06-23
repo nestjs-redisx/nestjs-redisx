@@ -97,20 +97,35 @@ async tryProcessOrder(orderId: string): Promise<boolean> {
 }
 ```
 
-## 7. Timeout Pattern
+## 7. Bounded-Wait Pattern
 
-Wait for lock with timeout:
+Bound how long acquisition waits before giving up. There is **no `waitTimeout`**
+— acquisition waiting is governed entirely by the retry config (`maxRetries`
+with exponential backoff). Tune those globally on the plugin to set the
+effective wait budget:
 
 ```typescript
-@WithLock({
-  key: 'resource:{0}',
-  waitTimeout: 5000,  // Wait max 5 seconds
+// Effective max wait ≈ sum of backoff delays across retries
+new LocksPlugin({
+  retry: {
+    maxRetries: 5,
+    initialDelay: 100,
+    multiplier: 2,
+    maxDelay: 2000,
+  },
 })
+
+// @WithLock then waits across those retries before throwing
+@WithLock({ key: 'resource:{0}' })
 async accessResource(id: string) {
-  // Uses global retry settings
-  // Throws LockAcquisitionError if cannot acquire within timeout
+  // Throws LockAcquisitionError once retries are exhausted
 }
 ```
+
+::: warning
+`waitTimeout` is accepted by the decorator/service options but is **ignored** —
+do not use it to bound wait time. Use the retry settings above instead.
+:::
 
 ## Next Steps
 

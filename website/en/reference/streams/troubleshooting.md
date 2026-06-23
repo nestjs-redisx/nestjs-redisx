@@ -247,17 +247,26 @@ async handle(message: IStreamMessage<Order>) {
 
 **Solutions:**
 
-**1. Configure idle claim timeout (module-level):**
+::: warning No automatic claiming
+The Streams plugin does **not** run any background auto-claim, and the
+`claimIdleTimeout` option is inert. Orphaned messages left in the PEL by a
+crashed consumer must be reclaimed manually — either via the `claimIdle()`
+method (e.g. from a cron job) or via the Redis CLI below.
+:::
+
+**1. Manual claim via the service:**
 
 ```typescript
-new StreamsPlugin({
-  consumer: {
-    claimIdleTimeout: 30000,  // Claim messages idle > 30s
-  },
-})
+// Run periodically (e.g. from a cron task) to recover orphaned messages
+const claimed = await this.consumer.claimIdle(
+  'orders',
+  'processors',
+  'worker-recovery',
+  30000, // min idle time (ms)
+);
 ```
 
-**2. Manual claim:**
+**2. Manual claim via Redis CLI:**
 
 ```bash
 # Find idle messages
