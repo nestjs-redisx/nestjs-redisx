@@ -42,6 +42,12 @@ export interface IConsumerInstanceConfig<T> {
   retryInitialDelay: number;
   retryMaxDelay: number;
   retryMultiplier: number;
+  /**
+   * Reclaim messages left pending (idle) longer than this many milliseconds by
+   * other consumers — e.g. a consumer that crashed mid-processing. 0 disables
+   * auto-claim.
+   */
+  claimIdleTimeout: number;
 }
 
 export class ConsumerInstance<T> {
@@ -51,6 +57,7 @@ export class ConsumerInstance<T> {
   private shutdownSignal?: Promise<typeof SHUTDOWN_SENTINEL>;
   private resolveShutdown?: (value: typeof SHUTDOWN_SENTINEL) => void;
   private pollPromise?: Promise<void>;
+  private claimPromise?: Promise<void>;
 
   constructor(
     private readonly driver: IRedisDriver,
@@ -67,6 +74,9 @@ export class ConsumerInstance<T> {
     });
     await this.ensureGroup();
     this.pollPromise = this.poll();
+    if (this.config.claimIdleTimeout > 0) {
+      this.claimPromise = this.claimLoop();
+    }
   }
 
   /**
@@ -91,6 +101,11 @@ export class ConsumerInstance<T> {
       await Promise.race([this.pollPromise, sleep(remaining)]);
     }
 
+    if (this.claimPromise) {
+      const remaining = Math.max(0, deadline - Date.now());
+      await Promise.race([this.claimPromise, sleep(remaining)]);
+    }
+
     while (this.processing > 0 && Date.now() < deadline) {
       await sleep(STOP_POLL_INTERVAL_MS);
     }
@@ -100,6 +115,43 @@ export class ConsumerInstance<T> {
     }
 
     this.pollPromise = undefined;
+    this.claimPromise = undefined;
+  }
+
+  /**
+   * Periodically reclaims messages that other consumers left pending for longer
+   * than `claimIdleTimeout` (e.g. a crashed consumer) and processes them, so
+   * orphaned messages are not stuck forever.
+   */
+  private async claimLoop(): Promise<void> {
+    while (this.running) {
+      await this.sleepOrShutdown(this.config.claimIdleTimeout);
+      if (!this.running) break;
+
+      try {
+        await this.claimIdleMessages();
+      } catch (error) {
+        if (!this.running || isShutdownError(error)) break;
+        this.logger.error('Stream auto-claim error:', error);
+      }
+    }
+  }
+
+  private async claimIdleMessages(): Promise<void> {
+    const minIdle = this.config.claimIdleTimeout;
+    const pending = await this.driver.xpendingRange(this.config.stream, this.config.group, '-', '+', this.config.batchSize);
+    const idleIds = pending.filter((entry) => entry.idleTime >= minIdle).map((entry) => entry.id);
+    if (idleIds.length === 0) return;
+
+    const claimed = await this.driver.xclaim(this.config.stream, this.config.group, this.config.consumer, minIdle, ...idleIds);
+
+    for (const entry of claimed) {
+      while (this.running && this.processing >= this.config.concurrency) {
+        await this.sleepOrShutdown(BACKPRESSURE_WAIT_MS);
+      }
+      if (!this.running) break;
+      void this.processMessage(entry.id, entry.fields);
+    }
   }
 
   private async ensureGroup(): Promise<void> {

@@ -18,7 +18,7 @@ The Streams Plugin provides Redis Streams support for NestJS, enabling event-dri
 | At-Least-Once Delivery | Explicit acknowledgment ensures processing |
 | Message History | Read historical messages from any point |
 | Dead Letter Queue | Isolate failed messages for analysis |
-| Manual Idle Claiming | Recover orphaned messages via `claimIdle()` (no automatic background claim) |
+| Idle Message Claiming | Background auto-claim recovers orphaned messages (`claimIdleTimeout`); `claimIdle()` available for on-demand claiming |
 
 ## Key Features
 

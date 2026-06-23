@@ -199,7 +199,10 @@ Messages delivered to a consumer but not acknowledged.
 
 ### Claiming Idle Messages
 
-Claim messages from dead consumers:
+Each consumer runs a background auto-claim loop (interval = `claimIdleTimeout`,
+default `30000` ms) that reclaims messages left pending by dead consumers and
+reprocesses them automatically — set `claimIdleTimeout: 0` to disable it. You
+can also claim on demand with `claimIdle()`:
 
 ```typescript
 // Claim messages idle for 30 seconds

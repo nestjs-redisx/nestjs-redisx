@@ -180,16 +180,31 @@ console.log({
 
 Claim messages from dead or slow consumers.
 
-::: warning No automatic claiming
-There is **no background auto-claim**. The consumer poll loop only reads new
-messages via `XREADGROUP '>'` — it never scans the PEL for idle/orphaned
-entries. Messages left pending by a crashed consumer are **not** reclaimed
-automatically; you must call `claimIdle()` yourself (for example from a cron
-job or a periodic task).
+### Auto-Claim via Module Config
 
-The `claimIdleTimeout` consumer option is currently inert — it is not read by
-the runtime and does not enable any automatic claiming.
-:::
+Each consumer runs a background auto-claim loop driven by the
+`claimIdleTimeout` option (default `30000` ms). Every `claimIdleTimeout`
+milliseconds the consumer scans the group's pending entries (`XPENDING`) and
+reclaims (`XCLAIM`) any message that has been idle for at least
+`claimIdleTimeout` — for example messages left pending by a crashed or stuck
+consumer. Reclaimed messages flow through the normal handler / retry / DLQ
+path, so orphaned messages are recovered automatically without any cron job.
+
+```typescript
+@StreamConsumer({
+  stream: 'orders',
+  group: 'processors',
+  claimIdleTimeout: 30000,  // Reclaim messages idle >= 30s, every 30s (default)
+})
+async handle(message: IStreamMessage<Order>) {
+  await this.process(message.data);
+  await message.ack();
+}
+```
+
+Set `claimIdleTimeout: 0` to disable the background auto-claim. The manual
+`claimIdle()` method (below) is still available for on-demand claiming — for
+example to reclaim with a different idle threshold or from an admin task.
 
 ### Manual Claim
 
@@ -290,8 +305,8 @@ Deleting a group removes all pending message tracking. Messages remain in the st
 
 **2. Pick an appropriate min-idle time when claiming manually:**
 
-Pass the idle threshold directly to `claimIdle()` (the `claimIdleTimeout`
-config option is inert and does not enable automatic claiming):
+The `claimIdleTimeout` config option drives the background auto-claim. When
+claiming on demand, pass the idle threshold directly to `claimIdle()`:
 
 ```typescript
 // For fast operations (< 1s)

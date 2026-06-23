@@ -269,14 +269,27 @@ async checkResources() {
 
 <<< @/apps/demo/src/plugins/streams/service-backpressure-graceful.usage.ts{typescript}
 
-### 5. Reclaim Orphaned Messages Manually
+### 5. Reclaim Orphaned Messages
 
-There is no automatic background claim (`claimIdleTimeout` is inert). To recover
-messages stuck in the PEL after a consumer crash, call `claimIdle()` yourself —
-for example from a periodic task — passing the minimum idle time directly:
+By default, messages stuck in the PEL after a consumer crash are reclaimed
+automatically: each consumer runs a background auto-claim loop driven by
+`claimIdleTimeout` (default `30000` ms) that reclaims any message idle for at
+least `claimIdleTimeout` and reprocesses it. Tune (or disable with `0`) the
+interval per consumer:
 
 ```typescript
-await consumer.claimIdle('orders', 'processors', 'worker-recovery', 30000); // idle > 30s
+@StreamConsumer({
+  stream: 'orders',
+  group: 'processors',
+  claimIdleTimeout: 30000,  // Reclaim messages idle >= 30s, every 30s (0 disables)
+})
+```
+
+For on-demand recovery with a custom idle threshold, call `claimIdle()`
+directly:
+
+```typescript
+await consumer.claimIdle('orders', 'processors', 'worker-recovery', 30000); // idle >= 30s
 ```
 
 ## Troubleshooting

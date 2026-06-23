@@ -71,11 +71,14 @@ interface ConsumerOptions {
   maxRetries?: number;
 
   /**
-   * Idle time before claiming messages (ms)
+   * Idle time before claiming messages (ms).
    *
-   * NOTE: Currently inert. The consumer poll loop only reads new messages and
-   * does not run any background auto-claim, so this value is never used.
-   * Use the `claimIdle()` method manually to recover orphaned messages.
+   * Drives the background auto-claim loop: every `claimIdleTimeout` ms each
+   * consumer scans the group's pending entries (XPENDING) and reclaims (XCLAIM)
+   * any message idle for at least this long — e.g. messages left pending by a
+   * crashed consumer — then processes them through the normal handler/retry/DLQ
+   * path. Set to 0 to disable auto-claim. The `claimIdle()` method remains
+   * available for on-demand claiming.
    * @default 30000
    */
   claimIdleTimeout?: number;
@@ -92,6 +95,13 @@ interface ProducerOptions {
    * @default 100000
    */
   maxLen?: number;
+
+  /**
+   * Implicitly create the stream on first publish. When false, publishes set
+   * NOMKSTREAM so a publish to a missing stream is a no-op (returns null).
+   * @default true
+   */
+  autoCreate?: boolean;
 }
 ```
 
@@ -101,8 +111,10 @@ false }` at the plugin level — no `MAXLEN` is then applied on publish. To cap 
 stream, use the `trim` block (see below) or `producer.maxLen`. A per-publish
 `maxLen` always overrides the configured trimming for that call.
 
-The `autoCreate` option is accepted by the type but has no effect — streams are
-created implicitly by the first `XADD` regardless of its value.
+The `autoCreate` option controls implicit stream creation on publish. When
+`true` (default), the first `XADD` creates the stream as usual. When `false`,
+publishes set `NOMKSTREAM`, so a publish to a non-existent stream does **not**
+create it — the publish becomes a no-op returning `null` instead.
 :::
 
 ### Dead Letter Queue Options

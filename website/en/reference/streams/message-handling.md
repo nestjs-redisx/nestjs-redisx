@@ -141,7 +141,7 @@ With defaults (`initialDelay: 1000`, `multiplier: 2`, `maxDelay: 30000`):
 - ...and so on, capped at **30s**
 
 ::: tip
-`claimIdle()` is a separate mechanism for recovering **orphaned** messages — messages stuck in the PEL because the original consumer crashed before ACK. See [Consumer Groups — Claiming Idle Messages](./consumer-groups#claiming-idle-messages).
+Idle claiming is a separate mechanism for recovering **orphaned** messages — messages stuck in the PEL because the original consumer crashed before ACK. By default each consumer reclaims these automatically via a background auto-claim loop (`claimIdleTimeout`, default `30000` ms); the `claimIdle()` method is also available for on-demand claiming. See [Consumer Groups — Claiming Idle Messages](./consumer-groups#claiming-idle-messages).
 :::
 
 ## Attempt Tracking

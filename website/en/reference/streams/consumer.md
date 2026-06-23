@@ -55,6 +55,14 @@ interface StreamConsumerOptions {
    * @default 1
    */
   concurrency?: number;
+
+  /**
+   * Idle time (ms) for the background auto-claim loop. Every `claimIdleTimeout`
+   * ms the consumer reclaims messages idle for at least this long (e.g. left by
+   * a crashed consumer) and reprocesses them. Set to 0 to disable auto-claim.
+   * @default 30000
+   */
+  claimIdleTimeout?: number;
 }
 ```
 
@@ -210,7 +218,10 @@ console.log({
 
 ### claimIdle()
 
-Claim idle messages from dead consumers:
+Claim idle messages from dead consumers on demand. (Consumers also auto-claim
+idle messages in the background via `claimIdleTimeout`; use this method when you
+need a different idle threshold or have disabled auto-claim with
+`claimIdleTimeout: 0`.)
 
 ```typescript
 const claimed = await consumer.claimIdle(

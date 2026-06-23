@@ -71,25 +71,31 @@ export class StreamProducerService implements IStreamProducer {
    * (keep-all), and `trim.maxLen`/`trim.approximate` control trimming when
    * enabled. When no `trim` config is set, the legacy `producer.maxLen` default
    * applies. (Trimming uses MAXLEN; MINID is not derivable from config.)
+   *
+   * When `producer.autoCreate` is false, NOMKSTREAM is set so a publish does not
+   * implicitly create a missing stream.
    */
-  private resolveAddOptions(options: IPublishOptions): { maxLen?: number; approximate?: boolean } {
+  private resolveAddOptions(options: IPublishOptions): { maxLen?: number; approximate?: boolean; noMkStream?: boolean } {
+    const noMkStream = this.config.producer?.autoCreate === false ? { noMkStream: true } : {};
+
     if (options.maxLen !== undefined) {
-      return { maxLen: options.maxLen, approximate: true };
+      return { maxLen: options.maxLen, approximate: true, ...noMkStream };
     }
 
     const trim = this.config.trim;
     if (trim) {
       if (trim.enabled === false) {
         // Keep-all: do not trim (no MAXLEN passed to XADD).
-        return {};
+        return { ...noMkStream };
       }
       return {
         maxLen: trim.maxLen ?? this.config.producer?.maxLen ?? 100000,
         approximate: trim.approximate ?? true,
+        ...noMkStream,
       };
     }
 
-    return { maxLen: this.config.producer?.maxLen ?? 100000, approximate: true };
+    return { maxLen: this.config.producer?.maxLen ?? 100000, approximate: true, ...noMkStream };
   }
 
   async getStreamInfo(stream: string): Promise<IStreamInfo> {

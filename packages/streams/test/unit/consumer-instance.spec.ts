@@ -7,6 +7,8 @@ function createMockDriver() {
     xreadgroup: vi.fn().mockResolvedValue(null),
     xack: vi.fn().mockResolvedValue(1),
     xadd: vi.fn().mockResolvedValue('1234567890-0'),
+    xpendingRange: vi.fn().mockResolvedValue([]),
+    xclaim: vi.fn().mockResolvedValue([]),
   } as any;
 }
 
@@ -41,6 +43,7 @@ function createConfig<T>(overrides: Partial<IConsumerInstanceConfig<T>> = {}): I
     retryInitialDelay: 100,
     retryMaxDelay: 5000,
     retryMultiplier: 2,
+    claimIdleTimeout: 0,
     ...overrides,
   };
 }
@@ -485,6 +488,54 @@ describe('ConsumerInstance', () => {
 
       // Then — only the single rejecting call happened; no 1s retry delay was taken
       expect(driver.xreadgroup).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('claimIdleMessages (auto-claim)', () => {
+    it('claims only messages idle beyond the threshold', async () => {
+      // Given
+      config = createConfig({ claimIdleTimeout: 1000 });
+      driver.xpendingRange.mockResolvedValue([
+        { id: '1-0', consumer: 'dead', idleTime: 5000, deliveryCount: 1 },
+        { id: '2-0', consumer: 'me', idleTime: 100, deliveryCount: 1 }, // below threshold
+      ]);
+      driver.xclaim.mockResolvedValue([]);
+      const instance = new ConsumerInstance(driver, dlqService, config, metrics);
+      (instance as any).running = true;
+
+      // When
+      await (instance as any).claimIdleMessages();
+
+      // Then - only the idle-beyond-threshold id is claimed
+      expect(driver.xpendingRange).toHaveBeenCalledWith('test-stream', 'test-group', '-', '+', 10);
+      expect(driver.xclaim).toHaveBeenCalledWith('test-stream', 'test-group', 'test-consumer', 1000, '1-0');
+    });
+
+    it('does not claim when nothing exceeds the idle threshold', async () => {
+      // Given
+      config = createConfig({ claimIdleTimeout: 1000 });
+      driver.xpendingRange.mockResolvedValue([{ id: '2-0', consumer: 'me', idleTime: 100, deliveryCount: 1 }]);
+      const instance = new ConsumerInstance(driver, dlqService, config, metrics);
+      (instance as any).running = true;
+
+      // When
+      await (instance as any).claimIdleMessages();
+
+      // Then
+      expect(driver.xclaim).not.toHaveBeenCalled();
+    });
+
+    it('does not start the auto-claim loop when claimIdleTimeout is 0', async () => {
+      // Given - default config disables auto-claim
+      const instance = new ConsumerInstance(driver, dlqService, createConfig({ claimIdleTimeout: 0 }), metrics);
+
+      // When
+      await instance.start();
+
+      // Then - no claim loop running
+      expect((instance as any).claimPromise).toBeUndefined();
+
+      await instance.stop(0);
     });
   });
 });

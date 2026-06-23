@@ -151,6 +151,32 @@ describe('StreamProducerService', () => {
     });
   });
 
+  describe('producer.autoCreate', () => {
+    it('should set NOMKSTREAM when autoCreate is false', async () => {
+      // Given
+      const noCreate = new StreamProducerService(mockDriver, { ...config, producer: { autoCreate: false } });
+      mockDriver.xadd.mockResolvedValue('1-0');
+
+      // When
+      await noCreate.publish('events', { a: 1 });
+
+      // Then
+      expect(mockDriver.xadd).toHaveBeenCalledWith('events', '*', { data: JSON.stringify({ a: 1 }) }, expect.objectContaining({ noMkStream: true }));
+    });
+
+    it('should not set NOMKSTREAM when autoCreate is true (default)', async () => {
+      // Given - config has autoCreate: true
+      mockDriver.xadd.mockResolvedValue('1-0');
+
+      // When
+      await service.publish('events', { a: 1 });
+
+      // Then
+      const passedOptions = mockDriver.xadd.mock.calls[0][3];
+      expect(passedOptions.noMkStream).toBeUndefined();
+    });
+  });
+
   describe('publishBatch', () => {
     it('should publish multiple messages', async () => {
       // Given

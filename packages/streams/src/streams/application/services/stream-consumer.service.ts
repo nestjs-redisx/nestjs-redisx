@@ -76,6 +76,7 @@ export class StreamConsumerService implements IStreamConsumer, OnApplicationShut
         retryInitialDelay: this.config.retry?.initialDelay ?? 1000,
         retryMaxDelay: this.config.retry?.maxDelay ?? 30000,
         retryMultiplier: this.config.retry?.multiplier ?? 2,
+        claimIdleTimeout: this.config.consumer?.claimIdleTimeout ?? 30000,
       },
       this.metrics,
     );
