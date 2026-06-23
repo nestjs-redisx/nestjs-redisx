@@ -34,6 +34,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Verify llms-full.txt covers all public methods
+        run: npm run check:llms
+
   test:
     name: Test (Node ${{ matrix.node }})
     runs-on: ubuntu-latest

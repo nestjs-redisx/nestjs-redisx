@@ -36,6 +36,7 @@
     "docs:dev": "npm run dev -w website",
     "docs:build": "npm run build -w website",
     "docs:preview": "npm run preview -w website",
+    "check:llms": "node scripts/check-llms-full.mjs",
     "prepare": "husky"
   },
   "devDependencies": {
