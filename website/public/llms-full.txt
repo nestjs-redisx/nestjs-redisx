@@ -571,6 +571,99 @@ new TracingPlugin({
 
 Each Redis span includes: `db.system: "redis"`, `db.operation`, `db.redis.key`, `redisx.plugin` (cache/locks/rate-limit), `redisx.cache.hit` (boolean), `redisx.duration_ms`.
 
+## Complete API Reference
+
+Every public service method, grouped by injection token. Inject the token to use the programmatic API (decorators wrap these same services).
+
+### Cache — `CACHE_SERVICE` (`ICacheService`)
+
+- `get<T>(key: string): Promise<T | null>` — read a value (L1 then L2); null on miss. Reads fail open.
+- `set<T>(key: string, value: T, options?: CacheSetOptions): Promise<void>` — write a value (TTL, tags, strategy). Writes fail closed.
+- `getOrSet<T>(key: string, loader: () => Promise<T>, options?: CacheGetOrSetOptions): Promise<T>` — return cached value or run loader, cache and return it (stampede-protected).
+- `delete(key: string): Promise<boolean>` — delete one key from L1+L2.
+- `deleteMany(keys: string[]): Promise<number>` — delete many keys; returns count removed.
+- `getMany<T>(keys: string[]): Promise<Array<T | null>>` — batch read; returns an array aligned to input keys.
+- `setMany<T>(entries): Promise<void>` — batch write multiple entries.
+- `has(key: string): Promise<boolean>` — existence check.
+- `ttl(key: string): Promise<number>` — remaining TTL in seconds (-1 no expiry, -2 missing).
+- `clear(): Promise<void>` — clear all cache entries.
+- `invalidateTag(tag: string): Promise<number>` — invalidate all keys carrying a tag; returns count. Throws `TagInvalidationError` on failure.
+- `invalidateTags(tags: string[]): Promise<number>` — invalidate keys for multiple tags.
+- `getKeysByTag(tag: string): Promise<string[]>` — list keys associated with a tag.
+- `invalidateByPattern(pattern: string): Promise<number>` — invalidate keys matching a glob pattern.
+- `getStats(): Promise<CacheStats>` — hit/miss/size statistics (async).
+- `wrap<T>(...)` — helper that wraps a function call with getOrSet semantics.
+
+Key chars are restricted to `[A-Za-z0-9-_:.]` (else `CacheKeyError`); tags are lowercase. `stampede.fallback` ('load' | 'error' | 'null', default 'load') controls behavior when stampede protection times out.
+
+### Locks — `LOCK_SERVICE` (`ILockService`)
+
+- `acquire(key: string, options?: ILockOptions): Promise<ILock>` — acquire with retry/backoff; throws `LockAcquisitionError` on timeout. `options.waitTimeout` caps total wait time.
+- `tryAcquire(key: string, options?: ILockOptions): Promise<ILock | null>` — single attempt; null if not acquired.
+- `withLock<T>(key: string, fn: () => Promise<T>, options?: ILockOptions): Promise<T>` — run fn while holding the lock, auto-released.
+- `isLocked(key: string): Promise<boolean>` — whether the key is currently locked.
+- `forceRelease(key: string): Promise<boolean>` — release without ownership check.
+- Lock entity: `release()`, `extend(ttl)`, `isHeld()`, `stopAutoRenew()`, `isAutoRenewing`. Auto-renew is best-effort and logs a warning (and flips `isAutoRenewing` to false) if it can no longer extend.
+
+### Rate Limit — `RATE_LIMIT_SERVICE` (`IRateLimitService`)
+
+- `check(key: string, config?: IRateLimitConfig): Promise<IRateLimitResult>` — consume one point; result has allowed/limit/remaining/reset/retryAfter.
+- `peek(key: string, config?: IRateLimitConfig): Promise<IRateLimitResult>` — read current state WITHOUT consuming (accurate for fixed-window, sliding-window, and token-bucket).
+- `getState(key: string, config?: IRateLimitConfig): Promise<IRateLimitState>` — human-readable state (current/limit/remaining/resetAt).
+- `reset(key: string): Promise<void>` — clear the limit for a key (all algorithm variants).
+
+The `@RateLimit` decorator binds `RateLimitGuard`; the guard consumes at most one point per request even if bound more than once.
+
+### Idempotency — `IDEMPOTENCY_SERVICE` (`IIdempotencyService`)
+
+- `checkAndLock(key: string, fingerprint: string, options?: IIdempotencyOptions): Promise<IIdempotencyCheckResult>` — atomically reserve a new key or report processing/completed/failed/fingerprint_mismatch.
+- `complete(key: string, response: IIdempotencyResponse, options?: IIdempotencyOptions): Promise<void>` — store a successful response for replay (TTL = defaultTtl).
+- `fail(key: string, error: string): Promise<void>` — mark failed (short TTL = lockTimeout) so a retry is allowed after the window.
+- `get(key: string): Promise<IIdempotencyRecord | null>` — read the stored record.
+- `delete(key: string): Promise<boolean>` — remove a record.
+
+Errors map to HTTP via the built-in filter: fingerprint mismatch → 422, previous-failed/timeout → 409, missing key → 400. `errorPolicy` ('fail-open' | 'fail-closed', default 'fail-closed') decides behavior when the store is unavailable.
+
+### Streams Producer — `STREAM_PRODUCER` (`IStreamProducer`)
+
+- `publish<T>(stream: string, data: T, options?: IPublishOptions): Promise<string>` — append one message; returns its id.
+- `publishBatch<T>(stream: string, messages: T[], options?: IPublishOptions): Promise<string[]>` — append many messages.
+- `getStreamInfo(stream: string): Promise<IStreamInfo>` — length, first/last entry, group count.
+- `trim(stream: string, maxLen: number): Promise<number>` — trim a stream to maxLen on demand.
+
+`trim` config controls trimming on publish (`trim.enabled: false` = keep-all); `producer.autoCreate: false` sets NOMKSTREAM.
+
+### Streams Consumer — `STREAM_CONSUMER` (`IStreamConsumer`)
+
+- `consume<T>(stream, group, consumer, handler: MessageHandler<T>, options?: IConsumeOptions): IConsumerHandle` — start consuming; handler return = ack, throw = retry/DLQ.
+- `stop(handle: IConsumerHandle): Promise<void>` — stop a consumer.
+- `createGroup(stream: string, group: string, startId?: string): Promise<void>` — create a consumer group.
+- `getPending(stream: string, group: string): Promise<IPendingInfo>` — pending (unacked) message info.
+- `claimIdle<T>(stream, group, consumer, minIdleTime): Promise<IStreamMessage<T>[]>` — on-demand claim of idle messages. Consumers also auto-claim in the background (`consumer.claimIdleTimeout`, default 30000ms; 0 disables).
+
+### Metrics — `METRICS_SERVICE` (`IMetricsService`)
+
+- `incrementCounter(name, labels?, value?): void` — increment a counter.
+- `observeHistogram(name, value, labels?): void` — record a histogram observation.
+- `startTimer(name, labels?): () => number` — start a timer; call the returned fn to record elapsed seconds.
+- `setGauge(name, value, labels?): void` / `incrementGauge(name, labels?, value?): void` / `decrementGauge(name, labels?, value?): void` — gauge operations.
+- `registerCounter(name, help, labelNames?): void` / `registerHistogram(name, help, labelNames?, buckets?): void` / `registerGauge(name, help, labelNames?): void` — register custom metrics.
+- `getMetrics(): Promise<string>` — Prometheus exposition text.
+- `getMetricsJson(): Promise<IMetricsJson[]>` — metrics as JSON.
+
+Options: `histogramBuckets`, `endpoint`.
+
+### Tracing — `TRACING_SERVICE` (`ITracingService`)
+
+- `startSpan(name: string, options?: ISpanOptions): ISpan` — start a span (caller ends it).
+- `withSpan<T>(name, fn: () => T | Promise<T>, options?: ISpanOptions): Promise<T>` — run fn within a span, auto-ended.
+- `getCurrentSpan(): ISpan | undefined` — the active span, if any.
+- `addEvent(name, attributes?): void` — add an event to the current span.
+- `setAttribute(key, value): void` — set an attribute on the current span.
+- `recordException(error: Error): void` — record an exception on the current span.
+
+Default `serviceName` is `'nestjs-redisx'`.
+
 ## Common Recipes
 
 ### Payment Processing (Idempotency + Locks)

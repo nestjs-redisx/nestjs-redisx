@@ -46,6 +46,8 @@ NestJS RedisX is designed for production NestJS applications that need Redis bey
 - [Rate Limit Overview](https://nestjs-redisx.dev/en/reference/rate-limit/): Multiple algorithms for API protection with decorator and guard support.
 - [Configuration](https://nestjs-redisx.dev/en/reference/rate-limit/configuration): RateLimitPlugin configuration for algorithms, points, windows, and key strategies.
 - [@RateLimit Decorator](https://nestjs-redisx.dev/en/reference/rate-limit/decorator): Route-level rate limiting with per-endpoint configuration.
+- [Guard](https://nestjs-redisx.dev/en/reference/rate-limit/guard): RateLimitGuard usage, global registration, and skip behavior.
+- [Service API](https://nestjs-redisx.dev/en/reference/rate-limit/service-api): Programmatic check/peek/reset/getState with IRateLimitService.
 - [Algorithms](https://nestjs-redisx.dev/en/reference/rate-limit/algorithms): Fixed window, sliding window, and token bucket — all atomic Lua scripts.
 - [Key Extraction](https://nestjs-redisx.dev/en/reference/rate-limit/key-extraction): Custom key strategies for IP, user, tenant, or custom identifiers.
 
@@ -54,6 +56,7 @@ NestJS RedisX is designed for production NestJS applications that need Redis bey
 - [Idempotency Overview](https://nestjs-redisx.dev/en/reference/idempotency/): Request deduplication with exactly-once execution for payments and mutations.
 - [Configuration](https://nestjs-redisx.dev/en/reference/idempotency/configuration): IdempotencyPlugin configuration for TTL, header name, and fingerprinting.
 - [@Idempotent Decorator](https://nestjs-redisx.dev/en/reference/idempotency/decorator): Route-level idempotency with key validation and response replay.
+- [Service API](https://nestjs-redisx.dev/en/reference/idempotency/service-api): Programmatic checkAndLock/complete/fail/get with IIdempotencyService.
 - [Fingerprinting](https://nestjs-redisx.dev/en/reference/idempotency/fingerprinting): Request body hashing to detect mismatched requests with same idempotency key.
 - [Concurrent Requests](https://nestjs-redisx.dev/en/reference/idempotency/concurrent-requests): Second request waits for first to complete, then returns cached response.
 
