@@ -7,7 +7,7 @@ import { Injectable, Inject, Logger, Optional } from '@nestjs/common';
 import { IRedisDriver, ErrorCode } from '@nestjs-redisx/core';
 
 import { CACHE_REDIS_DRIVER, L1_CACHE_STORE, L2_CACHE_STORE, STAMPEDE_PROTECTION, TAG_INDEX, SWR_MANAGER, CACHE_PLUGIN_OPTIONS } from '../../../shared/constants';
-import { CacheError, CacheKeyError } from '../../../shared/errors';
+import { CacheError, CacheKeyError, StampedeError } from '../../../shared/errors';
 import { CacheSetOptions, CacheGetOrSetOptions, CacheStats, ICachePluginOptions } from '../../../shared/types';
 import { IStampedeProtection } from '../../../stampede/application/ports/stampede-protection.port';
 import { ISwrManager } from '../../../swr/application/ports/swr-manager.port';
@@ -50,6 +50,7 @@ export class CacheService implements ICacheService {
   private readonly l1Enabled: boolean;
   private readonly l2Enabled: boolean;
   private readonly stampedeEnabled: boolean;
+  private readonly stampedeFallback: 'load' | 'error' | 'null';
   private readonly swrEnabled: boolean;
   private readonly tagsEnabled: boolean;
 
@@ -70,6 +71,7 @@ export class CacheService implements ICacheService {
     this.l2Enabled = options.l2?.enabled ?? true;
     this.keyPrefix = options.l2?.keyPrefix ?? 'cache:';
     this.stampedeEnabled = options.stampede?.enabled ?? true;
+    this.stampedeFallback = options.stampede?.fallback ?? 'load';
     this.swrEnabled = options.swr?.enabled ?? false;
     this.tagsEnabled = options.tags?.enabled ?? true;
   }
@@ -273,7 +275,15 @@ export class CacheService implements ICacheService {
    */
   private async loadWithStampede<T>(key: string, loader: () => Promise<T>, options: CacheGetOrSetOptions): Promise<T> {
     if (this.stampedeEnabled && !options.skipStampede) {
-      const result = await this.stampede.protect(key, loader);
+      let result;
+      try {
+        result = await this.stampede.protect(key, loader);
+      } catch (error) {
+        if (error instanceof StampedeError) {
+          return this.handleStampedeFallback<T>(key, loader, options, error);
+        }
+        throw error;
+      }
 
       if (result.cached) {
         // Stampede was prevented - another request loaded the value
@@ -304,6 +314,36 @@ export class CacheService implements ICacheService {
     }
 
     return value;
+  }
+
+  /**
+   * Applies the configured stampede `fallback` policy when stampede protection
+   * times out (a waiter could not get a coordinated result in time):
+   * - 'load' (default) loads directly without coordination and caches the value
+   * - 'null' returns null without loading or caching
+   * - 'error' re-throws the StampedeError
+   *
+   * @private
+   */
+  private async handleStampedeFallback<T>(key: string, loader: () => Promise<T>, options: CacheGetOrSetOptions, error: StampedeError): Promise<T> {
+    switch (this.stampedeFallback) {
+      case 'load': {
+        const value = await loader();
+        if (!options.unless?.(value)) {
+          await this.set(key, value, {
+            ttl: options.ttl,
+            tags: options.tags,
+            strategy: options.strategy,
+          });
+        }
+        return value;
+      }
+      case 'null':
+        return null as T;
+      case 'error':
+      default:
+        throw error;
+    }
   }
 
   async delete(key: string): Promise<boolean> {

@@ -8,6 +8,7 @@ import type { ITagIndex } from '../../src/tags/application/ports/tag-index.port'
 import type { ISwrManager } from '../../src/swr/application/ports/swr-manager.port';
 import type { ICachePluginOptions } from '../../src/shared/types';
 import { CacheEntry } from '../../src/cache/domain/value-objects/cache-entry.vo';
+import { StampedeError } from '../../src/shared/errors';
 
 describe('CacheService (Internal)', () => {
   let service: CacheService;
@@ -338,6 +339,51 @@ describe('CacheService (Internal)', () => {
 
       // Then
       expect(mockStampede.protect).toHaveBeenCalledWith(key, loader);
+    });
+
+    describe('stampede fallback (protection times out)', () => {
+      const stampedeError = new StampedeError('test-key', 5000);
+
+      beforeEach(() => {
+        mockL1Store.get.mockResolvedValue(null);
+        mockL2Store.get.mockResolvedValue(null);
+        mockStampede.protect.mockRejectedValue(stampedeError);
+      });
+
+      it("defaults to 'load': loads directly and caches when protection times out", async () => {
+        // Given - default options have no explicit fallback (defaults to 'load')
+        const loader = vi.fn().mockResolvedValue('fallback-value');
+
+        // When
+        const result = await service.getOrSet('test-key', loader);
+
+        // Then
+        expect(result).toBe('fallback-value');
+        expect(loader).toHaveBeenCalled();
+        expect(mockL2Store.set).toHaveBeenCalled();
+      });
+
+      it("returns null without loading when fallback is 'null'", async () => {
+        // Given
+        const nullService = new CacheService(mockDriver, mockL1Store, mockL2Store, mockStampede, mockTagIndex, mockSwrManager, { ...options, stampede: { enabled: true, fallback: 'null' } });
+        const loader = vi.fn().mockResolvedValue('x');
+
+        // When
+        const result = await nullService.getOrSet('test-key', loader);
+
+        // Then
+        expect(result).toBeNull();
+        expect(loader).not.toHaveBeenCalled();
+      });
+
+      it("rethrows StampedeError when fallback is 'error'", async () => {
+        // Given
+        const errorService = new CacheService(mockDriver, mockL1Store, mockL2Store, mockStampede, mockTagIndex, mockSwrManager, { ...options, stampede: { enabled: true, fallback: 'error' } });
+        const loader = vi.fn().mockResolvedValue('x');
+
+        // When/Then
+        await expect(errorService.getOrSet('test-key', loader)).rejects.toThrow(StampedeError);
+      });
     });
 
     it('should skip stampede protection when requested', async () => {

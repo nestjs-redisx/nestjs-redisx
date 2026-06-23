@@ -41,9 +41,7 @@ new CachePlugin({
     enabled: true,            // Enable anti-stampede (default: true)
     lockTimeout: 5000,        // Lock TTL in ms (default: 5000)
     waitTimeout: 10000,       // Max wait time in ms (default: 10000)
-    // fallback: NOT IMPLEMENTED — this option is currently inert (ignored).
-    // On stampede timeout the service ALWAYS throws StampedeError regardless
-    // of this value. See "stampede.fallback" note below.
+    fallback: 'load',         // On stampede timeout: 'load' | 'error' | 'null' (default: 'load')
   },
 
   // Stale-While-Revalidate
@@ -137,13 +135,13 @@ The cache service treats read and write failures differently:
 
 ### `stampede.fallback`
 
-::: danger Currently inert
-The `fallback` option (`'load' | 'error' | 'null'`) is defined in the type but
-is **not read by the implementation**. Regardless of its value, when stampede
-protection times out (loader exceeds `lockTimeout`, or a waiter exceeds
-`waitTimeout`) the service **always throws `StampedeError`**. Do not rely on
-`fallback` to change this behavior.
-:::
+Controls what happens when stampede protection times out — i.e. a waiter exceeds
+`waitTimeout` waiting for the in-flight loader to finish:
+
+- `'load'` (default) — load directly without coordination and cache the result,
+  so the caller still gets a value.
+- `'null'` — return `null` without loading or caching.
+- `'error'` — throw `StampedeError`.
 
 ### `isGlobal`
 
