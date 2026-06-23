@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         nestjs: ['10', '11']
-        node: ['18', '20']
+        node: ['18', '20', '22', '24']
         redis: ['6.2', '7.2']
 
     services:
@@ -48,11 +48,14 @@ jobs:
       - name: Override NestJS version to ${{ matrix.nestjs }}
         if: matrix.nestjs != '10'
         run: |
+          # NestJS 11 requires @nestjs/platform-fastify v11, which in turn needs fastify v5.
           npm install --no-save --legacy-peer-deps \
             @nestjs/common@^${{ matrix.nestjs }}.0.0 \
             @nestjs/core@^${{ matrix.nestjs }}.0.0 \
             @nestjs/testing@^${{ matrix.nestjs }}.0.0 \
-            @nestjs/platform-express@^${{ matrix.nestjs }}.0.0
+            @nestjs/platform-express@^${{ matrix.nestjs }}.0.0 \
+            @nestjs/platform-fastify@^${{ matrix.nestjs }}.0.0 \
+            fastify@^5.0.0
 
       - name: Build packages
         run: npm run build
