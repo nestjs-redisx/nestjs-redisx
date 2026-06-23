@@ -135,14 +135,25 @@ export class RedisRateLimitStoreAdapter implements IRateLimitStore, OnModuleInit
         };
       }
 
-      // Token bucket peek would require HMGET
-      const points = config.capacity || 100;
+      // Token bucket: read the stored state via HMGET and compute the currently
+      // available tokens (applying refill) WITHOUT consuming any.
+      const capacity = config.capacity || 100;
+      const refillRate = config.refillRate || 10;
+      const now = Date.now();
+      const bucket = await this.driver.hmget(key, 'tokens', 'last_refill');
+      const storedTokens = bucket[0] !== null && bucket[0] !== undefined ? parseFloat(bucket[0]) : capacity;
+      const lastRefill = bucket[1] !== null && bucket[1] !== undefined ? parseFloat(bucket[1]) : now;
+      const elapsedSeconds = Math.max(0, (now - lastRefill) / 1000);
+      const tokens = Math.min(capacity, storedTokens + elapsedSeconds * refillRate);
+      const remaining = Math.floor(tokens);
+      const timeToFull = refillRate > 0 ? (capacity - tokens) / refillRate : 0;
+
       return {
-        allowed: true,
-        limit: points,
-        remaining: points,
-        reset: Math.floor(Date.now() / 1000) + 60,
-        current: 0,
+        allowed: tokens >= 1,
+        limit: capacity,
+        remaining,
+        reset: Math.ceil(now / 1000 + timeToFull),
+        current: capacity - remaining,
       };
     } catch (error) {
       throw new RateLimitScriptError(`Peek failed: ${(error as Error).message}`, error as Error);

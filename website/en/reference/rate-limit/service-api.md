@@ -44,12 +44,10 @@ interface IRateLimitResult {
 
 Get human-readable state for monitoring:
 
-::: warning Token-bucket returns placeholder state
-`getState()` (like `peek()`) reads current state without consuming. It returns **accurate**
-values only for the `fixed-window` and `sliding-window` algorithms. For the **`token-bucket`**
-algorithm it currently returns **placeholder** data (`allowed: true`, `remaining` equal to
-capacity, `current: 0`) regardless of the real bucket level. Do not rely on `getState()` /
-`peek()` for token-bucket dashboards or decisions.
+::: tip Reads state without consuming
+`getState()` (like `peek()`) reports the current state without consuming a point, for all three
+algorithms. For `token-bucket` it reads the stored bucket and applies refill, so `remaining`
+reflects the real available tokens and `allowed` indicates whether at least one token is left.
 :::
 
 ```typescript
@@ -87,11 +85,10 @@ async upgradeToPremium(userId: string): Promise<void> {
 
 Check status without consuming:
 
-::: warning Token-bucket returns placeholder state
-`peek()` returns **accurate** values only for the `fixed-window` and `sliding-window`
-algorithms. For the **`token-bucket`** algorithm it currently returns **placeholder** data
-(`allowed: true`, `remaining` equal to capacity, `current: 0`) regardless of the real bucket
-level — it does not read the bucket. Do not rely on `peek()` for token-bucket.
+::: tip Accurate for all algorithms
+`peek()` returns accurate values for `fixed-window`, `sliding-window`, and `token-bucket`. For
+`token-bucket` it reads the stored bucket (applying refill) and reports the real remaining
+tokens without consuming any.
 :::
 
 ```typescript

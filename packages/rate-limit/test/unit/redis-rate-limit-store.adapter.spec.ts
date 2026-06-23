@@ -14,6 +14,7 @@ describe('RedisRateLimitStoreAdapter', () => {
       eval: vi.fn(),
       get: vi.fn(),
       zcard: vi.fn(),
+      hmget: vi.fn(),
       del: vi.fn(),
     } as unknown as MockedObject<IRedisDriver>;
 
@@ -266,15 +267,52 @@ describe('RedisRateLimitStoreAdapter', () => {
       expect(result.allowed).toBe(true);
     });
 
-    it('should peek token-bucket state', async () => {
-      // Given/When
+    it('should peek token-bucket state from stored tokens without consuming', async () => {
+      // Given - 40 tokens stored, refilled to "now" so no extra refill applies
+      mockDriver.hmget.mockResolvedValue(['40', String(Date.now())]);
+
+      // When
       const result = await adapter.peek('test-key', 'token-bucket', {
         capacity: 100,
+        refillRate: 10,
+      });
+
+      // Then - reflects the real remaining tokens, not a fabricated full bucket
+      expect(mockDriver.hmget).toHaveBeenCalledWith('test-key', 'tokens', 'last_refill');
+      expect(result.limit).toBe(100);
+      expect(result.remaining).toBe(40);
+      expect(result.current).toBe(60);
+      expect(result.allowed).toBe(true);
+    });
+
+    it('should report an empty token bucket as not allowed', async () => {
+      // Given - bucket drained, just refilled
+      mockDriver.hmget.mockResolvedValue(['0', String(Date.now())]);
+
+      // When
+      const result = await adapter.peek('test-key', 'token-bucket', {
+        capacity: 100,
+        refillRate: 10,
       });
 
       // Then
+      expect(result.remaining).toBe(0);
+      expect(result.allowed).toBe(false);
+    });
+
+    it('should default to a full bucket when no state is stored', async () => {
+      // Given - key does not exist yet
+      mockDriver.hmget.mockResolvedValue([null, null]);
+
+      // When
+      const result = await adapter.peek('test-key', 'token-bucket', {
+        capacity: 100,
+        refillRate: 10,
+      });
+
+      // Then
+      expect(result.remaining).toBe(100);
       expect(result.allowed).toBe(true);
-      expect(result.limit).toBe(100);
     });
 
     it('should throw RateLimitScriptError on peek error', async () => {
