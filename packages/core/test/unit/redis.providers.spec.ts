@@ -25,7 +25,7 @@ describe('Redis Providers', () => {
       const providers = createRedisProviders(options);
 
       // Then
-      expect(providers).toHaveLength(4); // options + manager + default client + health indicator
+      expect(providers).toHaveLength(5); // options + manager + default client + clients-initialization + REDIS_DRIVER
       expect(providers[0]).toEqual({
         provide: REDIS_MODULE_OPTIONS,
         useValue: options,
@@ -48,7 +48,7 @@ describe('Redis Providers', () => {
       const providers = createRedisProviders(options);
 
       // Then
-      expect(providers).toHaveLength(6); // options + manager + 3 clients + health indicator
+      expect(providers).toHaveLength(7); // options + manager + 3 clients + clients-initialization + REDIS_DRIVER
       expect(providers[0]).toEqual({
         provide: REDIS_MODULE_OPTIONS,
         useValue: options,
@@ -131,7 +131,23 @@ describe('Redis Providers', () => {
       const providers = createRedisProviders(options);
 
       // Then
-      expect(providers).toHaveLength(3); // options + manager + health indicator (no client providers)
+      expect(providers).toHaveLength(4); // options + manager + clients-initialization + REDIS_DRIVER (no client providers)
+    });
+
+    it('should provide REDIS_CLIENTS_INITIALIZATION so plugins resolve in sync mode', () => {
+      // Given
+      const options: IRedisModuleOptions = {
+        clients: createMockConnectionConfig('ioredis'),
+      };
+
+      // When
+      const providers = createRedisProviders(options);
+      const initProvider = providers.find((p: any) => p.provide === REDIS_CLIENTS_INITIALIZATION) as any;
+
+      // Then - present and gated on the client provider(s)
+      expect(initProvider).toBeDefined();
+      expect(initProvider).toHaveProperty('useFactory');
+      expect(initProvider.inject).toContain(getClientToken(DEFAULT_CLIENT_NAME));
     });
   });
 

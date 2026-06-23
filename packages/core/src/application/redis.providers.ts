@@ -168,12 +168,15 @@ function createAsyncOptionsProvider(options: IRedisModuleAsyncOptions): Provider
 function createClientProviders(options: IRedisModuleOptions): Provider[] {
   const providers: Provider[] = [];
   const driverType = options.global?.driver ?? 'ioredis';
+  const clientTokens: symbol[] = [];
 
   // Handle single connection or multiple named connections
   if (isISingleConnectionConfig(options.clients)) {
     // Single connection config
+    const token = getClientToken(DEFAULT_CLIENT_NAME);
+    clientTokens.push(token);
     providers.push({
-      provide: getClientToken(DEFAULT_CLIENT_NAME),
+      provide: token,
       useFactory: async (manager: RedisClientManager) => {
         return manager.createClient(DEFAULT_CLIENT_NAME, options.clients as ConnectionConfig, { driverType });
       },
@@ -184,8 +187,10 @@ function createClientProviders(options: IRedisModuleOptions): Provider[] {
     const configs = options.clients;
 
     for (const [name, config] of Object.entries(configs)) {
+      const token = getClientToken(name);
+      clientTokens.push(token);
       providers.push({
-        provide: getClientToken(name),
+        provide: token,
         useFactory: async (manager: RedisClientManager) => {
           return manager.createClient(name, config, { driverType });
         },
@@ -193,6 +198,16 @@ function createClientProviders(options: IRedisModuleOptions): Provider[] {
       });
     }
   }
+
+  // Initialization barrier so plugins (which inject REDIS_CLIENTS_INITIALIZATION)
+  // resolve in synchronous forRoot mode too. It depends on every client
+  // provider, so it only resolves once all clients have been created — mirroring
+  // the async path without re-creating clients.
+  providers.push({
+    provide: REDIS_CLIENTS_INITIALIZATION,
+    useFactory: () => undefined,
+    inject: clientTokens,
+  });
 
   return providers;
 }
