@@ -70,12 +70,15 @@ export class RedisIdempotencyStoreAdapter implements IIdempotencyStore, OnModule
     await this.driver.expire(key, ttlSeconds);
   }
 
-  async fail(key: string, error: string): Promise<void> {
+  async fail(key: string, error: string, ttlSeconds: number): Promise<void> {
     await this.driver.hmset(key, {
       status: 'failed',
       error,
       completedAt: String(Date.now()),
     });
+    // Set an explicit expiry so the failed record does not rely on the leftover
+    // lock TTL; once it expires a fresh attempt with the same key is allowed.
+    await this.driver.expire(key, ttlSeconds);
   }
 
   async get(key: string): Promise<IIdempotencyRecord | null> {

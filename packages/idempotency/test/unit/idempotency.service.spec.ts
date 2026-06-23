@@ -203,15 +203,15 @@ describe('IdempotencyService', () => {
   });
 
   describe('fail', () => {
-    it('should mark record as failed', async () => {
+    it('should mark record as failed with a TTL derived from lockTimeout', async () => {
       // Given
       const error = 'Database error';
 
       // When
       await service.fail('key7', error);
 
-      // Then
-      expect(mockStore.fail).toHaveBeenCalledWith('idempotency:key7', error);
+      // Then - lockTimeout 30000ms -> 30s TTL so the failed record expires
+      expect(mockStore.fail).toHaveBeenCalledWith('idempotency:key7', error, 30);
     });
   });
 

@@ -86,7 +86,10 @@ export class IdempotencyService implements IIdempotencyService {
 
   async fail(key: string, error: string): Promise<void> {
     const fullKey = this.buildKey(key);
-    await this.store.fail(fullKey, error);
+    // Failed records are short-lived: keep them only for the lock window so a
+    // retry returns the failure briefly, then a fresh attempt is allowed.
+    const ttlSeconds = Math.ceil((this.config.lockTimeout ?? 30000) / 1000);
+    await this.store.fail(fullKey, error, ttlSeconds);
   }
 
   async get(key: string): Promise<IIdempotencyRecord | null> {

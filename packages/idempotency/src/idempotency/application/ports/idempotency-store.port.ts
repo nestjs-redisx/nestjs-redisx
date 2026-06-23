@@ -56,8 +56,10 @@ export interface IIdempotencyStore {
    *
    * @param key - Redis key
    * @param error - Error message
+   * @param ttlSeconds - TTL in seconds after which the failed record expires,
+   *   allowing a fresh attempt with the same key
    */
-  fail(key: string, error: string): Promise<void>;
+  fail(key: string, error: string, ttlSeconds: number): Promise<void>;
 
   /**
    * Get record by key.

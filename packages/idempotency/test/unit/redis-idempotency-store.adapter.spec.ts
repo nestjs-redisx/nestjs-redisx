@@ -194,7 +194,7 @@ describe('RedisIdempotencyStoreAdapter', () => {
       const error = 'Internal server error';
 
       // When
-      await adapter.fail(key, error);
+      await adapter.fail(key, error, 30);
 
       // Then
       expect(mockDriver.hmset).toHaveBeenCalledWith(key, {
@@ -202,6 +202,17 @@ describe('RedisIdempotencyStoreAdapter', () => {
         error,
         completedAt: expect.any(String),
       });
+    });
+
+    it('should set an expiry on the failed record', async () => {
+      // Given
+      const key = 'test-key';
+
+      // When
+      await adapter.fail(key, 'boom', 30);
+
+      // Then - the failed record expires instead of relying on the lock TTL
+      expect(mockDriver.expire).toHaveBeenCalledWith(key, 30);
     });
   });
 

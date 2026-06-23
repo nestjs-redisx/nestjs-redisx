@@ -115,4 +115,20 @@ describeIntegration('IdempotencyPlugin — HTTP error mapping', () => {
     // Then
     expect(res.status).toBe(409);
   });
+
+  it('sets a bounded TTL on the failed record so it does not linger', async () => {
+    // Given
+    const key = 'order-failed-ttl';
+    await request(app.getHttpServer()).post('/orders/fail').set('Idempotency-Key', key).send({ amount: 1 }).expect(500);
+
+    // When - inspect the stored record's TTL (default keyPrefix is 'idempotency:')
+    const client = new Redis({ host: REDIS_HOST, port: REDIS_PORT, lazyConnect: true });
+    await client.connect();
+    const ttl = await client.ttl(`idempotency:${key}`);
+    await client.quit();
+
+    // Then - the failed record expires within the lock window (default 30s)
+    expect(ttl).toBeGreaterThan(0);
+    expect(ttl).toBeLessThanOrEqual(30);
+  });
 });

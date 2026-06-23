@@ -248,18 +248,17 @@ async createPayment() {}
 - First attempt with a key throws inside the handler (the operation failed)
 - Retrying with the **same** key returns HTTP 409 for a while, then eventually works
 
-**Why this happens (current behavior):**
+**Why this happens:**
 
 When the handler throws, the interceptor records the key as `failed`. A subsequent retry of the
 same key sees the `failed` record and throws `IdempotencyFailedError`. Like the other idempotency
 errors, this extends `RedisXError` (not `HttpException`), but the plugin's built-in exception
 filter maps it to **HTTP 409 Conflict**.
 
-The failed record is also **sticky**: `fail()` does **not** set a TTL, so the key keeps the
-expiry from when the lock was created — i.e. it stays locked for roughly the remaining
-`lockTimeout` window (default `30000` ms, applied via `PEXPIRE` when the lock was first
-acquired). Until that window elapses and the key expires, every retry of the same key keeps
-returning HTTP 409. After the key expires, a fresh attempt is allowed.
+The failed record is **short-lived**: it is stored with an explicit TTL equal to `lockTimeout`
+(default `30000` ms = 30s). While it exists, every retry of the same key returns HTTP 409; once
+it expires, a fresh attempt with the same key is allowed. (Successful responses, by contrast, are
+cached for the full `defaultTtl`.)
 
 **Implications:**
 - A client that retries immediately after a failure will receive HTTP 409 until the
