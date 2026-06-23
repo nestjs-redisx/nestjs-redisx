@@ -40,11 +40,11 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@nestjs/cli": "^10.3.0",
-    "@nestjs/common": "^10.3.0",
-    "@nestjs/core": "^10.3.0",
-    "@nestjs/platform-express": "^10.3.0",
-    "@nestjs/testing": "^10.3.0",
+    "@nestjs/cli": "^10.0.0 || ^11.0.0",
+    "@nestjs/common": "^10.0.0 || ^11.0.0",
+    "@nestjs/core": "^10.0.0 || ^11.0.0",
+    "@nestjs/platform-express": "^10.0.0 || ^11.0.0",
+    "@nestjs/testing": "^10.0.0 || ^11.0.0",
     "@testcontainers/redis": "^10.5.0",
     "@types/ioredis": "^5.0.0",
     "@types/node": "^20.11.0",

@@ -54,9 +54,9 @@
     "rxjs": "^7.8.0"
   },
   "devDependencies": {
-    "@nestjs/common": "^10.3.0",
-    "@nestjs/core": "^10.3.0",
-    "@nestjs/testing": "^10.3.0",
+    "@nestjs/common": "^10.0.0 || ^11.0.0",
+    "@nestjs/core": "^10.0.0 || ^11.0.0",
+    "@nestjs/testing": "^10.0.0 || ^11.0.0",
     "ioredis": "^5.9.2",
     "redis": "^5.10.0",
     "reflect-metadata": "^0.2.1",
