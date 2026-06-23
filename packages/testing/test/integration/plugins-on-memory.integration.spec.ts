@@ -168,7 +168,8 @@ describe('Plugins on the in-memory driver (no Redis)', () => {
   });
 
   describe('IdempotencyPlugin', () => {
-    it('is registered and exposes the service', async () => {
+    it('locks a new key, replays the completed record, and detects fingerprint mismatch (Lua check-and-lock)', async () => {
+      // Given
       app = await Test.createTestingModule({
         imports: [
           RedisModule.forRoot({
@@ -179,8 +180,25 @@ describe('Plugins on the in-memory driver (no Redis)', () => {
         ],
       }).compile();
       await app.init();
+      const idem = app.get<IIdempotencyService>(IDEMPOTENCY_SERVICE);
 
-      expect(app.get<IIdempotencyService>(IDEMPOTENCY_SERVICE)).toBeDefined();
+      // When — first request with a fingerprint is new and acquires the lock
+      const first = await idem.checkAndLock('pay:1', 'fp-a');
+      expect(first.isNew).toBe(true);
+
+      // And the handler completes, storing the response
+      await idem.complete('pay:1', { statusCode: 200, body: { ok: true } });
+
+      // Then — a replay with the same fingerprint returns the stored record
+      const replay = await idem.checkAndLock('pay:1', 'fp-a');
+      expect(replay.isNew).toBe(false);
+      expect(replay.record?.status).toBe('completed');
+      expect(replay.record?.statusCode).toBe(200);
+
+      // And a different fingerprint on the same key is a mismatch
+      const mismatch = await idem.checkAndLock('pay:1', 'fp-b');
+      expect(mismatch.isNew).toBe(false);
+      expect(mismatch.fingerprintMismatch).toBe(true);
     });
   });
 
