@@ -192,9 +192,9 @@ async function createPaymentWithRetry(data, maxRetries = 3) {
         throw new Error('Invalid request');
       }
 
-      if (response.status === 408) {
-        // Timeout - retry with same key
-        console.log(`Attempt ${attempt} timed out, retrying...`);
+      if (response.status === 409) {
+        // Concurrent request still in progress - retry with same key
+        console.log(`Attempt ${attempt} still in progress, retrying...`);
         continue;
       }
 
@@ -247,17 +247,18 @@ function isRetryable(error) {
 
 ## Handling Errors
 
-::: warning Default server status is 500, not 4xx
-Out of the box, the idempotency plugin surfaces all of its errors as **HTTP 500** —
-`IdempotencyFingerprintMismatchError`, `IdempotencyFailedError` and `IdempotencyTimeoutError`
-all extend a plain `Error` and the plugin registers no exception filter. The `422` / `408`
-statuses below only apply if the **server** has registered exception filters to remap these
-errors (see the [Fingerprinting](./fingerprinting#custom-error-handler-to-return-422) and
-[Troubleshooting](./troubleshooting) guides). If your server uses the defaults, branch on
-`500` and inspect the error payload/message instead.
+::: tip Server maps errors to 4xx out of the box
+Out of the box, the idempotency plugin registers a built-in exception filter that maps its errors
+to meaningful HTTP statuses: fingerprint mismatch (`IdempotencyFingerprintMismatchError`) →
+**422**, a previously-failed retry (`IdempotencyFailedError`) and a concurrent-request timeout
+(`IdempotencyTimeoutError`) → **409**, and a required-but-missing key
+(`IdempotencyKeyRequiredError`) → **400**. The `422` / `409` statuses below apply by default. A
+server can still register its own filter to change these (see the
+[Fingerprinting](./fingerprinting#custom-error-handler-optional-override-the-built-in-422) and
+[Troubleshooting](./troubleshooting) guides).
 :::
 
-### Fingerprint Mismatch (422, if a filter is configured)
+### Fingerprint Mismatch (422)
 
 ```javascript
 try {
@@ -272,13 +273,13 @@ try {
 }
 ```
 
-### Timeout (408, if a filter is configured)
+### Timeout (409)
 
 ```javascript
 try {
   await createOrder(key, data);
 } catch (error) {
-  if (error.response?.status === 408) {
+  if (error.response?.status === 409) {
     const retryAfter = error.response.headers['retry-after'];
     console.log(`Request timeout, retry in ${retryAfter}s`);
 

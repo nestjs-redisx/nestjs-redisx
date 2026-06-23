@@ -321,19 +321,20 @@ describe('Error handling', () => {
 
     const key = 'payment-123';
 
-    // First request fails
+    // First request fails (handler throws its own error → 500)
     await request(app.getHttpServer())
       .post('/payments')
       .set('Idempotency-Key', key)
       .send({ amount: 100 })
       .expect(500);
 
-    // Duplicate request gets same error
+    // Duplicate request hits the sticky failed record
+    // (IdempotencyFailedError → mapped to 409 by the built-in filter)
     await request(app.getHttpServer())
       .post('/payments')
       .set('Idempotency-Key', key)
       .send({ amount: 100 })
-      .expect(500);
+      .expect(409);
 
     // Service called only once
     expect(paymentService.process).toHaveBeenCalledTimes(1);
@@ -349,7 +350,7 @@ describe('Error handling', () => {
       .post('/payments')
       .set('Idempotency-Key', key)
       .send({ amount: 100 })
-      .expect(408);  // Timeout
+      .expect(409);  // Timeout (IdempotencyTimeoutError → 409 Conflict)
   });
 });
 ```

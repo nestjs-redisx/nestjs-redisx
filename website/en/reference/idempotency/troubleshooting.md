@@ -11,18 +11,17 @@ Common issues and how to fix them.
 
 ### Problem: Error on legitimate retry
 
-::: warning Surfaces as HTTP 500
-`IdempotencyFingerprintMismatchError` extends `RedisXError` (a plain `Error`), **not**
-`HttpException`, and the plugin registers **no** exception filter for it. As a result a
-fingerprint mismatch currently surfaces as a generic **HTTP 500**, not a 4xx. If you want a
-specific status (e.g. 409/422), add your own NestJS exception filter for
-`IdempotencyFingerprintMismatchError`.
+::: tip Surfaces as HTTP 422
+`IdempotencyFingerprintMismatchError` extends `RedisXError` rather than `HttpException`, but
+the plugin registers a built-in exception filter that maps it to **HTTP 422 Unprocessable
+Entity**. You do not need to add your own filter; if you want a different status you can still
+register one (NestJS uses the most specific filter).
 :::
 
 **Symptoms:**
 - First request succeeds
 - Retry with same key but different request data fails
-- Server returns HTTP 500; logs show `IdempotencyFingerprintMismatchError` / "Fingerprint mismatch"
+- Server returns HTTP 422; logs show `IdempotencyFingerprintMismatchError` / "Fingerprint mismatch"
 
 **Causes:**
 
@@ -140,16 +139,16 @@ own validation/guard.
 
 ### Problem: Request Timeout while waiting for a concurrent request
 
-::: warning Surfaces as HTTP 500
-`IdempotencyTimeoutError` extends `RedisXError` (not `HttpException`) and has no registered
-exception filter, so it currently surfaces as **HTTP 500**, not 408. Add your own exception
-filter if you need a specific status.
+::: tip Surfaces as HTTP 409
+`IdempotencyTimeoutError` extends `RedisXError` rather than `HttpException`, but the plugin's
+built-in exception filter maps it to **HTTP 409 Conflict** (a concurrent request with the same
+key is still in progress). Register your own filter only if you need a different status.
 :::
 
 **Symptoms:**
 - A concurrent request with the same key waits longer than `waitTimeout` for the in-flight
   request to complete
-- Server returns HTTP 500; logs show `IdempotencyTimeoutError` / "Timeout waiting for completion"
+- Server returns HTTP 409; logs show `IdempotencyTimeoutError` / "Timeout waiting for completion"
 
 **Causes:**
 
@@ -243,35 +242,35 @@ async createPayment() {}
 
 ## Retrying a Previously-Failed Key
 
-### Problem: Retry of a failed request keeps returning HTTP 500
+### Problem: Retry of a failed request keeps returning HTTP 409
 
 **Symptoms:**
 - First attempt with a key throws inside the handler (the operation failed)
-- Retrying with the **same** key returns HTTP 500 for a while, then eventually works
+- Retrying with the **same** key returns HTTP 409 for a while, then eventually works
 
 **Why this happens (current behavior):**
 
 When the handler throws, the interceptor records the key as `failed`. A subsequent retry of the
-same key sees the `failed` record and throws `IdempotencyFailedError`. Like the fingerprint
-mismatch error, this extends `RedisXError` (not `HttpException`) and has **no** registered
-exception filter, so it surfaces as **HTTP 500**.
+same key sees the `failed` record and throws `IdempotencyFailedError`. Like the other idempotency
+errors, this extends `RedisXError` (not `HttpException`), but the plugin's built-in exception
+filter maps it to **HTTP 409 Conflict**.
 
 The failed record is also **sticky**: `fail()` does **not** set a TTL, so the key keeps the
 expiry from when the lock was created — i.e. it stays locked for roughly the remaining
 `lockTimeout` window (default `30000` ms, applied via `PEXPIRE` when the lock was first
 acquired). Until that window elapses and the key expires, every retry of the same key keeps
-returning HTTP 500. After the key expires, a fresh attempt is allowed.
+returning HTTP 409. After the key expires, a fresh attempt is allowed.
 
 **Implications:**
-- A client that retries immediately after a failure will receive HTTP 500 until the
+- A client that retries immediately after a failure will receive HTTP 409 until the
   `lockTimeout` window passes — it cannot retry successfully right away.
 - To allow an immediate clean retry, use a **new** idempotency key for the retry, or explicitly
   delete the failed key (see [Inspect Redis Keys](#debugging-tools)).
 
 ::: tip
-If you need a specific HTTP status for failed/mismatch cases instead of 500, register a NestJS
-exception filter that maps `IdempotencyFailedError` and `IdempotencyFingerprintMismatchError`
-to the status codes you want.
+If you need a different HTTP status for failed/mismatch cases, register a NestJS exception filter
+that maps `IdempotencyFailedError` and `IdempotencyFingerprintMismatchError` to the status codes
+you want (NestJS uses the most specific filter, so it overrides the built-in one).
 :::
 
 ## Redis Connection Issues
@@ -379,17 +378,19 @@ redis-cli --scan --pattern 'idempotency:*'
 
 ## Common Errors
 
-All idempotency errors extend `RedisXError` (a plain `Error`), and the plugin registers **no**
-exception filter — so they all surface as **HTTP 500** unless you add your own filter to remap
-them.
+All idempotency errors extend `RedisXError` (a plain `Error`), but the plugin registers a
+built-in exception filter that maps them to meaningful HTTP statuses out of the box — fingerprint
+mismatch to **422**, previously-failed and timeout to **409**, and a missing key passes through
+with no error. You only need your own filter if you want different statuses or a custom payload.
 
 | Error | Default HTTP status | Cause | Fix |
 |-------|---------------------|-------|-----|
-| `IdempotencyFingerprintMismatchError` | 500 | Same key, different request data | Use same data or a new key; add a filter to remap to 409/422 |
-| `IdempotencyFailedError` | 500 | Retry of a key whose first attempt failed (sticky until ~`lockTimeout` expiry) | Use a new key or wait for the key to expire |
-| `IdempotencyTimeoutError` | 500 | Concurrent request waited longer than `waitTimeout` | Increase timeouts; speed up handler |
+| `IdempotencyFingerprintMismatchError` | 422 | Same key, different request data | Use same data or a new key; add a filter to change the status/payload |
+| `IdempotencyFailedError` | 409 | Retry of a key whose first attempt failed (sticky until ~`lockTimeout` expiry) | Use a new key or wait for the key to expire |
+| `IdempotencyTimeoutError` | 409 | Concurrent request waited longer than `waitTimeout` | Increase timeouts; speed up handler |
+| `IdempotencyKeyRequiredError` | 400 | Idempotency key required but not provided | Send an `Idempotency-Key` header |
 | Missing key | n/a (passed through) | No idempotency key on the request | Deduplication is skipped; send a key to enable it |
-| Redis error | 500 | Redis unavailable (no fail-open) | Keep Redis healthy; `errorPolicy` does not help |
+| Redis error / unexpected | 500 | Redis unavailable (no fail-open) or unmapped error | Keep Redis healthy; `errorPolicy` does not help |
 
 ## Debug Checklist
 
@@ -449,8 +450,8 @@ curl -i -X POST http://localhost:3000/payments \
   -H "Content-Type: application/json" \
   -d '{"amount": 100}'
 
-# Mismatch (same key, different body) — currently returns HTTP 500
-# (IdempotencyFingerprintMismatchError, no exception filter)
+# Mismatch (same key, different body) — returns HTTP 422
+# (IdempotencyFingerprintMismatchError, mapped by the built-in exception filter)
 curl -i -X POST http://localhost:3000/payments \
   -H "Idempotency-Key: $KEY" \
   -H "Content-Type: application/json" \

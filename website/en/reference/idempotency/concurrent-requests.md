@@ -200,15 +200,20 @@ try {
 
 ### Custom Timeout Handler
 
+By default the plugin's built-in exception filter already maps `IdempotencyTimeoutError` to
+**HTTP 409 Conflict** (the original request is still in progress). Register your own filter only
+if you want a different status or response shape — the example below customizes the payload while
+keeping the 409 status:
+
 ```typescript
 @Catch(IdempotencyTimeoutError)
 export class TimeoutFilter implements ExceptionFilter {
   catch(exception: IdempotencyTimeoutError, host: ArgumentsHost) {
     const response = host.switchToHttp().getResponse();
 
-    response.status(408).json({
-      statusCode: 408,
-      error: 'Request Timeout',
+    response.status(409).json({
+      statusCode: 409,
+      error: 'Conflict',
       message: 'The original request is still processing',
       retryAfter: 30,
       idempotencyKey: exception.idempotencyKey,

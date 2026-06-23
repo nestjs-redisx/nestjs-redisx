@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { APP_FILTER } from '@nestjs/core';
 import { IdempotencyPlugin } from '../../src/idempotency.plugin';
+import { IdempotencyExceptionFilter } from '../../src/idempotency/api/filters/idempotency-exception.filter';
 import { version } from '../../package.json';
 import { IDEMPOTENCY_PLUGIN_OPTIONS, IDEMPOTENCY_SERVICE, IDEMPOTENCY_STORE, IDEMPOTENCY_REDIS_DRIVER } from '../../src/shared/constants';
 import { CLIENT_MANAGER, REDIS_CLIENTS_INITIALIZATION } from '@nestjs-redisx/core';
@@ -52,8 +54,21 @@ describe('IdempotencyPlugin', () => {
     const providers = plugin.getProviders();
 
     // Then
-    // Options, Driver, Store, Service, Reflector, IdempotencyInterceptor
-    expect(providers).toHaveLength(6);
+    // Options, Driver, Store, Service, Reflector, IdempotencyInterceptor, APP_FILTER
+    expect(providers).toHaveLength(7);
+  });
+
+  it('should register the idempotency exception filter as APP_FILTER', () => {
+    // Given
+    const plugin = new IdempotencyPlugin();
+
+    // When
+    const providers = plugin.getProviders();
+
+    // Then
+    const filterProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === APP_FILTER);
+    expect(filterProvider).toBeDefined();
+    expect((filterProvider as any).useClass).toBe(IdempotencyExceptionFilter);
   });
 
   it('should export service and interceptor', () => {

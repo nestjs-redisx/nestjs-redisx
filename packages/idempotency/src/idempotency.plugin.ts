@@ -4,10 +4,11 @@
  */
 
 import { DynamicModule, ForwardReference, Provider, Type } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
+import { APP_FILTER, Reflector } from '@nestjs/core';
 import { IRedisXPlugin, IPluginAsyncOptions, CLIENT_MANAGER, REDIS_CLIENTS_INITIALIZATION, RedisClientManager } from '@nestjs-redisx/core';
 
 import { version } from '../package.json';
+import { IdempotencyExceptionFilter } from './idempotency/api/filters/idempotency-exception.filter';
 import { IdempotencyInterceptor } from './idempotency/api/interceptors/idempotency.interceptor';
 import { IdempotencyService } from './idempotency/application/services/idempotency.service';
 import { RedisIdempotencyStoreAdapter } from './idempotency/infrastructure/adapters/redis-idempotency-store.adapter';
@@ -122,6 +123,9 @@ export class IdempotencyPlugin implements IRedisXPlugin {
       // Reflector is needed for @Idempotent decorator metadata
       Reflector,
       IdempotencyInterceptor,
+      // Global exception filter to map idempotency errors to proper HTTP codes
+      // (otherwise they surface as 500 since they are not HttpExceptions)
+      { provide: APP_FILTER, useClass: IdempotencyExceptionFilter },
     ];
   }
 
