@@ -8,7 +8,7 @@ import type { ITagIndex } from '../../src/tags/application/ports/tag-index.port'
 import type { ISwrManager } from '../../src/swr/application/ports/swr-manager.port';
 import type { ICachePluginOptions } from '../../src/shared/types';
 import { CacheEntry } from '../../src/cache/domain/value-objects/cache-entry.vo';
-import { StampedeError } from '../../src/shared/errors';
+import { StampedeError, CacheError, TagInvalidationError } from '../../src/shared/errors';
 
 describe('CacheService (Internal)', () => {
   let service: CacheService;
@@ -704,6 +704,25 @@ describe('CacheService (Internal)', () => {
       // Then
       expect(mockL1Store.delete).toHaveBeenCalledWith('key1');
       expect(mockL1Store.delete).toHaveBeenCalledWith('key2');
+    });
+
+    it('should preserve TagInvalidationError thrown by the tag index', async () => {
+      // Given
+      mockTagIndex.getKeysByTag.mockResolvedValue([]);
+      const tagError = new TagInvalidationError('test-tag', 'index unavailable');
+      mockTagIndex.invalidateTag.mockRejectedValue(tagError);
+
+      // When/Then - the specific type reaches the caller (not a generic CacheError)
+      await expect(service.invalidateTag('test-tag')).rejects.toBeInstanceOf(TagInvalidationError);
+    });
+
+    it('should wrap an unexpected error as CacheError', async () => {
+      // Given
+      mockTagIndex.getKeysByTag.mockResolvedValue([]);
+      mockTagIndex.invalidateTag.mockRejectedValue(new Error('boom'));
+
+      // When/Then
+      await expect(service.invalidateTag('test-tag')).rejects.toBeInstanceOf(CacheError);
     });
 
     it('should return 0 when tags disabled', async () => {

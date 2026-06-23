@@ -499,6 +499,11 @@ export class CacheService implements ICacheService {
       // Delete from L2 and tag index (handled by tagIndex.invalidateTag)
       return await this.tagIndex.invalidateTag(tag);
     } catch (error) {
+      // Preserve the specific error type (e.g. TagInvalidationError) so callers
+      // can catch it by type; only wrap genuinely unexpected errors.
+      if (error instanceof CacheError) {
+        throw error;
+      }
       throw new CacheError(`Failed to invalidate tag "${tag}": ${(error as Error).message}`, ErrorCode.CACHE_TAG_INVALIDATION_FAILED, error as Error);
     }
   }
