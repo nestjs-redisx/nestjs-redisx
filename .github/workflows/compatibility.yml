@@ -69,6 +69,7 @@ jobs:
             with-lock lock.service.spec locks.plugin \
             rate-limit.decorator rate-limit.guard rate-limit.service.spec \
             idempotent.decorator idempotency.service.spec idempotency.plugin \
+            command-executor stream-value memory-redis-adapter redis-testing-module \
             --reporter=verbose 2>&1 | tee smoke-results.txt
         env:
           REDIS_HOST: localhost
@@ -150,6 +151,7 @@ jobs:
             with-lock lock.service.spec locks.plugin \
             rate-limit.decorator rate-limit.guard rate-limit.service.spec \
             idempotent.decorator idempotency.service.spec idempotency.plugin \
+            command-executor stream-value memory-redis-adapter redis-testing-module \
             --reporter=verbose 2>&1 | tee smoke-results.txt
         env:
           REDIS_HOST: localhost

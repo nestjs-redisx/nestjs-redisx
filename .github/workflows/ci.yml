@@ -79,6 +79,9 @@ jobs:
           REDIS_HOST: localhost
           REDIS_PORT: 6379
 
+      - name: Run in-memory driver e2e (no Redis required)
+        run: npm run test:integration -w @nestjs-redisx/testing
+
       - name: Upload coverage to Codecov
         if: matrix.node == 20
         uses: codecov/codecov-action@v5
@@ -134,7 +137,7 @@ jobs:
           TARBALLS_DIR=$(mktemp -d)
           echo "TARBALLS_DIR=$TARBALLS_DIR" >> $GITHUB_ENV
 
-          for pkg in core cache locks rate-limit idempotency streams metrics tracing; do
+          for pkg in core cache locks rate-limit idempotency streams metrics tracing testing; do
             echo "Packing @nestjs-redisx/$pkg..."
             cd packages/$pkg
             npm pack --pack-destination "$TARBALLS_DIR"
@@ -161,6 +164,7 @@ jobs:
             "$TARBALLS_DIR"/nestjs-redisx-streams-*.tgz \
             "$TARBALLS_DIR"/nestjs-redisx-metrics-*.tgz \
             "$TARBALLS_DIR"/nestjs-redisx-tracing-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-testing-*.tgz \
             @nestjs/common@^10.3.0 \
             @nestjs/core@^10.3.0 \
             @nestjs/platform-express@^10.3.0 \
@@ -219,6 +223,32 @@ jobs:
             it('should import tracing exports', async () => {
               const tracing = await import('@nestjs-redisx/tracing');
               expect(tracing.TracingPlugin).toBeDefined();
+            });
+
+            it('should import testing exports', async () => {
+              const testing = await import('@nestjs-redisx/testing');
+              expect(testing.RedisTestingModule).toBeDefined();
+              expect(testing.MEMORY_DRIVER_TYPE).toBe('memory');
+            });
+
+            it('should run a plugin on the in-memory driver (no Redis)', async () => {
+              const { RedisTestingModule } = await import('@nestjs-redisx/testing');
+              const { CachePlugin, CACHE_SERVICE } = await import('@nestjs-redisx/cache');
+              const { Test } = await import('@nestjs/testing');
+
+              const app = await Test.createTestingModule({
+                imports: [RedisTestingModule.forRoot({ plugins: [new CachePlugin()] })],
+              }).compile();
+              await app.init();
+
+              const cache = app.get(CACHE_SERVICE);
+              let calls = 0;
+              const loader = async () => (calls++, 1);
+              await cache.getOrSet('k', loader, { ttl: 60 });
+              await cache.getOrSet('k', loader, { ttl: 60 });
+              expect(calls).toBe(1);
+
+              await app.close();
             });
           });
           SPECEOF
