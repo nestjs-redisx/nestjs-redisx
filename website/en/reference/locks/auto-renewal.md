@@ -1,6 +1,6 @@
 ---
 title: 'Auto-Renewal — Locks Plugin | NestJS RedisX'
-description: 'Renew Redis lock TTL automatically during long-running NestJS jobs with configurable intervalFraction; renewal is best-effort and stops silently on failure.'
+description: 'Renew Redis lock TTL automatically during long-running NestJS jobs with configurable intervalFraction; renewal is best-effort and logs a warning when it stops on failure.'
 ---
 
 # Auto-Renewal
@@ -137,24 +137,23 @@ new LocksPlugin({
 
 ## Renewal Failure
 
-Auto-renewal is **best-effort and silent on failure**. If a renewal `extend()`
-fails (e.g., Redis goes down, or the lock was already lost), the auto-renew
-timer simply stops — the error is swallowed in an empty `catch` block. There is:
+Auto-renewal is **best-effort**. If a renewal `extend()` fails (e.g., Redis goes
+down, or the lock was already lost), the auto-renew timer stops. The failure is
+**logged as a warning** (`Logger` context `Lock`) so it is no longer silent, but:
 
-- **no event emitted**,
-- **no error thrown** to your code,
-- **no callback** invoked.
+- **no error is thrown** to your code (the running operation is not interrupted),
+- **no callback** is invoked.
 
-In particular, `LockExpiredError` exists in the public API but is **never thrown
-by auto-renewal** (nor anywhere else at runtime) — do not write `catch` logic
-expecting it. The running operation is **not** interrupted; the lock simply
-expires naturally in Redis once renewals stop.
+`LockExpiredError` exists in the public API but is **not thrown by auto-renewal**
+— do not write `catch` logic expecting it. The running operation continues; the
+lock simply expires naturally in Redis once renewals stop.
 
 ::: warning
 After the lock expires, another process may acquire it — potentially causing
-concurrent access. Because failure is silent, the only way to detect a lost lock
-is to poll `lock.isHeld()` yourself (see below). For critical operations,
-combine locks with idempotency.
+concurrent access. Besides the logged warning, you can detect a lost lock
+programmatically by checking `lock.isAutoRenewing` (it flips to `false` once
+renewal stops) or by polling `lock.isHeld()` yourself (see below). For critical
+operations, combine locks with idempotency.
 :::
 
 To detect if the lock was lost mid-operation:

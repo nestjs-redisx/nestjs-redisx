@@ -1,3 +1,5 @@
+import { Logger } from '@nestjs/common';
+
 import { LockNotOwnedError, LockExtensionError } from '../../../shared/errors';
 import { ILockStore } from '../../application/ports/lock-store.port';
 
@@ -80,6 +82,7 @@ export class Lock implements ILock {
   readonly ttl: number;
   readonly acquiredAt: Date;
 
+  private readonly logger = new Logger(Lock.name);
   private _expiresAt: Date;
   private autoRenewTimer: NodeJS.Timeout | null = null;
   private released = false;
@@ -191,8 +194,11 @@ export class Lock implements ILock {
     this.autoRenewTimer = setInterval(async () => {
       try {
         await this.extend(this.ttl);
-      } catch {
-        // Extension failed, stop renewing
+      } catch (error) {
+        // Extension failed — the lock may already be lost. Surface it (the
+        // previous silent catch hid lost locks) and stop renewing. Callers can
+        // also detect this via `isAutoRenewing` flipping to false.
+        this.logger.warn(`Auto-renewal failed for lock "${this.key}"; the lock may have expired and renewal has stopped: ${(error as Error).message}`);
         this.stopAutoRenew();
       }
     }, intervalMs);

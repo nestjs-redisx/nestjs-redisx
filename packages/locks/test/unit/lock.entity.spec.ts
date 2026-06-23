@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach, type MockedObject } from 'vitest';
+import { Logger } from '@nestjs/common';
 import { Lock } from '../../src/lock/domain/entities/lock.entity';
 import type { ILockStore } from '../../src/lock/application/ports/lock-store.port';
 import { LockNotOwnedError, LockExtensionError } from '../../src/shared/errors';
@@ -258,6 +259,23 @@ describe('Lock Entity', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(lock.isAutoRenewing).toBe(false);
+    });
+
+    it('should log a warning when auto-renewal fails instead of failing silently', async () => {
+      // Given
+      const warnSpy = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      const intervalMs = 50;
+      mockStore.extend.mockResolvedValue(false); // extend() throws LockExtensionError
+
+      // When
+      lock.startAutoRenew(intervalMs);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Then - the failure is surfaced (no longer swallowed by an empty catch)
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining(key));
+      expect(lock.isAutoRenewing).toBe(false);
+
+      warnSpy.mockRestore();
     });
 
     it('should continue renewal on successful extensions', async () => {
