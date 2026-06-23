@@ -66,11 +66,37 @@ graph LR
 The plugins are **driver-agnostic** — they only depend on `IRedisDriver`. Selecting
 the `'memory'` driver swaps the transport; everything above it is unchanged.
 
+## When to Use It — and When to Use Real Redis
+
+The in-memory driver answers **"is my code correct?"** — fast, on every commit,
+with no infrastructure. It is **not** a full Redis emulator: questions about
+Redis's *own* behavior still belong in integration tests against a real Redis.
+
+| ✅ Test with the in-memory driver | 🔺 Test against real Redis |
+|---|---|
+| Cache hit/miss, TTL, stampede, tag invalidation | Cluster cross-slot routing & hash-tag correctness |
+| Lock acquisition / contention / release | Redis Pub/Sub fan-out across connections |
+| Rate-limit algorithms (token bucket, windows) | Sentinel failover & reconnection behavior |
+| Idempotency check-and-lock, replay, fingerprint | Real network latency / throughput / load |
+| Streams produce → consumer group → ack / claim | Exact `BLOCK` timeout / long-poll timing |
+
+::: warning Known limitations
+Be aware of what the in-memory driver intentionally does **not** simulate:
+
+- **Single-node semantics** — one keyspace; no `SELECT`, no cluster cross-slot (`CROSSSLOT`) checks or hash-tag routing. A missing hash-tag bug passes in-memory but can fail on a real cluster.
+- **No Pub/Sub** — Redis publish/subscribe is not implemented (the plugins do not rely on it for their core logic).
+- **Blocking reads return promptly** — `BLOCK` on `XREADGROUP`/`XREAD` does not wait the full timeout. Delivery is still correct; only the timing differs.
+- **Correctness tool, not a performance simulator** — don't use it for load or latency testing.
+- **Unsupported commands fail loudly** — an unimplemented command throws `MemoryDriverError` instead of silently returning a wrong result.
+
+For any of the above, use a real Redis — the project ships integration test configs for **standalone**, **Sentinel**, and **Cluster**.
+:::
+
 ## Documentation
 
 | Topic | Description |
 |-------|-------------|
 | [Configuration](./configuration) | Driver selection, `RedisTestingModule`, and options |
 | [In-Memory Driver](./memory-driver) | Supported commands, the Lua subset, and limitations |
-| [Testing Plugins](./testing-plugins) | Patterns for cache, locks, rate-limit, idempotency |
+| [Testing Plugins](./testing-plugins) | Patterns for cache, locks, rate-limit, idempotency, streams |
 | [Troubleshooting](./troubleshooting) | Common errors and how to resolve them |

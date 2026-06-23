@@ -63,10 +63,15 @@ a `LuaExecutionError` rather than returning a silently wrong result.
 
 ## Limitations
 
-- **No real blocking** — `BLOCK` on `XREADGROUP`/`XREAD` returns promptly instead of waiting; Pub/Sub is not implemented.
-- **Single keyspace** — no multi-database (`SELECT`) or cross-slot cluster semantics; behavior matches a single standalone Redis.
+::: warning What it intentionally does not simulate
+- **No real blocking** — `BLOCK` on `XREADGROUP`/`XREAD` returns promptly instead of waiting; delivery is still correct, only the timing differs.
+- **No Pub/Sub** — Redis publish/subscribe is not implemented (the plugins do not depend on it for their core logic).
+- **Single keyspace** — no multi-database (`SELECT`) or cross-slot cluster semantics; behavior matches a single standalone Redis, so a missing hash-tag passes here but can fail on a real cluster.
 - **Not for load testing** — it is a correctness tool for unit tests, not a performance simulator.
 - **Unsupported commands fail loudly** — calling a command the driver does not implement throws `MemoryDriverError`, surfacing gaps instead of hiding them.
+
+For cluster routing, Pub/Sub, failover, or performance, test against a real Redis — see [When to Use It](./#when-to-use-it-and-when-to-use-real-redis).
+:::
 
 ## Direct use
 
