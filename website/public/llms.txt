@@ -86,10 +86,10 @@ NestJS RedisX is designed for production NestJS applications that need Redis bey
 
 ## Testing Utilities
 
-- [Testing Overview](https://nestjs-redisx.dev/en/reference/testing/): In-memory Redis driver for unit tests — run the real cache/locks/rate-limit/idempotency plugins (and their Lua scripts) with no Redis.
+- [Testing Overview](https://nestjs-redisx.dev/en/reference/testing/): In-memory Redis driver for unit tests — run the real cache/locks/rate-limit/idempotency/streams plugins (Lua scripts and consumer groups) with no Redis.
 - [Configuration](https://nestjs-redisx.dev/en/reference/testing/configuration): RedisTestingModule wrapper, the global.driver='memory' option, registerMemoryDriver, and IMemoryDriverOptions.
-- [In-Memory Driver](https://nestjs-redisx.dev/en/reference/testing/memory-driver): Supported commands (strings/hash/set/zset/list/keys/TTL/scripting), the bounded Lua subset, and limitations.
-- [Testing Plugins](https://nestjs-redisx.dev/en/reference/testing/testing-plugins): Patterns for cache, locks, rate-limit, idempotency; seeding and inspecting state via getStore().
+- [In-Memory Driver](https://nestjs-redisx.dev/en/reference/testing/memory-driver): Supported commands (strings/hash/set/zset/list/streams/keys/TTL/scripting), stream consumer groups, the bounded Lua subset, and limitations.
+- [Testing Plugins](https://nestjs-redisx.dev/en/reference/testing/testing-plugins): Patterns for cache, locks, rate-limit, idempotency, streams; seeding and inspecting state via getStore().
 - [Troubleshooting](https://nestjs-redisx.dev/en/reference/testing/troubleshooting): Unsupported driver type, unimplemented commands, and Lua execution errors.
 
 ## Concepts

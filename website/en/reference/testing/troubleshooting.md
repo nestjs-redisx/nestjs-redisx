@@ -21,9 +21,8 @@ registerMemoryDriver();
 
 The code under test issued a command outside the [supported set](./memory-driver#supported-commands).
 This is intentional — the driver fails loudly rather than returning a wrong
-result. If the command belongs to the cache/locks/rate-limit/idempotency
-plugins, please open an issue; if it is a Streams command, note that Streams are
-not part of Phase 1.
+result. The cache, locks, rate-limit, idempotency, and streams plugins all stay
+within the supported set; if you hit this with one of them, please open an issue.
 
 ## `Lua execution error: …`
 
@@ -35,9 +34,10 @@ within the bounded subset, or run that particular test against a real Redis.
 ## Results differ from real Redis
 
 The in-memory driver implements standard single-node semantics. If you rely on
-cluster cross-slot behavior, Pub/Sub, or Streams, use a real Redis for those
-tests — the in-memory driver targets correctness for the core data-structure and
-scripting paths the plugins use.
+cluster cross-slot behavior or Pub/Sub, use a real Redis for those tests — the
+in-memory driver targets correctness for the data-structure, scripting, and
+stream consumer-group paths the plugins use. Note that `BLOCK` on
+`XREADGROUP`/`XREAD` returns promptly rather than waiting the full timeout.
 
 ## State leaks between tests
 

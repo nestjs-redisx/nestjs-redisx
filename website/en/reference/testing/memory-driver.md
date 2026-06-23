@@ -20,12 +20,27 @@ The other ~180 driver methods are inherited unchanged.
 | Sets | `SADD`, `SREM`, `SMEMBERS`, `SISMEMBER`, `SCARD` |
 | Sorted sets | `ZADD`, `ZREM`, `ZCARD`, `ZSCORE`, `ZRANGE`, `ZRANGEBYSCORE`, `ZREMRANGEBYSCORE`, `ZCOUNT` |
 | Lists | `LPUSH`, `RPUSH`, `LPOP`, `RPOP`, `LLEN`, `LRANGE`, `LINDEX`, `LREM` |
+| Streams | `XADD` (`NOMKSTREAM`/`MAXLEN`/`MINID`), `XLEN`, `XRANGE`, `XREVRANGE`, `XDEL`, `XTRIM`, `XINFO STREAM`, `XGROUP` (`CREATE`/`DESTROY`/`SETID`/`DELCONSUMER`), `XREADGROUP`, `XREAD`, `XACK`, `XPENDING`, `XCLAIM` |
 | Scripting | `EVAL`, `EVALSHA`, `SCRIPT LOAD` |
 | Server | `PING`, `DBSIZE`, `FLUSHDB`, `FLUSHALL` |
 
-This set covers everything the **cache, locks, rate-limit, and idempotency**
-plugins use. TTL is enforced with lazy expiry: an expired key is evicted the next
-time it is read.
+This set covers everything the **cache, locks, rate-limit, idempotency, and
+streams** plugins use. TTL is enforced with lazy expiry: an expired key is
+evicted the next time it is read.
+
+### Streams and consumer groups
+
+Streams are modelled with real consumer-group semantics: monotonic `<ms>-<seq>`
+ids, per-group delivery cursors, per-consumer pending-entries lists (PEL),
+delivery counts, and idle-time tracking. So `XREADGROUP ... >` delivers only
+never-seen entries and records them in the PEL; `XACK` clears them; `XPENDING`
+and `XCLAIM` let another consumer reclaim idle messages — exactly what the
+Streams plugin's consumer loop and auto-claim rely on.
+
+The in-memory driver never truly blocks. A blocking `XREADGROUP`/`XREAD` that
+finds nothing returns `null` after a short delay (instead of waiting the full
+`BLOCK` timeout), which keeps a background consumer poll loop responsive without
+starving the event loop.
 
 ## Lua scripting
 
@@ -48,7 +63,7 @@ a `LuaExecutionError` rather than returning a silently wrong result.
 
 ## Limitations
 
-- **Phase 1 scope** — Streams (`XADD`/`XREADGROUP`/…) are not yet implemented, so the Streams plugin is out of scope for now.
+- **No real blocking** — `BLOCK` on `XREADGROUP`/`XREAD` returns promptly instead of waiting; Pub/Sub is not implemented.
 - **Single keyspace** — no multi-database (`SELECT`) or cross-slot cluster semantics; behavior matches a single standalone Redis.
 - **Not for load testing** — it is a correctness tool for unit tests, not a performance simulator.
 - **Unsupported commands fail loudly** — calling a command the driver does not implement throws `MemoryDriverError`, surfacing gaps instead of hiding them.

@@ -1,6 +1,6 @@
 ---
 title: 'Overview — @nestjs-redisx/testing | NestJS RedisX'
-description: 'Unit-test NestJS RedisX code without a running Redis. An in-memory driver runs the real cache, locks, rate-limit, and idempotency plugins — including their Lua scripts — entirely in memory.'
+description: 'Unit-test NestJS RedisX code without a running Redis. An in-memory driver runs the real cache, locks, rate-limit, idempotency, and streams plugins — including their Lua scripts and consumer groups — entirely in memory.'
 ---
 
 # Testing Utilities
@@ -11,9 +11,10 @@ An in-memory Redis driver for unit-testing NestJS RedisX code — **no Redis req
 
 `@nestjs-redisx/testing` provides a drop-in `'memory'` driver that implements the
 same `IRedisDriver` contract as the ioredis and node-redis adapters. Your plugins
-(`CachePlugin`, `LocksPlugin`, `RateLimitPlugin`, `IdempotencyPlugin`) run with
-their **real production code** — including their Lua scripts — against an in-memory
-keyspace. Tests stay fast, deterministic, and isolated.
+(`CachePlugin`, `LocksPlugin`, `RateLimitPlugin`, `IdempotencyPlugin`, `StreamsPlugin`)
+run with their **real production code** — including their Lua scripts and stream
+consumer groups — against an in-memory keyspace. Tests stay fast, deterministic,
+and isolated.
 
 | Concern | Real Redis in tests | `@nestjs-redisx/testing` |
 |---------|---------------------|--------------------------|
@@ -25,7 +26,7 @@ keyspace. Tests stay fast, deterministic, and isolated.
 
 ## Key Features
 
-- **Real plugin behavior** — exercises the actual cache/locks/rate-limit/idempotency code paths, not mocks.
+- **Real plugin behavior** — exercises the actual cache/locks/rate-limit/idempotency/streams code paths, not mocks.
 - **Lua execution** — a small, in-house Lua interpreter runs the plugins' atomic scripts (token bucket, lock release, etc.).
 - **Zero dependencies** — no third-party Redis mock; nothing extra in your runtime.
 - **Same `IRedisDriver`** — strings, hashes, sets, sorted sets, lists, keys/TTL, and scripting.

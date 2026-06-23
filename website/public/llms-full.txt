@@ -573,7 +573,7 @@ Each Redis span includes: `db.system: "redis"`, `db.operation`, `db.redis.key`, 
 
 ## Testing Utilities
 
-`@nestjs-redisx/testing` provides an in-memory Redis driver so you can unit-test code that uses the cache, locks, rate-limit, and idempotency plugins **without a running Redis**. The plugins run their real production code — including their Lua scripts — against an in-memory keyspace. Install it as a devDependency: `npm install -D @nestjs-redisx/testing`.
+`@nestjs-redisx/testing` provides an in-memory Redis driver so you can unit-test code that uses the cache, locks, rate-limit, idempotency, and streams plugins **without a running Redis**. The plugins run their real production code — including their Lua scripts and stream consumer groups — against an in-memory keyspace. Install it as a devDependency: `npm install -D @nestjs-redisx/testing`.
 
 ### RedisTestingModule (recommended)
 
@@ -611,7 +611,7 @@ RedisModule.forRoot({
 
 ### Supported commands
 
-Strings (`GET`/`SET`/`SETEX`/`SETNX`/`APPEND`/`STRLEN`/`INCR`/`INCRBY`/`DECR`/`DECRBY`/`MGET`/`MSET`), keys & TTL (`DEL`/`UNLINK`/`EXISTS`/`EXPIRE`/`PEXPIRE`/`EXPIREAT`/`PEXPIREAT`/`PERSIST`/`TTL`/`PTTL`/`TYPE`/`KEYS`/`SCAN`), hashes (`HSET`/`HMSET`/`HGET`/`HMGET`/`HGETALL`/`HDEL`/`HEXISTS`/`HLEN`/`HKEYS`/`HVALS`/`HINCRBY`), sets (`SADD`/`SREM`/`SMEMBERS`/`SISMEMBER`/`SCARD`), sorted sets (`ZADD`/`ZREM`/`ZCARD`/`ZSCORE`/`ZRANGE`/`ZRANGEBYSCORE`/`ZREMRANGEBYSCORE`/`ZCOUNT`), lists (`LPUSH`/`RPUSH`/`LPOP`/`RPOP`/`LLEN`/`LRANGE`/`LINDEX`/`LREM`), scripting (`EVAL`/`EVALSHA`/`SCRIPT LOAD`), server (`PING`/`DBSIZE`/`FLUSHDB`/`FLUSHALL`). TTL uses lazy expiry. A built-in Lua interpreter runs the plugins' atomic scripts.
+Strings (`GET`/`SET`/`SETEX`/`SETNX`/`APPEND`/`STRLEN`/`INCR`/`INCRBY`/`DECR`/`DECRBY`/`MGET`/`MSET`), keys & TTL (`DEL`/`UNLINK`/`EXISTS`/`EXPIRE`/`PEXPIRE`/`EXPIREAT`/`PEXPIREAT`/`PERSIST`/`TTL`/`PTTL`/`TYPE`/`KEYS`/`SCAN`), hashes (`HSET`/`HMSET`/`HGET`/`HMGET`/`HGETALL`/`HDEL`/`HEXISTS`/`HLEN`/`HKEYS`/`HVALS`/`HINCRBY`), sets (`SADD`/`SREM`/`SMEMBERS`/`SISMEMBER`/`SCARD`), sorted sets (`ZADD`/`ZREM`/`ZCARD`/`ZSCORE`/`ZRANGE`/`ZRANGEBYSCORE`/`ZREMRANGEBYSCORE`/`ZCOUNT`), lists (`LPUSH`/`RPUSH`/`LPOP`/`RPOP`/`LLEN`/`LRANGE`/`LINDEX`/`LREM`), streams (`XADD`/`XLEN`/`XRANGE`/`XREVRANGE`/`XDEL`/`XTRIM`/`XINFO STREAM`/`XGROUP`/`XREADGROUP`/`XREAD`/`XACK`/`XPENDING`/`XCLAIM` with real consumer-group + PEL semantics), scripting (`EVAL`/`EVALSHA`/`SCRIPT LOAD`), server (`PING`/`DBSIZE`/`FLUSHDB`/`FLUSHALL`). TTL uses lazy expiry. A built-in Lua interpreter runs the plugins' atomic scripts. Blocking `XREADGROUP`/`XREAD` returns promptly (no real blocking).
 
 ### Seeding & inspecting state
 
@@ -619,7 +619,7 @@ Cast the injected `REDIS_DRIVER` to `MemoryRedisAdapter` and call `getStore()` t
 
 ### Exports & limitations
 
-Exports: `RedisTestingModule`, `registerMemoryDriver`, `MemoryRedisAdapter`, `MemoryStore`, `CommandExecutor`, `LuaInterpreter`, `MEMORY_DRIVER_TYPE`, `IMemoryDriverOptions`, and errors `MemoryDriverError` / `LuaExecutionError` / `WrongTypeError`. Limitations: Streams are not yet implemented (Phase 1); single-node semantics only; unsupported commands or Lua constructs fail loudly rather than returning wrong results; it is a correctness tool, not a performance simulator.
+Exports: `RedisTestingModule`, `registerMemoryDriver`, `MemoryRedisAdapter`, `MemoryStore`, `CommandExecutor`, `LuaInterpreter`, `MEMORY_DRIVER_TYPE`, `IMemoryDriverOptions`, and errors `MemoryDriverError` / `LuaExecutionError` / `WrongTypeError`. Limitations: single-node semantics only (no cluster cross-slot, no Pub/Sub); blocking reads return promptly; unsupported commands or Lua constructs fail loudly rather than returning wrong results; it is a correctness tool, not a performance simulator.
 
 ## Complete API Reference
 

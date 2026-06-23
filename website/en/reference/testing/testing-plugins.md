@@ -86,6 +86,55 @@ expect((await rl.check('ip:1')).allowed).toBe(false);
 Register `IdempotencyPlugin` the same way and inject `IDEMPOTENCY_SERVICE`; the
 fingerprint store and TTLs behave exactly as they do against Redis.
 
+## Streams
+
+The in-memory driver implements stream consumer groups (delivery cursors, PEL,
+`XACK`, `XCLAIM`, `XPENDING`), so the real producer and the background consumer
+loop round-trip a message with no Redis:
+
+<<< @/apps/demo/src/plugins/testing/streams.usage.ts{typescript}
+
+A Vitest spec driving the producer and consumer group directly:
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { Test } from '@nestjs/testing';
+import { RedisTestingModule } from '@nestjs-redisx/testing';
+import { StreamsPlugin, STREAM_PRODUCER, STREAM_CONSUMER, IStreamProducer, IStreamConsumer } from '@nestjs-redisx/streams';
+
+describe('streams (in-memory)', () => {
+  it('delivers a published message to the consumer group', async () => {
+    const app = await Test.createTestingModule({
+      imports: [RedisTestingModule.forRoot({ plugins: [new StreamsPlugin()] })],
+    }).compile();
+    await app.init();
+
+    const producer = app.get<IStreamProducer>(STREAM_PRODUCER);
+    const consumer = app.get<IStreamConsumer>(STREAM_CONSUMER);
+
+    const received: Array<{ n: number }> = [];
+    const done = new Promise<void>((resolve) => {
+      consumer.consume<{ n: number }>('orders', 'g1', 'c1', async (msg) => {
+        received.push(msg.data);
+        resolve();
+      });
+    });
+
+    await producer.publish('orders', { n: 1 });
+    await done;
+
+    expect(received).toEqual([{ n: 1 }]);
+    await app.close();
+  });
+});
+```
+
+::: tip
+The in-memory driver does not truly block: a `BLOCK` `XREADGROUP` with no new
+messages returns promptly, so the consumer poll loop stays responsive in tests
+instead of waiting the full block timeout.
+:::
+
 ## Seeding and inspecting state
 
 For tests that need to pre-populate the keyspace or assert on raw values, cast
