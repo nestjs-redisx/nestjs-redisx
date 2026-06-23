@@ -101,6 +101,56 @@ describe('StreamProducerService', () => {
     });
   });
 
+  describe('trim configuration', () => {
+    it('should not trim (keep-all) when trim.enabled is false', async () => {
+      // Given
+      const keepAll = new StreamProducerService(mockDriver, { ...config, trim: { enabled: false } });
+      mockDriver.xadd.mockResolvedValue('1-0');
+
+      // When
+      await keepAll.publish('events', { a: 1 });
+
+      // Then - no MAXLEN is passed, so old entries are never trimmed
+      expect(mockDriver.xadd).toHaveBeenCalledWith('events', '*', { data: JSON.stringify({ a: 1 }) }, {});
+    });
+
+    it('should honor trim.maxLen and trim.approximate when enabled', async () => {
+      // Given
+      const trimmed = new StreamProducerService(mockDriver, { ...config, trim: { enabled: true, maxLen: 500, approximate: false } });
+      mockDriver.xadd.mockResolvedValue('1-0');
+
+      // When
+      await trimmed.publish('events', { a: 1 });
+
+      // Then
+      expect(mockDriver.xadd).toHaveBeenCalledWith('events', '*', { data: JSON.stringify({ a: 1 }) }, { maxLen: 500, approximate: false });
+    });
+
+    it('should let a per-publish maxLen override keep-all', async () => {
+      // Given
+      const keepAll = new StreamProducerService(mockDriver, { ...config, trim: { enabled: false } });
+      mockDriver.xadd.mockResolvedValue('1-0');
+
+      // When
+      await keepAll.publish('events', { a: 1 }, { maxLen: 50 });
+
+      // Then
+      expect(mockDriver.xadd).toHaveBeenCalledWith('events', '*', { data: JSON.stringify({ a: 1 }) }, { maxLen: 50, approximate: true });
+    });
+
+    it('should fall back to producer.maxLen when trim.maxLen is not set', async () => {
+      // Given
+      const trimmed = new StreamProducerService(mockDriver, { ...config, trim: { enabled: true } });
+      mockDriver.xadd.mockResolvedValue('1-0');
+
+      // When
+      await trimmed.publish('events', { a: 1 });
+
+      // Then
+      expect(mockDriver.xadd).toHaveBeenCalledWith('events', '*', { data: JSON.stringify({ a: 1 }) }, { maxLen: 100000, approximate: true });
+    });
+  });
+
   describe('publishBatch', () => {
     it('should publish multiple messages', async () => {
       // Given

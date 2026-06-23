@@ -87,24 +87,22 @@ interface ConsumerOptions {
 ```typescript
 interface ProducerOptions {
   /**
-   * Maximum stream length. Every publish runs `XADD ... MAXLEN ~ <maxLen>`
-   * (approximate trimming), so the stream is capped at roughly this many
-   * entries. This is the ONLY trimming mechanism — see the warning below.
+   * Default maximum stream length used when no `trim` block is configured.
+   * Every publish runs `XADD ... MAXLEN ~ <maxLen>` (approximate trimming).
    * @default 100000
    */
   maxLen?: number;
 }
 ```
 
-::: warning No keep-all / unlimited mode
-`producer.maxLen` always applies approximate `MAXLEN` trimming on publish, and
-there is **no way to disable it** — setting `maxLen: 0` does not mean
-"unlimited". If you need every entry retained (for example for event sourcing),
-streams are not currently safe for that use case: old entries will be trimmed
-and lost.
+::: tip Disabling trimming (keep-all)
+To retain every entry (for example for event sourcing), set `trim: { enabled:
+false }` at the plugin level — no `MAXLEN` is then applied on publish. To cap the
+stream, use the `trim` block (see below) or `producer.maxLen`. A per-publish
+`maxLen` always overrides the configured trimming for that call.
 
-The `autoCreate` option is accepted by the type but **does nothing** — streams
-are created implicitly by the first `XADD` regardless of its value.
+The `autoCreate` option is accepted by the type but has no effect — streams are
+created implicitly by the first `XADD` regardless of its value.
 :::
 
 ### Dead Letter Queue Options
@@ -167,14 +165,39 @@ interface RetryOptions {
 
 ### Trimming
 
-There is **no `trim` configuration block in effect**. Although a `trim` option
-exists on the type, it is never read by the runtime. Trimming is driven solely
-by `producer.maxLen`, which applies approximate `MAXLEN` trimming on every
-publish (see [Producer Options](#producer-options) above). The `strategy`
-(`MINID`) and `approximate: false` variants are not configurable, and trimming
-cannot be turned off.
+```typescript
+interface TrimOptions {
+  /**
+   * Whether to trim on publish. Set to false to keep all entries (event
+   * sourcing). @default true
+   */
+  enabled?: boolean;
 
-For one-off trimming you can also call `producer.trim(stream, maxLen)` directly.
+  /**
+   * Maximum stream length. Falls back to producer.maxLen, then 100000.
+   */
+  maxLen?: number;
+
+  /**
+   * Approximate trimming (MAXLEN ~) for better performance. @default true
+   */
+  approximate?: boolean;
+
+  /** Trimming strategy. Only MAXLEN is applied from config. */
+  strategy?: 'MAXLEN' | 'MINID';
+}
+```
+
+When a `trim` block is configured it controls trimming on every publish:
+
+- `trim.enabled: false` disables trimming entirely (keep-all).
+- `trim.maxLen` / `trim.approximate` set the `MAXLEN` and whether it is exact.
+- Only the `MAXLEN` strategy is applied from config (`MINID` requires an id that
+  is not part of the config).
+
+When no `trim` block is set, trimming falls back to `producer.maxLen`. A
+per-publish `maxLen` always overrides the configured trimming for that call. For
+one-off trimming you can also call `producer.trim(stream, maxLen)` directly.
 
 ## Full Configuration Example
 
@@ -275,11 +298,14 @@ new StreamsPlugin({
 })
 ```
 
-::: warning Event sourcing / keep-all is not supported
-A "keep all events" preset is intentionally omitted: trimming via
-`producer.maxLen` is always applied on publish and cannot be disabled (setting
-`maxLen: 0` does not mean unlimited). If your use case requires retaining every
-entry, do not rely on the Streams plugin's producer to do so.
+::: tip Event sourcing / keep-all
+For event sourcing where every entry must be retained, disable trimming:
+
+```typescript
+new StreamsPlugin({
+  trim: { enabled: false }, // keep-all: no MAXLEN applied on publish
+})
+```
 :::
 
 ## Environment Configuration

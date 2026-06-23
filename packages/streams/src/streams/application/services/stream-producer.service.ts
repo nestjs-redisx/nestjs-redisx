@@ -27,10 +27,9 @@ export class StreamProducerService implements IStreamProducer {
   async publish<T>(stream: string, data: T, options: IPublishOptions = {}): Promise<string> {
     const startTime = Date.now();
     try {
-      const maxLen = options.maxLen ?? this.config.producer?.maxLen ?? 100000;
       const id = options.id ?? '*';
 
-      const result = await this.driver.xadd(stream, id, { data: JSON.stringify(data) }, { maxLen, approximate: true });
+      const result = await this.driver.xadd(stream, id, { data: JSON.stringify(data) }, this.resolveAddOptions(options));
 
       this.metrics?.incrementCounter('redisx_stream_messages_published_total', { stream });
       this.metrics?.observeHistogram('redisx_stream_publish_duration_seconds', (Date.now() - startTime) / 1000, { stream });
@@ -45,12 +44,12 @@ export class StreamProducerService implements IStreamProducer {
   async publishBatch<T>(stream: string, messages: T[], options: IPublishOptions = {}): Promise<string[]> {
     const startTime = Date.now();
     try {
-      const maxLen = options.maxLen ?? this.config.producer?.maxLen ?? 100000;
+      const addOptions = this.resolveAddOptions(options);
       const results: string[] = [];
 
       // Use individual xadd calls since pipeline doesn't support stream commands yet
       for (const data of messages) {
-        const id = await this.driver.xadd(stream, '*', { data: JSON.stringify(data) }, { maxLen, approximate: true });
+        const id = await this.driver.xadd(stream, '*', { data: JSON.stringify(data) }, addOptions);
         results.push(id);
       }
 
@@ -62,6 +61,35 @@ export class StreamProducerService implements IStreamProducer {
       this.metrics?.incrementCounter('redisx_stream_publish_errors_total', { stream });
       throw new StreamPublishError(stream, error as Error);
     }
+  }
+
+  /**
+   * Resolves the trim-related XADD options for a publish.
+   *
+   * Precedence: an explicit per-publish `maxLen` always wins. Otherwise the
+   * `trim` config is honored — `trim.enabled: false` disables trimming entirely
+   * (keep-all), and `trim.maxLen`/`trim.approximate` control trimming when
+   * enabled. When no `trim` config is set, the legacy `producer.maxLen` default
+   * applies. (Trimming uses MAXLEN; MINID is not derivable from config.)
+   */
+  private resolveAddOptions(options: IPublishOptions): { maxLen?: number; approximate?: boolean } {
+    if (options.maxLen !== undefined) {
+      return { maxLen: options.maxLen, approximate: true };
+    }
+
+    const trim = this.config.trim;
+    if (trim) {
+      if (trim.enabled === false) {
+        // Keep-all: do not trim (no MAXLEN passed to XADD).
+        return {};
+      }
+      return {
+        maxLen: trim.maxLen ?? this.config.producer?.maxLen ?? 100000,
+        approximate: trim.approximate ?? true,
+      };
+    }
+
+    return { maxLen: this.config.producer?.maxLen ?? 100000, approximate: true };
   }
 
   async getStreamInfo(stream: string): Promise<IStreamInfo> {
