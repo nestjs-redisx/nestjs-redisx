@@ -17,19 +17,18 @@ Declarative locking — add distributed locks with a single decorator.
 interface IWithLockOptions {
   key: string | ((...args: unknown[]) => string);  // Lock key or key builder
   ttl?: number;                                     // Lock TTL (ms)
-  waitTimeout?: number;                             // Accepted but NOT honored — see note
+  waitTimeout?: number;                             // Max wall-clock time to wait (ms)
   autoRenew?: boolean;                              // Enable auto-renewal
   onLockFailed?: 'throw' | 'skip' | ((key: string) => Error);  // Failure strategy
 }
 ```
 
-::: warning `waitTimeout` is not honored
-`waitTimeout` is accepted by `@WithLock` (and by `LockService.acquire()`) for
-backward compatibility, but it has **no effect**. How long acquisition waits is
-governed entirely by the retry config (`retry.maxRetries`, `retry.initialDelay`,
-`retry.multiplier`, `retry.maxDelay`) — the service retries with exponential
-backoff and throws once retries are exhausted; it does not enforce a wall-clock
-wait limit. To bound waiting, tune the retry options.
+::: tip `waitTimeout` bounds the total wait
+`waitTimeout` caps how long acquisition waits for a contended lock. The service
+retries with exponential backoff (`retry.maxRetries`, `retry.initialDelay`,
+`retry.multiplier`, `retry.maxDelay`) and stops as soon as either the retry cap
+is reached **or** waiting again would exceed `waitTimeout`, whichever comes
+first. Leave `waitTimeout` unset to let the retry config alone govern the wait.
 :::
 
 ## Key Patterns

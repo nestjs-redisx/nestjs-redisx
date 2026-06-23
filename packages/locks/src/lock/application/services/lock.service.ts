@@ -81,6 +81,7 @@ export class LockService implements ILockService, OnModuleDestroy {
     const token = this.generateToken();
 
     const retry = this.resolveRetryConfig(options);
+    const waitTimeout = options.waitTimeout;
     const startTime = Date.now();
 
     let delay = retry.initialDelay;
@@ -104,8 +105,11 @@ export class LockService implements ILockService, OnModuleDestroy {
           return lock;
         }
 
-        // Last attempt failed
-        if (attempt === retry.maxRetries) {
+        // Stop when the retry cap is reached, or when sleeping again would push
+        // the total wait past the caller's waitTimeout budget (when provided).
+        const waitBudgetExhausted = waitTimeout !== undefined && Date.now() - startTime + delay >= waitTimeout;
+
+        if (attempt === retry.maxRetries || waitBudgetExhausted) {
           this.metrics?.incrementCounter('redisx_lock_acquisitions_total', { status: 'failed' });
           span?.setAttribute('lock.acquired', false);
           span?.setAttribute('lock.attempts', attempt + 1);

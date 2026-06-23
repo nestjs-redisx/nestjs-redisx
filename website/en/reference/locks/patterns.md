@@ -99,13 +99,18 @@ async tryProcessOrder(orderId: string): Promise<boolean> {
 
 ## 7. Bounded-Wait Pattern
 
-Bound how long acquisition waits before giving up. There is **no `waitTimeout`**
-— acquisition waiting is governed entirely by the retry config (`maxRetries`
-with exponential backoff). Tune those globally on the plugin to set the
-effective wait budget:
+Bound how long acquisition waits before giving up. Use `waitTimeout` for a hard
+wall-clock cap, and/or the retry config (`maxRetries` with exponential backoff)
+to shape the retry schedule. Acquisition stops as soon as either limit is hit:
 
 ```typescript
-// Effective max wait ≈ sum of backoff delays across retries
+// Hard cap: wait at most ~2s for the lock, then throw
+@WithLock({ key: 'resource:{0}', waitTimeout: 2000 })
+async accessResource(id: string) {
+  // Throws LockAcquisitionError once waitTimeout (or the retry cap) is reached
+}
+
+// Or shape the retry schedule globally on the plugin
 new LocksPlugin({
   retry: {
     maxRetries: 5,
@@ -114,17 +119,12 @@ new LocksPlugin({
     maxDelay: 2000,
   },
 })
-
-// @WithLock then waits across those retries before throwing
-@WithLock({ key: 'resource:{0}' })
-async accessResource(id: string) {
-  // Throws LockAcquisitionError once retries are exhausted
-}
 ```
 
-::: warning
-`waitTimeout` is accepted by the decorator/service options but is **ignored** —
-do not use it to bound wait time. Use the retry settings above instead.
+::: tip
+`waitTimeout` is the simplest way to bound waiting — the service stops retrying
+once the next backoff sleep would exceed it. Combine it with the retry settings,
+or rely on the retry settings alone if you do not set `waitTimeout`.
 :::
 
 ## Next Steps

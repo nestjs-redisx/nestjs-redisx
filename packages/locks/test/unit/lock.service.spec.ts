@@ -132,6 +132,45 @@ describe('LockService', () => {
       expect(mockStore.acquire).toHaveBeenCalledTimes(2); // 1 initial + 1 retry
     });
 
+    it('should stop immediately when waitTimeout is shorter than the first retry delay', async () => {
+      // Given - initialDelay is 100ms, waitTimeout is 50ms
+      const key = 'test-key';
+      mockStore.acquire.mockResolvedValue(false);
+
+      // When/Then
+      await expect(service.acquire(key, { waitTimeout: 50 })).rejects.toThrow(LockAcquisitionError);
+
+      // There is no time left to sleep before the first retry, so only the
+      // initial attempt runs.
+      expect(mockStore.acquire).toHaveBeenCalledTimes(1);
+    });
+
+    it('should stop retrying once the waitTimeout budget is exhausted', async () => {
+      // Given - maxRetries (3) would allow 4 attempts, but waitTimeout cuts it short
+      const key = 'test-key';
+      mockStore.acquire.mockResolvedValue(false);
+
+      // When/Then
+      await expect(service.acquire(key, { waitTimeout: 150 })).rejects.toThrow(LockAcquisitionError);
+
+      // attempt 0 (delay 100 fits in budget) -> sleep -> attempt 1 (next delay
+      // would exceed 150ms) -> give up.
+      expect(mockStore.acquire).toHaveBeenCalledTimes(2);
+    });
+
+    it('should ignore waitTimeout when the lock is acquired in time', async () => {
+      // Given
+      const key = 'test-key';
+      mockStore.acquire.mockResolvedValue(true);
+
+      // When
+      const lock = await service.acquire(key, { waitTimeout: 50 });
+
+      // Then
+      expect(lock).toBeInstanceOf(Lock);
+      expect(mockStore.acquire).toHaveBeenCalledTimes(1);
+    });
+
     it('should start auto-renewal when enabled', async () => {
       // Given
       const key = 'test-key';
