@@ -311,6 +311,55 @@ describe('RateLimitGuard', () => {
     });
   });
 
+  describe('double binding (idempotent consumption per request)', () => {
+    it('should consume the limit only once when the guard runs twice for the same request', async () => {
+      // Given - the same request passes through the guard twice
+      // (e.g. @RateLimit on both class and method, or @RateLimit + global APP_GUARD)
+      mockService.check.mockResolvedValue(successResult);
+
+      // When
+      const first = await guard.canActivate(mockContext);
+      const second = await guard.canActivate(mockContext);
+
+      // Then
+      expect(first).toBe(true);
+      expect(second).toBe(true);
+      expect(mockService.check).toHaveBeenCalledTimes(1);
+    });
+
+    it('should set response headers only once when the guard runs twice', async () => {
+      // Given
+      mockService.check.mockResolvedValue(successResult);
+
+      // When
+      await guard.canActivate(mockContext);
+      await guard.canActivate(mockContext);
+
+      // Then - headers (3 per pass) are written only for the first pass
+      expect(mockHttpAdapter.setHeader).toHaveBeenCalledTimes(3);
+    });
+
+    it('should consume the limit again for a different request', async () => {
+      // Given
+      mockService.check.mockResolvedValue(successResult);
+      const otherContext = {
+        getHandler: vi.fn(),
+        getClass: vi.fn(),
+        switchToHttp: vi.fn().mockReturnValue({
+          getRequest: () => ({ ip: '127.0.0.2', headers: {} }),
+          getResponse: () => ({}),
+        }),
+      } as unknown as MockedObject<ExecutionContext>;
+
+      // When
+      await guard.canActivate(mockContext);
+      await guard.canActivate(otherContext);
+
+      // Then
+      expect(mockService.check).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe('error factory', () => {
     it('should use decorator-level error factory', async () => {
       // Given

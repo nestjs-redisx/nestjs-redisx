@@ -7,19 +7,12 @@ description: 'Apply RateLimitGuard manually with @UseGuards, order it after Auth
 
 Use RateLimitGuard for fine-grained control.
 
-::: danger Do NOT double-bind the guard
+::: tip The guard is safe to bind more than once
 The `@RateLimit()` decorator **already binds `RateLimitGuard`** for you (it applies
-`UseGuards(RateLimitGuard)` internally). If you ALSO register the same guard globally via
-`{ provide: APP_GUARD, useClass: RateLimitGuard }`, NestJS does **not** deduplicate it —
-the guard runs **twice** on decorated routes and the limit is **consumed twice per request**
-(e.g. a `points: 10` limit effectively becomes 5).
-
-Pick **one** approach:
-
-- **Per-route:** Use `@RateLimit()` on each route. Do NOT register `APP_GUARD`.
-- **Global:** Register `RateLimitGuard` once via `APP_GUARD` and do NOT also add `@RateLimit()`
-  on routes you want limited (use `@RateLimit()` only where you need per-route overrides on
-  routes that are NOT otherwise covered — but be aware those routes will be double-counted).
+`UseGuards(RateLimitGuard)` internally). Binding it again — `@RateLimit()` on both the class
+and the method, or `@RateLimit()` together with a global `{ provide: APP_GUARD, useClass:
+RateLimitGuard }` — is safe: the guard **consumes the limit at most once per request**, so a
+`points: 10` limit stays 10 regardless of how many times the guard is bound on the route.
 :::
 
 ::: warning A globally-registered guard rate-limits EVERY endpoint by IP

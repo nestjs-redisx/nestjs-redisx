@@ -30,6 +30,19 @@ interface ITracingService {
 }
 
 /**
+ * Per-request marker that records the rate limit has already been consumed for
+ * the current request.
+ *
+ * The {@link RateLimit} decorator binds this guard via `UseGuards`. NestJS does
+ * not deduplicate the same guard across binding scopes, so a route decorated on
+ * both the class and the method — or a route decorated with `@RateLimit` while
+ * the guard is also registered globally as `APP_GUARD` — would otherwise run
+ * `canActivate` (and consume a point) more than once for a single request. The
+ * marker makes consumption idempotent within one request.
+ */
+const RATE_LIMIT_CONSUMED = Symbol('redisx.rateLimitConsumed');
+
+/**
  * Rate limit guard.
  * Enforces rate limiting based on @RateLimit() decorator configuration.
  */
@@ -51,12 +64,23 @@ export class RateLimitGuard implements CanActivate {
    * Checks rate limit and sets response headers.
    */
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // The limit must be consumed at most once per request even if the guard is
+    // bound more than once (class + method decorator, or decorator + global
+    // APP_GUARD). If a prior binding already consumed it, allow without
+    // re-consuming.
+    const request = context.switchToHttp().getRequest<Record<symbol, unknown>>();
+    if (request[RATE_LIMIT_CONSUMED]) {
+      return true;
+    }
+
     const options = this.getOptions(context);
 
     // Check skip condition
     if (await this.shouldSkip(context, options)) {
       return true;
     }
+
+    request[RATE_LIMIT_CONSUMED] = true;
 
     const key = await this.extractKey(context, options);
     const span = this.tracing?.startSpan('ratelimit.check', {
