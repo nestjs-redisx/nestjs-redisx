@@ -12,7 +12,7 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "build:core": "npm run build -w @nestjs-redisx/core",
-    "build:packages": "npm run build -w @nestjs-redisx/core -w @nestjs-redisx/cache -w @nestjs-redisx/locks -w @nestjs-redisx/rate-limit -w @nestjs-redisx/idempotency -w @nestjs-redisx/streams -w @nestjs-redisx/metrics -w @nestjs-redisx/tracing",
+    "build:packages": "npm run build -w @nestjs-redisx/core -w @nestjs-redisx/cache -w @nestjs-redisx/locks -w @nestjs-redisx/rate-limit -w @nestjs-redisx/idempotency -w @nestjs-redisx/streams -w @nestjs-redisx/metrics -w @nestjs-redisx/tracing -w @nestjs-redisx/testing",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
