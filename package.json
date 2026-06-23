@@ -12,6 +12,7 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "build:core": "npm run build -w @nestjs-redisx/core",
+    "build:packages": "npm run build -w @nestjs-redisx/core -w @nestjs-redisx/cache -w @nestjs-redisx/locks -w @nestjs-redisx/rate-limit -w @nestjs-redisx/idempotency -w @nestjs-redisx/streams -w @nestjs-redisx/metrics -w @nestjs-redisx/tracing",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
@@ -40,11 +41,11 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@nestjs/cli": "^10.0.0 || ^11.0.0",
-    "@nestjs/common": "^10.0.0 || ^11.0.0",
-    "@nestjs/core": "^10.0.0 || ^11.0.0",
-    "@nestjs/platform-express": "^10.0.0 || ^11.0.0",
-    "@nestjs/testing": "^10.0.0 || ^11.0.0",
+    "@nestjs/cli": "^9.0.0 || ^10.0.0 || ^11.0.0",
+    "@nestjs/common": "^9.0.0 || ^10.0.0 || ^11.0.0",
+    "@nestjs/core": "^9.0.0 || ^10.0.0 || ^11.0.0",
+    "@nestjs/platform-express": "^9.0.0 || ^10.0.0 || ^11.0.0",
+    "@nestjs/testing": "^9.0.0 || ^10.0.0 || ^11.0.0",
     "@testcontainers/redis": "^10.5.0",
     "@types/ioredis": "^5.0.0",
     "@types/node": "^20.11.0",

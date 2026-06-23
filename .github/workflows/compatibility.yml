@@ -58,7 +58,7 @@ jobs:
             fastify@^5.0.0
 
       - name: Build packages
-        run: npm run build
+        run: npm run build:packages
 
       - name: Run smoke tests
         id: smoke
@@ -140,7 +140,7 @@ jobs:
             @nestjs/platform-express@^9.0.0
 
       - name: Build packages
-        run: npm run build
+        run: npm run build:packages
 
       - name: Run smoke tests
         run: |
