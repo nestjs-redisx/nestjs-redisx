@@ -118,7 +118,7 @@ export class RateLimitPlugin implements IRedisXPlugin {
           const clientName = options.client ?? 'default';
           try {
             return await manager.getClient(clientName);
-          } catch (error) {
+          } catch {
             throw new Error(`RateLimitPlugin: Redis client "${clientName}" not found. ` + `Available clients are configured in RedisModule.forRoot({ clients: { ... } }). ` + `Either add a "${clientName}" client or remove the "client" option to use the default connection.`);
           }
         },

@@ -16,7 +16,7 @@ export default defineConfig({
   target: 'es2022',
   tsconfig: './tsconfig.json',
   external: ['@nestjs/common', '@nestjs/core', 'reflect-metadata', 'rxjs', 'ioredis', 'redis'],
-  onSuccess: async () => {
+  onSuccess: () => {
     // Post-build: wrap top-level requires of optional driver packages (ioredis, redis)
     // with lazy getters so they only load when first accessed.
     // This allows users who only install one driver to import @nestjs-redisx/core.
@@ -51,5 +51,9 @@ function __lazyRequire(pkg) {
     code = code.slice(0, firstNewline + 1) + lazyHelper + code.slice(firstNewline + 1);
 
     writeFileSync(distPath, code);
+
+    // tsup's onSuccess type requires a Promise return; the body is fully
+    // synchronous, so resolve immediately (no `async` → no unused await).
+    return Promise.resolve();
   },
 });
