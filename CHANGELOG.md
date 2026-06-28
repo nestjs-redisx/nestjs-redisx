@@ -4,6 +4,13 @@ All notable changes to NestJS RedisX are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-06-28
+
+### Added
+
+- `@nestjs-redisx/testing`: new package — an in-memory Redis driver for unit-testing without a running Redis. It runs the real `cache`, `locks`, `rate-limit`, `idempotency`, and `streams` plugins — including their Lua scripts and stream consumer groups (PEL, `XACK` / `XCLAIM` / `XPENDING`) — entirely in memory. Exposes `RedisTestingModule` (a `RedisModule` wrapper that forces the `'memory'` driver), `registerMemoryDriver()`, and `MemoryRedisAdapter`. Install it as a devDependency.
+- `core`: a driver registry (`registerDriver()`) lets first-party packages plug in an alternative `IRedisDriver` implementation (used by `@nestjs-redisx/testing`) without modifying core. Built-in `ioredis` / `node-redis` types cannot be overridden; `DriverType` is widened to accept registered custom type strings.
+
 ## [1.4.0] - 2026-06-23
 
 ### Added

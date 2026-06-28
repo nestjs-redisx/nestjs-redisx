@@ -1,6 +1,6 @@
 {
   "name": "@nestjs-redisx/testing",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Testing utilities for NestJS RedisX: an in-memory Redis driver for unit-testing without a running Redis",
   "author": "NestJS RedisX Team",
   "license": "MIT",
@@ -54,11 +54,11 @@
     "rxjs": "^7.8.0"
   },
   "devDependencies": {
-    "@nestjs-redisx/cache": "^1.4.0",
-    "@nestjs-redisx/idempotency": "^1.4.0",
-    "@nestjs-redisx/locks": "^1.4.0",
-    "@nestjs-redisx/rate-limit": "^1.4.0",
-    "@nestjs-redisx/streams": "^1.4.0",
+    "@nestjs-redisx/cache": "^1.5.0",
+    "@nestjs-redisx/idempotency": "^1.5.0",
+    "@nestjs-redisx/locks": "^1.5.0",
+    "@nestjs-redisx/rate-limit": "^1.5.0",
+    "@nestjs-redisx/streams": "^1.5.0",
     "@nestjs/testing": "^9.0.0 || ^10.0.0 || ^11.0.0",
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
