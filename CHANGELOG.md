@@ -4,6 +4,12 @@ All notable changes to NestJS RedisX are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-07-19
+
+### Fixed
+
+- `cache`: L1 (in-memory) entries expired ~60 ms after being written. `CacheService` passes the L1 TTL in **seconds** (per the public `l1.ttl` config), but `L1MemoryStoreAdapter` treated the value as **milliseconds** when computing `expiresAt`, so a `@Cached` value effectively lived a few milliseconds and almost every read was an L1 miss (falling through to L2). The L1 store now consistently interprets TTL in seconds, matching the config, the L2 store, and the docs. Fixes [#10](https://github.com/nestjs-redisx/nestjs-redisx/issues/10).
+
 ## [1.5.0] - 2026-06-28
 
 ### Added
