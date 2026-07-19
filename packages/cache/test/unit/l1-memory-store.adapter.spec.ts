@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { L1MemoryStoreAdapter } from '../../src/cache/infrastructure/adapters/l1-memory-store.adapter';
 
 describe('L1MemoryStoreAdapter', () => {
   let store: L1MemoryStoreAdapter;
 
   beforeEach(() => {
-    store = new L1MemoryStoreAdapter({ max: 100, ttl: 60000 });
+    store = new L1MemoryStoreAdapter({ l1: { maxSize: 100, ttl: 60 } });
   });
 
   describe('get/set', () => {
@@ -44,6 +44,72 @@ describe('L1MemoryStoreAdapter', () => {
 
       // Then
       expect(result).toBe('new-value');
+    });
+  });
+
+  describe('TTL expiration (seconds)', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('should treat explicit ttl as seconds, not milliseconds', async () => {
+      // Given — regression for issue #10: entry used to expire ~60ms after write
+      vi.useFakeTimers();
+      await store.set('key', 'value', 60);
+
+      // When — well past 60ms but within the 60s TTL
+      vi.advanceTimersByTime(1_000);
+
+      // Then — still cached (previously this was already expired)
+      expect(await store.get('key')).toBe('value');
+    });
+
+    it('should keep entry until its explicit ttl elapses', async () => {
+      // Given
+      vi.useFakeTimers();
+      await store.set('key', 'value', 60);
+
+      // When — just before expiry
+      vi.advanceTimersByTime(59_000);
+      const beforeExpiry = await store.get('key');
+
+      // When — just after expiry
+      vi.advanceTimersByTime(2_000);
+      const afterExpiry = await store.get('key');
+
+      // Then
+      expect(beforeExpiry).toBe('value');
+      expect(afterExpiry).toBeNull();
+    });
+
+    it('should apply configured default ttl (seconds) when ttl omitted', async () => {
+      // Given — default l1.ttl is 60 seconds
+      vi.useFakeTimers();
+      await store.set('key', 'value');
+
+      // When
+      vi.advanceTimersByTime(59_000);
+      const beforeExpiry = await store.get('key');
+
+      vi.advanceTimersByTime(2_000);
+      const afterExpiry = await store.get('key');
+
+      // Then
+      expect(beforeExpiry).toBe('value');
+      expect(afterExpiry).toBeNull();
+    });
+
+    it('should respect explicit ttl on overwrite of an existing key', async () => {
+      // Given
+      vi.useFakeTimers();
+      await store.set('key', 'old', 60);
+
+      // When — overwrite resets expiry with the new (seconds) ttl
+      await store.set('key', 'new', 60);
+      vi.advanceTimersByTime(1_000);
+
+      // Then
+      expect(await store.get('key')).toBe('new');
     });
   });
 

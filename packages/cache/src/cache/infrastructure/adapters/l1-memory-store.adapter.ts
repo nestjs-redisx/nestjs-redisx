@@ -25,6 +25,7 @@ export class L1MemoryStoreAdapter implements IL1CacheStore {
   private head: ICacheNode<unknown> | null = null;
   private tail: ICacheNode<unknown> | null = null;
   private readonly maxSize: number;
+  /** Default TTL in seconds (converted to ms only when computing expiresAt). */
   private readonly defaultTtl: number;
   private readonly evictionPolicy: 'lru' | 'lfu';
   private hits = 0;
@@ -35,7 +36,7 @@ export class L1MemoryStoreAdapter implements IL1CacheStore {
     private readonly options: ICachePluginOptions,
   ) {
     this.maxSize = options.l1?.maxSize ?? 1000;
-    this.defaultTtl = (options.l1?.ttl ?? 60) * 1000; // Convert to ms
+    this.defaultTtl = options.l1?.ttl ?? 60; // Seconds (matches public l1.ttl config)
     this.evictionPolicy = options.l1?.evictionPolicy ?? 'lru';
   }
 
@@ -73,7 +74,7 @@ export class L1MemoryStoreAdapter implements IL1CacheStore {
     if (existingNode) {
       // Update existing node
       existingNode.entry = entry;
-      existingNode.expiresAt = Date.now() + (ttl ?? this.defaultTtl);
+      existingNode.expiresAt = Date.now() + (ttl ?? this.defaultTtl) * 1000;
 
       if (this.evictionPolicy === 'lru') {
         this.moveToFront(existingNode);
@@ -92,7 +93,7 @@ export class L1MemoryStoreAdapter implements IL1CacheStore {
         entry,
         prev: null,
         next: this.head,
-        expiresAt: Date.now() + (ttl ?? this.defaultTtl),
+        expiresAt: Date.now() + (ttl ?? this.defaultTtl) * 1000,
         frequency: 1,
       };
 

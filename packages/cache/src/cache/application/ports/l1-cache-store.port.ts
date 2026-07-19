@@ -18,7 +18,7 @@ export interface IL1CacheStore {
    *
    * @param key - Cache key
    * @param entry - CacheEntry to store
-   * @param ttl - TTL in milliseconds (optional, uses default if not provided)
+   * @param ttl - TTL in seconds (optional, uses default if not provided)
    */
   set<T>(key: string, entry: CacheEntry<T>, ttl?: number): Promise<void>;
 
