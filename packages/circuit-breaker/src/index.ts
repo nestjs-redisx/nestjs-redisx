@@ -1,6 +1,9 @@
 // Domain — types & contract
 export type { CircuitState, ICircuitBreakerConfig, ICircuitSnapshot, ICircuitBreakerState } from './circuit-breaker/domain/circuit-breaker-state.interface';
 
+// Domain — state machine
+export { CircuitBreakerState } from './circuit-breaker/domain/circuit-breaker-state';
+
 // Errors
 export { InvalidCircuitBreakerConfigError } from './circuit-breaker/shared/errors';
 
