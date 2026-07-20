@@ -105,6 +105,113 @@ describe('CircuitBreaker on the in-memory driver (no Redis)', () => {
     expect((await cb.getState(key)).state).toBe('open');
   });
 
+  it('caps concurrent half-open probes at halfOpenMaxCalls (over Lua)', async () => {
+    // Given a breaker that allows a single probe and needs one success to close
+    app = await Test.createTestingModule({
+      imports: [
+        RedisModule.forRoot({
+          clients: { type: 'single', host: 'x', port: 1 },
+          global: { driver: MEMORY_DRIVER_TYPE },
+          plugins: [new CircuitBreakerPlugin({ failureThreshold: 1, windowMs: 10000, openDurationMs: OPEN_MS, halfOpenMaxCalls: 1, successThreshold: 1 })],
+        }),
+      ],
+    }).compile();
+    await app.init();
+    const cb = app.get<ICircuitBreakerService>(CIRCUIT_BREAKER_SERVICE);
+    const key = 'probe-cap';
+
+    await expect(cb.execute(key, () => Promise.reject(new Error('down')))).rejects.toThrow();
+    expect((await cb.getState(key)).state).toBe('open');
+    await wait(OPEN_MS + 40);
+
+    // A deferred probe holds the single slot open while two more calls race in.
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const probe = cb.execute(key, async () => {
+      await gate;
+      return 'probe-ok';
+    });
+    // Let the probe's canRequest commit and occupy the slot.
+    await wait(10);
+
+    // The extra calls are rejected while the probe is in-flight.
+    await expect(cb.execute(key, () => Promise.resolve('nope'))).rejects.toBeInstanceOf(CircuitBreakerOpenError);
+    await expect(cb.execute(key, () => Promise.resolve('nope'))).rejects.toBeInstanceOf(CircuitBreakerOpenError);
+
+    // Release the probe -> success closes the breaker.
+    release();
+    await expect(probe).resolves.toBe('probe-ok');
+    expect((await cb.getState(key)).state).toBe('closed');
+  });
+
+  it('requires successThreshold successful probes to close (over Lua)', async () => {
+    // Given a breaker needing two successful probes
+    app = await Test.createTestingModule({
+      imports: [
+        RedisModule.forRoot({
+          clients: { type: 'single', host: 'x', port: 1 },
+          global: { driver: MEMORY_DRIVER_TYPE },
+          plugins: [new CircuitBreakerPlugin({ failureThreshold: 1, windowMs: 10000, openDurationMs: OPEN_MS, halfOpenMaxCalls: 2, successThreshold: 2 })],
+        }),
+      ],
+    }).compile();
+    await app.init();
+    const cb = app.get<ICircuitBreakerService>(CIRCUIT_BREAKER_SERVICE);
+    const key = 'two-probes';
+
+    await expect(cb.execute(key, () => Promise.reject(new Error('down')))).rejects.toThrow();
+    await wait(OPEN_MS + 40);
+
+    // First probe succeeds -> still half-open (1/2)
+    await expect(cb.execute(key, () => Promise.resolve('ok'))).resolves.toBe('ok');
+    expect((await cb.getState(key)).state).toBe('half-open');
+    expect((await cb.getState(key)).halfOpenSuccesses).toBe(1);
+
+    // Second probe succeeds -> closes
+    await expect(cb.execute(key, () => Promise.resolve('ok'))).resolves.toBe('ok');
+    expect((await cb.getState(key)).state).toBe('closed');
+  });
+
+  it('supports manual recordFailure/recordSuccess/getState (over Lua)', async () => {
+    const cb = await boot();
+    const key = 'manual';
+
+    // Two manual failures trip the breaker (failureThreshold = 2)
+    expect((await cb.recordFailure(key)).state).toBe('closed');
+    expect((await cb.recordFailure(key)).state).toBe('open');
+    expect((await cb.getState(key)).state).toBe('open');
+
+    // After cooldown, a permitted call recovers via success
+    await wait(OPEN_MS + 40);
+    await expect(cb.execute(key, () => Promise.resolve('ok'))).resolves.toBe('ok');
+    expect((await cb.getState(key)).state).toBe('closed');
+  });
+
+  it('does not trip when failures are spread beyond the window (over Lua)', async () => {
+    // Given a short window so the first failure ages out before the second
+    app = await Test.createTestingModule({
+      imports: [
+        RedisModule.forRoot({
+          clients: { type: 'single', host: 'x', port: 1 },
+          global: { driver: MEMORY_DRIVER_TYPE },
+          plugins: [new CircuitBreakerPlugin({ failureThreshold: 2, windowMs: 80, openDurationMs: OPEN_MS, halfOpenMaxCalls: 1, successThreshold: 1 })],
+        }),
+      ],
+    }).compile();
+    await app.init();
+    const cb = app.get<ICircuitBreakerService>(CIRCUIT_BREAKER_SERVICE);
+    const key = 'sliding';
+
+    await expect(cb.execute(key, () => Promise.reject(new Error('down')))).rejects.toThrow();
+    await wait(120); // first failure ages out of the 80ms window
+    await expect(cb.execute(key, () => Promise.reject(new Error('down')))).rejects.toThrow();
+
+    // Only one failure is ever in-window -> still CLOSED
+    expect((await cb.getState(key)).state).toBe('closed');
+  });
+
   it('reset() returns a tripped breaker to CLOSED', async () => {
     // Given a tripped breaker
     const cb = await boot();

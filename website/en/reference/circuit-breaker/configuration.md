@@ -43,4 +43,4 @@ Load option values from `ConfigService` with `CircuitBreakerPlugin.registerAsync
 
 ## Per-call Overrides
 
-Every knob can be overridden per method (via the decorator) or per call (via `execute`), e.g. `@WithCircuitBreaker({ key: 'x', failureThreshold: 10 })`. See the [decorator](./decorator) and [service](./service) pages.
+Every knob can be overridden per method (via the decorator) or per call (via `execute`), e.g. `@WithCircuitBreaker({ key: 'x', failureThreshold: 10 })`. See the [decorator](./decorator) and [service](./service-api) pages.

@@ -15,7 +15,7 @@ import { RedisCircuitBreakerStoreAdapter } from './circuit-breaker/infrastructur
 import { CIRCUIT_BREAKER_PLUGIN_OPTIONS, CIRCUIT_BREAKER_REDIS_DRIVER, CIRCUIT_BREAKER_SERVICE, CIRCUIT_BREAKER_STORE } from './circuit-breaker/shared/constants';
 import { ICircuitBreakerPluginOptions } from './circuit-breaker/shared/types';
 
-const DEFAULT_CIRCUIT_BREAKER_CONFIG: Required<Omit<ICircuitBreakerPluginOptions, 'isGlobal' | 'client' | 'errorFactory' | 'skip'>> = {
+const DEFAULT_CIRCUIT_BREAKER_CONFIG: Required<Omit<ICircuitBreakerPluginOptions, 'isGlobal' | 'client' | 'errorFactory'>> = {
   keyPrefix: 'cb:',
   failureThreshold: 5,
   windowMs: 10000,
@@ -75,7 +75,6 @@ export class CircuitBreakerPlugin implements IRedisXPlugin {
       successThreshold: options.successThreshold ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.successThreshold,
       errorPolicy: options.errorPolicy ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.errorPolicy,
       errorFactory: options.errorFactory,
-      skip: options.skip,
     };
   }
 

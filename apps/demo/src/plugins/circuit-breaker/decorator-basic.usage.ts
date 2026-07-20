@@ -30,4 +30,13 @@ export class PaymentsService {
   async warmCache(id: string): Promise<User | null> {
     return this.userCache.get(id);
   }
+
+  // Bypass the breaker entirely for trusted/internal calls via skip().
+  @WithCircuitBreaker({
+    key: 'users-api',
+    skip: (id: string, internal?: boolean) => internal === true,
+  })
+  async getUserMaybeInternal(id: string, internal?: boolean): Promise<User> {
+    return this.usersApi.getUser(id);
+  }
 }

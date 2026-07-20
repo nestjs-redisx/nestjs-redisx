@@ -4,6 +4,13 @@ All notable changes to NestJS RedisX are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-07-20
+
+### Added
+
+- `@nestjs-redisx/circuit-breaker`: new package — a distributed circuit breaker (`closed` / `open` / `half-open`) backed by Redis. At its core is a pure, time-injected finite state machine (`CircuitBreakerState`) that takes an explicit `now` (no hidden `Date.now()`), so the policy is deterministic and fully unit-testable; the distributed layer replicates it 1:1 with atomic Lua scripts. Provides `CircuitBreakerPlugin`, `CIRCUIT_BREAKER_SERVICE` (`execute` with fallback, manual `recordSuccess` / `recordFailure`, `getState`, `reset`), and a proxy-based `@WithCircuitBreaker` decorator that works on any Injectable method (key interpolation, per-method overrides, `fallback`, `onOpen`, and `skip`). Honors `errorPolicy` (`fail-open` / `fail-closed`) when the state store is unavailable, and works on Redis Cluster (state keys share a hash tag). Also runs on the `@nestjs-redisx/testing` in-memory driver.
+- `core`: added `CIRCUIT_BREAKER_OPEN`, `CIRCUIT_BREAKER_STORE_ERROR`, and `CIRCUIT_BREAKER_CONFIG_INVALID` to `ErrorCode`.
+
 ## [1.5.1] - 2026-07-19
 
 ### Fixed

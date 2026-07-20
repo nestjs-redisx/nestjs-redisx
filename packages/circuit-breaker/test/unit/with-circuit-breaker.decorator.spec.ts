@@ -110,6 +110,62 @@ describe('WithCircuitBreaker decorator', () => {
     expect(result).toBeUndefined();
   });
 
+  it('should bypass the breaker (not call execute) when skip() returns true', async () => {
+    // Given
+    const fake = passthroughService();
+    registerCircuitBreakerServiceGetter(() => fake);
+
+    class Api {
+      @WithCircuitBreaker({ key: 'api', skip: (req: { internal: boolean }) => req.internal })
+      async call(req: { internal: boolean }): Promise<string> {
+        return 'ran';
+      }
+    }
+
+    // When — skip condition met
+    const result = await new Api().call({ internal: true });
+
+    // Then — original ran, breaker never consulted
+    expect(result).toBe('ran');
+    expect(fake.execute).not.toHaveBeenCalled();
+  });
+
+  it('should apply the breaker when skip() returns false', async () => {
+    // Given
+    const fake = passthroughService();
+    registerCircuitBreakerServiceGetter(() => fake);
+
+    class Api {
+      @WithCircuitBreaker({ key: 'api', skip: (req: { internal: boolean }) => req.internal })
+      async call(req: { internal: boolean }): Promise<string> {
+        return 'ran';
+      }
+    }
+
+    // When — skip condition not met
+    await new Api().call({ internal: false });
+
+    // Then — breaker consulted
+    expect(fake.execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('should support an async skip predicate', async () => {
+    // Given
+    const fake = passthroughService();
+    registerCircuitBreakerServiceGetter(() => fake);
+
+    class Api {
+      @WithCircuitBreaker({ key: 'api', skip: () => Promise.resolve(true) })
+      async call(): Promise<string> {
+        return 'ran';
+      }
+    }
+
+    // When / Then
+    await expect(new Api().call()).resolves.toBe('ran');
+    expect(fake.execute).not.toHaveBeenCalled();
+  });
+
   it('should execute the method directly when no service is available', async () => {
     // Given — getter returns null (service not ready)
     registerCircuitBreakerServiceGetter(() => null as unknown as FakeService);

@@ -63,9 +63,12 @@ stateDiagram-v2
 
 | Topic | Description |
 |-------|-------------|
+| [Core Concepts](./concepts) | States and when to use a breaker |
 | [Configuration](./configuration) | Options and defaults |
 | [@WithCircuitBreaker Decorator](./decorator) | Method-level breaking |
-| [Service API](./service) | Programmatic `execute` / manual recording |
+| [Service API](./service-api) | Programmatic `execute` / manual recording |
 | [Algorithm](./algorithm) | States, window, cooldown, probes |
+| [Monitoring](./monitoring) | Observing circuit state |
 | [Recipes](./recipes) | Fallbacks and patterns |
+| [Testing](./testing) | Testing breaker-guarded code |
 | [Troubleshooting](./troubleshooting) | Debugging common issues |

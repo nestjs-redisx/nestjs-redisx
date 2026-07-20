@@ -85,6 +85,18 @@ export interface IWithCircuitBreakerOptions {
    * - 'skip': skip execution and resolve to undefined
    */
   onOpen?: 'throw' | 'skip';
+
+  /**
+   * Bypass the breaker for certain calls. Evaluated with the method arguments;
+   * if it returns true, the original method runs directly without the breaker
+   * (no state is read or recorded).
+   *
+   * @example
+   * ```typescript
+   * @WithCircuitBreaker({ key: 'api', skip: (req) => req.internal === true })
+   * ```
+   */
+  skip?: (...args: unknown[]) => boolean | Promise<boolean>;
 }
 
 /**
@@ -122,6 +134,11 @@ export function WithCircuitBreaker(options: IWithCircuitBreakerOptions): MethodD
       const service = globalCircuitBreakerServiceGetter();
       if (!service) {
         logger.warn('@WithCircuitBreaker: service getter returned null, executing method without breaker');
+        return originalMethod.apply(this, args);
+      }
+
+      // Bypass the breaker entirely when skip() opts out for these arguments.
+      if (options.skip && (await options.skip(...args))) {
         return originalMethod.apply(this, args);
       }
 

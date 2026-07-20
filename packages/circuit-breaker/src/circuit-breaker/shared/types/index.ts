@@ -64,12 +64,6 @@ export interface ICircuitBreakerPluginOptions {
    * Custom error factory used when the breaker rejects a call (OPEN).
    */
   errorFactory?: (key: string, snapshot: ICircuitSnapshot) => Error;
-
-  /**
-   * Skip the breaker for certain calls (evaluated with the method arguments).
-   * If it returns true, the guarded function runs without the breaker.
-   */
-  skip?: (...args: unknown[]) => boolean | Promise<boolean>;
 }
 
 /**
