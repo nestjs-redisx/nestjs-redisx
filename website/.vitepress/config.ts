@@ -73,6 +73,7 @@ export default withMermaid(
         core: 'Core', cache: 'Cache', locks: 'Locks', 'rate-limit': 'Rate Limit',
         idempotency: 'Idempotency', streams: 'Streams', metrics: 'Metrics',
         tracing: 'Tracing', testing: 'Testing', plugins: 'Plugins',
+        'circuit-breaker': 'Circuit Breaker',
       };
       const parts = slug.split('/').filter(Boolean);
       if (parts.length >= 2) {
@@ -354,6 +355,19 @@ export default withMermaid(
               { text: 'Testing', link: '/en/reference/rate-limit/testing' },
               { text: 'Recipes', link: '/en/reference/rate-limit/recipes' },
               { text: 'Troubleshooting', link: '/en/reference/rate-limit/troubleshooting' },
+            ],
+          },
+          {
+            text: 'Circuit Breaker',
+            collapsed: true,
+            items: [
+              { text: 'Overview', link: '/en/reference/circuit-breaker/' },
+              { text: 'Configuration', link: '/en/reference/circuit-breaker/configuration' },
+              { text: '@WithCircuitBreaker Decorator', link: '/en/reference/circuit-breaker/decorator' },
+              { text: 'Service API', link: '/en/reference/circuit-breaker/service' },
+              { text: 'Algorithm', link: '/en/reference/circuit-breaker/algorithm' },
+              { text: 'Recipes', link: '/en/reference/circuit-breaker/recipes' },
+              { text: 'Troubleshooting', link: '/en/reference/circuit-breaker/troubleshooting' },
             ],
           },
           {

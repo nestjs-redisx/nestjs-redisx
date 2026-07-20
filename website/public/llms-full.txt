@@ -664,6 +664,16 @@ Key chars are restricted to `[A-Za-z0-9-_:.]` (else `CacheKeyError`); tags are l
 
 The `@RateLimit` decorator binds `RateLimitGuard`; the guard consumes at most one point per request even if bound more than once.
 
+### Circuit Breaker — `CIRCUIT_BREAKER_SERVICE` (`ICircuitBreakerService`)
+
+- `execute<T>(key: string, fn: () => Promise<T>, options?: ICircuitBreakerExecuteOptions<T>): Promise<T>` — run `fn` guarded by the breaker; records success on resolve and failure on throw. While OPEN, returns `options.fallback()` if provided, otherwise throws `options.errorFactory`/plugin `errorFactory` or `CircuitBreakerOpenError`.
+- `recordSuccess(key: string, options?: ICircuitBreakerOptions): Promise<ICircuitSnapshot>` — manually record a success (e.g. from a health probe); returns the resulting snapshot.
+- `recordFailure(key: string, options?: ICircuitBreakerOptions): Promise<ICircuitSnapshot>` — manually record a failure; returns the resulting snapshot.
+- `getState(key: string, options?: ICircuitBreakerOptions): Promise<ICircuitSnapshot>` — read the committed state (closed/open/half-open) without mutating it.
+- `reset(key: string): Promise<void>` — return the circuit to CLOSED and clear all state.
+
+States: CLOSED counts failures in a rolling `windowMs`; at `failureThreshold` it trips to OPEN for `openDurationMs`; the next request then flips to HALF_OPEN, allowing up to `halfOpenMaxCalls` probes, and `successThreshold` successes close it (any probe failure re-opens). The `@WithCircuitBreaker` decorator is proxy-based and works on any Injectable method. `errorPolicy` ('fail-open' | 'fail-closed', default 'fail-closed') governs behavior when the state store is unavailable.
+
 ### Idempotency — `IDEMPOTENCY_SERVICE` (`IIdempotencyService`)
 
 - `checkAndLock(key: string, fingerprint: string, options?: IIdempotencyOptions): Promise<IIdempotencyCheckResult>` — atomically reserve a new key or report processing/completed/failed/fingerprint_mismatch.
