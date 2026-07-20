@@ -241,6 +241,15 @@ export enum ErrorCode {
   /** Stream read failed */
   STREAM_READ_FAILED = 'STREAM_READ_FAILED',
 
+  /** Circuit breaker is open; the call was rejected without executing */
+  CIRCUIT_BREAKER_OPEN = 'CIRCUIT_BREAKER_OPEN',
+
+  /** Circuit breaker state store operation failed */
+  CIRCUIT_BREAKER_STORE_ERROR = 'CIRCUIT_BREAKER_STORE_ERROR',
+
+  /** Circuit breaker configuration is invalid */
+  CIRCUIT_BREAKER_CONFIG_INVALID = 'CIRCUIT_BREAKER_CONFIG_INVALID',
+
   /** Plugin is invalid */
   PLUGIN_INVALID = 'PLUGIN_INVALID',
 

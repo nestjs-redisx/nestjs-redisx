@@ -25,6 +25,11 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // Resolve sibling workspace packages to their sources so the core driver
+      // registry is a single shared instance (the memory driver registered by
+      // @nestjs-redisx/testing must be visible to the app's RedisModule).
+      '@nestjs-redisx/core': path.resolve(__dirname, '../core/src'),
+      '@nestjs-redisx/testing': path.resolve(__dirname, '../testing/src'),
     },
   },
 });
