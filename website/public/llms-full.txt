@@ -1,6 +1,6 @@
 # NestJS RedisX
 
-> Modular Redis toolkit for NestJS with plugin architecture. Provides two-tier caching (L1 memory + L2 Redis), distributed locks, rate limiting, idempotency, Redis Streams, Prometheus metrics, and OpenTelemetry tracing. Supports both ioredis and node-redis drivers. TypeScript-first, zero external dependencies per plugin.
+> Modular Redis toolkit for NestJS with plugin architecture. Provides two-tier caching (L1 memory + L2 Redis), distributed locks, rate limiting, a distributed circuit breaker, idempotency, Redis Streams, Prometheus metrics, and OpenTelemetry tracing. Supports both ioredis and node-redis drivers. TypeScript-first, zero external dependencies per plugin.
 
 ## Installation
 
@@ -22,6 +22,7 @@ Install only the plugins you need:
 npm install @nestjs-redisx/cache        # Two-tier caching
 npm install @nestjs-redisx/locks        # Distributed locks
 npm install @nestjs-redisx/rate-limit   # Rate limiting
+npm install @nestjs-redisx/circuit-breaker # Distributed circuit breaker
 npm install @nestjs-redisx/idempotency  # Request deduplication
 npm install @nestjs-redisx/streams      # Redis Streams
 npm install @nestjs-redisx/metrics      # Prometheus metrics
@@ -297,7 +298,7 @@ async updateUser(id: string, data: UpdateUserDto): Promise<User> {
 1. Check L1 (memory) → hit returns in <1ms
 2. Check L2 (Redis) → hit backfills L1, returns in <5ms
 3. Miss → execute method, store in L2 + L1, return result
-4. If stampede protection enabled: only one request regenerates, others wait
+4. If stampede protection enabled: only one request regenerates per cluster — concurrent local requests share the in-flight promise, and other instances wait for the distributed lock and reuse the cached value
 5. If SWR enabled: serve stale immediately, refresh in background
 
 ## Locks Plugin
@@ -426,6 +427,76 @@ Rate limit responses include standard headers: `X-RateLimit-Limit`, `X-RateLimit
 Fixed Window: Simple counter per time window. Cheap but allows burst at window boundaries.
 Sliding Window: Rolling window that smooths out bursts. Best for most APIs.
 Token Bucket: Allows controlled bursts up to bucket capacity. Best for bursty workloads.
+
+## Circuit Breaker Plugin
+
+Distributed circuit breaker (closed / open / half-open) shared across all application instances via Redis. Fails fast while a dependency is down, probes it during recovery, and supports per-call fallbacks. All state transitions run as atomic Lua scripts; the state keys share a hash tag, so it is Redis Cluster safe.
+
+### CircuitBreakerPlugin Configuration
+
+```typescript
+new CircuitBreakerPlugin({
+  failureThreshold: 5,        // failures within windowMs that trip CLOSED -> OPEN
+  windowMs: 10000,            // rolling failure window (ms)
+  openDurationMs: 30000,      // cooldown before probing (ms)
+  halfOpenMaxCalls: 1,        // concurrent probes allowed while HALF_OPEN
+  successThreshold: 1,        // successful probes required to close
+  probeTimeoutMs: 30000,      // reclaim a probe slot if its outcome is never recorded (default: openDurationMs)
+  keyPrefix: 'cb:',
+  errorPolicy: 'fail-closed', // 'fail-open' runs the call when the STATE STORE is unavailable
+})
+```
+
+All numeric knobs are validated (integers >= 1; successThreshold <= halfOpenMaxCalls) — an invalid config throws InvalidCircuitBreakerConfigError at bootstrap and on per-call overrides.
+
+### @WithCircuitBreaker Decorator
+
+Proxy-based — works on any @Injectable() method, not just controllers.
+
+```typescript
+import { WithCircuitBreaker } from '@nestjs-redisx/circuit-breaker';
+
+@Injectable()
+export class PaymentsService {
+  @WithCircuitBreaker({ key: 'stripe', failureThreshold: 5, openDurationMs: 30000 })
+  async charge(dto: ChargeDto) { return this.stripe.charge(dto); }
+
+  // Key interpolation from arguments ({0}, {0.id}) + fallback while OPEN
+  @WithCircuitBreaker({ key: 'users-api:{0}', fallback: (id) => ({ id, cached: true }) })
+  async getUser(id: string) { return this.api.getUser(id); }
+
+  // Resolve to undefined instead of throwing while OPEN
+  @WithCircuitBreaker({ key: 'analytics', onOpen: 'skip' })
+  async track(event: AnalyticsEvent) { /* ... */ }
+
+  // Bypass the breaker entirely for trusted calls (no state read or recorded)
+  @WithCircuitBreaker({ key: 'api', skip: (req) => req.internal === true })
+  async call(req: ApiRequest) { /* ... */ }
+}
+```
+
+### Service API
+
+```typescript
+import { CIRCUIT_BREAKER_SERVICE, ICircuitBreakerService } from '@nestjs-redisx/circuit-breaker';
+
+const user = await breaker.execute('users-api', () => api.getUser(id), {
+  fallback: () => cachedUser, // served instead of throwing while OPEN
+});
+
+await breaker.recordSuccess('users-api'); // manual recording (e.g. from a health probe)
+await breaker.recordFailure('users-api');
+const { state, failuresInWindow } = await breaker.getState('users-api'); // non-mutating
+await breaker.reset('users-api'); // force back to CLOSED
+```
+
+### States
+
+CLOSED: calls run; failures are counted over a rolling `windowMs`; reaching `failureThreshold` trips to OPEN.
+OPEN: calls are rejected immediately (CircuitBreakerOpenError or the fallback); after `openDurationMs` the next request probes.
+HALF_OPEN: up to `halfOpenMaxCalls` concurrent probes; `successThreshold` successes close the breaker, any probe failure re-opens it. A probe left unresolved longer than `probeTimeoutMs` loses its slot automatically (crash-safe recovery).
+
+`errorPolicy` governs STATE STORE failures only: 'fail-open' runs the guarded call anyway, 'fail-closed' (default) throws CircuitBreakerStoreError. The manual API (recordSuccess/recordFailure/getState/reset) is always strict. The pure state machine (`CircuitBreakerState`) is exported for hermetic unit tests — every time-dependent method takes an explicit `now`.
 
 ## Idempotency Plugin
 
@@ -573,7 +644,7 @@ Each Redis span includes: `db.system: "redis"`, `db.operation`, `db.redis.key`, 
 
 ## Testing Utilities
 
-`@nestjs-redisx/testing` provides an in-memory Redis driver so you can unit-test code that uses the cache, locks, rate-limit, idempotency, and streams plugins **without a running Redis**. The plugins run their real production code — including their Lua scripts and stream consumer groups — against an in-memory keyspace. Install it as a devDependency: `npm install -D @nestjs-redisx/testing`.
+`@nestjs-redisx/testing` provides an in-memory Redis driver so you can unit-test code that uses the cache, locks, rate-limit, circuit-breaker, idempotency, and streams plugins **without a running Redis**. The plugins run their real production code — including their Lua scripts and stream consumer groups — against an in-memory keyspace. Install it as a devDependency: `npm install -D @nestjs-redisx/testing`.
 
 ### RedisTestingModule (recommended)
 
@@ -817,6 +888,8 @@ export class JobWorker {
 | Cron job on multiple instances | Locks |
 | API abuse protection | Rate Limit |
 | Login brute force | Rate Limit |
+| Flaky third-party API | Circuit Breaker |
+| Payment gateway outages | Circuit Breaker + fallback |
 | Background job processing | Streams |
 | Event-driven architecture | Streams |
 | Production monitoring | Metrics |
@@ -824,10 +897,10 @@ export class JobWorker {
 
 ## Key Architecture Decisions
 
-- **Proxy-based decorators**: @Cached, @WithLock work on any @Injectable() method, not just controllers. NestJS Interceptors only work on controller methods, so RedisX uses immediate method wrapping with lazy service injection.
+- **Proxy-based decorators**: @Cached, @WithLock, @WithCircuitBreaker work on any @Injectable() method, not just controllers. NestJS Interceptors only work on controller methods, so RedisX uses immediate method wrapping with lazy service injection.
 - **Plugin isolation**: Each plugin is a self-contained NestJS module. Import only what you need.
 - **Driver abstraction**: Both ioredis and node-redis supported through adapter pattern. Switch without code changes.
-- **Atomic operations**: Rate limiting, locks, and idempotency use Lua scripts for atomicity.
+- **Atomic operations**: Rate limiting, locks, idempotency, and the circuit breaker use Lua scripts for atomicity.
 - **No external dependencies**: Each plugin has zero npm dependencies beyond NestJS and the Redis driver.
 - **Global module**: RedisModule is global — import once in AppModule, inject anywhere.
 - **Composition over inheritance**: No base classes required. Decorators and services compose freely.
