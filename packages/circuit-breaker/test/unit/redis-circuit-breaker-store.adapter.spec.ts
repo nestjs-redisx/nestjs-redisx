@@ -196,6 +196,80 @@ describe('RedisCircuitBreakerStoreAdapter', () => {
     });
   });
 
+  describe('defensive parsing & error variants', () => {
+    beforeEach(async () => {
+      await adapter.onModuleInit();
+    });
+
+    it('canRequest should tolerate an empty script result (all fields default)', async () => {
+      // Given — a malformed/empty reply
+      driver.evalsha.mockResolvedValue([]);
+
+      // When
+      const decision = await adapter.canRequest('cb:x', CONFIG);
+
+      // Then — denied, closed snapshot with zeros
+      expect(decision.allowed).toBe(false);
+      expect(decision.snapshot).toEqual({ state: 'closed', failuresInWindow: 0, halfOpenSuccesses: 0, halfOpenInFlight: 0 });
+    });
+
+    it('recordSuccess should tolerate a short script result', async () => {
+      // Given — only the state code is present
+      driver.evalsha.mockResolvedValue([2]);
+
+      // When
+      const snapshot = await adapter.recordSuccess('cb:x', CONFIG);
+
+      // Then
+      expect(snapshot).toEqual({ state: 'half-open', failuresInWindow: 0, halfOpenSuccesses: 0, halfOpenInFlight: 0 });
+    });
+
+    it('should treat the "No matching script" message as a NOSCRIPT fallback', async () => {
+      // Given — node-redis style wording instead of ioredis NOSCRIPT
+      driver.evalsha.mockRejectedValue(new Error('No matching script. Please use EVAL.'));
+      driver.eval.mockResolvedValue([1, 0, 0, 0, 0]);
+
+      // When
+      const decision = await adapter.canRequest('cb:x', CONFIG);
+
+      // Then
+      expect(driver.eval).toHaveBeenCalledTimes(1);
+      expect(decision.allowed).toBe(true);
+    });
+
+    it('should wrap errors without a message (no NOSCRIPT match possible)', async () => {
+      // Given — an error-like object with no message
+      driver.evalsha.mockRejectedValue({});
+
+      // When / Then
+      await expect(adapter.getState('cb:x', CONFIG)).rejects.toBeInstanceOf(CircuitBreakerStoreError);
+    });
+
+    it('recordFailure should wrap non-NOSCRIPT store errors', async () => {
+      // Given
+      driver.evalsha.mockRejectedValue(new Error('connection reset'));
+
+      // When / Then
+      await expect(adapter.recordFailure('cb:x', CONFIG)).rejects.toBeInstanceOf(CircuitBreakerStoreError);
+    });
+  });
+
+  describe('EVAL-direct path (scripts never preloaded)', () => {
+    it('recordSuccess and getState should use EVAL when sha is null', async () => {
+      // Given — no onModuleInit()
+      driver.eval.mockResolvedValue([0, 0, 0, 0]);
+
+      // When
+      await adapter.recordSuccess('cb:x', CONFIG);
+      await adapter.getState('cb:x', CONFIG);
+      await adapter.recordFailure('cb:x', CONFIG);
+
+      // Then
+      expect(driver.evalsha).not.toHaveBeenCalled();
+      expect(driver.eval).toHaveBeenCalledTimes(3);
+    });
+  });
+
   describe('reset', () => {
     it('should delete the state, failures, and probes keys in a single atomic DEL', async () => {
       // When

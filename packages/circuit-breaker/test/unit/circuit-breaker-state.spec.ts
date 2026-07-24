@@ -374,6 +374,21 @@ describe('CircuitBreakerState', () => {
       expect(cb.snapshot(t0 + 1000).halfOpenInFlight).toBe(0);
     });
 
+    it('success releases the max-start-time probe even when now values were non-monotonic', () => {
+      // Given — two slots; clock skew makes the second probe carry an OLDER timestamp
+      const cb = trippedSingleSlot(1000, 2, 2);
+      const t0 = 1 + 5000;
+      cb.canRequest(t0 + 500); // probe recorded at t0+500 (newest by time, first by insertion)
+      cb.canRequest(t0); // probe recorded at t0 (older timestamp, inserted last)
+
+      // When — a success releases the max-timestamp probe (t0+500), like Lua ZRANGE -1 -1
+      cb.recordSuccess(t0 + 600);
+
+      // Then — the remaining tracked probe is the OLDER one (t0): it expires at t0+1000
+      expect(cb.snapshot(t0 + 999).halfOpenInFlight).toBe(1);
+      expect(cb.snapshot(t0 + 1000).halfOpenInFlight).toBe(0);
+    });
+
     it('reclaim does not bypass the cap while a probe is still fresh', () => {
       // Given — single slot, long probe timeout
       const cb = trippedSingleSlot(10000);

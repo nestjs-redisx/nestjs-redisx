@@ -155,6 +155,39 @@ describe('CircuitBreakerService', () => {
     });
   });
 
+  describe('package defaults (empty plugin options)', () => {
+    it('should fall back to DEFAULT_CIRCUIT_BREAKER_CONFIG for every knob and the default key prefix', async () => {
+      // Given — a service built with completely empty plugin options
+      service = new CircuitBreakerService({}, store);
+
+      // When
+      await service.execute('svc', vi.fn().mockResolvedValue('ok'));
+
+      // Then — package defaults everywhere, probeTimeoutMs = default openDurationMs
+      expect(store.canRequest).toHaveBeenCalledWith('cb:svc', {
+        failureThreshold: 5,
+        windowMs: 10000,
+        openDurationMs: 30000,
+        halfOpenMaxCalls: 1,
+        successThreshold: 1,
+        probeTimeoutMs: 30000,
+      });
+    });
+  });
+
+  describe('per-call errorFactory', () => {
+    it('should prefer the per-call errorFactory over the plugin-level one', async () => {
+      // Given
+      class PluginError extends Error {}
+      class CallError extends Error {}
+      service = new CircuitBreakerService({ ...options, errorFactory: () => new PluginError('plugin') }, store);
+      store.canRequest.mockResolvedValue({ allowed: false, snapshot: openSnapshot() });
+
+      // When / Then
+      await expect(service.execute('api', vi.fn(), { errorFactory: () => new CallError('call') })).rejects.toBeInstanceOf(CallError);
+    });
+  });
+
   describe('per-call config validation', () => {
     it('should reject execute() with an invalid override before touching the store', async () => {
       // Given

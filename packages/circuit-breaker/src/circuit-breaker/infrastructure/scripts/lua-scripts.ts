@@ -41,7 +41,9 @@ local half_max = tonumber(ARGV[4])
 local success_threshold = tonumber(ARGV[5])
 local probe_timeout_ms = tonumber(ARGV[6])
 local now = tonumber(ARGV[7])
-local ttl_ms = math.max(window_ms, open_ms) * 2 + 60000
+-- Idle TTL must outlive every timed aspect of the circuit (window, cooldown,
+-- AND probe timeout) so keys never expire before their semantics played out.
+local ttl_ms = math.max(window_ms, open_ms, probe_timeout_ms) * 2 + 60000
 `;
 
 /**

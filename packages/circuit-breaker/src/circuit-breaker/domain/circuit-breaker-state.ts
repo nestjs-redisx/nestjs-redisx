@@ -62,11 +62,13 @@ export class CircuitBreakerState implements ICircuitBreakerState {
         return;
 
       case 'half-open':
-        // Release the most recently started in-flight probe slot, if any.
+        // Release the most recently started (max start-time) in-flight probe
+        // slot, if any — exact parity with the Lua store, which removes the
+        // highest-score ZSET entry, even if `now` values were non-monotonic.
         // A probe that outlived probeTimeoutMs already lost its slot, but its
         // outcome still counts toward closing.
         this.pruneProbes(now);
-        this.halfOpenProbes.pop();
+        this.releaseNewestProbe();
         this.halfOpenSuccesses++;
         if (this.halfOpenSuccesses >= this.config.successThreshold) {
           this.toClosed();
@@ -153,6 +155,20 @@ export class CircuitBreakerState implements ICircuitBreakerState {
   private pruneProbes(now: number): void {
     const cutoff = now - this.config.probeTimeoutMs;
     this.halfOpenProbes = this.halfOpenProbes.filter((startedAt) => startedAt > cutoff);
+  }
+
+  /** Remove the probe with the highest start time (mirrors Lua ZRANGE -1 -1 + ZREM). */
+  private releaseNewestProbe(): void {
+    if (this.halfOpenProbes.length === 0) {
+      return;
+    }
+    let newestIndex = 0;
+    for (let i = 1; i < this.halfOpenProbes.length; i++) {
+      if (this.halfOpenProbes[i]! >= this.halfOpenProbes[newestIndex]!) {
+        newestIndex = i;
+      }
+    }
+    this.halfOpenProbes.splice(newestIndex, 1);
   }
 
   /** Non-mutating count of failures still inside the window at `now`. */

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { CircuitBreakerPlugin } from '../../src/circuit-breaker.plugin';
 import { version } from '../../package.json';
-import { CIRCUIT_BREAKER_PLUGIN_OPTIONS, CIRCUIT_BREAKER_SERVICE } from '../../src/shared/constants';
+import { CIRCUIT_BREAKER_PLUGIN_OPTIONS, CIRCUIT_BREAKER_REDIS_DRIVER, CIRCUIT_BREAKER_SERVICE } from '../../src/shared/constants';
 import { InvalidCircuitBreakerConfigError } from '../../src/shared/errors';
 import type { ICircuitBreakerPluginOptions } from '../../src/shared/types';
 
@@ -93,6 +93,51 @@ describe('CircuitBreakerPlugin', () => {
 
       // Then
       expect(exports).toContain(CIRCUIT_BREAKER_SERVICE);
+    });
+  });
+
+  describe('redis driver provider (named client resolution)', () => {
+    type DriverFactory = (manager: unknown, init: void, options: ICircuitBreakerPluginOptions) => Promise<unknown>;
+
+    function driverFactory(plugin: CircuitBreakerPlugin): DriverFactory {
+      const provider = plugin.getProviders().find((p) => typeof p === 'object' && 'provide' in p && p.provide === CIRCUIT_BREAKER_REDIS_DRIVER) as { useFactory: DriverFactory };
+      return provider.useFactory;
+    }
+
+    it('should resolve the default client when no client option is set', async () => {
+      // Given
+      const client = { id: 'redis' };
+      const manager = { getClient: async (name: string) => (name === 'default' ? client : Promise.reject(new Error('missing'))) };
+
+      // When
+      const resolved = await driverFactory(new CircuitBreakerPlugin())(manager, undefined, {});
+
+      // Then
+      expect(resolved).toBe(client);
+    });
+
+    it('should resolve a named client from plugin options', async () => {
+      // Given
+      const client = { id: 'breaker-redis' };
+      const manager = { getClient: async (name: string) => (name === 'breaker' ? client : Promise.reject(new Error('missing'))) };
+
+      // When
+      const resolved = await driverFactory(new CircuitBreakerPlugin())(manager, undefined, { client: 'breaker' });
+
+      // Then
+      expect(resolved).toBe(client);
+    });
+
+    it('should throw a descriptive error when the named client does not exist', async () => {
+      // Given
+      const manager = {
+        getClient: async () => {
+          throw new Error('no such client');
+        },
+      };
+
+      // When / Then
+      await expect(driverFactory(new CircuitBreakerPlugin())(manager, undefined, { client: 'ghost' })).rejects.toThrow('CircuitBreakerPlugin: Redis client "ghost" not found');
     });
   });
 

@@ -184,6 +184,59 @@ describe('WithCircuitBreaker decorator', () => {
     expect(result).toBe('direct');
   });
 
+  it('should execute the method directly when NO getter was ever registered', async () => {
+    // Given — simulate the pre-init state (no getter at all)
+    registerCircuitBreakerServiceGetter(null as unknown as () => FakeService);
+
+    class Api {
+      @WithCircuitBreaker({ key: 'svc' })
+      async call(): Promise<string> {
+        return 'direct-no-getter';
+      }
+    }
+
+    // When / Then — runs without the breaker, never throws
+    await expect(new Api().call()).resolves.toBe('direct-no-getter');
+  });
+
+  it('should interpolate object properties in the key template ({0.id})', async () => {
+    // Given
+    const fake = passthroughService();
+    registerCircuitBreakerServiceGetter(() => fake);
+
+    class Api {
+      @WithCircuitBreaker({ key: 'order:{0.id}' })
+      async process(order: { id: string }): Promise<string> {
+        return order.id;
+      }
+    }
+
+    // When
+    await new Api().process({ id: 'o-77' });
+
+    // Then
+    expect(fake.execute.mock.calls[0][0]).toBe('order:o-77');
+  });
+
+  it('should stringify the whole argument when a property path targets a non-object', async () => {
+    // Given
+    const fake = passthroughService();
+    registerCircuitBreakerServiceGetter(() => fake);
+
+    class Api {
+      @WithCircuitBreaker({ key: 'x:{0.name}' })
+      async run(value: string): Promise<string> {
+        return value;
+      }
+    }
+
+    // When — the first argument is a plain string, so {0.name} falls back to String(arg)
+    await new Api().run('plain');
+
+    // Then
+    expect(fake.execute.mock.calls[0][0]).toBe('x:plain');
+  });
+
   it('should store options metadata on the wrapper for reflection', () => {
     // Given
     class Api {

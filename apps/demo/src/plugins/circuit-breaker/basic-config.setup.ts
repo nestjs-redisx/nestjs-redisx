@@ -16,6 +16,7 @@ import { CircuitBreakerPlugin } from '@nestjs-redisx/circuit-breaker';
           openDurationMs: 30000, // stay OPEN for 30s before probing
           halfOpenMaxCalls: 1, // allow 1 probe while HALF_OPEN
           successThreshold: 1, // 1 successful probe closes the breaker
+          probeTimeoutMs: 30000, // reclaim a probe slot if its outcome is never recorded
         }),
       ],
     }),

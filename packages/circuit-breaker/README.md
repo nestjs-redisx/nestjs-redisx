@@ -56,6 +56,7 @@ export class PaymentsService {
 - **`@WithCircuitBreaker`** — proxy-based decorator for any Injectable method: key interpolation (`'user:{0}'`), per-method overrides, `fallback`, `onOpen: 'skip'`, and `skip()` bypass.
 - **`CircuitBreakerService`** — programmatic `execute(key, fn, { fallback })`, manual `recordSuccess` / `recordFailure`, non-mutating `getState`, `reset`.
 - **fail-open / fail-closed** — choose availability or strictness when the state store itself is unavailable.
+- **Zombie-probe reclaim** — a half-open probe whose outcome is never recorded loses its slot after `probeTimeoutMs`, so recovery is never blocked by a crashed prober.
 - **Pure core** — `CircuitBreakerState` is exported for hermetic unit tests of your breaker policy (explicit `now`, no fake timers).
 - **Testable without Redis** — runs on the `@nestjs-redisx/testing` in-memory driver, Lua included.
 
