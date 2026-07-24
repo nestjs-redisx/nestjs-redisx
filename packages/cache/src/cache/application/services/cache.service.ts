@@ -241,18 +241,22 @@ export class CacheService implements ICacheService {
         }
       }
 
-      // SWR miss or expired - load and cache with SWR metadata
-      const value = await this.loadWithStampede(enrichedKey, loader, options);
+      // SWR miss or expired — load and cache with SWR metadata. The write
+      // happens INSIDE the stampede flight (writeBack), so it is covered by
+      // the distributed lock and no plain CacheEntry is double-written.
+      const staleTime = options.swr?.staleTime ?? this.options.swr?.defaultStaleTime ?? 60;
+      const ttl = options.ttl ?? this.options.l2?.defaultTtl ?? 3600;
 
-      if (!options.unless?.(value)) {
-        const staleTime = options.swr?.staleTime ?? this.options.swr?.defaultStaleTime ?? 60;
-        const ttl = options.ttl ?? this.options.l2?.defaultTtl ?? 3600;
-        const swrEntryNew = this.swrManager.createSwrEntry(value, ttl, staleTime);
-
-        await this.l2Store.setSwr(enrichedKey, swrEntryNew);
-      }
-
-      return value;
+      return this.loadWithStampede(enrichedKey, loader, options, {
+        writeBack: async (value: T) => {
+          const swrEntryNew = this.swrManager.createSwrEntry(value, ttl, staleTime);
+          await this.l2Store.setSwr(enrichedKey, swrEntryNew);
+        },
+        recheck: async () => {
+          const entry = await this.l2Store.getSwr<T>(enrichedKey);
+          return entry && !this.swrManager.isExpired(entry) ? entry.value : null;
+        },
+      });
     }
 
     // Regular flow (no SWR) — use enrichedKey directly to avoid double-enrichment
@@ -267,77 +271,87 @@ export class CacheService implements ICacheService {
   /**
    * Loads value with stampede protection if enabled.
    *
+   * The cache write (`writeBack`) runs INSIDE the protected section — after
+   * the loader, before the distributed lock is released — so another instance
+   * that waited for the lock is guaranteed to find the value on `recheck`.
+   *
    * @param key - Normalized cache key
    * @param loader - Function to load value
    * @param options - Cache options
+   * @param hooks - Optional cache write/read hooks (defaults target the
+   *                regular L1/L2 entry format; the SWR flow supplies its own)
    * @returns Loaded value
    * @private
    */
-  private async loadWithStampede<T>(key: string, loader: () => Promise<T>, options: CacheGetOrSetOptions): Promise<T> {
+  private async loadWithStampede<T>(key: string, loader: () => Promise<T>, options: CacheGetOrSetOptions, hooks?: { writeBack?: (value: T) => Promise<void>; recheck?: () => Promise<T | null> }): Promise<T> {
+    const writeBack =
+      hooks?.writeBack ??
+      (async (value: T) => {
+        await this.set(key, value, {
+          ttl: options.ttl,
+          tags: options.tags,
+          strategy: options.strategy,
+        });
+      });
+
+    // Loader wrapped with the cache write, so local waiters and cross-instance
+    // followers both observe a fully persisted value.
+    const loadAndWrite = async (): Promise<T> => {
+      const value = await loader();
+      if (!options.unless?.(value)) {
+        await writeBack(value);
+      }
+      return value;
+    };
+
     if (this.stampedeEnabled && !options.skipStampede) {
+      const recheck =
+        hooks?.recheck ??
+        (this.l2Enabled
+          ? async (): Promise<T | null> => {
+              const entry = await this.l2Store.get<T>(key);
+              return entry ? entry.value : null;
+            }
+          : undefined);
+
       let result;
       try {
-        result = await this.stampede.protect(key, loader);
+        result = await this.stampede.protect(key, loadAndWrite, recheck);
       } catch (error) {
         if (error instanceof StampedeError) {
-          return this.handleStampedeFallback<T>(key, loader, options, error);
+          return this.handleStampedeFallback<T>(loadAndWrite, error);
         }
         throw error;
       }
 
       if (result.cached) {
-        // Stampede was prevented - another request loaded the value
+        // Stampede was prevented — another request (or instance) loaded the value
         this.metrics?.incrementCounter('redisx_cache_stampede_prevented_total');
         return result.value;
       }
 
-      if (!options.unless?.(result.value)) {
-        await this.set(key, result.value, {
-          ttl: options.ttl,
-          tags: options.tags,
-          strategy: options.strategy,
-        });
-      }
-
+      // Not coalesced: the value was already written inside the flight.
       return result.value;
     }
 
-    // No stampede protection - direct load
-    const value = await loader();
-
-    if (!options.unless?.(value)) {
-      await this.set(key, value, {
-        ttl: options.ttl,
-        tags: options.tags,
-        strategy: options.strategy,
-      });
-    }
-
-    return value;
+    // No stampede protection — direct load + write
+    return loadAndWrite();
   }
 
   /**
    * Applies the configured stampede `fallback` policy when stampede protection
    * times out (a waiter could not get a coordinated result in time):
    * - 'load' (default) loads directly without coordination and caches the value
+   *   (the passed loader already performs the cache write)
    * - 'null' returns null without loading or caching
    * - 'error' re-throws the StampedeError
    *
    * @private
    */
-  private async handleStampedeFallback<T>(key: string, loader: () => Promise<T>, options: CacheGetOrSetOptions, error: StampedeError): Promise<T> {
+  private async handleStampedeFallback<T>(loadAndWrite: () => Promise<T>, error: StampedeError): Promise<T> {
     switch (this.stampedeFallback) {
-      case 'load': {
-        const value = await loader();
-        if (!options.unless?.(value)) {
-          await this.set(key, value, {
-            ttl: options.ttl,
-            tags: options.tags,
-            strategy: options.strategy,
-          });
-        }
-        return value;
-      }
+      case 'load':
+        return loadAndWrite();
       case 'null':
         return null as T;
       case 'error':

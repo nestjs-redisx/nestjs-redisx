@@ -338,7 +338,8 @@ describe('CacheService (Internal)', () => {
       await service.getOrSet(key, loader);
 
       // Then
-      expect(mockStampede.protect).toHaveBeenCalledWith(key, loader);
+      // protect receives the write-wrapped loader + a cache recheck callback
+      expect(mockStampede.protect).toHaveBeenCalledWith(key, expect.any(Function), expect.any(Function));
     });
 
     describe('stampede fallback (protection times out)', () => {
@@ -487,6 +488,22 @@ describe('CacheService (Internal)', () => {
       // Then
       expect(value).toBeNull();
       expect(mockL2Store.setSwr).not.toHaveBeenCalled();
+    });
+
+    it('should write ONLY the SWR entry on an SWR miss (no plain CacheEntry double-write)', async () => {
+      // Given — SWR miss; the load goes through the stampede wrapper
+      const swrService = new CacheService(mockDriver, mockL1Store, mockL2Store, mockStampede, mockTagIndex, mockSwrManager, { ...options, swr: { enabled: true } });
+      mockL2Store.getSwr.mockResolvedValue(null);
+      const loader = vi.fn().mockResolvedValue('fresh');
+
+      // When
+      const value = await swrService.getOrSet('swr-key', loader, { swr: { enabled: true, staleTime: 60 } });
+
+      // Then — exactly one write, in the SWR format; the regular set path must
+      // NOT also write a plain CacheEntry to the same key
+      expect(value).toBe('fresh');
+      expect(mockL2Store.setSwr).toHaveBeenCalledTimes(1);
+      expect(mockL2Store.set).not.toHaveBeenCalled();
     });
   });
 
@@ -1077,7 +1094,7 @@ describe('CacheService (Internal)', () => {
       const enrichedKey = 'user:profile:_ctx_:tenantId.abc';
       expect(mockL1Store.get).toHaveBeenCalledWith(enrichedKey);
       expect(mockL2Store.get).toHaveBeenCalledWith(enrichedKey);
-      expect(mockStampede.protect).toHaveBeenCalledWith(enrichedKey, loader);
+      expect(mockStampede.protect).toHaveBeenCalledWith(enrichedKey, expect.any(Function), expect.any(Function));
     });
 
     it('should enrich key with varyBy in getOrSet()', async () => {
@@ -1095,7 +1112,7 @@ describe('CacheService (Internal)', () => {
       // Then
       const enrichedKey = 'user:profile:_ctx_:region.eu';
       expect(mockL1Store.get).toHaveBeenCalledWith(enrichedKey);
-      expect(mockStampede.protect).toHaveBeenCalledWith(enrichedKey, loader);
+      expect(mockStampede.protect).toHaveBeenCalledWith(enrichedKey, expect.any(Function), expect.any(Function));
     });
 
     it('should enrich key in delete()', async () => {

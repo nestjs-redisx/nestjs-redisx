@@ -43,12 +43,16 @@ Layer 2: Distributed Redis Lock (cross-process)
 2. Check local flights — if another request is already loading this key, **wait for its Promise**
 3. Register new flight (synchronous, before any async work)
 4. Try to acquire distributed Redis lock (`SET _stampede:{key} {value} EX {ttl} NX`)
-5. Execute loader function with timeout
-6. Resolve all local waiters with the loaded value
-7. Release Redis lock (Lua script ensures only owner releases)
-8. Cache the result
+5. **Lock held by another instance?** Wait for the lock to clear (bounded by `waitTimeout`), then re-read the cache and serve the value the other instance stored — the load happens **once across all instances**. If the leader failed or the wait times out, fall back to loading locally.
+6. **Lock acquired (or coordination fell through):** execute the loader with timeout, then **write the value to the cache while still holding the lock**
+7. Resolve all local waiters with the loaded value
+8. Release Redis lock (Lua script ensures only owner releases)
 
-Waiting uses `Promise.race()` — no polling, no busy-waiting.
+Local waiters use `Promise.race()` — no polling. Cross-instance waiting polls the lock key every 50 ms, bounded by `waitTimeout`.
+
+::: tip No stale-flight window
+A completed flight is removed synchronously, so a later `getOrSet` after `invalidateTags`/`delete` always re-checks the cache and reloads — it can never be served a pre-invalidation value from a finished flight.
+:::
 
 ::: tip @Cached includes stampede protection
 Since v1.1.0, `@Cached` decorator uses `getOrSet()` internally — stampede protection is automatic for both decorator and Service API usage.

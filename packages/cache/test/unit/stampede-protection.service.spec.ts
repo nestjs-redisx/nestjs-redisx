@@ -187,6 +187,103 @@ describe('StampedeProtectionService', () => {
       expect(stats.activeFlights).toBe(0);
     });
 
+    it('should wait for another instance and serve its cached value via recheck (lock held elsewhere)', async () => {
+      // Given — the distributed lock is held by ANOTHER instance
+      mockDriver.set.mockResolvedValue(null); // SET NX fails -> not acquired
+      mockDriver.exists.mockResolvedValueOnce(1).mockResolvedValueOnce(1).mockResolvedValue(0); // lock clears on 3rd poll
+      const recheck = vi.fn().mockResolvedValue('shared-value');
+      const loader = vi.fn().mockResolvedValue('own-value');
+
+      // When
+      const result = await service.protect('cross:1', loader, recheck);
+
+      // Then — the other instance's value is served; our loader never runs
+      expect(result).toEqual({ value: 'shared-value', cached: true, waited: true });
+      expect(loader).not.toHaveBeenCalled();
+      expect(recheck).toHaveBeenCalledTimes(1);
+    });
+
+    it('should fall back to its own loader when recheck finds nothing after the lock cleared', async () => {
+      // Given — lock held elsewhere, but the leader cached nothing (failed / unless)
+      mockDriver.set.mockResolvedValue(null);
+      mockDriver.exists.mockResolvedValue(0); // lock already gone
+      const recheck = vi.fn().mockResolvedValue(null);
+      const loader = vi.fn().mockResolvedValue('own-value');
+
+      // When
+      const result = await service.protect('cross:2', loader, recheck);
+
+      // Then
+      expect(result.value).toBe('own-value');
+      expect(result.cached).toBe(false);
+      expect(loader).toHaveBeenCalledTimes(1);
+    });
+
+    it('should run the loader immediately when no recheck is provided (backward compatible)', async () => {
+      // Given — lock held elsewhere, legacy call without recheck
+      mockDriver.set.mockResolvedValue(null);
+      const loader = vi.fn().mockResolvedValue('own-value');
+
+      // When
+      const result = await service.protect('cross:3', loader);
+
+      // Then — no polling at all
+      expect(result.value).toBe('own-value');
+      expect(mockDriver.exists).not.toHaveBeenCalled();
+    });
+
+    it('should give up waiting at waitTimeout and load locally (availability over coordination)', async () => {
+      // Given — lock never clears within a short waitTimeout
+      const impatient = new StampedeProtectionService({ stampede: { lockTimeout: 10000, waitTimeout: 150 } }, mockDriver);
+      mockDriver.set.mockResolvedValue(null);
+      mockDriver.exists.mockResolvedValue(1);
+      const recheck = vi.fn();
+      const loader = vi.fn().mockResolvedValue('own-value');
+
+      // When
+      const result = await impatient.protect('cross:4', loader, recheck);
+
+      // Then — recheck never consulted (lock never cleared), loader ran
+      expect(result.value).toBe('own-value');
+      expect(recheck).not.toHaveBeenCalled();
+      expect(loader).toHaveBeenCalledTimes(1);
+    });
+
+    it('should treat recheck failures as a miss and load locally', async () => {
+      // Given
+      mockDriver.set.mockResolvedValue(null);
+      mockDriver.exists.mockResolvedValue(0);
+      const recheck = vi.fn().mockRejectedValue(new Error('redis read failed'));
+      const loader = vi.fn().mockResolvedValue('own-value');
+
+      // When
+      const result = await service.protect('cross:5', loader, recheck);
+
+      // Then
+      expect(result.value).toBe('own-value');
+      expect(result.cached).toBe(false);
+    });
+
+    it('should share the cross-instance value with local waiters', async () => {
+      // Given — leader-of-this-process waits on another instance's lock
+      mockDriver.set.mockResolvedValue(null);
+      mockDriver.exists.mockResolvedValueOnce(1).mockResolvedValue(0);
+      const recheck = vi.fn().mockResolvedValue('shared-value');
+      const loader = vi.fn();
+
+      // When — a second local call joins while the first is polling
+      const first = service.protect('cross:6', loader, recheck);
+      await new Promise((resolve) => setTimeout(resolve, 10)); // first call is now polling
+      const second = service.protect('cross:6', loader, recheck);
+      const [r1, r2] = await Promise.all([first, second]);
+
+      // Then — both got the shared value, loader never ran
+      expect(r1.value).toBe('shared-value');
+      expect(r2.value).toBe('shared-value');
+      expect(r2.waited).toBe(true);
+      expect(loader).not.toHaveBeenCalled();
+    });
+
     it('should fallback to loader when distributed lock fails', async () => {
       // Given — lock acquisition fails (Redis error)
       mockDriver.set.mockRejectedValue(new Error('Redis connection error'));
