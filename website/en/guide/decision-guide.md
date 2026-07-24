@@ -1,6 +1,6 @@
 ---
 title: 'Choosing the Right Plugins in NestJS RedisX | NestJS RedisX'
-description: 'Compare Cache, Locks, Rate Limit, Idempotency, Streams, Metrics, and Tracing plugins to pick the right NestJS RedisX tool for your Redis use case.'
+description: 'Compare Cache, Locks, Rate Limit, Circuit Breaker, Idempotency, Streams, Metrics, and Tracing plugins to pick the right NestJS RedisX tool for your Redis use case.'
 ---
 
 # Decision Guide
@@ -42,6 +42,8 @@ flowchart TD
 | Cron job on multiple instances | Locks | Only one instance executes |
 | API abuse protection | Rate Limit | Throttle excessive requests |
 | Login brute force | Rate Limit | Progressive delays |
+| Flaky third-party API | Circuit Breaker | Fail fast, probe recovery |
+| Payment gateway outages | Circuit Breaker | Fallback while OPEN |
 | Background job processing | Streams | Reliable async with retries |
 | Event-driven architecture | Streams | Pub/sub with persistence |
 | Production monitoring | Metrics | Prometheus integration |
@@ -110,6 +112,7 @@ graph LR
     Core[Core Module] --> Cache
     Core --> Locks
     Core --> RateLimit[Rate Limit]
+    Core --> CircuitBreaker[Circuit Breaker]
     Core --> Idempotency
     Core --> Streams
     Core --> Metrics

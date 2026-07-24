@@ -5,6 +5,7 @@ import { LocksPlugin, LOCK_SERVICE, type ILockService, LockAcquisitionError } fr
 import { CachePlugin, CACHE_SERVICE, type ICacheService } from '@nestjs-redisx/cache';
 import { RateLimitPlugin, RATE_LIMIT_SERVICE, type IRateLimitService } from '@nestjs-redisx/rate-limit';
 import { IdempotencyPlugin, IDEMPOTENCY_SERVICE, type IIdempotencyService } from '@nestjs-redisx/idempotency';
+import { CircuitBreakerPlugin, CIRCUIT_BREAKER_SERVICE, CircuitBreakerOpenError, type ICircuitBreakerService } from '@nestjs-redisx/circuit-breaker';
 import { StreamsPlugin, STREAM_PRODUCER, STREAM_CONSUMER, type IStreamProducer, type IStreamConsumer, type ConsumerHandle } from '@nestjs-redisx/streams';
 
 import { RedisTestingModule } from '../../src';
@@ -262,6 +263,71 @@ describe('Plugins on the in-memory driver (no Redis)', () => {
 
       const info = await producer.getStreamInfo('events');
       expect(info.length).toBe(2);
+    });
+  });
+
+  describe('CircuitBreakerPlugin', () => {
+    it('runs a full closed -> open -> half-open -> closed cycle over Lua', async () => {
+      // Given — trips after 2 failures; short cooldown for the probe phase
+      const OPEN_MS = 120;
+      app = await Test.createTestingModule({
+        imports: [
+          RedisModule.forRoot({
+            clients: { type: 'single', host: 'x', port: 1 },
+            global: { driver: MEMORY_DRIVER_TYPE },
+            plugins: [new CircuitBreakerPlugin({ failureThreshold: 2, windowMs: 10000, openDurationMs: OPEN_MS, halfOpenMaxCalls: 1, successThreshold: 1 })],
+          }),
+        ],
+      }).compile();
+      await app.init();
+      const cb = app.get<ICircuitBreakerService>(CIRCUIT_BREAKER_SERVICE);
+
+      // When — two failures trip the breaker
+      await expect(cb.execute('dep', () => Promise.reject(new Error('down')))).rejects.toThrow('down');
+      await expect(cb.execute('dep', () => Promise.reject(new Error('down')))).rejects.toThrow('down');
+
+      // Then — OPEN: rejected fast, fn is not executed
+      expect((await cb.getState('dep')).state).toBe('open');
+      let executed = false;
+      await expect(
+        cb.execute('dep', () => {
+          executed = true;
+          return Promise.resolve('no');
+        }),
+      ).rejects.toBeInstanceOf(CircuitBreakerOpenError);
+      expect(executed).toBe(false);
+
+      // When — the cooldown elapses and a probe succeeds
+      await new Promise((resolve) => setTimeout(resolve, OPEN_MS + 40));
+      await expect(cb.execute('dep', () => Promise.resolve('ok'))).resolves.toBe('ok');
+
+      // Then — CLOSED again
+      expect((await cb.getState('dep')).state).toBe('closed');
+    });
+
+    it('supports fallback while OPEN and reset back to CLOSED', async () => {
+      // Given — a tripped breaker
+      app = await Test.createTestingModule({
+        imports: [
+          RedisModule.forRoot({
+            clients: { type: 'single', host: 'x', port: 1 },
+            global: { driver: MEMORY_DRIVER_TYPE },
+            plugins: [new CircuitBreakerPlugin({ failureThreshold: 1, windowMs: 10000, openDurationMs: 60000, halfOpenMaxCalls: 1, successThreshold: 1 })],
+          }),
+        ],
+      }).compile();
+      await app.init();
+      const cb = app.get<ICircuitBreakerService>(CIRCUIT_BREAKER_SERVICE);
+      await expect(cb.execute('dep', () => Promise.reject(new Error('down')))).rejects.toThrow();
+      expect((await cb.getState('dep')).state).toBe('open');
+
+      // When / Then — fallback is served instead of the error
+      await expect(cb.execute('dep', () => Promise.resolve('real'), { fallback: () => 'cached' })).resolves.toBe('cached');
+
+      // When / Then — reset returns the circuit to CLOSED
+      await cb.reset('dep');
+      expect((await cb.getState('dep')).state).toBe('closed');
+      await expect(cb.execute('dep', () => Promise.resolve('real'))).resolves.toBe('real');
     });
   });
 

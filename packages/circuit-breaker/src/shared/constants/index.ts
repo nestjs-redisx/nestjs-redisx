@@ -1,9 +1,8 @@
 /**
- * Injection tokens for the circuit breaker plugin.
- *
- * These are declared now for the skeleton; they will be wired into the
- * service/store layer in a later step.
+ * Injection tokens and default configuration for the circuit breaker plugin.
  */
+
+import { ICircuitBreakerPluginOptions } from '../types';
 
 /**
  * Injection token for circuit breaker plugin options.
@@ -25,3 +24,18 @@ export const CIRCUIT_BREAKER_STORE = Symbol.for('CIRCUIT_BREAKER_STORE');
  * Resolves to the named client specified in plugin options.
  */
 export const CIRCUIT_BREAKER_REDIS_DRIVER = Symbol.for('CIRCUIT_BREAKER_REDIS_DRIVER');
+
+/**
+ * Default circuit breaker configuration.
+ * Single source of truth for the plugin's mergeDefaults and the service's
+ * per-call config resolution.
+ */
+export const DEFAULT_CIRCUIT_BREAKER_CONFIG: Required<Omit<ICircuitBreakerPluginOptions, 'isGlobal' | 'client' | 'errorFactory'>> = {
+  keyPrefix: 'cb:',
+  failureThreshold: 5,
+  windowMs: 10000,
+  openDurationMs: 30000,
+  halfOpenMaxCalls: 1,
+  successThreshold: 1,
+  errorPolicy: 'fail-closed',
+};

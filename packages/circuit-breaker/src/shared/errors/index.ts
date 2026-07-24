@@ -1,6 +1,6 @@
 import { RedisXError, ErrorCode } from '@nestjs-redisx/core';
 
-import { ICircuitSnapshot } from '../../domain/circuit-breaker-state.interface';
+import { ICircuitSnapshot } from '../../circuit-breaker/domain/circuit-breaker-state.interface';
 
 /**
  * Base error class for circuit breaker errors.

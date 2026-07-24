@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { CircuitBreakerState } from '../../src/circuit-breaker/domain/circuit-breaker-state';
-import { InvalidCircuitBreakerConfigError } from '../../src/circuit-breaker/shared/errors';
+import { InvalidCircuitBreakerConfigError } from '../../src/shared/errors';
 import type { ICircuitBreakerConfig } from '../../src/circuit-breaker/domain/circuit-breaker-state.interface';
 
 /**

@@ -11,19 +11,10 @@ import { IRedisXPlugin, IPluginAsyncOptions, CLIENT_MANAGER, REDIS_CLIENTS_INITI
 import { version } from '../package.json';
 import { CircuitBreakerDecoratorInitializerService } from './circuit-breaker/application/services/circuit-breaker-decorator-initializer.service';
 import { CircuitBreakerService } from './circuit-breaker/application/services/circuit-breaker.service';
+import { validateCircuitBreakerConfig } from './circuit-breaker/domain/validate-circuit-breaker-config';
 import { RedisCircuitBreakerStoreAdapter } from './circuit-breaker/infrastructure/adapters/redis-circuit-breaker-store.adapter';
-import { CIRCUIT_BREAKER_PLUGIN_OPTIONS, CIRCUIT_BREAKER_REDIS_DRIVER, CIRCUIT_BREAKER_SERVICE, CIRCUIT_BREAKER_STORE } from './circuit-breaker/shared/constants';
-import { ICircuitBreakerPluginOptions } from './circuit-breaker/shared/types';
-
-const DEFAULT_CIRCUIT_BREAKER_CONFIG: Required<Omit<ICircuitBreakerPluginOptions, 'isGlobal' | 'client' | 'errorFactory'>> = {
-  keyPrefix: 'cb:',
-  failureThreshold: 5,
-  windowMs: 10000,
-  openDurationMs: 30000,
-  halfOpenMaxCalls: 1,
-  successThreshold: 1,
-  errorPolicy: 'fail-closed',
-};
+import { CIRCUIT_BREAKER_PLUGIN_OPTIONS, CIRCUIT_BREAKER_REDIS_DRIVER, CIRCUIT_BREAKER_SERVICE, CIRCUIT_BREAKER_STORE, DEFAULT_CIRCUIT_BREAKER_CONFIG } from './shared/constants';
+import { ICircuitBreakerPluginOptions } from './shared/types';
 
 /**
  * Circuit breaker plugin for NestJS RedisX.
@@ -65,7 +56,7 @@ export class CircuitBreakerPlugin implements IRedisXPlugin {
   }
 
   private static mergeDefaults(options: ICircuitBreakerPluginOptions): ICircuitBreakerPluginOptions {
-    return {
+    const merged: ICircuitBreakerPluginOptions = {
       client: options.client,
       keyPrefix: options.keyPrefix ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.keyPrefix,
       failureThreshold: options.failureThreshold ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.failureThreshold,
@@ -76,6 +67,17 @@ export class CircuitBreakerPlugin implements IRedisXPlugin {
       errorPolicy: options.errorPolicy ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.errorPolicy,
       errorFactory: options.errorFactory,
     };
+
+    // Fail fast at bootstrap: an invalid config must never reach the Lua scripts.
+    validateCircuitBreakerConfig({
+      failureThreshold: merged.failureThreshold!,
+      windowMs: merged.windowMs!,
+      openDurationMs: merged.openDurationMs!,
+      halfOpenMaxCalls: merged.halfOpenMaxCalls!,
+      successThreshold: merged.successThreshold!,
+    });
+
+    return merged;
   }
 
   getImports(): Array<Type<unknown> | DynamicModule | ForwardReference> {

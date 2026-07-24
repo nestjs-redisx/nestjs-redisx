@@ -2,7 +2,8 @@
  * @nestjs-redisx/testing
  *
  * In-memory Redis driver and testing utilities for unit-testing NestJS RedisX
- * code (cache, locks, rate-limit, idempotency) without a running Redis.
+ * code (cache, locks, rate-limit, idempotency, streams, circuit-breaker)
+ * without a running Redis.
  *
  * Importing this package registers the `'memory'` driver with the core driver
  * registry as a side effect.

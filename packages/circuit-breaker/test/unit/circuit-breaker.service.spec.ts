@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi, type MockedObject } from 'vitest';
 import { CircuitBreakerService } from '../../src/circuit-breaker/application/services/circuit-breaker.service';
-import { CircuitBreakerOpenError } from '../../src/circuit-breaker/shared/errors';
+import { CircuitBreakerOpenError, InvalidCircuitBreakerConfigError } from '../../src/shared/errors';
 import type { ICircuitBreakerStore } from '../../src/circuit-breaker/application/ports/circuit-breaker-store.port';
-import type { ICircuitBreakerPluginOptions } from '../../src/circuit-breaker/shared/types';
+import type { ICircuitBreakerPluginOptions } from '../../src/shared/types';
 import type { ICircuitSnapshot } from '../../src/circuit-breaker/domain/circuit-breaker-state.interface';
 
 function closedSnapshot(): ICircuitSnapshot {
@@ -152,6 +152,41 @@ describe('CircuitBreakerService', () => {
 
       // When / Then
       await expect(service.execute('api', fn)).rejects.toThrow('original');
+    });
+  });
+
+  describe('per-call config validation', () => {
+    it('should reject execute() with an invalid override before touching the store', async () => {
+      // Given
+      const fn = vi.fn();
+
+      // When / Then — windowMs: 0 would silently break the Lua window math
+      await expect(service.execute('api', fn, { windowMs: 0 })).rejects.toBeInstanceOf(InvalidCircuitBreakerConfigError);
+      expect(store.canRequest).not.toHaveBeenCalled();
+      expect(fn).not.toHaveBeenCalled();
+    });
+
+    it('should reject manual recordFailure with an invalid override', async () => {
+      // When / Then
+      await expect(service.recordFailure('api', { failureThreshold: 0 })).rejects.toBeInstanceOf(InvalidCircuitBreakerConfigError);
+      expect(store.recordFailure).not.toHaveBeenCalled();
+    });
+
+    it('should reject successThreshold > halfOpenMaxCalls combined from override + plugin options', async () => {
+      // Given — plugin halfOpenMaxCalls = 2; override pushes successThreshold above it
+      // When / Then
+      await expect(service.getState('api', { successThreshold: 3 })).rejects.toBeInstanceOf(InvalidCircuitBreakerConfigError);
+      expect(store.getState).not.toHaveBeenCalled();
+    });
+
+    it('should NOT apply errorPolicy to config errors (fail-open still throws)', async () => {
+      // Given — programmer error is never subject to errorPolicy
+      service = new CircuitBreakerService({ ...options, errorPolicy: 'fail-open' }, store);
+      const fn = vi.fn();
+
+      // When / Then
+      await expect(service.execute('api', fn, { windowMs: -1 })).rejects.toBeInstanceOf(InvalidCircuitBreakerConfigError);
+      expect(fn).not.toHaveBeenCalled();
     });
   });
 

@@ -1,5 +1,5 @@
-import { InvalidCircuitBreakerConfigError } from '../shared/errors';
 import { CircuitState, ICircuitBreakerConfig, ICircuitBreakerState, ICircuitSnapshot } from './circuit-breaker-state.interface';
+import { validateCircuitBreakerConfig } from './validate-circuit-breaker-config';
 
 /**
  * Pure, time-injected circuit-breaker finite state machine.
@@ -24,7 +24,7 @@ export class CircuitBreakerState implements ICircuitBreakerState {
   private halfOpenInFlight = 0;
 
   constructor(private readonly config: ICircuitBreakerConfig) {
-    this.validateConfig(config);
+    validateCircuitBreakerConfig(config);
   }
 
   canRequest(now: number): boolean {
@@ -150,23 +150,5 @@ export class CircuitBreakerState implements ICircuitBreakerState {
       }
     }
     return count;
-  }
-
-  private validateConfig(config: ICircuitBreakerConfig): void {
-    this.assertPositiveInteger('failureThreshold', config.failureThreshold, 1);
-    this.assertPositiveInteger('windowMs', config.windowMs, 1);
-    this.assertPositiveInteger('openDurationMs', config.openDurationMs, 1);
-    this.assertPositiveInteger('halfOpenMaxCalls', config.halfOpenMaxCalls, 1);
-    this.assertPositiveInteger('successThreshold', config.successThreshold, 1);
-
-    if (config.successThreshold > config.halfOpenMaxCalls) {
-      throw new InvalidCircuitBreakerConfigError(`successThreshold (${config.successThreshold}) must be <= halfOpenMaxCalls (${config.halfOpenMaxCalls})`);
-    }
-  }
-
-  private assertPositiveInteger(name: string, value: number, min: number): void {
-    if (typeof value !== 'number' || !Number.isInteger(value) || value < min) {
-      throw new InvalidCircuitBreakerConfigError(`${name} must be an integer >= ${min} (got ${String(value)})`);
-    }
   }
 }

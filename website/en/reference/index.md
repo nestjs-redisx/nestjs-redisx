@@ -74,6 +74,7 @@ Self-contained feature modules for common Redis use cases.
 | [Cache](./cache/) | Two-tier caching with L1 memory and L2 Redis |
 | [Locks](./locks/) | Distributed locking with auto-renewal |
 | [Rate Limit](./rate-limit/) | Multiple algorithms for API protection |
+| [Circuit Breaker](./circuit-breaker/) | Distributed closed/open/half-open breaker with fallbacks |
 | [Idempotency](./idempotency/) | Request deduplication with response replay |
 | [Streams](./streams/) | Redis Streams with consumer groups |
 | [Metrics](./metrics/) | Prometheus metrics export |

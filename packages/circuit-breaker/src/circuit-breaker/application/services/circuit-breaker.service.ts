@@ -1,24 +1,27 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 
-import { CIRCUIT_BREAKER_PLUGIN_OPTIONS, CIRCUIT_BREAKER_STORE } from '../../shared/constants';
-import { CircuitBreakerOpenError } from '../../shared/errors';
+import { CIRCUIT_BREAKER_PLUGIN_OPTIONS, CIRCUIT_BREAKER_STORE, DEFAULT_CIRCUIT_BREAKER_CONFIG } from '../../../shared/constants';
+import { CircuitBreakerOpenError } from '../../../shared/errors';
 import { ICircuitBreakerConfig, ICircuitSnapshot } from '../../domain/circuit-breaker-state.interface';
-import { ICircuitBreakerExecuteOptions, ICircuitBreakerOptions, ICircuitBreakerPluginOptions } from '../../shared/types';
+import { validateCircuitBreakerConfig } from '../../domain/validate-circuit-breaker-config';
+import { ICircuitBreakerExecuteOptions, ICircuitBreakerOptions, ICircuitBreakerPluginOptions } from '../../../shared/types';
 import { ICircuitBreakerService } from '../ports/circuit-breaker-service.port';
 import { ICircuitBreakerStore } from '../ports/circuit-breaker-store.port';
-
-/** Fallback defaults if the plugin options omit a knob. */
-const DEFAULTS: ICircuitBreakerConfig = {
-  failureThreshold: 5,
-  windowMs: 10000,
-  openDurationMs: 30000,
-  halfOpenMaxCalls: 1,
-  successThreshold: 1,
-};
 
 /**
  * Circuit breaker service implementation.
  * Guards calls with a distributed breaker backed by the state store.
+ *
+ * Error semantics:
+ * - execute(): a store failure on the canRequest gate is governed by
+ *   `errorPolicy` (fail-open runs `fn`, fail-closed throws); store failures
+ *   while recording the outcome are logged and never mask `fn`'s own result.
+ * - manual API (recordSuccess/recordFailure/getState/reset): ALWAYS strict —
+ *   store failures throw CircuitBreakerStoreError regardless of `errorPolicy`
+ *   (there is no meaningful "open" fallback for an explicit state operation).
+ * - invalid configuration (plugin options or per-call overrides) always throws
+ *   InvalidCircuitBreakerConfigError — a programmer error is never subject to
+ *   errorPolicy.
  */
 @Injectable()
 export class CircuitBreakerService implements ICircuitBreakerService {
@@ -93,38 +96,52 @@ export class CircuitBreakerService implements ICircuitBreakerService {
 
   /**
    * Record success without masking the guarded call's result on store errors.
+   *
+   * NOTE: if this fails while the breaker is HALF_OPEN, the consumed probe slot
+   * is not released; the circuit can stay half-open (rejecting calls once the
+   * probe budget is exhausted) until the state key's TTL self-heals it. The
+   * log message points operators at reset() as the immediate remedy.
    */
   private async safeRecordSuccess(key: string, cfg: ICircuitBreakerConfig): Promise<void> {
     try {
       await this.store.recordSuccess(key, cfg);
     } catch (error) {
-      this.logger.error(`Failed to record success for "${key}": ${(error as Error).message}`);
+      this.logger.error(`Failed to record success for "${key}": ${(error as Error).message}. ` + `If the circuit was HALF_OPEN its probe slot may stay consumed until the state TTL expires — reset("${key}") clears it immediately.`);
     }
   }
 
   /**
    * Record failure without masking the guarded call's error on store errors.
+   * Same HALF_OPEN probe-slot caveat as safeRecordSuccess.
    */
   private async safeRecordFailure(key: string, cfg: ICircuitBreakerConfig): Promise<void> {
     try {
       await this.store.recordFailure(key, cfg);
     } catch (error) {
-      this.logger.error(`Failed to record failure for "${key}": ${(error as Error).message}`);
+      this.logger.error(`Failed to record failure for "${key}": ${(error as Error).message}. ` + `If the circuit was HALF_OPEN its probe slot may stay consumed until the state TTL expires — reset("${key}") clears it immediately.`);
     }
   }
 
+  /**
+   * Merge per-call overrides over plugin options over package defaults, then
+   * validate — an invalid config must never reach the Lua scripts.
+   *
+   * @throws {InvalidCircuitBreakerConfigError} on invalid values
+   */
   private resolveConfig(options: ICircuitBreakerOptions): ICircuitBreakerConfig {
-    return {
-      failureThreshold: options.failureThreshold ?? this.config.failureThreshold ?? DEFAULTS.failureThreshold,
-      windowMs: options.windowMs ?? this.config.windowMs ?? DEFAULTS.windowMs,
-      openDurationMs: options.openDurationMs ?? this.config.openDurationMs ?? DEFAULTS.openDurationMs,
-      halfOpenMaxCalls: options.halfOpenMaxCalls ?? this.config.halfOpenMaxCalls ?? DEFAULTS.halfOpenMaxCalls,
-      successThreshold: options.successThreshold ?? this.config.successThreshold ?? DEFAULTS.successThreshold,
+    const resolved: ICircuitBreakerConfig = {
+      failureThreshold: options.failureThreshold ?? this.config.failureThreshold ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.failureThreshold,
+      windowMs: options.windowMs ?? this.config.windowMs ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.windowMs,
+      openDurationMs: options.openDurationMs ?? this.config.openDurationMs ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.openDurationMs,
+      halfOpenMaxCalls: options.halfOpenMaxCalls ?? this.config.halfOpenMaxCalls ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.halfOpenMaxCalls,
+      successThreshold: options.successThreshold ?? this.config.successThreshold ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.successThreshold,
     };
+    validateCircuitBreakerConfig(resolved);
+    return resolved;
   }
 
   private buildKey(key: string): string {
-    const prefix = this.config.keyPrefix ?? 'cb:';
+    const prefix = this.config.keyPrefix ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.keyPrefix;
     return `${prefix}${key}`;
   }
 }

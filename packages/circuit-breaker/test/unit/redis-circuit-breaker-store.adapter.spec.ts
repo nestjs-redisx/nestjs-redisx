@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, type MockedObject } from 'vitest';
 import { RedisCircuitBreakerStoreAdapter } from '../../src/circuit-breaker/infrastructure/adapters/redis-circuit-breaker-store.adapter';
-import { CircuitBreakerStoreError } from '../../src/circuit-breaker/shared/errors';
+import { CircuitBreakerStoreError } from '../../src/shared/errors';
 import type { IRedisDriver } from '@nestjs-redisx/core';
 import type { ICircuitBreakerConfig } from '../../src/circuit-breaker/domain/circuit-breaker-state.interface';
 
@@ -150,16 +150,55 @@ describe('RedisCircuitBreakerStoreAdapter', () => {
       // When / Then
       await expect(adapter.recordSuccess('cb:x', CONFIG)).rejects.toBeInstanceOf(CircuitBreakerStoreError);
     });
+
+    it('recordFailure should fall back to EVAL on a NOSCRIPT error', async () => {
+      // Given
+      driver.evalsha.mockRejectedValue(new Error('NOSCRIPT No matching script'));
+      driver.eval.mockResolvedValue([1, 0, 0, 0]);
+
+      // When
+      const snapshot = await adapter.recordFailure('cb:x', CONFIG);
+
+      // Then
+      expect(driver.eval).toHaveBeenCalledTimes(1);
+      expect(snapshot.state).toBe('open');
+    });
+
+    it('getState should fall back to EVAL on a NOSCRIPT error', async () => {
+      // Given
+      driver.evalsha.mockRejectedValue(new Error('NOSCRIPT No matching script'));
+      driver.eval.mockResolvedValue([0, 1, 0, 0]);
+
+      // When
+      const snapshot = await adapter.getState('cb:x', CONFIG);
+
+      // Then
+      expect(driver.eval).toHaveBeenCalledTimes(1);
+      expect(snapshot).toEqual({ state: 'closed', failuresInWindow: 1, halfOpenSuccesses: 0, halfOpenInFlight: 0 });
+    });
+
+    it('recordSuccess should fall back to EVAL on a NOSCRIPT error', async () => {
+      // Given
+      driver.evalsha.mockRejectedValue(new Error('NOSCRIPT No matching script'));
+      driver.eval.mockResolvedValue([0, 0, 0, 0]);
+
+      // When
+      const snapshot = await adapter.recordSuccess('cb:x', CONFIG);
+
+      // Then
+      expect(driver.eval).toHaveBeenCalledTimes(1);
+      expect(snapshot.state).toBe('closed');
+    });
   });
 
   describe('reset', () => {
-    it('should delete both the state and failures keys', async () => {
+    it('should delete the state and failures keys in a single atomic DEL', async () => {
       // When
       await adapter.reset('cb:x');
 
-      // Then
-      expect(driver.del).toHaveBeenCalledWith('{cb:x}');
-      expect(driver.del).toHaveBeenCalledWith('{cb:x}:f');
+      // Then — one variadic DEL, both keys share a hash tag (same cluster slot)
+      expect(driver.del).toHaveBeenCalledTimes(1);
+      expect(driver.del).toHaveBeenCalledWith('{cb:x}', '{cb:x}:f');
     });
 
     it('should wrap deletion errors', async () => {

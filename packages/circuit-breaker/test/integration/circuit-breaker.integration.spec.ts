@@ -49,94 +49,122 @@ describeIntegration('CircuitBreaker (live Redis)', () => {
   });
 
   it('runs closed -> open -> half-open -> closed over real Redis Lua', async () => {
+    // Given — a fresh CLOSED circuit
     const key = uniqueKey();
     await cb.reset(key);
-
     await expect(cb.execute(key, ok)).resolves.toBe('ok');
-    await expect(cb.execute(key, fail)).rejects.toThrow('down');
-    await expect(cb.execute(key, fail)).rejects.toThrow('down');
-    expect((await cb.getState(key)).state).toBe('open');
 
+    // When — two failures within the window
+    await expect(cb.execute(key, fail)).rejects.toThrow('down');
+    await expect(cb.execute(key, fail)).rejects.toThrow('down');
+
+    // Then — OPEN: calls fail fast without running fn
+    expect((await cb.getState(key)).state).toBe('open');
     await expect(cb.execute(key, ok)).rejects.toBeInstanceOf(CircuitBreakerOpenError);
-    // getState is non-mutating: still open after cooldown until a real request
+
+    // When — the cooldown elapses (getState is non-mutating: still open)
     await wait(OPEN_MS + 80);
     expect((await cb.getState(key)).state).toBe('open');
 
+    // Then — the next real call probes and, on success, closes the breaker
     await expect(cb.execute(key, ok)).resolves.toBe('ok');
     expect((await cb.getState(key)).state).toBe('closed');
     await cb.reset(key);
   });
 
   it('supports the manual API: recordFailure/recordSuccess/getState/reset', async () => {
+    // Given
     const key = uniqueKey();
     await cb.reset(key);
 
+    // When / Then — two manual failures trip the breaker (threshold = 2)
     expect((await cb.recordFailure(key)).state).toBe('closed');
-    expect((await cb.recordFailure(key)).state).toBe('open'); // threshold = 2
+    expect((await cb.recordFailure(key)).state).toBe('open');
     expect((await cb.getState(key)).state).toBe('open');
 
+    // When / Then — reset returns it to CLOSED
     await cb.reset(key);
     expect((await cb.getState(key)).state).toBe('closed');
 
-    await wait(0);
-    // recordSuccess in closed is a no-op and keeps it closed
+    // Then — recordSuccess in CLOSED is a no-op and keeps it closed
     expect((await cb.recordSuccess(key)).state).toBe('closed');
     await cb.reset(key);
   });
 
   it('returns the fallback instead of throwing while OPEN', async () => {
+    // Given — a tripped breaker
     const key = uniqueKey();
     await cb.reset(key);
     await expect(cb.execute(key, fail)).rejects.toThrow();
     await expect(cb.execute(key, fail)).rejects.toThrow();
     expect((await cb.getState(key)).state).toBe('open');
 
+    // When
     const result = await cb.execute(key, ok, { fallback: () => 'fallback' });
+
+    // Then
     expect(result).toBe('fallback');
     await cb.reset(key);
   });
 
   it('reopens on a failed half-open probe with a fresh cooldown', async () => {
+    // Given — a tripped breaker past its cooldown
     const key = uniqueKey();
     await cb.reset(key);
     await expect(cb.execute(key, fail)).rejects.toThrow();
     await expect(cb.execute(key, fail)).rejects.toThrow();
     await wait(OPEN_MS + 80);
 
-    await expect(cb.execute(key, fail)).rejects.toThrow('down'); // probe fails -> reopen
+    // When — the half-open probe fails
+    await expect(cb.execute(key, fail)).rejects.toThrow('down');
+
+    // Then — OPEN again with a fresh cooldown (rejects immediately)
     expect((await cb.getState(key)).state).toBe('open');
-    // still open immediately after reopen
     await expect(cb.execute(key, ok)).rejects.toBeInstanceOf(CircuitBreakerOpenError);
     await cb.reset(key);
   });
 
   it('caps concurrent half-open probes at halfOpenMaxCalls', async () => {
+    // Given — a tripped breaker past its cooldown (halfOpenMaxCalls = 1)
     const key = uniqueKey();
     await cb.reset(key);
     await expect(cb.execute(key, fail)).rejects.toThrow();
     await expect(cb.execute(key, fail)).rejects.toThrow();
     await wait(OPEN_MS + 80);
 
+    // When — a deferred probe occupies the single slot
+
+    // `started` resolves only once fn runs — i.e. canRequest committed the
+    // slot — so no sleep-based synchronization is needed.
     let release!: () => void;
+    let started!: () => void;
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
+    const startedPromise = new Promise<void>((resolve) => {
+      started = resolve;
+    });
     const probe = cb.execute(key, async () => {
+      started();
       await gate;
       return 'probe-ok';
     });
-    await wait(20); // let the probe occupy the single slot
+    await startedPromise; // deterministic: the slot is occupied
 
+    // Then — the extra call is rejected while the probe is in flight
     await expect(cb.execute(key, ok)).rejects.toBeInstanceOf(CircuitBreakerOpenError);
 
+    // When — the probe completes successfully
     release();
     await expect(probe).resolves.toBe('probe-ok');
+
+    // Then — the breaker closes
     expect((await cb.getState(key)).state).toBe('closed');
     await cb.reset(key);
   });
 
   it('does not trip when failures fall outside the window', async () => {
-    // A dedicated app with a short window.
+    // Given — a dedicated app with a short (80ms) rolling window
     const shortApp = await Test.createTestingModule({
       imports: [
         RedisModule.forRoot({
@@ -150,9 +178,12 @@ describeIntegration('CircuitBreaker (live Redis)', () => {
     const key = uniqueKey();
     await shortCb.reset(key);
 
+    // When — two failures spread wider than the window
     await expect(shortCb.execute(key, fail)).rejects.toThrow();
     await wait(120); // first failure ages out of the 80ms window
     await expect(shortCb.execute(key, fail)).rejects.toThrow();
+
+    // Then — only one failure is ever in-window, still CLOSED
     expect((await shortCb.getState(key)).state).toBe('closed');
 
     await shortCb.reset(key);

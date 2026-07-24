@@ -40,3 +40,7 @@ The decorator throwing behaviour comes from the breaker rejecting the call. Reco
 ::: warning
 If the plugin has not finished initializing (no service available yet), the method runs **without** the breaker and a warning is logged — calls are never blocked by a missing breaker.
 :::
+
+::: info Known typing limitation
+`fallback` and `skip` are typed as `(...args: unknown[])` so a single decorator works for any method signature (the same trade-off as `@WithLock`'s key builder). Under `strict` TypeScript, annotate the callback parameters as `unknown` and narrow inside, or cast: `skip: ((id: string) => boolean) as (...args: unknown[]) => boolean`.
+:::

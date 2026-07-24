@@ -1,11 +1,11 @@
 import { Injectable, Inject, OnModuleInit } from '@nestjs/common';
 import { IRedisDriver } from '@nestjs-redisx/core';
 
-import { CIRCUIT_BREAKER_REDIS_DRIVER } from '../../shared/constants';
-import { CircuitBreakerStoreError } from '../../shared/errors';
+import { CIRCUIT_BREAKER_REDIS_DRIVER } from '../../../shared/constants';
+import { CircuitBreakerStoreError } from '../../../shared/errors';
 import { CircuitState, ICircuitBreakerConfig, ICircuitSnapshot } from '../../domain/circuit-breaker-state.interface';
 import { ICircuitBreakerStore } from '../../application/ports/circuit-breaker-store.port';
-import { ICircuitBreakerDecision } from '../../shared/types';
+import { ICircuitBreakerDecision } from '../../../shared/types';
 import { CAN_REQUEST_SCRIPT, GET_STATE_SCRIPT, RECORD_FAILURE_SCRIPT, RECORD_SUCCESS_SCRIPT } from '../scripts/lua-scripts';
 
 /**
@@ -95,8 +95,9 @@ export class RedisCircuitBreakerStoreAdapter implements ICircuitBreakerStore, On
     const [stateKey, failKey] = this.buildKeys(key);
 
     try {
-      await this.driver.del(stateKey);
-      await this.driver.del(failKey);
+      // Single variadic DEL: both keys share a hash tag (same cluster slot),
+      // so the circuit state and its failure window are cleared atomically.
+      await this.driver.del(stateKey, failKey);
     } catch (error) {
       throw new CircuitBreakerStoreError(`reset failed: ${(error as Error).message}`, error as Error);
     }

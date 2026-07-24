@@ -20,7 +20,8 @@ description: 'Configure @nestjs-redisx/circuit-breaker: failure threshold, rolli
 | `client` | `string` | `'default'` | Named Redis client to use. |
 | `errorPolicy` | `'fail-open' \| 'fail-closed'` | `'fail-closed'` | Behaviour when the **state store** is unavailable. |
 | `errorFactory` | `(key, snapshot) => Error` | — | Custom error thrown when the breaker rejects a call. |
-| `isGlobal` | `boolean` | `false` | Register the plugin's exports globally. |
+
+All numeric knobs are validated at bootstrap (integers ≥ 1; `successThreshold <= halfOpenMaxCalls`) — an invalid config throws `InvalidCircuitBreakerConfigError` instead of silently misbehaving.
 
 ## Synchronous Setup
 

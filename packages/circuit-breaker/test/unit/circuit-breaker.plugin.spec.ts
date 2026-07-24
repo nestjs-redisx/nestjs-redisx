@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { CircuitBreakerPlugin } from '../../src/circuit-breaker.plugin';
 import { version } from '../../package.json';
-import { CIRCUIT_BREAKER_PLUGIN_OPTIONS, CIRCUIT_BREAKER_SERVICE } from '../../src/circuit-breaker/shared/constants';
-import type { ICircuitBreakerPluginOptions } from '../../src/circuit-breaker/shared/types';
+import { CIRCUIT_BREAKER_PLUGIN_OPTIONS, CIRCUIT_BREAKER_SERVICE } from '../../src/shared/constants';
+import { InvalidCircuitBreakerConfigError } from '../../src/shared/errors';
+import type { ICircuitBreakerPluginOptions } from '../../src/shared/types';
 
 function optionsProviderValue(plugin: CircuitBreakerPlugin): Record<string, unknown> {
   const providers = plugin.getProviders();
@@ -75,6 +76,43 @@ describe('CircuitBreakerPlugin', () => {
 
       // Then
       expect(exports).toContain(CIRCUIT_BREAKER_SERVICE);
+    });
+  });
+
+  describe('configuration validation (fail-fast at bootstrap)', () => {
+    it.each([
+      ['failureThreshold: 0', { failureThreshold: 0 }],
+      ['windowMs: 0', { windowMs: 0 }],
+      ['openDurationMs: -1', { openDurationMs: -1 }],
+      ['halfOpenMaxCalls: 0', { halfOpenMaxCalls: 0 }],
+      ['successThreshold: 1.5', { successThreshold: 1.5 }],
+    ])('should throw InvalidCircuitBreakerConfigError for %s', (_label, options) => {
+      // Given
+      const plugin = new CircuitBreakerPlugin(options as ICircuitBreakerPluginOptions);
+
+      // When / Then — sync path validates when providers are built
+      expect(() => plugin.getProviders()).toThrow(InvalidCircuitBreakerConfigError);
+    });
+
+    it('should reject successThreshold greater than halfOpenMaxCalls', () => {
+      // Given
+      const plugin = new CircuitBreakerPlugin({ halfOpenMaxCalls: 1, successThreshold: 2 });
+
+      // When / Then
+      expect(() => plugin.getProviders()).toThrow(InvalidCircuitBreakerConfigError);
+    });
+
+    it('should reject an invalid config coming from the async factory', async () => {
+      // Given
+      const plugin = CircuitBreakerPlugin.registerAsync({
+        inject: [],
+        useFactory: () => ({ windowMs: 0 }),
+      });
+      const providers = plugin.getProviders();
+      const optionsProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === CIRCUIT_BREAKER_PLUGIN_OPTIONS) as { useFactory: (...args: unknown[]) => Promise<unknown> };
+
+      // When / Then — async path validates when the factory resolves
+      await expect(optionsProvider.useFactory()).rejects.toBeInstanceOf(InvalidCircuitBreakerConfigError);
     });
   });
 

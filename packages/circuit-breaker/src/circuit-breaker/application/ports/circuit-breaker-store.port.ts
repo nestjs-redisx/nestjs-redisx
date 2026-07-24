@@ -1,5 +1,5 @@
 import { ICircuitBreakerConfig, ICircuitSnapshot } from '../../domain/circuit-breaker-state.interface';
-import { ICircuitBreakerDecision } from '../../shared/types';
+import { ICircuitBreakerDecision } from '../../../shared/types';
 
 /**
  * Circuit breaker state store port.

@@ -1,6 +1,6 @@
 ---
 title: 'Testing Plugins — Testing Utilities | NestJS RedisX'
-description: 'Patterns for unit-testing the cache, locks, rate-limit, and idempotency plugins against the in-memory Redis driver, plus seeding and inspecting keyspace state.'
+description: 'Patterns for unit-testing the cache, locks, rate-limit, circuit-breaker, and idempotency plugins against the in-memory Redis driver, plus seeding and inspecting keyspace state.'
 ---
 
 # Testing Plugins
@@ -79,6 +79,28 @@ const rl = app.get<IRateLimitService>(RATE_LIMIT_SERVICE);
 expect((await rl.check('ip:1')).allowed).toBe(true);
 expect((await rl.check('ip:1')).allowed).toBe(true);
 expect((await rl.check('ip:1')).allowed).toBe(false);
+```
+
+## Circuit breaker
+
+The breaker's atomic Lua transitions run on the in-memory interpreter, so the
+full closed → open → half-open → closed cycle is testable without Redis:
+
+```typescript
+const app = await Test.createTestingModule({
+  imports: [
+    RedisTestingModule.forRoot({
+      plugins: [new CircuitBreakerPlugin({ failureThreshold: 2, openDurationMs: 1000 })],
+    }),
+  ],
+}).compile();
+await app.init();
+
+const cb = app.get<ICircuitBreakerService>(CIRCUIT_BREAKER_SERVICE);
+const fail = () => Promise.reject(new Error('down'));
+await expect(cb.execute('dep', fail)).rejects.toThrow();
+await expect(cb.execute('dep', fail)).rejects.toThrow();
+expect((await cb.getState('dep')).state).toBe('open');
 ```
 
 ## Idempotency

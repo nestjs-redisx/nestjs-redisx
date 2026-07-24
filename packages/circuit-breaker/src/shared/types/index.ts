@@ -1,4 +1,4 @@
-import { ICircuitBreakerConfig, ICircuitSnapshot } from '../../domain/circuit-breaker-state.interface';
+import { ICircuitBreakerConfig, ICircuitSnapshot } from '../../circuit-breaker/domain/circuit-breaker-state.interface';
 
 /**
  * Circuit breaker plugin options.

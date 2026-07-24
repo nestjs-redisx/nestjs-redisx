@@ -1,5 +1,5 @@
 import { ICircuitSnapshot } from '../../domain/circuit-breaker-state.interface';
-import { ICircuitBreakerExecuteOptions, ICircuitBreakerOptions } from '../../shared/types';
+import { ICircuitBreakerExecuteOptions, ICircuitBreakerOptions } from '../../../shared/types';
 
 /**
  * Circuit breaker service port.

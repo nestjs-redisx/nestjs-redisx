@@ -25,6 +25,18 @@ description: 'Fix common NestJS RedisX circuit breaker issues: breaker never tri
 - The decorator wraps the method via a proxy and needs the plugin registered in `RedisModule.forRoot({ plugins: [new CircuitBreakerPlugin()] })`. Until the plugin initializes, calls run **without** the breaker and a warning is logged.
 - The decorator works on any Injectable method — but the instance must be created by Nest (so the wrapped descriptor is used).
 
+## The breaker seems stuck in HALF_OPEN
+
+Each permitted half-open probe consumes a slot (`halfOpenInFlight`) that is released only when the outcome is recorded. Two rare scenarios can leak a slot:
+
+- the process crashed between being granted the probe and recording its outcome;
+- the guarded call finished, but recording the outcome failed because the state store was momentarily unavailable (this is logged with a `reset(...)` hint).
+
+With the default `halfOpenMaxCalls: 1`, a leaked slot means further calls are rejected while `getState` reports `half-open`. The state self-heals when the circuit's Redis key TTL expires (about `2 × max(windowMs, openDurationMs) + 60s`). Remedies:
+
+- **immediate** — call `reset(key)` (or the admin tooling from [Recipes](./recipes)) to force the circuit back to CLOSED;
+- **preventive** — set `halfOpenMaxCalls` above 1 so a single leaked slot cannot exhaust the probe budget.
+
 ## `CircuitBreakerStoreError` under load
 
 - This means the **state store** (Redis) failed, not that the breaker opened. Choose `errorPolicy: 'fail-open'` to keep serving traffic when Redis is unavailable, or `'fail-closed'` (default) to surface the error.

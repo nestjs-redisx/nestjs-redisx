@@ -125,16 +125,22 @@ describe('CircuitBreaker on the in-memory driver (no Redis)', () => {
     await wait(OPEN_MS + 40);
 
     // A deferred probe holds the single slot open while two more calls race in.
+    // `started` resolves only once fn runs — i.e. canRequest has already
+    // committed the slot — so no sleep-based synchronization is needed.
     let release!: () => void;
+    let started!: () => void;
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
+    const startedPromise = new Promise<void>((resolve) => {
+      started = resolve;
+    });
     const probe = cb.execute(key, async () => {
+      started();
       await gate;
       return 'probe-ok';
     });
-    // Let the probe's canRequest commit and occupy the slot.
-    await wait(10);
+    await startedPromise; // deterministic: the slot is occupied
 
     // The extra calls are rejected while the probe is in-flight.
     await expect(cb.execute(key, () => Promise.resolve('nope'))).rejects.toBeInstanceOf(CircuitBreakerOpenError);

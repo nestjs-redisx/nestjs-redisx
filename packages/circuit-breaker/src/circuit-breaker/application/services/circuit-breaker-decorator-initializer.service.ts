@@ -8,7 +8,7 @@
 
 import { Injectable, OnModuleInit, Inject, Logger } from '@nestjs/common';
 
-import { CIRCUIT_BREAKER_SERVICE } from '../../shared/constants';
+import { CIRCUIT_BREAKER_SERVICE } from '../../../shared/constants';
 import { registerCircuitBreakerServiceGetter } from '../../api/decorators/with-circuit-breaker.decorator';
 import { ICircuitBreakerService } from '../ports/circuit-breaker-service.port';
 

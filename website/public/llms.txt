@@ -51,6 +51,15 @@ NestJS RedisX is designed for production NestJS applications that need Redis bey
 - [Algorithms](https://nestjs-redisx.dev/en/reference/rate-limit/algorithms): Fixed window, sliding window, and token bucket — all atomic Lua scripts.
 - [Key Extraction](https://nestjs-redisx.dev/en/reference/rate-limit/key-extraction): Custom key strategies for IP, user, tenant, or custom identifiers.
 
+## Circuit Breaker Plugin
+
+- [Circuit Breaker Overview](https://nestjs-redisx.dev/en/reference/circuit-breaker/): Distributed closed/open/half-open breaker with fail-fast rejection and fallbacks.
+- [Configuration](https://nestjs-redisx.dev/en/reference/circuit-breaker/configuration): CircuitBreakerPlugin configuration for failure threshold, rolling window, open cooldown, and half-open probes.
+- [@WithCircuitBreaker Decorator](https://nestjs-redisx.dev/en/reference/circuit-breaker/decorator): Proxy-based decorator for any Injectable method with fallbacks and skip.
+- [Service API](https://nestjs-redisx.dev/en/reference/circuit-breaker/service-api): Programmatic execute/recordSuccess/recordFailure/getState/reset with ICircuitBreakerService.
+- [Algorithm](https://nestjs-redisx.dev/en/reference/circuit-breaker/algorithm): State transitions, rolling failure window, cooldown, and probe rules — atomic Lua scripts.
+- [Testing](https://nestjs-redisx.dev/en/reference/circuit-breaker/testing): Unit-test the pure state machine or run the real plugin on the in-memory driver.
+
 ## Idempotency Plugin
 
 - [Idempotency Overview](https://nestjs-redisx.dev/en/reference/idempotency/): Request deduplication with exactly-once execution for payments and mutations.

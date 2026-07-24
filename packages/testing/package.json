@@ -55,6 +55,7 @@
   },
   "devDependencies": {
     "@nestjs-redisx/cache": "^1.6.0",
+    "@nestjs-redisx/circuit-breaker": "^1.6.0",
     "@nestjs-redisx/idempotency": "^1.6.0",
     "@nestjs-redisx/locks": "^1.6.0",
     "@nestjs-redisx/rate-limit": "^1.6.0",
