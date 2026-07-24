@@ -11,6 +11,17 @@ import { IIdempotencyPluginOptions, IIdempotencyRecord } from '../../../shared/t
 import { IIdempotencyService } from '../../application/ports/idempotency-service.port';
 import { IDEMPOTENT_OPTIONS, IIdempotentOptions } from '../decorators/idempotent.decorator';
 
+/**
+ * Per-request marker recording that idempotency has already been handled for
+ * this request. The interceptor can legitimately be bound more than once
+ * (global APP_INTERCEPTOR + @Idempotent on the method, controller-level
+ * @UseInterceptors + method decorator, controller inheritance). Without the
+ * marker the inner pass would see its own 'processing' record and wait for
+ * itself until the lock TTL expires — a self-deadlock. Mirrors
+ * RATE_LIMIT_CONSUMED in the rate-limit guard.
+ */
+const IDEMPOTENCY_HANDLED = Symbol('redisx.idempotencyHandled');
+
 @Injectable()
 export class IdempotencyInterceptor implements NestInterceptor {
   private readonly logger = new Logger(IdempotencyInterceptor.name);
@@ -23,6 +34,14 @@ export class IdempotencyInterceptor implements NestInterceptor {
   ) {}
 
   async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<unknown>> {
+    // Idempotency must engage at most once per request even when the
+    // interceptor is bound multiple times; a second pass is a plain
+    // passthrough (see IDEMPOTENCY_HANDLED).
+    const request = context.switchToHttp().getRequest<Record<symbol, unknown>>();
+    if (request[IDEMPOTENCY_HANDLED]) {
+      return next.handle();
+    }
+
     const options = this.getOptions(context);
     const response = context.switchToHttp().getResponse();
 
@@ -36,12 +55,15 @@ export class IdempotencyInterceptor implements NestInterceptor {
       return next.handle();
     }
 
+    request[IDEMPOTENCY_HANDLED] = true;
+
     const fingerprint = await this.generateFingerprint(context, options);
 
     let checkResult: Awaited<ReturnType<typeof this.idempotencyService.checkAndLock>>;
     try {
       checkResult = await this.idempotencyService.checkAndLock(key, fingerprint, {
         ttl: options.ttl,
+        validateFingerprint: options.validateFingerprint,
       });
     } catch (error) {
       // The idempotency store is unavailable (e.g. Redis is down). Honor the
@@ -71,18 +93,27 @@ export class IdempotencyInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap({
         next: (data) => {
-          void this.idempotencyService.complete(
-            key,
-            {
-              statusCode: response.statusCode,
-              body: data,
-              headers: this.extractHeaders(response, options),
-            },
-            { ttl: options.ttl },
-          );
+          Promise.resolve(
+            this.idempotencyService.complete(
+              key,
+              {
+                statusCode: response.statusCode,
+                body: data,
+                headers: this.extractHeaders(response, options),
+              },
+              { ttl: options.ttl, fingerprint },
+            ),
+          ).catch((err: Error) => {
+            // The client already got its response; never let a store failure
+            // become an unhandled rejection. The processing record will
+            // expire after lockTimeout and a waiter/retry takes over.
+            this.logger.error(`Failed to persist idempotency completion for key "${key}": ${err.message}`);
+          });
         },
         error: (error) => {
-          void this.idempotencyService.fail(key, error.message);
+          Promise.resolve(this.idempotencyService.fail(key, error.message, { fingerprint })).catch((err: Error) => {
+            this.logger.error(`Failed to persist idempotency failure for key "${key}": ${err.message}`);
+          });
         },
       }),
     );
@@ -99,8 +130,13 @@ export class IdempotencyInterceptor implements NestInterceptor {
 
     const request = context.switchToHttp().getRequest();
     const headerName = this.config.headerName ?? 'Idempotency-Key';
+    const value = request.headers[headerName.toLowerCase()];
 
-    return request.headers[headerName.toLowerCase()] ?? null;
+    // A duplicated header arrives as an array; use the first occurrence.
+    if (Array.isArray(value)) {
+      return value[0] ?? null;
+    }
+    return value ?? null;
   }
 
   private async generateFingerprint(context: ExecutionContext, options: IIdempotentOptions): Promise<string> {

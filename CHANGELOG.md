@@ -4,6 +4,22 @@ All notable changes to NestJS RedisX are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] - 2026-07-24
+
+### Fixed
+
+- `idempotency`: a duplicated interceptor binding (global `APP_INTERCEPTOR` + `@Idempotent`, controller-level `@UseInterceptors` + method decorator, or manual registration) caused a **self-deadlock**: the inner pass saw its own `processing` record and waited for it until the lock TTL expired (~30 s), then surfaced an unexplained 500. Idempotency now engages at most once per request via a per-request marker (same pattern as the rate-limit guard).
+- `idempotency`: when the first attempt died between `checkAndLock` and `complete` (its `processing` record expired by lock TTL), every concurrent waiter got `IdempotencyRecordNotFoundError` → 500. A waiter now atomically **takes over** the lock and executes the request itself; losers keep waiting on the new owner's record. As a backstop the filter maps `IdempotencyRecordNotFoundError` to a retryable 409 instead of 500.
+- `idempotency`: `complete()`/`fail()` now persist the request **fingerprint**. Previously a handler that outlived `lockTimeout` re-created the record without a fingerprint, and every later replay of the same key was misread as a mismatch (422).
+- `idempotency`: fire-and-forget `complete()`/`fail()` rejections (e.g. Redis blips after the response was sent) are now logged instead of becoming unhandled promise rejections.
+- `idempotency`: the package `test:integration` script pointed at a non-existent spec file and silently ran nothing; it now runs the whole directory sequentially.
+- `idempotency`: a duplicated `Idempotency-Key` header (array) now uses the first value instead of producing a garbage key.
+
+### Added
+
+- `idempotency`: `validateFingerprint` now actually works (it was a documented no-op — the fingerprint was always compared). `false` at the plugin or `@Idempotent` level replays a reused key without comparing request contents. Also plugged through per-call `IIdempotencyOptions.validateFingerprint`.
+- `idempotency`: plugin options are validated at bootstrap (`defaultTtl`/`lockTimeout`/`waitTimeout` must be positive) — invalid values throw `IdempotencyConfigError` instead of silently breaking TTL semantics (e.g. `lockTimeout: 0` deleted the processing record instantly).
+
 ## [1.6.0] - 2026-07-24
 
 ### Added

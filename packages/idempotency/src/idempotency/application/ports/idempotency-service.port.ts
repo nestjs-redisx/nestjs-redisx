@@ -29,7 +29,7 @@ export interface IIdempotencyService {
    * @param key - Idempotency key
    * @param error - Error message
    */
-  fail(key: string, error: string): Promise<void>;
+  fail(key: string, error: string, options?: IIdempotencyOptions): Promise<void>;
 
   /**
    * Get existing record by key.

@@ -404,7 +404,7 @@ describe('IdempotencyInterceptor', () => {
         expect.fail('Should have thrown error');
       } catch (err) {
         expect(err).toBe(error);
-        expect(mockService.fail).toHaveBeenCalledWith('key12', 'Handler error');
+        expect(mockService.fail).toHaveBeenCalledWith('key12', 'Handler error', { fingerprint: expect.any(String) });
       }
     });
   });
@@ -551,7 +551,9 @@ describe('IdempotencyInterceptor', () => {
       await new Promise((resolve) => resultFromAdapter.subscribe(resolve));
       const fingerprintFromAdapter = mockService.checkAndLock.mock.calls[0][1];
 
-      // And given — same request but adapter now returns undefined, so it falls back to raw url
+      // And given — same request but adapter now returns undefined, so it falls back to raw url.
+      // Clear the per-request handled marker so the second pass engages again.
+      Object.getOwnPropertySymbols(mockRequest).forEach((sym) => delete (mockRequest as Record<symbol, unknown>)[sym]);
       mockService.checkAndLock.mockClear();
       mockHttpAdapter.getRequestUrl.mockReturnValue(undefined);
       mockService.checkAndLock.mockResolvedValue({ isNew: true });
@@ -563,6 +565,101 @@ describe('IdempotencyInterceptor', () => {
       // Then — different paths produce different fingerprints
       expect(fingerprintFromAdapter).not.toBe(fingerprintFromUrl);
       expect(mockHttpAdapter.getRequestUrl).toHaveBeenCalledWith(mockRequest);
+    });
+  });
+
+  describe('duplicate binding (per-request handled marker)', () => {
+    it('should engage idempotency at most once when the interceptor is bound twice', async () => {
+      // Given — the same interceptor instance wired twice into the chain
+      // (global registration + @Idempotent, or manual @UseInterceptors)
+      mockRequest.headers['idempotency-key'] = 'dup-1';
+      mockService.checkAndLock.mockResolvedValue({ isNew: true });
+      const handler = vi.fn().mockReturnValue(of('handled'));
+
+      // Inner pass = the second interceptor invocation wrapping the real handler
+      const innerNext: CallHandler = { handle: handler };
+      const outerNext: CallHandler = {
+        handle: () => {
+          // Simulate the nested interceptor pass on the SAME request
+          let innerResult!: ReturnType<CallHandler['handle']>;
+          void interceptor.intercept(mockContext, innerNext).then((obs) => (innerResult = obs));
+          return of('outer-wraps-inner');
+        },
+      };
+
+      // When — outer pass engages, inner pass must be a pure passthrough
+      const result = await interceptor.intercept(mockContext, outerNext);
+      await firstValueFrom(result);
+      // allow the inner intercept microtask to run
+      await new Promise((resolve) => setImmediate(resolve));
+
+      // Then — checkAndLock ran exactly ONCE (no self-deadlock wait)
+      expect(mockService.checkAndLock).toHaveBeenCalledTimes(1);
+    });
+
+    it('inner pass resolves instantly via passthrough (no waitForCompletion self-deadlock)', async () => {
+      // Given — request already handled by an outer pass
+      mockRequest.headers['idempotency-key'] = 'dup-2';
+      mockService.checkAndLock.mockResolvedValue({ isNew: true });
+      const outer = await interceptor.intercept(mockContext, mockNext);
+      await firstValueFrom(outer);
+      mockService.checkAndLock.mockClear();
+
+      // When — a second pass arrives on the same request object
+      const inner = await interceptor.intercept(mockContext, mockNext);
+      const value = await firstValueFrom(inner);
+
+      // Then — passthrough: handler ran, the service was never consulted
+      expect(value).toEqual({ result: 'success' });
+      expect(mockService.checkAndLock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('fire-and-forget persistence failures', () => {
+    it('should log (not crash) when complete() rejects after the response was sent', async () => {
+      // Given
+      mockRequest.headers['idempotency-key'] = 'ff-1';
+      mockService.checkAndLock.mockResolvedValue({ isNew: true });
+      mockService.complete.mockRejectedValue(new Error('redis down'));
+
+      // When — the response flows normally
+      const result = await interceptor.intercept(mockContext, mockNext);
+      const value = await firstValueFrom(result);
+      await new Promise((resolve) => setImmediate(resolve)); // flush the rejection
+
+      // Then — client result unaffected; no unhandled rejection escaped
+      expect(value).toEqual({ result: 'success' });
+    });
+
+    it('should pass the fingerprint through to complete()', async () => {
+      // Given
+      mockRequest.headers['idempotency-key'] = 'ff-2';
+      mockService.checkAndLock.mockResolvedValue({ isNew: true });
+      mockService.complete.mockResolvedValue(undefined);
+
+      // When
+      const result = await interceptor.intercept(mockContext, mockNext);
+      await firstValueFrom(result);
+      await new Promise((resolve) => setImmediate(resolve));
+
+      // Then — the same fingerprint used for checkAndLock is persisted
+      const fingerprint = mockService.checkAndLock.mock.calls[0][1];
+      expect(mockService.complete).toHaveBeenCalledWith('ff-2', expect.any(Object), { ttl: undefined, fingerprint });
+    });
+  });
+
+  describe('duplicated Idempotency-Key header', () => {
+    it('should use the first value when the header arrives as an array', async () => {
+      // Given
+      mockRequest.headers['idempotency-key'] = ['first-key', 'second-key'];
+      mockService.checkAndLock.mockResolvedValue({ isNew: true });
+
+      // When
+      const result = await interceptor.intercept(mockContext, mockNext);
+      await firstValueFrom(result);
+
+      // Then
+      expect(mockService.checkAndLock).toHaveBeenCalledWith('first-key', expect.any(String), expect.any(Object));
     });
   });
 });

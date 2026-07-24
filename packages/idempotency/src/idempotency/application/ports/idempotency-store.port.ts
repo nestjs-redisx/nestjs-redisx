@@ -15,6 +15,9 @@ export interface ICheckAndLockResult {
  * Data for completing a request
  */
 export interface ICompleteData {
+  /** Request fingerprint (persisted so replays keep matching after rewrites) */
+  fingerprint?: string;
+
   /** HTTP status code */
   statusCode: number;
 
@@ -40,7 +43,7 @@ export interface IIdempotencyStore {
    * @param lockTimeoutMs - Lock timeout in milliseconds
    * @returns Check result
    */
-  checkAndLock(key: string, fingerprint: string, lockTimeoutMs: number): Promise<ICheckAndLockResult>;
+  checkAndLock(key: string, fingerprint: string, lockTimeoutMs: number, validateFingerprint?: boolean): Promise<ICheckAndLockResult>;
 
   /**
    * Mark record as completed with response data.
@@ -59,7 +62,7 @@ export interface IIdempotencyStore {
    * @param ttlSeconds - TTL in seconds after which the failed record expires,
    *   allowing a fresh attempt with the same key
    */
-  fail(key: string, error: string, ttlSeconds: number): Promise<void>;
+  fail(key: string, error: string, ttlSeconds: number, fingerprint?: string): Promise<void>;
 
   /**
    * Get record by key.

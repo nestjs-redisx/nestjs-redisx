@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi, type MockedObject } from 'vitest'
 import { IdempotencyService } from '../../src/idempotency/application/services/idempotency.service';
 import type { IIdempotencyStore } from '../../src/idempotency/application/ports/idempotency-store.port';
 import type { IIdempotencyPluginOptions, IIdempotencyRecord } from '../../src/shared/types';
+import { IdempotencyFingerprintMismatchError } from '../../src/shared/errors';
 
 describe('IdempotencyService', () => {
   let service: IdempotencyService;
@@ -37,7 +38,7 @@ describe('IdempotencyService', () => {
 
       // Then
       expect(result.isNew).toBe(true);
-      expect(mockStore.checkAndLock).toHaveBeenCalledWith('idempotency:key1', 'fp1', 30000);
+      expect(mockStore.checkAndLock).toHaveBeenCalledWith('idempotency:key1', 'fp1', 30000, true);
     });
 
     it('should return fingerprintMismatch on mismatch', async () => {
@@ -133,18 +134,80 @@ describe('IdempotencyService', () => {
       }
     });
 
-    it('should throw error when record not found during wait', async () => {
-      // Given
-      mockStore.checkAndLock.mockResolvedValue({ status: 'processing' });
+    it('should TAKE OVER when the processing record vanishes (first attempt died)', async () => {
+      // Given — initial check sees 'processing'; the record then expires
+      // (crash between checkAndLock and complete); the takeover retry wins.
+      mockStore.checkAndLock.mockResolvedValueOnce({ status: 'processing' }).mockResolvedValueOnce({ status: 'new' });
       mockStore.get.mockResolvedValue(null);
 
-      // When/Then
-      try {
-        await service.checkAndLock('key7', 'fp7');
-        expect.fail('Should have thrown error');
-      } catch (error) {
-        expect((error as Error).name).toMatch(/IdempotencyRecordNotFoundError/);
-      }
+      // When
+      const result = await service.checkAndLock('key7', 'fp7');
+
+      // Then — the caller now owns the key and must execute the handler
+      expect(result).toEqual({ isNew: true });
+      expect(mockStore.checkAndLock).toHaveBeenCalledTimes(2);
+    });
+
+    it('should keep waiting when another waiter wins the takeover, then replay its result', async () => {
+      // Given — record vanished; our retry loses ('processing' again); the
+      // winner then completes and we replay its record.
+      const completed: IIdempotencyRecord = { key: 'idempotency:key8', fingerprint: 'fp8', status: 'completed', statusCode: 201, response: '{"id":1}', startedAt: 1 };
+      mockStore.checkAndLock.mockResolvedValueOnce({ status: 'processing' }).mockResolvedValueOnce({ status: 'processing' });
+      mockStore.get.mockResolvedValueOnce(null).mockResolvedValue(completed);
+
+      // When
+      const result = await service.checkAndLock('key8', 'fp8');
+
+      // Then
+      expect(result.isNew).toBe(false);
+      expect(result.record).toEqual(completed);
+    });
+
+    it('should replay directly when the takeover retry finds a completed record', async () => {
+      // Given — between our get(null) and the retry, the winner already completed
+      const completed: IIdempotencyRecord = { key: 'idempotency:key9', fingerprint: 'fp9', status: 'completed', statusCode: 200, response: '"ok"', startedAt: 1 };
+      mockStore.checkAndLock.mockResolvedValueOnce({ status: 'processing' }).mockResolvedValueOnce({ status: 'completed', record: completed });
+      mockStore.get.mockResolvedValue(null);
+
+      // When
+      const result = await service.checkAndLock('key9', 'fp9');
+
+      // Then
+      expect(result.isNew).toBe(false);
+      expect(result.record).toEqual(completed);
+    });
+
+    it('should throw FingerprintMismatch when a different request re-claimed the key mid-wait', async () => {
+      // Given
+      mockStore.checkAndLock.mockResolvedValueOnce({ status: 'processing' }).mockResolvedValueOnce({ status: 'fingerprint_mismatch' });
+      mockStore.get.mockResolvedValue(null);
+
+      // When / Then
+      await expect(service.checkAndLock('key10', 'fp10')).rejects.toThrow(IdempotencyFingerprintMismatchError);
+    });
+  });
+
+  describe('validateFingerprint threading', () => {
+    it('should pass validateFingerprint=true to the store by default', async () => {
+      // Given
+      mockStore.checkAndLock.mockResolvedValue({ status: 'new' });
+
+      // When
+      await service.checkAndLock('k', 'fp');
+
+      // Then
+      expect(mockStore.checkAndLock).toHaveBeenCalledWith('idempotency:k', 'fp', 30000, true);
+    });
+
+    it('should pass validateFingerprint=false when disabled per call', async () => {
+      // Given
+      mockStore.checkAndLock.mockResolvedValue({ status: 'new' });
+
+      // When
+      await service.checkAndLock('k', 'fp', { validateFingerprint: false });
+
+      // Then
+      expect(mockStore.checkAndLock).toHaveBeenCalledWith('idempotency:k', 'fp', 30000, false);
     });
   });
 
@@ -211,7 +274,7 @@ describe('IdempotencyService', () => {
       await service.fail('key7', error);
 
       // Then - lockTimeout 30000ms -> 30s TTL so the failed record expires
-      expect(mockStore.fail).toHaveBeenCalledWith('idempotency:key7', error, 30);
+      expect(mockStore.fail).toHaveBeenCalledWith('idempotency:key7', error, 30, undefined);
     });
   });
 
@@ -271,7 +334,7 @@ describe('IdempotencyService', () => {
       await service.checkAndLock('test', 'fp');
 
       // Then
-      expect(mockStore.checkAndLock).toHaveBeenCalledWith('idempotency:test', expect.any(String), expect.any(Number));
+      expect(mockStore.checkAndLock).toHaveBeenCalledWith('idempotency:test', expect.any(String), expect.any(Number), true);
     });
   });
 });

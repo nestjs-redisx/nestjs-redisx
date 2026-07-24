@@ -749,11 +749,11 @@ States: CLOSED counts failures in a rolling `windowMs`; at `failureThreshold` it
 
 - `checkAndLock(key: string, fingerprint: string, options?: IIdempotencyOptions): Promise<IIdempotencyCheckResult>` — atomically reserve a new key or report processing/completed/failed/fingerprint_mismatch.
 - `complete(key: string, response: IIdempotencyResponse, options?: IIdempotencyOptions): Promise<void>` — store a successful response for replay (TTL = defaultTtl).
-- `fail(key: string, error: string): Promise<void>` — mark failed (short TTL = lockTimeout) so a retry is allowed after the window.
+- `fail(key: string, error: string, options?: IIdempotencyOptions): Promise<void>` — mark failed (short TTL = lockTimeout) so a retry is allowed after the window; pass `fingerprint` so replays keep matching.
 - `get(key: string): Promise<IIdempotencyRecord | null>` — read the stored record.
 - `delete(key: string): Promise<boolean>` — remove a record.
 
-Errors map to HTTP via the built-in filter: fingerprint mismatch → 422, previous-failed/timeout → 409, missing key → 400. `errorPolicy` ('fail-open' | 'fail-closed', default 'fail-closed') decides behavior when the store is unavailable.
+Errors map to HTTP via the built-in filter: fingerprint mismatch → 422, previous-failed/timeout/vanished-in-flight → 409, missing key → 400. `errorPolicy` ('fail-open' | 'fail-closed', default 'fail-closed') decides behavior when the store is unavailable. If the first attempt dies before completing (its processing record expires by lock TTL), a concurrent waiter atomically TAKES OVER and executes the request itself. The interceptor engages at most once per request even when bound multiple times (global registration + @Idempotent is safe; never add @UseInterceptors(IdempotencyInterceptor) manually — @Idempotent already includes it). `validateFingerprint: false` (plugin or per-@Idempotent) replays a reused key without comparing request contents.
 
 ### Streams Producer — `STREAM_PRODUCER` (`IStreamProducer`)
 

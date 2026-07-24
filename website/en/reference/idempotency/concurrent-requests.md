@@ -364,3 +364,8 @@ if (record.status === 'processing') {
 
 - [Configuration](./configuration) — Timeout settings
 - [Troubleshooting](./troubleshooting) — Debug concurrency issues
+
+
+## When the first request dies mid-flight
+
+If the process handling the first request crashes between acquiring the lock and storing the response (deploy, OOM, kill), its `processing` record expires after `lockTimeout`. Waiting requests do **not** fail: the first waiter to notice the vanished record atomically **takes over** the lock and executes the request itself; the remaining waiters continue waiting and replay the new owner's response. If nobody can take over within `waitTimeout`, the client receives a retryable `409 Conflict`.

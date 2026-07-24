@@ -4,7 +4,7 @@ import { IDEMPOTENCY_PLUGIN_OPTIONS, IDEMPOTENCY_STORE } from '../../../shared/c
 
 /** Polling interval when waiting for an in-flight idempotent request to complete. */
 const POLL_INTERVAL_MS = 100;
-import { IdempotencyRecordNotFoundError, IdempotencyTimeoutError } from '../../../shared/errors';
+import { IdempotencyFingerprintMismatchError, IdempotencyTimeoutError } from '../../../shared/errors';
 import { IIdempotencyPluginOptions, IIdempotencyRecord, IIdempotencyCheckResult, IIdempotencyResponse, IIdempotencyOptions } from '../../../shared/types';
 import { IIdempotencyService } from '../ports/idempotency-service.port';
 import { IIdempotencyStore } from '../ports/idempotency-store.port';
@@ -34,8 +34,9 @@ export class IdempotencyService implements IIdempotencyService {
     const startTime = Date.now();
     const fullKey = this.buildKey(key);
     const lockTimeout = options.lockTimeout ?? this.config.lockTimeout ?? 30000;
+    const validateFingerprint = options.validateFingerprint ?? this.config.validateFingerprint ?? true;
 
-    const result = await this.store.checkAndLock(fullKey, fingerprint, lockTimeout);
+    const result = await this.store.checkAndLock(fullKey, fingerprint, lockTimeout, validateFingerprint);
 
     if (result.status === 'new') {
       this.metrics?.incrementCounter('redisx_idempotency_requests_total', { status: 'new' });
@@ -50,11 +51,20 @@ export class IdempotencyService implements IIdempotencyService {
     }
 
     if (result.status === 'processing') {
-      // Wait for completion
-      const record = await this.waitForCompletion(fullKey);
+      // Wait for the in-flight attempt; if its record vanishes (the process
+      // died between checkAndLock and complete, so the lock TTL expired),
+      // atomically take over instead of failing the caller.
+      const outcome = await this.waitForCompletion(fullKey, fingerprint, lockTimeout, validateFingerprint);
+
+      if (outcome === 'takeover') {
+        this.metrics?.incrementCounter('redisx_idempotency_requests_total', { status: 'takeover' });
+        this.recordDuration(startTime);
+        return { isNew: true };
+      }
+
       this.metrics?.incrementCounter('redisx_idempotency_requests_total', { status: 'replay' });
       this.recordDuration(startTime);
-      return { isNew: false, record };
+      return { isNew: false, record: outcome };
     }
 
     // completed or failed - replay from cache
@@ -75,6 +85,7 @@ export class IdempotencyService implements IIdempotencyService {
     await this.store.complete(
       fullKey,
       {
+        fingerprint: options.fingerprint,
         statusCode: response.statusCode,
         response: JSON.stringify(response.body),
         headers: response.headers ? JSON.stringify(response.headers) : undefined,
@@ -84,12 +95,12 @@ export class IdempotencyService implements IIdempotencyService {
     );
   }
 
-  async fail(key: string, error: string): Promise<void> {
+  async fail(key: string, error: string, options: IIdempotencyOptions = {}): Promise<void> {
     const fullKey = this.buildKey(key);
     // Failed records are short-lived: keep them only for the lock window so a
     // retry returns the failure briefly, then a fresh attempt is allowed.
     const ttlSeconds = Math.ceil((this.config.lockTimeout ?? 30000) / 1000);
-    await this.store.fail(fullKey, error, ttlSeconds);
+    await this.store.fail(fullKey, error, ttlSeconds, options.fingerprint);
   }
 
   async get(key: string): Promise<IIdempotencyRecord | null> {
@@ -102,17 +113,42 @@ export class IdempotencyService implements IIdempotencyService {
     return this.store.delete(fullKey);
   }
 
-  private async waitForCompletion(key: string): Promise<IIdempotencyRecord> {
+  /**
+   * Polls until the in-flight attempt completes or fails, bounded by
+   * waitTimeout.
+   *
+   * If the processing record VANISHES (the first attempt died between
+   * checkAndLock and complete, so its lock TTL expired), the waiter attempts
+   * an atomic takeover via checkAndLock: the winner returns 'takeover' (the
+   * caller executes the handler itself), losers keep waiting on the new
+   * owner's record. This turns a dead first attempt into a self-healing
+   * retry instead of surfacing an unexplained error to every waiter.
+   *
+   * @returns the completed/failed record to replay, or 'takeover' when this
+   *          caller now owns the key and must execute the request
+   */
+  private async waitForCompletion(key: string, fingerprint: string, lockTimeoutMs: number, validateFingerprint: boolean): Promise<IIdempotencyRecord | 'takeover'> {
     const waitTimeout = this.config.waitTimeout ?? 60000;
     const startTime = Date.now();
     while (Date.now() - startTime < waitTimeout) {
       const record = await this.store.get(key);
 
       if (!record) {
-        throw new IdempotencyRecordNotFoundError(key);
-      }
+        // First attempt died — race for the lock (atomic Lua SET-if-absent).
+        const retry = await this.store.checkAndLock(key, fingerprint, lockTimeoutMs, validateFingerprint);
 
-      if (record.status === 'completed' || record.status === 'failed') {
+        if (retry.status === 'new') {
+          return 'takeover';
+        }
+        if (retry.status === 'completed' || retry.status === 'failed') {
+          return retry.record!;
+        }
+        if (retry.status === 'fingerprint_mismatch') {
+          // A different request re-claimed the key while we waited.
+          throw new IdempotencyFingerprintMismatchError(key);
+        }
+        // 'processing' — another waiter won the takeover; keep waiting.
+      } else if (record.status === 'completed' || record.status === 'failed') {
         return record;
       }
 

@@ -18,7 +18,7 @@ export { IdempotencyInterceptor } from './idempotency/api/interceptors/idempoten
 export type { IIdempotencyPluginOptions, IIdempotencyRecord, IIdempotencyCheckResult, IIdempotencyResponse, IIdempotencyOptions } from './shared/types';
 
 // Errors
-export { IdempotencyError, IdempotencyKeyRequiredError, IdempotencyFingerprintMismatchError, IdempotencyTimeoutError, IdempotencyFailedError, IdempotencyRecordNotFoundError } from './shared/errors';
+export { IdempotencyError, IdempotencyKeyRequiredError, IdempotencyFingerprintMismatchError, IdempotencyTimeoutError, IdempotencyFailedError, IdempotencyRecordNotFoundError, IdempotencyConfigError } from './shared/errors';
 
 // Constants
 export { IDEMPOTENCY_PLUGIN_OPTIONS, IDEMPOTENCY_REDIS_DRIVER, IDEMPOTENCY_SERVICE, IDEMPOTENCY_STORE } from './shared/constants';

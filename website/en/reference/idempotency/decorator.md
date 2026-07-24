@@ -5,6 +5,10 @@ description: 'Implement declarative idempotency with @Idempotent, controlling tt
 
 # @Idempotent Decorator
 
+::: warning Do not register the interceptor manually
+`@Idempotent()` already bundles `IdempotencyInterceptor` — adding your own `@UseInterceptors(IdempotencyInterceptor)` is unnecessary. Duplicate bindings (including a global `APP_INTERCEPTOR` combined with `@Idempotent`) are safe: idempotency engages at most once per request.
+:::
+
 Make any endpoint idempotent with a single decorator.
 
 ## Basic Usage

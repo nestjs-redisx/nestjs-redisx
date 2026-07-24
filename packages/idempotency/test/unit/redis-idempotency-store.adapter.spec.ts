@@ -50,7 +50,7 @@ describe('RedisIdempotencyStoreAdapter', () => {
 
       // Then
       expect(result).toEqual({ status: 'new' });
-      expect(mockDriver.evalsha).toHaveBeenCalledWith('sha1hash', [key], [fingerprint, lockTimeout, expect.any(Number)]);
+      expect(mockDriver.evalsha).toHaveBeenCalledWith('sha1hash', [key], [fingerprint, lockTimeout, expect.any(Number), '1']);
     });
 
     it('should return fingerprint_mismatch status when fingerprint differs', async () => {
@@ -365,6 +365,52 @@ describe('RedisIdempotencyStoreAdapter', () => {
 
       // Then
       expect(result).toBe(false);
+    });
+  });
+
+  describe('fingerprint persistence (rewrites after lock expiry)', () => {
+    it('complete() should persist the fingerprint when provided', async () => {
+      // Given / When
+      await adapter.complete('idempotency:k1', { fingerprint: 'fp-1', statusCode: 201, response: '{"id":1}', completedAt: 123 }, 3600);
+
+      // Then — HMSET includes the fingerprint so a record re-created after
+      // lock expiry still matches future replays (no spurious 422)
+      expect(mockDriver.hmset).toHaveBeenCalledWith('idempotency:k1', expect.objectContaining({ status: 'completed', fingerprint: 'fp-1' }));
+    });
+
+    it('fail() should persist the fingerprint when provided', async () => {
+      // Given / When
+      await adapter.fail('idempotency:k2', 'boom', 30, 'fp-2');
+
+      // Then
+      expect(mockDriver.hmset).toHaveBeenCalledWith('idempotency:k2', expect.objectContaining({ status: 'failed', fingerprint: 'fp-2' }));
+    });
+
+    it('get() should tolerate records without fingerprint/startedAt (legacy rewrites)', async () => {
+      // Given — a record re-created by a pre-fix complete() after expiry
+      mockDriver.hgetall.mockResolvedValue({ status: 'completed', statusCode: '200', response: '"ok"', completedAt: '5' });
+
+      // When
+      const record = await adapter.get('idempotency:k3');
+
+      // Then — no crash, sane defaults
+      expect(record).toMatchObject({ status: 'completed', fingerprint: '', startedAt: 0 });
+    });
+  });
+
+  describe('validateFingerprint flag', () => {
+    it("should pass '1' to Lua by default and '0' when disabled", async () => {
+      // Given
+      mockDriver.evalsha.mockResolvedValue(['new']);
+      await adapter.onModuleInit();
+
+      // When
+      await adapter.checkAndLock('idempotency:k', 'fp', 30000);
+      await adapter.checkAndLock('idempotency:k', 'fp', 30000, false);
+
+      // Then
+      expect(mockDriver.evalsha.mock.calls[0][2][3]).toBe('1');
+      expect(mockDriver.evalsha.mock.calls[1][2][3]).toBe('0');
     });
   });
 });

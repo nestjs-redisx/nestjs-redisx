@@ -58,3 +58,13 @@ export class IdempotencyRecordNotFoundError extends IdempotencyError {
     super(`Idempotency record not found for key "${key}"`, ErrorCode.OP_KEY_NOT_FOUND, key);
   }
 }
+
+/**
+ * Thrown when the plugin is configured with invalid values (e.g. non-positive
+ * timeouts, which would silently break record TTL semantics).
+ */
+export class IdempotencyConfigError extends IdempotencyError {
+  constructor(message: string) {
+    super(message, ErrorCode.CFG_INVALID, '');
+  }
+}

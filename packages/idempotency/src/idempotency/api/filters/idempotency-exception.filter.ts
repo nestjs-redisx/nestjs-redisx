@@ -1,7 +1,7 @@
 import { Catch, ExceptionFilter, ArgumentsHost, HttpStatus, Inject } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 
-import { IdempotencyError, IdempotencyKeyRequiredError, IdempotencyFingerprintMismatchError, IdempotencyTimeoutError, IdempotencyFailedError } from '../../../shared/errors';
+import { IdempotencyError, IdempotencyKeyRequiredError, IdempotencyFingerprintMismatchError, IdempotencyTimeoutError, IdempotencyFailedError, IdempotencyRecordNotFoundError } from '../../../shared/errors';
 
 /**
  * Exception filter for idempotency errors.
@@ -43,6 +43,7 @@ export class IdempotencyExceptionFilter implements ExceptionFilter {
    * - Reused key with a different request -> 422 Unprocessable Entity
    * - Concurrent request still in progress (timeout) -> 409 Conflict
    * - Previous request with the same key failed -> 409 Conflict
+   * - In-flight record vanished mid-wait -> 409 Conflict (retryable)
    * - Anything else (unexpected) -> 500 Internal Server Error
    */
   private resolveStatus(exception: IdempotencyError): HttpStatus {
@@ -56,6 +57,11 @@ export class IdempotencyExceptionFilter implements ExceptionFilter {
       return HttpStatus.CONFLICT;
     }
     if (exception instanceof IdempotencyFailedError) {
+      return HttpStatus.CONFLICT;
+    }
+    if (exception instanceof IdempotencyRecordNotFoundError) {
+      // Should be unreachable since waiters take over vanished records, but if
+      // it ever surfaces the client should get a retryable 409, not a 500.
       return HttpStatus.CONFLICT;
     }
     return HttpStatus.INTERNAL_SERVER_ERROR;

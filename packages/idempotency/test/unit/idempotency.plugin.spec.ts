@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { APP_FILTER } from '@nestjs/core';
 import { IdempotencyPlugin } from '../../src/idempotency.plugin';
+import { IdempotencyConfigError } from '../../src/shared/errors';
 import { IdempotencyExceptionFilter } from '../../src/idempotency/api/filters/idempotency-exception.filter';
 import { version } from '../../package.json';
 import { IDEMPOTENCY_PLUGIN_OPTIONS, IDEMPOTENCY_SERVICE, IDEMPOTENCY_STORE, IDEMPOTENCY_REDIS_DRIVER } from '../../src/shared/constants';
@@ -186,6 +187,24 @@ describe('IdempotencyPlugin', () => {
       const result = await optionsProvider.useFactory({});
       expect(result.defaultTtl).toBe(3600);
       expect(result.keyPrefix).toBe('idempotency:');
+    });
+  });
+
+  describe('configuration validation (fail-fast at bootstrap)', () => {
+    it.each([
+      ['lockTimeout: 0', { lockTimeout: 0 }],
+      ['waitTimeout: -1', { waitTimeout: -1 }],
+      ['defaultTtl: 0', { defaultTtl: 0 }],
+    ])('should throw IdempotencyConfigError for %s', (_label, options) => {
+      // Given
+      const plugin = new IdempotencyPlugin(options as never);
+
+      // When / Then — non-positive timings silently break TTL semantics
+      expect(() => plugin.getProviders()).toThrow(IdempotencyConfigError);
+    });
+
+    it('should accept a valid config', () => {
+      expect(() => new IdempotencyPlugin({ lockTimeout: 500, waitTimeout: 5000 }).getProviders()).not.toThrow();
     });
   });
 });

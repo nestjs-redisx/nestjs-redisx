@@ -22,9 +22,9 @@ export class RedisIdempotencyStoreAdapter implements IIdempotencyStore, OnModule
     this.checkAndLockSha = await this.driver.scriptLoad(CHECK_AND_LOCK_SCRIPT);
   }
 
-  async checkAndLock(key: string, fingerprint: string, lockTimeoutMs: number): Promise<ICheckAndLockResult> {
+  async checkAndLock(key: string, fingerprint: string, lockTimeoutMs: number, validateFingerprint = true): Promise<ICheckAndLockResult> {
     const now = Date.now();
-    const rawResult = await this.driver.evalsha(this.checkAndLockSha!, [key], [fingerprint, lockTimeoutMs, now]);
+    const rawResult = await this.driver.evalsha(this.checkAndLockSha!, [key], [fingerprint, lockTimeoutMs, now, validateFingerprint ? '1' : '0']);
 
     // Normalize result: node-redis may return Buffer/null elements
     const result = (rawResult as unknown[]).map((v) => (v === null || v === undefined ? '' : String(v)));
@@ -60,22 +60,33 @@ export class RedisIdempotencyStoreAdapter implements IIdempotencyStore, OnModule
   }
 
   async complete(key: string, data: ICompleteData, ttlSeconds: number): Promise<void> {
-    await this.driver.hmset(key, {
+    const fields: Record<string, string> = {
       status: 'completed',
       statusCode: String(data.statusCode),
       response: data.response,
       headers: data.headers || '',
       completedAt: String(data.completedAt),
-    });
+    };
+    // Persist the fingerprint too: if the record expired mid-handler (handler
+    // ran longer than lockTimeout), HMSET re-creates the key — without the
+    // fingerprint every later replay would be misread as a mismatch (422).
+    if (data.fingerprint) {
+      fields.fingerprint = data.fingerprint;
+    }
+    await this.driver.hmset(key, fields);
     await this.driver.expire(key, ttlSeconds);
   }
 
-  async fail(key: string, error: string, ttlSeconds: number): Promise<void> {
-    await this.driver.hmset(key, {
+  async fail(key: string, error: string, ttlSeconds: number, fingerprint?: string): Promise<void> {
+    const fields: Record<string, string> = {
       status: 'failed',
       error,
       completedAt: String(Date.now()),
-    });
+    };
+    if (fingerprint) {
+      fields.fingerprint = fingerprint;
+    }
+    await this.driver.hmset(key, fields);
     // Set an explicit expiry so the failed record does not rely on the leftover
     // lock TTL; once it expires a fresh attempt with the same key is allowed.
     await this.driver.expire(key, ttlSeconds);
@@ -89,12 +100,12 @@ export class RedisIdempotencyStoreAdapter implements IIdempotencyStore, OnModule
 
     return {
       key,
-      fingerprint: data.fingerprint!,
+      fingerprint: data.fingerprint ?? '',
       status: data.status! as 'processing' | 'completed' | 'failed',
       statusCode: data.statusCode ? parseInt(data.statusCode, 10) : undefined,
       response: data.response || undefined,
       headers: data.headers || undefined,
-      startedAt: parseInt(data.startedAt!, 10),
+      startedAt: data.startedAt ? parseInt(data.startedAt, 10) : 0,
       completedAt: data.completedAt ? parseInt(data.completedAt, 10) : undefined,
       error: data.error || undefined,
     };

@@ -13,6 +13,7 @@ import { IdempotencyInterceptor } from './idempotency/api/interceptors/idempoten
 import { IdempotencyService } from './idempotency/application/services/idempotency.service';
 import { RedisIdempotencyStoreAdapter } from './idempotency/infrastructure/adapters/redis-idempotency-store.adapter';
 import { IDEMPOTENCY_PLUGIN_OPTIONS, IDEMPOTENCY_REDIS_DRIVER, IDEMPOTENCY_SERVICE, IDEMPOTENCY_STORE } from './shared/constants';
+import { IdempotencyConfigError } from './shared/errors';
 import { IIdempotencyPluginOptions } from './shared/types';
 
 const DEFAULT_IDEMPOTENCY_CONFIG: Required<Omit<IIdempotencyPluginOptions, 'isGlobal' | 'client' | 'fingerprintGenerator'>> = {
@@ -70,7 +71,7 @@ export class IdempotencyPlugin implements IRedisXPlugin {
   }
 
   private static mergeDefaults(options: IIdempotencyPluginOptions): IIdempotencyPluginOptions {
-    return {
+    const merged: IIdempotencyPluginOptions = {
       client: options.client,
       defaultTtl: options.defaultTtl ?? DEFAULT_IDEMPOTENCY_CONFIG.defaultTtl,
       keyPrefix: options.keyPrefix ?? DEFAULT_IDEMPOTENCY_CONFIG.keyPrefix,
@@ -82,6 +83,17 @@ export class IdempotencyPlugin implements IRedisXPlugin {
       errorPolicy: options.errorPolicy ?? DEFAULT_IDEMPOTENCY_CONFIG.errorPolicy,
       fingerprintGenerator: options.fingerprintGenerator,
     };
+
+    // Fail fast: non-positive timing values silently break TTL semantics
+    // (e.g. lockTimeout 0 -> the processing record is deleted immediately).
+    for (const knob of ['defaultTtl', 'lockTimeout', 'waitTimeout'] as const) {
+      const value = merged[knob]!;
+      if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+        throw new IdempotencyConfigError(`${knob} must be a positive number (got ${String(value)})`);
+      }
+    }
+
+    return merged;
   }
 
   getImports(): Array<Type<unknown> | DynamicModule | ForwardReference> {

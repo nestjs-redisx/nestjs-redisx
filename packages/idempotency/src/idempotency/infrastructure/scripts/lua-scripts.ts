@@ -14,6 +14,7 @@
  * ARGV[1] = fingerprint
  * ARGV[2] = lock timeout (ms)
  * ARGV[3] = current timestamp (ms)
+ * ARGV[4] = validate fingerprint flag ('1' = compare fingerprints, '0' = skip)
  *
  * Returns:
  * - ['new'] - new request, lock acquired
@@ -26,6 +27,7 @@ local key = KEYS[1]
 local fingerprint = ARGV[1]
 local lock_timeout = tonumber(ARGV[2])
 local now = tonumber(ARGV[3])
+local validate = ARGV[4] ~= '0'
 
 -- Check if key exists
 local existing = redis.call('HGETALL', key)
@@ -47,8 +49,8 @@ for i = 1, #existing, 2 do
   record[existing[i]] = existing[i + 1]
 end
 
--- Check fingerprint
-if record.fingerprint ~= fingerprint then
+-- Check fingerprint (skipped when validateFingerprint is disabled)
+if validate and record.fingerprint ~= fingerprint then
   return {'fingerprint_mismatch'}
 end
 

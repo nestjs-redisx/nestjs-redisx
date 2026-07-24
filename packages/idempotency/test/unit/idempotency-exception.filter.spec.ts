@@ -70,9 +70,20 @@ describe('IdempotencyExceptionFilter', () => {
     expect(mockHttpAdapter.reply).toHaveBeenCalledWith(mockResponse, expect.objectContaining({ statusCode: HttpStatus.CONFLICT }), HttpStatus.CONFLICT);
   });
 
+  it('should map IdempotencyRecordNotFoundError to 409 Conflict (retryable, never a bare 500)', () => {
+    // Given - the in-flight record vanished mid-wait (first attempt died)
+    const error = new IdempotencyRecordNotFoundError('key-4');
+
+    // When
+    filter.catch(error, mockHost);
+
+    // Then
+    expect(mockHttpAdapter.reply).toHaveBeenCalledWith(mockResponse, expect.objectContaining({ statusCode: HttpStatus.CONFLICT }), HttpStatus.CONFLICT);
+  });
+
   it('should map an unexpected idempotency error to 500 Internal Server Error', () => {
     // Given - a subtype the filter does not explicitly map
-    const error = new IdempotencyRecordNotFoundError('key-4');
+    const error = new IdempotencyError('unexpected', 'IDEMPOTENCY_IN_PROGRESS' as never);
 
     // When
     filter.catch(error, mockHost);

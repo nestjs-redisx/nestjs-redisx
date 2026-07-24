@@ -32,7 +32,7 @@ export interface IIdempotencyPluginOptions {
   validateFingerprint?: boolean;
 
   /** Fields to include in fingerprint. @default ['method', 'path', 'body'] */
-  fingerprintFields?: ('method' | 'path' | 'body' | 'query' | 'headers')[];
+  fingerprintFields?: ('method' | 'path' | 'body' | 'query')[];
 
   /** Custom fingerprint generator */
   fingerprintGenerator?: (context: ExecutionContext) => string | Promise<string>;
@@ -102,4 +102,17 @@ export interface IIdempotencyResponse {
 export interface IIdempotencyOptions {
   ttl?: number;
   lockTimeout?: number;
+  /**
+   * Request fingerprint to persist alongside the record. Keeps replay working
+   * even when the record is (re)written after the original lock expired
+   * (e.g. a handler that ran longer than lockTimeout).
+   */
+  fingerprint?: string;
+
+  /**
+   * Compare the request fingerprint against the stored record.
+   * When false, a reused key replays regardless of the request contents.
+   * @default plugin validateFingerprint (true)
+   */
+  validateFingerprint?: boolean;
 }
