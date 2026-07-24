@@ -11,6 +11,12 @@ export interface ICircuitBreakerConfig {
   halfOpenMaxCalls: number;
   /** Successful probes required to close from HALF_OPEN. Integer >= 1, must be <= halfOpenMaxCalls. */
   successThreshold: number;
+  /**
+   * Time (ms) a permitted HALF_OPEN probe may stay unresolved before its slot
+   * is reclaimed (protects against probes whose outcome is never recorded,
+   * e.g. a crashed process). Integer > 0.
+   */
+  probeTimeoutMs: number;
 }
 
 export interface ICircuitSnapshot {
@@ -19,7 +25,10 @@ export interface ICircuitSnapshot {
   failuresInWindow: number;
   /** HALF_OPEN: successful probes recorded so far. */
   halfOpenSuccesses: number;
-  /** HALF_OPEN: probes permitted (canRequest === true) but not yet resolved. */
+  /**
+   * HALF_OPEN: probes permitted (canRequest === true), not yet resolved, and
+   * still within probeTimeoutMs at the queried time.
+   */
   halfOpenInFlight: number;
 }
 
@@ -36,17 +45,25 @@ export interface ICircuitSnapshot {
  *    - recordSuccess(now)   -> no-op (window aging alone clears failures; success does NOT reset the window).
  *  OPEN
  *    - canRequest(now)      -> if now - openedAt >= openDurationMs: COMMIT transition to HALF_OPEN
- *                              (halfOpenSuccesses = 0, halfOpenInFlight = 0) and then apply the HALF_OPEN
+ *                              (halfOpenSuccesses = 0, probe list cleared) and then apply the HALF_OPEN
  *                              rule below; else false. (The OPEN->HALF_OPEN flip is committed ONLY here,
  *                              never in snapshot.)
  *    - recordSuccess/Failure -> ignored (no permitted calls exist in OPEN).
  *  HALF_OPEN
- *    - canRequest(now)      -> if halfOpenInFlight < halfOpenMaxCalls: halfOpenInFlight++, true; else false.
- *    - recordSuccess(now)   -> halfOpenInFlight = max(0, halfOpenInFlight - 1); halfOpenSuccesses++;
+ *    Each permitted probe records its start time. A probe whose start time is
+ *    <= now - probeTimeoutMs is EXPIRED: its slot is reclaimed (the probe is
+ *    presumed dead — e.g. the caller crashed before recording an outcome).
+ *    - canRequest(now)      -> drop expired probes; if remaining in-flight < halfOpenMaxCalls:
+ *                              register a probe started at `now`, true; else false.
+ *    - recordSuccess(now)   -> drop expired probes; release the most recently started
+ *                              in-flight probe slot, if any (a probe that outlived
+ *                              probeTimeoutMs already lost its slot, but its outcome
+ *                              still counts); halfOpenSuccesses++;
  *                              if halfOpenSuccesses >= successThreshold -> CLOSED (clear all counters).
  *    - recordFailure(now)   -> OPEN (openedAt = now, clear half-open counters). A single probe failure reopens.
  *
- * snapshot(now) is non-mutating and reports the COMMITTED state (it does not lazily flip OPEN->HALF_OPEN).
+ * snapshot(now) is non-mutating and reports the COMMITTED state (it does not lazily flip
+ * OPEN->HALF_OPEN); failuresInWindow and halfOpenInFlight are time-filtered at `now`.
  * reset() returns to CLOSED and clears everything.
  */
 export interface ICircuitBreakerState {

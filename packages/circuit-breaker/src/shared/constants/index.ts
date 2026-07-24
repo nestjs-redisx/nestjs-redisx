@@ -29,8 +29,12 @@ export const CIRCUIT_BREAKER_REDIS_DRIVER = Symbol.for('CIRCUIT_BREAKER_REDIS_DR
  * Default circuit breaker configuration.
  * Single source of truth for the plugin's mergeDefaults and the service's
  * per-call config resolution.
+ *
+ * `probeTimeoutMs` is intentionally absent: its default is dynamic — it
+ * follows the RESOLVED `openDurationMs` (a probe hanging longer than the
+ * cooldown itself is presumed dead).
  */
-export const DEFAULT_CIRCUIT_BREAKER_CONFIG: Required<Omit<ICircuitBreakerPluginOptions, 'isGlobal' | 'client' | 'errorFactory'>> = {
+export const DEFAULT_CIRCUIT_BREAKER_CONFIG: Required<Omit<ICircuitBreakerPluginOptions, 'isGlobal' | 'client' | 'errorFactory' | 'probeTimeoutMs'>> = {
   keyPrefix: 'cb:',
   failureThreshold: 5,
   windowMs: 10000,

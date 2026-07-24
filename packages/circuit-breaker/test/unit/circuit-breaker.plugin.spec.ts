@@ -37,8 +37,25 @@ describe('CircuitBreakerPlugin', () => {
         openDurationMs: 30000,
         halfOpenMaxCalls: 1,
         successThreshold: 1,
+        probeTimeoutMs: 30000, // dynamic default = openDurationMs
         errorPolicy: 'fail-closed',
       });
+    });
+
+    it('should default probeTimeoutMs to the RESOLVED openDurationMs', () => {
+      // Given — custom cooldown, no explicit probe timeout
+      const value = optionsProviderValue(new CircuitBreakerPlugin({ openDurationMs: 5000 }));
+
+      // Then — probe timeout follows the cooldown
+      expect(value).toMatchObject({ openDurationMs: 5000, probeTimeoutMs: 5000 });
+    });
+
+    it('should honor an explicit probeTimeoutMs over the dynamic default', () => {
+      // Given
+      const value = optionsProviderValue(new CircuitBreakerPlugin({ openDurationMs: 5000, probeTimeoutMs: 2000 }));
+
+      // Then
+      expect(value).toMatchObject({ openDurationMs: 5000, probeTimeoutMs: 2000 });
     });
 
     it('should override defaults from user options', () => {
@@ -86,6 +103,7 @@ describe('CircuitBreakerPlugin', () => {
       ['openDurationMs: -1', { openDurationMs: -1 }],
       ['halfOpenMaxCalls: 0', { halfOpenMaxCalls: 0 }],
       ['successThreshold: 1.5', { successThreshold: 1.5 }],
+      ['probeTimeoutMs: 0', { probeTimeoutMs: 0 }],
     ])('should throw InvalidCircuitBreakerConfigError for %s', (_label, options) => {
       // Given
       const plugin = new CircuitBreakerPlugin(options as ICircuitBreakerPluginOptions);

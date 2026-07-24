@@ -20,8 +20,12 @@ export class CircuitBreakerState implements ICircuitBreakerState {
   /** HALF_OPEN: successful probes recorded so far. */
   private halfOpenSuccesses = 0;
 
-  /** HALF_OPEN: probes permitted but not yet resolved. */
-  private halfOpenInFlight = 0;
+  /**
+   * HALF_OPEN: start timestamps (epoch ms, ascending) of permitted probes that
+   * have not resolved yet. A probe whose start time is <= now - probeTimeoutMs
+   * is expired and its slot is reclaimed.
+   */
+  private halfOpenProbes: number[] = [];
 
   constructor(private readonly config: ICircuitBreakerConfig) {
     validateCircuitBreakerConfig(config);
@@ -37,13 +41,13 @@ export class CircuitBreakerState implements ICircuitBreakerState {
         if (now - this.openedAt >= this.config.openDurationMs) {
           this.state = 'half-open';
           this.halfOpenSuccesses = 0;
-          this.halfOpenInFlight = 0;
-          return this.tryHalfOpenProbe();
+          this.halfOpenProbes = [];
+          return this.tryHalfOpenProbe(now);
         }
         return false;
 
       case 'half-open':
-        return this.tryHalfOpenProbe();
+        return this.tryHalfOpenProbe(now);
     }
   }
 
@@ -58,7 +62,11 @@ export class CircuitBreakerState implements ICircuitBreakerState {
         return;
 
       case 'half-open':
-        this.halfOpenInFlight = Math.max(0, this.halfOpenInFlight - 1);
+        // Release the most recently started in-flight probe slot, if any.
+        // A probe that outlived probeTimeoutMs already lost its slot, but its
+        // outcome still counts toward closing.
+        this.pruneProbes(now);
+        this.halfOpenProbes.pop();
         this.halfOpenSuccesses++;
         if (this.halfOpenSuccesses >= this.config.successThreshold) {
           this.toClosed();
@@ -94,7 +102,7 @@ export class CircuitBreakerState implements ICircuitBreakerState {
       state: this.state,
       failuresInWindow: this.countFailuresInWindow(now),
       halfOpenSuccesses: this.halfOpenSuccesses,
-      halfOpenInFlight: this.halfOpenInFlight,
+      halfOpenInFlight: this.countProbesInFlight(now),
     };
   }
 
@@ -103,16 +111,17 @@ export class CircuitBreakerState implements ICircuitBreakerState {
     this.failures = [];
     this.openedAt = 0;
     this.halfOpenSuccesses = 0;
-    this.halfOpenInFlight = 0;
+    this.halfOpenProbes = [];
   }
 
   // ---------------------------------------------------------------------------
   // Internals
   // ---------------------------------------------------------------------------
 
-  private tryHalfOpenProbe(): boolean {
-    if (this.halfOpenInFlight < this.config.halfOpenMaxCalls) {
-      this.halfOpenInFlight++;
+  private tryHalfOpenProbe(now: number): boolean {
+    this.pruneProbes(now);
+    if (this.halfOpenProbes.length < this.config.halfOpenMaxCalls) {
+      this.halfOpenProbes.push(now);
       return true;
     }
     return false;
@@ -123,7 +132,7 @@ export class CircuitBreakerState implements ICircuitBreakerState {
     this.openedAt = now;
     this.failures = [];
     this.halfOpenSuccesses = 0;
-    this.halfOpenInFlight = 0;
+    this.halfOpenProbes = [];
   }
 
   private toClosed(): void {
@@ -131,7 +140,7 @@ export class CircuitBreakerState implements ICircuitBreakerState {
     this.failures = [];
     this.openedAt = 0;
     this.halfOpenSuccesses = 0;
-    this.halfOpenInFlight = 0;
+    this.halfOpenProbes = [];
   }
 
   /** Drop failures with timestamp <= now - windowMs (older-or-equal are OUT). */
@@ -140,12 +149,30 @@ export class CircuitBreakerState implements ICircuitBreakerState {
     this.failures = this.failures.filter((timestamp) => timestamp > cutoff);
   }
 
+  /** Drop expired probes: start time <= now - probeTimeoutMs (slot reclaimed). */
+  private pruneProbes(now: number): void {
+    const cutoff = now - this.config.probeTimeoutMs;
+    this.halfOpenProbes = this.halfOpenProbes.filter((startedAt) => startedAt > cutoff);
+  }
+
   /** Non-mutating count of failures still inside the window at `now`. */
   private countFailuresInWindow(now: number): number {
     const cutoff = now - this.config.windowMs;
     let count = 0;
     for (const timestamp of this.failures) {
       if (timestamp > cutoff) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  /** Non-mutating count of in-flight probes still within probeTimeoutMs at `now`. */
+  private countProbesInFlight(now: number): number {
+    const cutoff = now - this.config.probeTimeoutMs;
+    let count = 0;
+    for (const startedAt of this.halfOpenProbes) {
+      if (startedAt > cutoff) {
         count++;
       }
     }

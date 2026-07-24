@@ -98,15 +98,14 @@ export class CircuitBreakerService implements ICircuitBreakerService {
    * Record success without masking the guarded call's result on store errors.
    *
    * NOTE: if this fails while the breaker is HALF_OPEN, the consumed probe slot
-   * is not released; the circuit can stay half-open (rejecting calls once the
-   * probe budget is exhausted) until the state key's TTL self-heals it. The
-   * log message points operators at reset() as the immediate remedy.
+   * is not released immediately — it is auto-reclaimed after probeTimeoutMs.
+   * The log message points operators at reset() as the instant remedy.
    */
   private async safeRecordSuccess(key: string, cfg: ICircuitBreakerConfig): Promise<void> {
     try {
       await this.store.recordSuccess(key, cfg);
     } catch (error) {
-      this.logger.error(`Failed to record success for "${key}": ${(error as Error).message}. ` + `If the circuit was HALF_OPEN its probe slot may stay consumed until the state TTL expires — reset("${key}") clears it immediately.`);
+      this.logger.error(`Failed to record success for "${key}": ${(error as Error).message}. ` + `If the circuit was HALF_OPEN its probe slot will be auto-reclaimed after probeTimeoutMs (${cfg.probeTimeoutMs}ms); reset("${key}") clears it immediately.`);
     }
   }
 
@@ -118,7 +117,7 @@ export class CircuitBreakerService implements ICircuitBreakerService {
     try {
       await this.store.recordFailure(key, cfg);
     } catch (error) {
-      this.logger.error(`Failed to record failure for "${key}": ${(error as Error).message}. ` + `If the circuit was HALF_OPEN its probe slot may stay consumed until the state TTL expires — reset("${key}") clears it immediately.`);
+      this.logger.error(`Failed to record failure for "${key}": ${(error as Error).message}. ` + `If the circuit was HALF_OPEN its probe slot will be auto-reclaimed after probeTimeoutMs (${cfg.probeTimeoutMs}ms); reset("${key}") clears it immediately.`);
     }
   }
 
@@ -129,12 +128,15 @@ export class CircuitBreakerService implements ICircuitBreakerService {
    * @throws {InvalidCircuitBreakerConfigError} on invalid values
    */
   private resolveConfig(options: ICircuitBreakerOptions): ICircuitBreakerConfig {
+    const openDurationMs = options.openDurationMs ?? this.config.openDurationMs ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.openDurationMs;
     const resolved: ICircuitBreakerConfig = {
       failureThreshold: options.failureThreshold ?? this.config.failureThreshold ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.failureThreshold,
       windowMs: options.windowMs ?? this.config.windowMs ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.windowMs,
-      openDurationMs: options.openDurationMs ?? this.config.openDurationMs ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.openDurationMs,
+      openDurationMs,
       halfOpenMaxCalls: options.halfOpenMaxCalls ?? this.config.halfOpenMaxCalls ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.halfOpenMaxCalls,
       successThreshold: options.successThreshold ?? this.config.successThreshold ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.successThreshold,
+      // Dynamic default: a probe hanging longer than the cooldown is presumed dead.
+      probeTimeoutMs: options.probeTimeoutMs ?? this.config.probeTimeoutMs ?? openDurationMs,
     };
     validateCircuitBreakerConfig(resolved);
     return resolved;

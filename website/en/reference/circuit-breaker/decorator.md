@@ -23,6 +23,7 @@ description: 'Guard any NestJS Injectable method with the proxy-based @WithCircu
 | `openDurationMs` | `number` | Per-method override. |
 | `halfOpenMaxCalls` | `number` | Per-method override. |
 | `successThreshold` | `number` | Per-method override. |
+| `probeTimeoutMs` | `number` | Per-method override (defaults to the resolved `openDurationMs`). |
 | `fallback` | `(...args) => unknown` | Called with the original arguments when the breaker rejects; its return becomes the method result. |
 | `onOpen` | `'throw' \| 'skip'` | When there is no `fallback`: throw `CircuitBreakerOpenError` (default) or skip and resolve to `undefined`. |
 | `skip` | `(...args) => boolean \| Promise<boolean>` | Evaluated with the method arguments; when it returns true the method runs directly, bypassing the breaker (no state read or recorded). |

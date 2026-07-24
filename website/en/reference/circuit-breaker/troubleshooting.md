@@ -27,15 +27,14 @@ description: 'Fix common NestJS RedisX circuit breaker issues: breaker never tri
 
 ## The breaker seems stuck in HALF_OPEN
 
-Each permitted half-open probe consumes a slot (`halfOpenInFlight`) that is released only when the outcome is recorded. Two rare scenarios can leak a slot:
+Each permitted half-open probe consumes a slot (`halfOpenInFlight`). If a probe's outcome is never recorded (the process crashed mid-probe, or recording failed because the state store was momentarily unavailable — this is logged), the slot is **reclaimed automatically after `probeTimeoutMs`** (default: `openDurationMs`), so recovery resumes on its own.
 
-- the process crashed between being granted the probe and recording its outcome;
-- the guarded call finished, but recording the outcome failed because the state store was momentarily unavailable (this is logged with a `reset(...)` hint).
-
-With the default `halfOpenMaxCalls: 1`, a leaked slot means further calls are rejected while `getState` reports `half-open`. The state self-heals when the circuit's Redis key TTL expires (about `2 × max(windowMs, openDurationMs) + 60s`). Remedies:
+If calls are being rejected in `half-open`, it usually just means a probe is still in flight (or its `probeTimeoutMs` has not elapsed yet). Remedies if you need to act faster:
 
 - **immediate** — call `reset(key)` (or the admin tooling from [Recipes](./recipes)) to force the circuit back to CLOSED;
-- **preventive** — set `halfOpenMaxCalls` above 1 so a single leaked slot cannot exhaust the probe budget.
+- **tune** — lower `probeTimeoutMs` if your probes should resolve quickly, or raise `halfOpenMaxCalls` so one slow probe cannot exhaust the probe budget.
+
+As a last backstop, all circuit keys carry a TTL (about `2 × max(windowMs, openDurationMs) + 60s`) after which the state self-heals completely.
 
 ## `CircuitBreakerStoreError` under load
 
@@ -43,4 +42,4 @@ With the default `halfOpenMaxCalls: 1`, a leaked slot means further calls are re
 
 ## Cluster deployments
 
-Each circuit uses two keys sharing a hash tag (`{cb:key}` and `{cb:key}:f`), so they always resolve to the same slot. No extra configuration is required for Redis Cluster.
+Each circuit uses three keys sharing a hash tag (`{cb:key}`, `{cb:key}:f`, `{cb:key}:p`), so they always resolve to the same slot. No extra configuration is required for Redis Cluster.

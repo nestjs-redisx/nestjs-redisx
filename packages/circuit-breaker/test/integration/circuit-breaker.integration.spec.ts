@@ -163,6 +163,52 @@ describeIntegration('CircuitBreaker (live Redis)', () => {
     await cb.reset(key);
   });
 
+  it('reclaims a zombie probe slot after probeTimeoutMs', async () => {
+    // Given — a dedicated app: single slot, probes expire after 150ms
+    const PROBE_TIMEOUT = 150;
+    const zombieApp = await Test.createTestingModule({
+      imports: [
+        RedisModule.forRoot({
+          clients: { type: 'single', host: REDIS_HOST, port: REDIS_PORT },
+          plugins: [new CircuitBreakerPlugin({ keyPrefix: 'cbz:', failureThreshold: 1, windowMs: 10000, openDurationMs: OPEN_MS, halfOpenMaxCalls: 1, successThreshold: 1, probeTimeoutMs: PROBE_TIMEOUT })],
+        }),
+      ],
+    }).compile();
+    await zombieApp.init();
+    const zombieCb = zombieApp.get<ICircuitBreakerService>(CIRCUIT_BREAKER_SERVICE);
+    const key = uniqueKey();
+    await zombieCb.reset(key);
+
+    // Trip and wait out the cooldown
+    await expect(zombieCb.execute(key, fail)).rejects.toThrow();
+    await wait(OPEN_MS + 80);
+
+    // When — a zombie probe takes the slot and never records an outcome
+    let started!: () => void;
+    const startedPromise = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    void zombieCb.execute(key, async () => {
+      started();
+      await new Promise(() => undefined); // hangs forever (simulated crash)
+      return 'never';
+    });
+    await startedPromise;
+
+    // Then — the slot is held while the zombie is fresh
+    await expect(zombieCb.execute(key, ok)).rejects.toBeInstanceOf(CircuitBreakerOpenError);
+
+    // When — probeTimeoutMs elapses, the slot is reclaimed over real Redis Lua
+    await wait(PROBE_TIMEOUT + 60);
+
+    // Then — a fresh probe is admitted and closes the breaker on success
+    await expect(zombieCb.execute(key, ok)).resolves.toBe('ok');
+    expect((await zombieCb.getState(key)).state).toBe('closed');
+
+    await zombieCb.reset(key);
+    await zombieApp.close();
+  });
+
   it('does not trip when failures fall outside the window', async () => {
     // Given — a dedicated app with a short (80ms) rolling window
     const shortApp = await Test.createTestingModule({

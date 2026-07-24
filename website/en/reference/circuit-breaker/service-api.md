@@ -24,13 +24,13 @@ interface ICircuitSnapshot {
   state: 'closed' | 'open' | 'half-open';
   failuresInWindow: number; // CLOSED: failures still inside the window
   halfOpenSuccesses: number; // HALF_OPEN: probes that have succeeded
-  halfOpenInFlight: number; // HALF_OPEN: permitted probes not yet resolved
+  halfOpenInFlight: number; // HALF_OPEN: unresolved probes still within probeTimeoutMs
 }
 ```
 
 ## Execute options
 
-`ICircuitBreakerExecuteOptions` extends the per-call overrides (`failureThreshold`, `windowMs`, `openDurationMs`, `halfOpenMaxCalls`, `successThreshold`) with:
+`ICircuitBreakerExecuteOptions` extends the per-call overrides (`failureThreshold`, `windowMs`, `openDurationMs`, `halfOpenMaxCalls`, `successThreshold`, `probeTimeoutMs`) with:
 
 - `fallback?: () => T | Promise<T>` — returned instead of throwing when rejected.
 - `errorFactory?: (key, snapshot) => Error` — custom rejection error (overrides the plugin-level factory).

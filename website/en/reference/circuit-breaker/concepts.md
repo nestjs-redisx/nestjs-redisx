@@ -15,7 +15,7 @@ A **circuit breaker** watches the failure rate and, once it crosses a threshold,
 
 - **CLOSED** — normal operation. Calls run; failures are counted over a rolling window. When failures reach `failureThreshold` within `windowMs`, the breaker trips to OPEN.
 - **OPEN** — fail-fast. Calls are rejected immediately without touching the dependency. After `openDurationMs`, the breaker becomes eligible to probe.
-- **HALF_OPEN** — cautious recovery. A limited number of probe calls (`halfOpenMaxCalls`) are allowed through. After `successThreshold` successes the breaker CLOSES; a single failure sends it back to OPEN.
+- **HALF_OPEN** — cautious recovery. A limited number of probe calls (`halfOpenMaxCalls`) are allowed through; a probe that stays unresolved longer than `probeTimeoutMs` loses its slot so recovery is never blocked. After `successThreshold` successes the breaker CLOSES; a single failure sends it back to OPEN.
 
 ```mermaid
 stateDiagram-v2

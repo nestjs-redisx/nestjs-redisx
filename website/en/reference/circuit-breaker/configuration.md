@@ -16,6 +16,7 @@ description: 'Configure @nestjs-redisx/circuit-breaker: failure threshold, rolli
 | `openDurationMs` | `number` | `30000` | Time (ms) the breaker stays OPEN before probes are allowed. |
 | `halfOpenMaxCalls` | `number` | `1` | Max probe calls permitted while HALF_OPEN. |
 | `successThreshold` | `number` | `1` | Successful probes required to close (must be ≤ `halfOpenMaxCalls`). |
+| `probeTimeoutMs` | `number` | `openDurationMs` | Time (ms) a permitted HALF_OPEN probe may stay unresolved before its slot is reclaimed (protects against crashed probes). |
 | `keyPrefix` | `string` | `'cb:'` | Redis key prefix for circuit state. |
 | `client` | `string` | `'default'` | Named Redis client to use. |
 | `errorPolicy` | `'fail-open' \| 'fail-closed'` | `'fail-closed'` | Behaviour when the **state store** is unavailable. |

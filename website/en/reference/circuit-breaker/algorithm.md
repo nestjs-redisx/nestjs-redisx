@@ -31,6 +31,7 @@ stateDiagram-v2
 ## HALF_OPEN
 
 - Up to `halfOpenMaxCalls` probe calls are permitted concurrently; further calls are rejected.
+- Each permitted probe records its start time. A probe that stays unresolved longer than `probeTimeoutMs` is presumed dead (e.g. the caller crashed before recording an outcome): its slot is **reclaimed** so recovery is never blocked by a zombie probe. If such a probe eventually resolves, its outcome still counts.
 - Each successful probe increments a counter; once `successThreshold` probes succeed, the breaker **closes** and all counters clear.
 - A single probe failure re-opens the breaker with a fresh `openDurationMs`.
 
@@ -40,9 +41,10 @@ The state machine never reads the clock itself. In the distributed store, the ad
 
 ## Distributed storage
 
-Per circuit, two Redis keys share a hash tag so they land on the same cluster slot:
+Per circuit, three Redis keys share a hash tag so they land on the same cluster slot:
 
-- a **hash** holding `state`, `opened_at`, `ho_succ`, `ho_inflight`;
-- a **sorted set** of failure timestamps (pruned by the rolling window).
+- a **hash** holding `state`, `opened_at`, `ho_succ`;
+- a **sorted set** of failure timestamps (pruned by the rolling window);
+- a **sorted set** of in-flight probe start times (pruned by `probeTimeoutMs`).
 
 All transitions (`canRequest`, `recordSuccess`, `recordFailure`) are single atomic Lua scripts, so concurrent instances never observe a torn state.

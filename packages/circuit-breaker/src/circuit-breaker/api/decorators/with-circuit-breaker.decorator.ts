@@ -29,6 +29,7 @@ interface IDecoratorCircuitBreakerService {
       openDurationMs?: number;
       halfOpenMaxCalls?: number;
       successThreshold?: number;
+      probeTimeoutMs?: number;
       fallback?: () => T | Promise<T>;
     },
   ): Promise<T>;
@@ -71,6 +72,8 @@ export interface IWithCircuitBreakerOptions {
   halfOpenMaxCalls?: number;
   /** Override successThreshold for this method. */
   successThreshold?: number;
+  /** Override probeTimeoutMs for this method (defaults to the resolved openDurationMs). */
+  probeTimeoutMs?: number;
 
   /**
    * Called with the original arguments when the breaker rejects the call
@@ -151,6 +154,7 @@ export function WithCircuitBreaker(options: IWithCircuitBreakerOptions): MethodD
         openDurationMs: options.openDurationMs,
         halfOpenMaxCalls: options.halfOpenMaxCalls,
         successThreshold: options.successThreshold,
+        probeTimeoutMs: options.probeTimeoutMs,
         fallback,
       });
     };

@@ -218,6 +218,49 @@ describe('CircuitBreaker on the in-memory driver (no Redis)', () => {
     expect((await cb.getState(key)).state).toBe('closed');
   });
 
+  it('reclaims a zombie probe slot after probeTimeoutMs (over Lua)', async () => {
+    // Given — single probe slot; probes expire after 100ms
+    const PROBE_TIMEOUT = 100;
+    app = await Test.createTestingModule({
+      imports: [
+        RedisModule.forRoot({
+          clients: { type: 'single', host: 'x', port: 1 },
+          global: { driver: MEMORY_DRIVER_TYPE },
+          plugins: [new CircuitBreakerPlugin({ failureThreshold: 1, windowMs: 10000, openDurationMs: OPEN_MS, halfOpenMaxCalls: 1, successThreshold: 1, probeTimeoutMs: PROBE_TIMEOUT })],
+        }),
+      ],
+    }).compile();
+    await app.init();
+    const cb = app.get<ICircuitBreakerService>(CIRCUIT_BREAKER_SERVICE);
+    const key = 'zombie';
+
+    // Trip and wait out the cooldown
+    await expect(cb.execute(key, () => Promise.reject(new Error('down')))).rejects.toThrow();
+    await wait(OPEN_MS + 40);
+
+    // When — a zombie probe occupies the slot and NEVER records an outcome
+    let started!: () => void;
+    const startedPromise = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    void cb.execute(key, async () => {
+      started();
+      await new Promise(() => undefined); // hangs forever (simulated crash)
+      return 'never';
+    });
+    await startedPromise; // slot committed
+
+    // Then — while the zombie is fresh, further calls are rejected
+    await expect(cb.execute(key, () => Promise.resolve('nope'))).rejects.toBeInstanceOf(CircuitBreakerOpenError);
+
+    // When — probeTimeoutMs elapses, the slot is auto-reclaimed
+    await wait(PROBE_TIMEOUT + 40);
+
+    // Then — a fresh probe is admitted and, on success, closes the breaker
+    await expect(cb.execute(key, () => Promise.resolve('recovered'))).resolves.toBe('recovered');
+    expect((await cb.getState(key)).state).toBe('closed');
+  });
+
   it('reset() returns a tripped breaker to CLOSED', async () => {
     // Given a tripped breaker
     const cb = await boot();

@@ -56,14 +56,17 @@ export class CircuitBreakerPlugin implements IRedisXPlugin {
   }
 
   private static mergeDefaults(options: ICircuitBreakerPluginOptions): ICircuitBreakerPluginOptions {
+    const openDurationMs = options.openDurationMs ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.openDurationMs;
     const merged: ICircuitBreakerPluginOptions = {
       client: options.client,
       keyPrefix: options.keyPrefix ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.keyPrefix,
       failureThreshold: options.failureThreshold ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.failureThreshold,
       windowMs: options.windowMs ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.windowMs,
-      openDurationMs: options.openDurationMs ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.openDurationMs,
+      openDurationMs,
       halfOpenMaxCalls: options.halfOpenMaxCalls ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.halfOpenMaxCalls,
       successThreshold: options.successThreshold ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.successThreshold,
+      // Dynamic default: a probe hanging longer than the cooldown is presumed dead.
+      probeTimeoutMs: options.probeTimeoutMs ?? openDurationMs,
       errorPolicy: options.errorPolicy ?? DEFAULT_CIRCUIT_BREAKER_CONFIG.errorPolicy,
       errorFactory: options.errorFactory,
     };
@@ -75,6 +78,7 @@ export class CircuitBreakerPlugin implements IRedisXPlugin {
       openDurationMs: merged.openDurationMs!,
       halfOpenMaxCalls: merged.halfOpenMaxCalls!,
       successThreshold: merged.successThreshold!,
+      probeTimeoutMs: merged.probeTimeoutMs!,
     });
 
     return merged;

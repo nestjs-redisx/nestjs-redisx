@@ -53,6 +53,14 @@ export interface ICircuitBreakerPluginOptions {
   successThreshold?: number;
 
   /**
+   * Time (ms) a permitted HALF_OPEN probe may stay unresolved before its slot
+   * is reclaimed (protects against probes whose outcome was never recorded,
+   * e.g. a crashed process).
+   * @default openDurationMs
+   */
+  probeTimeoutMs?: number;
+
+  /**
    * Error handling strategy for STATE STORE failures (e.g. Redis/Lua errors).
    * - fail-open: run the guarded call anyway (high availability)
    * - fail-closed: throw CircuitBreakerStoreError (strict enforcement)
@@ -80,6 +88,8 @@ export interface ICircuitBreakerOptions {
   halfOpenMaxCalls?: number;
   /** Override successThreshold. */
   successThreshold?: number;
+  /** Override probeTimeoutMs (defaults to the resolved openDurationMs). */
+  probeTimeoutMs?: number;
 }
 
 /**

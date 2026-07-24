@@ -40,8 +40,9 @@ export class RedisCircuitBreakerStoreAdapter implements ICircuitBreakerStore, On
 
   async canRequest(key: string, config: ICircuitBreakerConfig): Promise<ICircuitBreakerDecision> {
     const now = Date.now(); // ⚠ real time — supplied to Lua as ARGV, never read inside Lua
+    const member = this.uniqueMember(now); // probe ZSET member when a half-open slot is granted
     const keys = this.buildKeys(key);
-    const args = [...this.buildConfigArgs(config), now];
+    const args = [...this.buildConfigArgs(config), now, member];
 
     try {
       const result = await this.runScript(this.canRequestSha, CAN_REQUEST_SCRIPT, keys, args);
@@ -66,7 +67,7 @@ export class RedisCircuitBreakerStoreAdapter implements ICircuitBreakerStore, On
 
   async recordFailure(key: string, config: ICircuitBreakerConfig): Promise<ICircuitSnapshot> {
     const now = Date.now(); // ⚠ real time
-    const member = `${now}-${Math.random().toString(36).substring(7)}`; // ⚠ real time + random (unique ZSET member)
+    const member = this.uniqueMember(now); // failure ZSET member (CLOSED window entry)
     const keys = this.buildKeys(key);
     const args = [...this.buildConfigArgs(config), now, member];
 
@@ -92,28 +93,34 @@ export class RedisCircuitBreakerStoreAdapter implements ICircuitBreakerStore, On
   }
 
   async reset(key: string): Promise<void> {
-    const [stateKey, failKey] = this.buildKeys(key);
+    const [stateKey, failKey, probeKey] = this.buildKeys(key);
 
     try {
-      // Single variadic DEL: both keys share a hash tag (same cluster slot),
-      // so the circuit state and its failure window are cleared atomically.
-      await this.driver.del(stateKey, failKey);
+      // Single variadic DEL: all keys share a hash tag (same cluster slot),
+      // so the circuit state, failure window, and probe list are cleared atomically.
+      await this.driver.del(stateKey, failKey, probeKey);
     } catch (error) {
       throw new CircuitBreakerStoreError(`reset failed: ${(error as Error).message}`, error as Error);
     }
   }
 
   /**
-   * Build the two Redis keys sharing a hash tag so they land on the same
-   * cluster slot: `{prefixedKey}` (state hash) and `{prefixedKey}:f` (failures).
+   * Build the three Redis keys sharing a hash tag so they land on the same
+   * cluster slot: `{prefixedKey}` (state hash), `{prefixedKey}:f` (failures
+   * window) and `{prefixedKey}:p` (half-open probes).
    */
-  private buildKeys(key: string): [string, string] {
+  private buildKeys(key: string): [string, string, string] {
     const tag = `{${key}}`;
-    return [tag, `${tag}:f`];
+    return [tag, `${tag}:f`, `${tag}:p`];
   }
 
   private buildConfigArgs(config: ICircuitBreakerConfig): number[] {
-    return [config.failureThreshold, config.windowMs, config.openDurationMs, config.halfOpenMaxCalls, config.successThreshold];
+    return [config.failureThreshold, config.windowMs, config.openDurationMs, config.halfOpenMaxCalls, config.successThreshold, config.probeTimeoutMs];
+  }
+
+  /** Unique ZSET member (timestamp + random suffix) for probe/failure entries. */
+  private uniqueMember(now: number): string {
+    return `${now}-${Math.random().toString(36).substring(7)}`; // ⚠ random
   }
 
   /**

@@ -6,7 +6,8 @@ import type { ICircuitBreakerConfig } from '../../src/circuit-breaker/domain/cir
 /**
  * Base config used across the behavioural tests.
  * Trips after 3 failures within 1s; stays OPEN for 5s; allows 2 half-open
- * probes; closes after 2 successful probes.
+ * probes; closes after 2 successful probes. probeTimeoutMs is large so probe
+ * expiry never interferes with tests that don't target it explicitly.
  */
 function baseConfig(overrides: Partial<ICircuitBreakerConfig> = {}): ICircuitBreakerConfig {
   return {
@@ -15,6 +16,7 @@ function baseConfig(overrides: Partial<ICircuitBreakerConfig> = {}): ICircuitBre
     openDurationMs: 5000,
     halfOpenMaxCalls: 2,
     successThreshold: 2,
+    probeTimeoutMs: 600000,
     ...overrides,
   };
 }
@@ -295,6 +297,96 @@ describe('CircuitBreakerState', () => {
     });
   });
 
+  describe('probe timeout (HALF_OPEN slot reclaim)', () => {
+    /** Trip with failureThreshold=1 at t=1, cooldown 5000 -> half-open eligible at t=5001. */
+    function trippedSingleSlot(probeTimeoutMs: number, halfOpenMaxCalls = 1, successThreshold = 1): CircuitBreakerState {
+      const cb = new CircuitBreakerState(baseConfig({ failureThreshold: 1, halfOpenMaxCalls, successThreshold, probeTimeoutMs }));
+      cb.recordFailure(1); // OPEN, openedAt = 1
+      return cb;
+    }
+
+    it('should reclaim an expired probe slot so a new probe is admitted', () => {
+      // Given — single slot, probes expire after 1000ms
+      const cb = trippedSingleSlot(1000);
+      const t0 = 1 + 5000;
+      expect(cb.canRequest(t0)).toBe(true); // probe #1 occupies the slot
+      expect(cb.canRequest(t0 + 999)).toBe(false); // still within probeTimeoutMs
+
+      // When — the probe's outcome was never recorded and the timeout elapses
+      const allowed = cb.canRequest(t0 + 1000); // started <= now - 1000 -> expired
+
+      // Then — the slot is reclaimed and a fresh probe is admitted
+      expect(allowed).toBe(true);
+      expect(cb.snapshot(t0 + 1000)).toMatchObject({ state: 'half-open', halfOpenInFlight: 1 });
+    });
+
+    it('should treat a probe started exactly at (now - probeTimeoutMs) as expired', () => {
+      // Given
+      const cb = trippedSingleSlot(1000);
+      const t0 = 1 + 5000;
+      cb.canRequest(t0);
+
+      // When / Then — boundary semantics match the failure window (<= cutoff is OUT)
+      expect(cb.snapshot(t0 + 1000).halfOpenInFlight).toBe(0);
+      expect(cb.canRequest(t0 + 1000)).toBe(true);
+    });
+
+    it('snapshot should report time-aware in-flight without mutating state', () => {
+      // Given
+      const cb = trippedSingleSlot(1000);
+      const t0 = 1 + 5000;
+      cb.canRequest(t0);
+
+      // When — query far past the timeout, twice (non-mutating)
+      const first = cb.snapshot(t0 + 5000);
+      const second = cb.snapshot(t0 + 5000);
+
+      // Then — reports 0 in-flight but the committed state is untouched
+      expect(first).toEqual(second);
+      expect(first).toMatchObject({ state: 'half-open', halfOpenInFlight: 0 });
+    });
+
+    it('a probe that outlived its slot still counts toward closing when it succeeds', () => {
+      // Given — the probe times out (slot reclaimed), but the caller is alive, just slow
+      const cb = trippedSingleSlot(1000);
+      const t0 = 1 + 5000;
+      cb.canRequest(t0);
+
+      // When — the slow probe finally succeeds after its slot expired
+      cb.recordSuccess(t0 + 2000);
+
+      // Then — the success closes the breaker (successThreshold = 1)
+      expect(cb.snapshot(t0 + 2000).state).toBe('closed');
+    });
+
+    it('success releases the most recently started probe (the older one still expires on time)', () => {
+      // Given — two slots, probes started at t0 and t0+500; the t0 probe is a zombie
+      const cb = trippedSingleSlot(1000, 2, 2);
+      const t0 = 1 + 5000;
+      cb.canRequest(t0); // zombie
+      cb.canRequest(t0 + 500); // live probe
+
+      // When — the live probe succeeds (releases the NEWEST timestamp, t0+500)
+      cb.recordSuccess(t0 + 600);
+
+      // Then — the remaining tracked probe is the zombie (t0): it expires at t0+1000
+      expect(cb.snapshot(t0 + 999).halfOpenInFlight).toBe(1);
+      expect(cb.snapshot(t0 + 1000).halfOpenInFlight).toBe(0);
+    });
+
+    it('reclaim does not bypass the cap while a probe is still fresh', () => {
+      // Given — single slot, long probe timeout
+      const cb = trippedSingleSlot(10000);
+      const t0 = 1 + 5000;
+      expect(cb.canRequest(t0)).toBe(true);
+
+      // When / Then — repeated attempts within the timeout are all rejected
+      expect(cb.canRequest(t0 + 1)).toBe(false);
+      expect(cb.canRequest(t0 + 5000)).toBe(false);
+      expect(cb.canRequest(t0 + 9999)).toBe(false);
+    });
+  });
+
   describe('reset', () => {
     it('should return to CLOSED and clear all counters from any state', () => {
       // Given — an OPEN breaker
@@ -320,6 +412,7 @@ describe('CircuitBreakerState', () => {
       ['openDurationMs', { openDurationMs: 0 }],
       ['halfOpenMaxCalls', { halfOpenMaxCalls: 0 }],
       ['successThreshold', { successThreshold: 0 }],
+      ['probeTimeoutMs', { probeTimeoutMs: 0 }],
     ])('should reject non-positive %s', (_name, overrides) => {
       expect(() => new CircuitBreakerState(baseConfig(overrides))).toThrow(InvalidCircuitBreakerConfigError);
     });

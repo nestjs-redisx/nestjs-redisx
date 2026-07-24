@@ -13,7 +13,7 @@ import { ICircuitBreakerConfig } from './circuit-breaker-state.interface';
  * Validates a fully-resolved circuit breaker config.
  *
  * Rules (same as the ICircuitBreakerConfig JSDoc):
- * - all five knobs are integers >= 1;
+ * - all six knobs are integers >= 1;
  * - successThreshold <= halfOpenMaxCalls.
  *
  * @throws {InvalidCircuitBreakerConfigError} on the first violated rule
@@ -24,6 +24,7 @@ export function validateCircuitBreakerConfig(config: ICircuitBreakerConfig): voi
   assertPositiveInteger('openDurationMs', config.openDurationMs);
   assertPositiveInteger('halfOpenMaxCalls', config.halfOpenMaxCalls);
   assertPositiveInteger('successThreshold', config.successThreshold);
+  assertPositiveInteger('probeTimeoutMs', config.probeTimeoutMs);
 
   if (config.successThreshold > config.halfOpenMaxCalls) {
     throw new InvalidCircuitBreakerConfigError(`successThreshold (${config.successThreshold}) must be <= halfOpenMaxCalls (${config.halfOpenMaxCalls})`);

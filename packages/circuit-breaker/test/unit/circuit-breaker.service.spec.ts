@@ -199,6 +199,22 @@ describe('CircuitBreakerService', () => {
       expect(store.recordFailure).toHaveBeenCalledWith('cb:svc', expect.objectContaining({ failureThreshold: 99, windowMs: 1000 }));
     });
 
+    it('should default probeTimeoutMs to the resolved openDurationMs', async () => {
+      // When — plugin options (openDurationMs: 5000) do not set probeTimeoutMs
+      await service.execute('svc', vi.fn().mockResolvedValue('ok'));
+
+      // Then — the store receives the dynamic default
+      expect(store.canRequest).toHaveBeenCalledWith('cb:svc', expect.objectContaining({ openDurationMs: 5000, probeTimeoutMs: 5000 }));
+    });
+
+    it('should honor a per-call probeTimeoutMs override', async () => {
+      // When
+      await service.execute('svc', vi.fn().mockResolvedValue('ok'), { probeTimeoutMs: 750 });
+
+      // Then
+      expect(store.canRequest).toHaveBeenCalledWith('cb:svc', expect.objectContaining({ probeTimeoutMs: 750 }));
+    });
+
     it('should delegate getState and reset with the prefixed key', async () => {
       // When
       await service.getState('svc');

@@ -10,6 +10,7 @@ const CONFIG: ICircuitBreakerConfig = {
   openDurationMs: 5000,
   halfOpenMaxCalls: 2,
   successThreshold: 2,
+  probeTimeoutMs: 4000,
 };
 
 function createDriver(): MockedObject<IRedisDriver> {
@@ -60,8 +61,12 @@ describe('RedisCircuitBreakerStoreAdapter', () => {
       // Then
       expect(decision.allowed).toBe(true);
       expect(decision.snapshot).toEqual({ state: 'half-open', failuresInWindow: 0, halfOpenSuccesses: 0, halfOpenInFlight: 1 });
-      // keys are hash-tagged and share a slot: {cb:x} and {cb:x}:f
-      expect(driver.evalsha).toHaveBeenCalledWith('sha', ['{cb:x}', '{cb:x}:f'], expect.arrayContaining([3, 1000, 5000, 2, 2]));
+      // keys are hash-tagged and share a slot: {cb:x}, {cb:x}:f, {cb:x}:p
+      expect(driver.evalsha).toHaveBeenCalledWith('sha', ['{cb:x}', '{cb:x}:f', '{cb:x}:p'], expect.arrayContaining([3, 1000, 5000, 2, 2, 4000]));
+      // args: 6 config values + now + unique probe member
+      const canRequestArgs = driver.evalsha.mock.calls[0][2] as unknown[];
+      expect(canRequestArgs).toHaveLength(8);
+      expect(typeof canRequestArgs[7]).toBe('string');
     });
 
     it('should fall back to EVAL on a NOSCRIPT error', async () => {
@@ -117,8 +122,8 @@ describe('RedisCircuitBreakerStoreAdapter', () => {
       // Then
       expect(snapshot.state).toBe('open');
       const args = driver.evalsha.mock.calls[0][2] as unknown[];
-      expect(args).toHaveLength(7); // 5 config + now + member
-      expect(typeof args[6]).toBe('string');
+      expect(args).toHaveLength(8); // 6 config + now + member
+      expect(typeof args[7]).toBe('string');
     });
 
     it('recordSuccess should parse the snapshot', async () => {
@@ -192,13 +197,13 @@ describe('RedisCircuitBreakerStoreAdapter', () => {
   });
 
   describe('reset', () => {
-    it('should delete the state and failures keys in a single atomic DEL', async () => {
+    it('should delete the state, failures, and probes keys in a single atomic DEL', async () => {
       // When
       await adapter.reset('cb:x');
 
-      // Then — one variadic DEL, both keys share a hash tag (same cluster slot)
+      // Then — one variadic DEL, all keys share a hash tag (same cluster slot)
       expect(driver.del).toHaveBeenCalledTimes(1);
-      expect(driver.del).toHaveBeenCalledWith('{cb:x}', '{cb:x}:f');
+      expect(driver.del).toHaveBeenCalledWith('{cb:x}', '{cb:x}:f', '{cb:x}:p');
     });
 
     it('should wrap deletion errors', async () => {
