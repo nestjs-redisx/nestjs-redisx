@@ -11,7 +11,7 @@ Before installing NestJS RedisX, ensure your environment meets these requirement
 
 | Requirement | Version |
 |-------------|---------|
-| Node.js | 20.x or later |
+| Node.js | 18.x or later (tested on 18/20/22/24) |
 | NestJS | 10.x or later |
 | Redis | 6.x or later |
 | TypeScript | 5.0 or later |

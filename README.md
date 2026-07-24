@@ -35,8 +35,10 @@
 - 2k+ tests across unit, integration, and E2E
 - Coverage tracked via [Codecov](https://codecov.io/gh/nestjs-redisx/nestjs-redisx)
 - Pack-test validates every package installs and works from tarball
-- Compatibility tested across Node 18/20, NestJS 10/11, Redis 6.2/7.x
+- Compatibility tested across Node 18/20/22/24, NestJS 10/11, Redis 6.2/7.x
 - Works with both Express and Fastify adapters
+
+> **Node.js support:** the published packages run on **Node >= 18** (declared in each package's `engines` and exercised in CI on 18/20/22/24). The root `package.json` of this monorepo requires **Node >= 20** — that constraint applies only to *developing this repository* (build tooling), not to using the packages.
 
 [Testing details](https://nestjs-redisx.dev/en/guide/operations/testing-overview/) | [Compatibility matrix](https://nestjs-redisx.dev/en/guide/operations/compatibility/)
 

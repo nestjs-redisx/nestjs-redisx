@@ -29,11 +29,11 @@
   },
   "dependencies": {
     "@opentelemetry/api": "^1.7.0",
-    "@opentelemetry/sdk-trace-node": "^1.21.0",
-    "@opentelemetry/sdk-trace-base": "^1.21.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.48.0",
     "@opentelemetry/resources": "^1.21.0",
-    "@opentelemetry/semantic-conventions": "^1.21.0",
-    "@opentelemetry/exporter-trace-otlp-http": "^0.48.0"
+    "@opentelemetry/sdk-trace-base": "^1.21.0",
+    "@opentelemetry/sdk-trace-node": "^1.21.0",
+    "@opentelemetry/semantic-conventions": "^1.21.0"
   },
   "keywords": [
     "nestjs",
@@ -66,14 +66,17 @@
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
+    "@vitest/coverage-v8": "^1.6.0",
     "eslint": "^8.0.0",
     "prettier": "^3.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.3.0",
-    "vitest": "^1.6.0",
-    "@vitest/coverage-v8": "^1.6.0"
+    "vitest": "^1.6.0"
   },
   "publishConfig": {
     "access": "public"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
