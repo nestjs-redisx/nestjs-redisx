@@ -117,9 +117,13 @@ export class StampedeProtectionService implements IStampedeProtection {
       }
       throw error;
     } finally {
-      setTimeout(() => {
-        this.flights.delete(key);
-      }, 100);
+      // Delete the flight SYNCHRONOUSLY. Waiters that joined during the load
+      // already hold the promise reference, so a delayed cleanup buys nothing —
+      // but a lingering resolved flight would serve stale (pre-invalidation)
+      // values to later calls (mutation -> invalidateTags -> instant refetch),
+      // and a lingering rejected-with-no-waiters flight would hang new callers
+      // until waitTimeout.
+      this.flights.delete(key);
 
       if (lock) {
         this.releaseLock(lock.lockKey, lock.lockValue).catch((err) => {

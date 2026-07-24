@@ -144,6 +144,34 @@ describe('StampedeProtectionService', () => {
       await expect(promise2).rejects.toThrow(/Loader failed/);
     });
 
+    it('should NOT serve a completed flight to a later sequential call (stale window regression)', async () => {
+      // Given — a fully completed load of V1
+      const first = await service.protect('user:1', async () => 'V1');
+      expect(first.value).toBe('V1');
+
+      // When — the very next call arrives immediately after completion
+      // (mutation -> invalidateTags -> instant refetch pattern)
+      const second = await service.protect('user:1', async () => 'V2');
+
+      // Then — the loader MUST run again; serving the old resolved flight
+      // would return pre-invalidation data
+      expect(second.value).toBe('V2');
+      expect(second.cached).toBe(false);
+    });
+
+    it('should NOT leave a never-settling flight after a loader error with no waiters', async () => {
+      // Given — a loader that fails while nobody is waiting
+      await expect(service.protect('user:2', async () => Promise.reject(new Error('load failed')))).rejects.toThrow();
+
+      // When — the next call arrives immediately after the failure
+      const result = await service.protect('user:2', async () => 'recovered');
+
+      // Then — it must run its own loader instantly (not attach to a dead
+      // flight and hang until waitTimeout)
+      expect(result.value).toBe('recovered');
+      expect(result.cached).toBe(false);
+    });
+
     it('should clean up flight after execution', async () => {
       // Given
       const key = 'test-key';

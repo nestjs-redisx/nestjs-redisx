@@ -11,6 +11,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - `@nestjs-redisx/circuit-breaker`: new package — a distributed circuit breaker (`closed` / `open` / `half-open`) backed by Redis. At its core is a pure, time-injected finite state machine (`CircuitBreakerState`) that takes an explicit `now` (no hidden `Date.now()`), so the policy is deterministic and fully unit-testable; the distributed layer replicates it 1:1 with atomic Lua scripts. Provides `CircuitBreakerPlugin`, `CIRCUIT_BREAKER_SERVICE` (`execute` with fallback, manual `recordSuccess` / `recordFailure`, `getState`, `reset`), and a proxy-based `@WithCircuitBreaker` decorator that works on any Injectable method (key interpolation, per-method overrides, `fallback`, `onOpen`, and `skip`). Half-open probes whose outcome is never recorded (e.g. a crashed process) are auto-reclaimed after `probeTimeoutMs` (default: `openDurationMs`). Honors `errorPolicy` (`fail-open` / `fail-closed`) when the state store is unavailable, and works on Redis Cluster (state keys share a hash tag). Also runs on the `@nestjs-redisx/testing` in-memory driver.
 - `core`: added `CIRCUIT_BREAKER_OPEN`, `CIRCUIT_BREAKER_STORE_ERROR`, and `CIRCUIT_BREAKER_CONFIG_INVALID` to `ErrorCode`.
 
+### Fixed
+
+- `cache`: stampede protection served **stale (pre-invalidation) values for up to 100 ms** after any load. A completed singleflight stayed in the in-process flight map (`setTimeout(delete, 100)`), so the pattern "mutation → `invalidateTags`/`delete` → immediate `getOrSet`" (SSE / TanStack Query refetch) coalesced onto the already-resolved flight: the loader was not called, the old value was returned with `stampedePrevented` incremented, and the cache was not re-populated. The same lingering window could also hang a caller for the full `waitTimeout` if it attached to a flight whose loader had failed with no waiters. Flights are now removed **synchronously** on completion — in-flight waiters are unaffected (they already hold the promise), and sequential calls always re-check the cache and reload.
+
 ## [1.5.1] - 2026-07-19
 
 ### Fixed
