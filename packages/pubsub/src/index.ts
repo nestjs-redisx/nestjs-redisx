@@ -8,7 +8,7 @@ export { PubSubService } from './pubsub/application/services/pubsub.service';
 export type { IPubSubService } from './pubsub/application/ports/pubsub-service.port';
 
 // Decorators
-export { Subscribe, type ISubscribeOptions } from './pubsub/api/decorators/subscribe.decorator';
+export { Subscribe, PUBSUB_SUBSCRIBE_METADATA, type ISubscribeOptions } from './pubsub/api/decorators/subscribe.decorator';
 
 // Types
 export type { IPubSubPluginOptions, IPubSubMessage, IPubSubSubscription, IPubSubSubscriptionsSnapshot, PubSubMessageHandler, PubSubPluginOptions, PubSubMessage } from './shared/types';

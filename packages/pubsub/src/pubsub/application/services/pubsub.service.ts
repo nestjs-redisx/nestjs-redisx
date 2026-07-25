@@ -31,6 +31,8 @@ export class PubSubService implements IPubSubService, OnModuleDestroy {
   private readonly channelHandlers = new Map<string, Set<PubSubMessageHandler>>();
   /** full (prefixed) pattern -> handlers */
   private readonly patternHandlers = new Map<string, Set<PubSubMessageHandler>>();
+  /** per-target operation chains (see runExclusive) */
+  private readonly targetOps = new Map<string, Promise<void>>();
 
   constructor(
     @Inject(PUBSUB_PLUGIN_OPTIONS)
@@ -75,11 +77,13 @@ export class PubSubService implements IPubSubService, OnModuleDestroy {
 
   async subscribe<T>(channel: string, handler: PubSubMessageHandler<T>): Promise<IPubSubSubscription> {
     const fullChannel = this.prefix + channel;
-    const handlers = this.channelHandlers.get(fullChannel);
 
-    if (handlers) {
-      handlers.add(handler as PubSubMessageHandler);
-    } else {
+    await this.runExclusive(`c:${fullChannel}`, async () => {
+      const handlers = this.channelHandlers.get(fullChannel);
+      if (handlers) {
+        handlers.add(handler as PubSubMessageHandler);
+        return;
+      }
       // First handler for this channel: create the Redis subscription BEFORE
       // registering, so a failed SUBSCRIBE leaves no phantom handler behind.
       try {
@@ -88,30 +92,36 @@ export class PubSubService implements IPubSubService, OnModuleDestroy {
         throw new PubSubSubscribeError(channel, error as Error);
       }
       this.channelHandlers.set(fullChannel, new Set([handler as PubSubMessageHandler]));
-    }
+    });
 
     return this.buildSubscription(channel, fullChannel, handler as PubSubMessageHandler, false);
   }
 
   async psubscribe<T>(pattern: string, handler: PubSubMessageHandler<T>): Promise<IPubSubSubscription> {
     const fullPattern = this.prefix + pattern;
-    const handlers = this.patternHandlers.get(fullPattern);
 
-    if (handlers) {
-      handlers.add(handler as PubSubMessageHandler);
-    } else {
+    await this.runExclusive(`p:${fullPattern}`, async () => {
+      const handlers = this.patternHandlers.get(fullPattern);
+      if (handlers) {
+        handlers.add(handler as PubSubMessageHandler);
+        return;
+      }
       try {
         await this.subscriber.psubscribe(fullPattern);
       } catch (error) {
         throw new PubSubSubscribeError(pattern, error as Error);
       }
       this.patternHandlers.set(fullPattern, new Set([handler as PubSubMessageHandler]));
-    }
+    });
 
     return this.buildSubscription(pattern, fullPattern, handler as PubSubMessageHandler, true);
   }
 
   async unsubscribeAll(): Promise<void> {
+    // Let in-flight subscribe/unsubscribe operations settle first so a
+    // subscription cannot slip in after the sweep below.
+    await Promise.all([...this.targetOps.values()]);
+
     const channels = [...this.channelHandlers.keys()];
     const patterns = [...this.patternHandlers.keys()];
     this.channelHandlers.clear();
@@ -144,26 +154,49 @@ export class PubSubService implements IPubSubService, OnModuleDestroy {
   // Internals
   // ---------------------------------------------------------------------------
 
+  /**
+   * Serializes subscribe/release operations per channel/pattern. Without this,
+   * two concurrent first-subscribes to the same channel would each issue a
+   * SUBSCRIBE and the later one would overwrite the handler Set (losing the
+   * earlier handler), and a subscribe racing a last-handler unsubscribe could
+   * register a handler on an already-released Redis subscription.
+   */
+  private runExclusive(scopeKey: string, op: () => Promise<void>): Promise<void> {
+    const prev = this.targetOps.get(scopeKey) ?? Promise.resolve();
+    const next = prev.catch(() => undefined).then(op);
+    const tail: Promise<void> = next.catch(() => undefined);
+    this.targetOps.set(scopeKey, tail);
+    void tail.finally(() => {
+      if (this.targetOps.get(scopeKey) === tail) {
+        this.targetOps.delete(scopeKey);
+      }
+    });
+    return next;
+  }
+
   private buildSubscription(target: string, fullTarget: string, handler: PubSubMessageHandler, isPattern: boolean): IPubSubSubscription {
     const registry = isPattern ? this.patternHandlers : this.channelHandlers;
+    const scopeKey = isPattern ? `p:${fullTarget}` : `c:${fullTarget}`;
 
     return {
       target,
       isPattern,
       unsubscribe: async (): Promise<void> => {
-        const handlers = registry.get(fullTarget);
-        if (!handlers?.delete(handler)) {
-          return; // already removed
-        }
-        if (handlers.size === 0) {
-          registry.delete(fullTarget);
-          // Release the Redis subscription; log-only on failure (the local
-          // handler is already gone, so no messages will be dispatched).
-          const release = isPattern ? this.subscriber.punsubscribe(fullTarget) : this.subscriber.unsubscribe(fullTarget);
-          await release.catch((err: Error) => {
-            this.logger.warn(`Failed to release subscription "${fullTarget}": ${err.message}`);
-          });
-        }
+        await this.runExclusive(scopeKey, async () => {
+          const handlers = registry.get(fullTarget);
+          if (!handlers?.delete(handler)) {
+            return; // already removed
+          }
+          if (handlers.size === 0) {
+            registry.delete(fullTarget);
+            // Release the Redis subscription; log-only on failure (the local
+            // handler is already gone, so no messages will be dispatched).
+            const release = isPattern ? this.subscriber.punsubscribe(fullTarget) : this.subscriber.unsubscribe(fullTarget);
+            await release.catch((err: Error) => {
+              this.logger.warn(`Failed to release subscription "${fullTarget}": ${err.message}`);
+            });
+          }
+        });
       },
     };
   }

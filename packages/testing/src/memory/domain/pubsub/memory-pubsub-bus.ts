@@ -8,6 +8,8 @@
  * semantics the memory driver already documents.
  */
 
+import { globToRegExp } from '../glob';
+
 type MessageListener = (channel: string, message: string) => void;
 type PatternListener = (pattern: string, channel: string, message: string) => void;
 
@@ -16,30 +18,7 @@ interface ISubscriber {
   onPMessage: PatternListener;
 }
 
-/** Converts a Redis glob pattern (*, ?, [..]) to a RegExp. */
-export function globToRegExp(pattern: string): RegExp {
-  let regex = '';
-  for (let i = 0; i < pattern.length; i++) {
-    const ch = pattern[i]!;
-    if (ch === '*') {
-      regex += '.*';
-    } else if (ch === '?') {
-      regex += '.';
-    } else if (ch === '[') {
-      // copy the character class as-is up to the closing bracket
-      const end = pattern.indexOf(']', i + 1);
-      if (end === -1) {
-        regex += '\\[';
-      } else {
-        regex += pattern.slice(i, end + 1);
-        i = end;
-      }
-    } else {
-      regex += ch.replace(/[.+^${}()|\\]/g, '\\$&');
-    }
-  }
-  return new RegExp(`^${regex}$`);
-}
+export { globToRegExp };
 
 class MemoryPubSubBus {
   private readonly channelSubs = new Map<string, Map<ISubscriber, true>>();

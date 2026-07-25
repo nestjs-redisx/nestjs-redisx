@@ -17,7 +17,7 @@ Nobody was subscribed to that channel on the Redis server at that moment. Check 
 
 - Ensure the handler class is a **provider** (registered in a module) — `@Subscribe` discovery scans providers only.
 - The plugin logs `Subscribed X.y to channel "…"` on startup for every discovered handler; if the line is missing, the metadata was not found.
-- With a custom `keyExtractor`-style setup, verify the channel names match exactly (prefix included).
+- Verify the channel names match exactly on both sides — `channelPrefix` is applied by the plugin, so publishers outside RedisX must include the prefix themselves.
 
 ## node-redis + Cluster/Sentinel
 

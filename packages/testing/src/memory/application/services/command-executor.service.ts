@@ -3,22 +3,11 @@ import { createHash } from 'crypto';
 import { MemoryStore } from '../../domain/store/memory-store';
 import { StreamEntry, compareIds } from '../../domain/store/stream-value';
 import { LuaInterpreter } from '../../domain/lua/lua-interpreter';
+import { globToRegExp } from '../../domain/glob';
 import { MemoryDriverError } from '../../../shared/errors';
 import { ICommandExecutor } from '../ports/command-executor.port';
 
 const OK = 'OK';
-
-/** Converts a Redis glob pattern to a RegExp (supports * and ?). */
-function globToRegExp(glob: string): RegExp {
-  let re = '^';
-  for (const ch of glob) {
-    if (ch === '*') re += '.*';
-    else if (ch === '?') re += '.';
-    else if ('.+^${}()|\\/['.includes(ch)) re += `\\${ch}`;
-    else re += ch;
-  }
-  return new RegExp(`${re}$`);
-}
 
 type ScoreBound = {
   value: number;
