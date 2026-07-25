@@ -13,7 +13,6 @@ description: 'Configure @nestjs-redisx/pubsub: named client, channel prefix, and
 |--------|------|---------|-------------|
 | `client` | `string` | `'default'` | Named Redis client used for **publishing**. The dedicated subscriber connection is cloned from this client's config. |
 | `channelPrefix` | `string` | `''` | Prefix applied to every channel and pattern. Empty by default so channels interoperate with non-RedisX publishers/subscribers. Handlers always see the logical (unprefixed) names. |
-| `isGlobal` | `boolean` | `false` | Standard plugin flag. |
 
 ## Synchronous Setup
 
