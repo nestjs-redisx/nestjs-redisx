@@ -34,9 +34,9 @@ within the bounded subset, or run that particular test against a real Redis.
 ## Results differ from real Redis
 
 The in-memory driver implements standard single-node semantics. If you rely on
-cluster cross-slot behavior or Pub/Sub, use a real Redis for those tests — the
-in-memory driver targets correctness for the data-structure, scripting, and
-stream consumer-group paths the plugins use. Note that `BLOCK` on
+cluster cross-slot behavior or cross-process Pub/Sub, use a real Redis for
+those tests — the in-memory driver targets correctness for the data-structure,
+scripting, stream consumer-group, and in-process Pub/Sub paths the plugins use. Note that `BLOCK` on
 `XREADGROUP`/`XREAD` returns promptly rather than waiting the full timeout.
 
 ## State leaks between tests

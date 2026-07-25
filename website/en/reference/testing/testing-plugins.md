@@ -1,6 +1,6 @@
 ---
 title: 'Testing Plugins — Testing Utilities | NestJS RedisX'
-description: 'Patterns for unit-testing the cache, locks, rate-limit, circuit-breaker, and idempotency plugins against the in-memory Redis driver, plus seeding and inspecting keyspace state.'
+description: 'Patterns for unit-testing the cache, locks, rate-limit, circuit-breaker, pubsub, and idempotency plugins against the in-memory Redis driver, plus seeding and inspecting keyspace state.'
 ---
 
 # Testing Plugins
@@ -101,6 +101,25 @@ const fail = () => Promise.reject(new Error('down'));
 await expect(cb.execute('dep', fail)).rejects.toThrow();
 await expect(cb.execute('dep', fail)).rejects.toThrow();
 expect((await cb.getState('dep')).state).toBe('open');
+```
+
+## Pub/Sub
+
+The in-memory driver ships a process-wide Pub/Sub bus, so the real plugin —
+including its dedicated subscriber client — round-trips messages hermetically:
+
+```typescript
+const app = await Test.createTestingModule({
+  imports: [RedisTestingModule.forRoot({ plugins: [new PubSubPlugin()] })],
+}).compile();
+await app.init();
+
+const pubsub = app.get<IPubSubService>(PUBSUB_SERVICE);
+const got: unknown[] = [];
+await pubsub.subscribe('events', (msg) => got.push(msg.data));
+await pubsub.publish('events', { n: 1 });
+await new Promise((r) => setTimeout(r, 20));
+expect(got).toEqual([{ n: 1 }]);
 ```
 
 ## Idempotency

@@ -1,6 +1,6 @@
 # NestJS RedisX
 
-> Modular Redis toolkit for NestJS with plugin architecture. Provides two-tier caching (L1 memory + L2 Redis), distributed locks, rate limiting, a distributed circuit breaker, idempotency, Redis Streams, Prometheus metrics, and OpenTelemetry tracing. Supports both ioredis and node-redis drivers. TypeScript-first, zero external dependencies per plugin.
+> Modular Redis toolkit for NestJS with plugin architecture. Provides two-tier caching (L1 memory + L2 Redis), distributed locks, rate limiting, a distributed circuit breaker, typed Pub/Sub, idempotency, Redis Streams, Prometheus metrics, and OpenTelemetry tracing. Supports both ioredis and node-redis drivers. TypeScript-first, zero external dependencies per plugin.
 
 ## Installation
 
@@ -23,6 +23,7 @@ npm install @nestjs-redisx/cache        # Two-tier caching
 npm install @nestjs-redisx/locks        # Distributed locks
 npm install @nestjs-redisx/rate-limit   # Rate limiting
 npm install @nestjs-redisx/circuit-breaker # Distributed circuit breaker
+npm install @nestjs-redisx/pubsub       # Typed Pub/Sub messaging
 npm install @nestjs-redisx/idempotency  # Request deduplication
 npm install @nestjs-redisx/streams      # Redis Streams
 npm install @nestjs-redisx/metrics      # Prometheus metrics
@@ -498,6 +499,57 @@ HALF_OPEN: up to `halfOpenMaxCalls` concurrent probes; `successThreshold` succes
 
 `errorPolicy` governs STATE STORE failures only: 'fail-open' runs the guarded call anyway, 'fail-closed' (default) throws CircuitBreakerStoreError. The manual API (recordSuccess/recordFailure/getState/reset) is always strict. The pure state machine (`CircuitBreakerState`) is exported for hermetic unit tests — every time-dependent method takes an explicit `now`.
 
+## Pub/Sub Plugin
+
+Typed Redis Pub/Sub: publish/subscribe with JSON payloads, pattern subscriptions, a @Subscribe decorator with automatic discovery, and a DEDICATED subscriber connection managed for you (a Redis connection in subscriber mode cannot execute regular commands, so the plugin clones one from your named client automatically as `<client>:pubsub-subscriber`).
+
+### PubSubPlugin Configuration
+
+```typescript
+new PubSubPlugin({
+  client: 'default',   // named Redis client used for publishing
+  channelPrefix: '',   // optional namespace applied to every channel/pattern
+                       // (empty by default for interop with non-RedisX publishers)
+})
+```
+
+### @Subscribe Decorator
+
+Handler methods on any @Injectable() provider are auto-discovered on startup:
+
+```typescript
+import { Subscribe, IPubSubMessage } from '@nestjs-redisx/pubsub';
+
+@Injectable()
+export class UserEvents {
+  @Subscribe('user.created') // exact channel
+  onCreated(message: IPubSubMessage<{ id: string }>) {
+    console.log(message.channel, message.data.id);
+  }
+
+  @Subscribe({ pattern: 'user.*' }) // Redis glob pattern (*, ?, [..])
+  onAnyUserEvent(message: IPubSubMessage) {
+    console.log(message.pattern, message.channel, message.data);
+  }
+}
+```
+
+### Service API
+
+```typescript
+import { PUBSUB_SERVICE, IPubSubService } from '@nestjs-redisx/pubsub';
+
+const receivers = await pubsub.publish('user.created', { id: '42' }); // JSON-serialized
+const sub = await pubsub.subscribe<UserCreated>('user.created', (msg) => {
+  console.log(msg.channel, msg.data, msg.raw);
+});
+await sub.unsubscribe(); // last handler releases the Redis subscription
+```
+
+Multiple handlers per channel multiplex over ONE Redis subscription. Handler errors are logged, never propagated into the dispatch loop. Non-JSON payloads from other systems are delivered with `data` = raw string (fail-open interop). All subscriptions are cleaned up on shutdown. Pub/Sub is fire-and-forget (no persistence, no replay, at-most-once) — use the Streams plugin when you need durable delivery.
+
+Note: with the node-redis driver, Pub/Sub is supported on single-node connections; use ioredis for Pub/Sub over Cluster/Sentinel topologies.
+
 ## Idempotency Plugin
 
 Request deduplication for payments, order creation, and mutations. Ensures operations execute exactly once even when clients retry.
@@ -644,7 +696,7 @@ Each Redis span includes: `db.system: "redis"`, `db.operation`, `db.redis.key`, 
 
 ## Testing Utilities
 
-`@nestjs-redisx/testing` provides an in-memory Redis driver so you can unit-test code that uses the cache, locks, rate-limit, circuit-breaker, idempotency, and streams plugins **without a running Redis**. The plugins run their real production code — including their Lua scripts and stream consumer groups — against an in-memory keyspace. Install it as a devDependency: `npm install -D @nestjs-redisx/testing`.
+`@nestjs-redisx/testing` provides an in-memory Redis driver so you can unit-test code that uses the cache, locks, rate-limit, circuit-breaker, pubsub, idempotency, and streams plugins **without a running Redis**. The plugins run their real production code — including their Lua scripts, stream consumer groups, and Pub/Sub subscriptions — against an in-memory keyspace. Install it as a devDependency: `npm install -D @nestjs-redisx/testing`.
 
 ### RedisTestingModule (recommended)
 
@@ -682,7 +734,7 @@ RedisModule.forRoot({
 
 ### Supported commands
 
-Strings (`GET`/`SET`/`SETEX`/`SETNX`/`APPEND`/`STRLEN`/`INCR`/`INCRBY`/`DECR`/`DECRBY`/`MGET`/`MSET`), keys & TTL (`DEL`/`UNLINK`/`EXISTS`/`EXPIRE`/`PEXPIRE`/`EXPIREAT`/`PEXPIREAT`/`PERSIST`/`TTL`/`PTTL`/`TYPE`/`KEYS`/`SCAN`), hashes (`HSET`/`HMSET`/`HGET`/`HMGET`/`HGETALL`/`HDEL`/`HEXISTS`/`HLEN`/`HKEYS`/`HVALS`/`HINCRBY`), sets (`SADD`/`SREM`/`SMEMBERS`/`SISMEMBER`/`SCARD`), sorted sets (`ZADD`/`ZREM`/`ZCARD`/`ZSCORE`/`ZRANGE`/`ZRANGEBYSCORE`/`ZREMRANGEBYSCORE`/`ZCOUNT`), lists (`LPUSH`/`RPUSH`/`LPOP`/`RPOP`/`LLEN`/`LRANGE`/`LINDEX`/`LREM`), streams (`XADD`/`XLEN`/`XRANGE`/`XREVRANGE`/`XDEL`/`XTRIM`/`XINFO STREAM`/`XGROUP`/`XREADGROUP`/`XREAD`/`XACK`/`XPENDING`/`XCLAIM` with real consumer-group + PEL semantics), scripting (`EVAL`/`EVALSHA`/`SCRIPT LOAD`), server (`PING`/`DBSIZE`/`FLUSHDB`/`FLUSHALL`). TTL uses lazy expiry. A built-in Lua interpreter runs the plugins' atomic scripts. Blocking `XREADGROUP`/`XREAD` returns promptly (no real blocking).
+Strings (`GET`/`SET`/`SETEX`/`SETNX`/`APPEND`/`STRLEN`/`INCR`/`INCRBY`/`DECR`/`DECRBY`/`MGET`/`MSET`), keys & TTL (`DEL`/`UNLINK`/`EXISTS`/`EXPIRE`/`PEXPIRE`/`EXPIREAT`/`PEXPIREAT`/`PERSIST`/`TTL`/`PTTL`/`TYPE`/`KEYS`/`SCAN`), hashes (`HSET`/`HMSET`/`HGET`/`HMGET`/`HGETALL`/`HDEL`/`HEXISTS`/`HLEN`/`HKEYS`/`HVALS`/`HINCRBY`), sets (`SADD`/`SREM`/`SMEMBERS`/`SISMEMBER`/`SCARD`), sorted sets (`ZADD`/`ZREM`/`ZCARD`/`ZSCORE`/`ZRANGE`/`ZRANGEBYSCORE`/`ZREMRANGEBYSCORE`/`ZCOUNT`), lists (`LPUSH`/`RPUSH`/`LPOP`/`RPOP`/`LLEN`/`LRANGE`/`LINDEX`/`LREM`), streams (`XADD`/`XLEN`/`XRANGE`/`XREVRANGE`/`XDEL`/`XTRIM`/`XINFO STREAM`/`XGROUP`/`XREADGROUP`/`XREAD`/`XACK`/`XPENDING`/`XCLAIM` with real consumer-group + PEL semantics), scripting (`EVAL`/`EVALSHA`/`SCRIPT LOAD`), pub/sub (`PUBLISH`/`SUBSCRIBE`/`UNSUBSCRIBE`/`PSUBSCRIBE`/`PUNSUBSCRIBE` via a process-wide bus with glob pattern matching), server (`PING`/`DBSIZE`/`FLUSHDB`/`FLUSHALL`). TTL uses lazy expiry. A built-in Lua interpreter runs the plugins' atomic scripts. Blocking `XREADGROUP`/`XREAD` returns promptly (no real blocking).
 
 ### Seeding & inspecting state
 
@@ -690,7 +742,7 @@ Cast the injected `REDIS_DRIVER` to `MemoryRedisAdapter` and call `getStore()` t
 
 ### Exports & limitations
 
-Exports: `RedisTestingModule`, `registerMemoryDriver`, `MemoryRedisAdapter`, `MemoryStore`, `CommandExecutor`, `LuaInterpreter`, `MEMORY_DRIVER_TYPE`, `IMemoryDriverOptions`, and errors `MemoryDriverError` / `LuaExecutionError` / `WrongTypeError`. Limitations: single-node semantics only (no cluster cross-slot, no Pub/Sub); blocking reads return promptly; unsupported commands or Lua constructs fail loudly rather than returning wrong results; it is a correctness tool, not a performance simulator.
+Exports: `RedisTestingModule`, `registerMemoryDriver`, `MemoryRedisAdapter`, `MemoryStore`, `CommandExecutor`, `LuaInterpreter`, `MEMORY_DRIVER_TYPE`, `IMemoryDriverOptions`, and errors `MemoryDriverError` / `LuaExecutionError` / `WrongTypeError`. Limitations: single-node semantics only (no cluster cross-slot); Pub/Sub is a process-wide bus with single-node semantics; blocking reads return promptly; unsupported commands or Lua constructs fail loudly rather than returning wrong results; it is a correctness tool, not a performance simulator.
 
 ## Complete API Reference
 
@@ -744,6 +796,16 @@ The `@RateLimit` decorator binds `RateLimitGuard`; the guard consumes at most on
 - `reset(key: string): Promise<void>` — return the circuit to CLOSED and clear all state.
 
 States: CLOSED counts failures in a rolling `windowMs`; at `failureThreshold` it trips to OPEN for `openDurationMs`; the next request then flips to HALF_OPEN, allowing up to `halfOpenMaxCalls` probes (a probe unresolved longer than `probeTimeoutMs`, default `openDurationMs`, has its slot reclaimed), and `successThreshold` successes close it (any probe failure re-opens). The `@WithCircuitBreaker` decorator is proxy-based and works on any Injectable method. `errorPolicy` ('fail-open' | 'fail-closed', default 'fail-closed') governs behavior when the state store is unavailable.
+
+### Pub/Sub — `PUBSUB_SERVICE` (`IPubSubService`)
+
+- `publish<T>(channel: string, data: T): Promise<number>` — publish a JSON-serialized payload to a channel; returns the number of subscribers that received it. Throws `PubSubPublishError` on serialization or PUBLISH failure.
+- `subscribe<T>(channel: string, handler: PubSubMessageHandler<T>): Promise<IPubSubSubscription>` — register a handler for a channel; multiple handlers multiplex over one Redis subscription. Throws `PubSubSubscribeError` on SUBSCRIBE failure.
+- `psubscribe<T>(pattern: string, handler: PubSubMessageHandler<T>): Promise<IPubSubSubscription>` — register a handler for a Redis glob pattern (`*`, `?`, `[..]`); messages carry both pattern and concrete channel.
+- `unsubscribeAll(): Promise<void>` — remove ALL handlers and release every Redis subscription (called automatically on module destroy).
+- `getSubscriptions(): IPubSubSubscriptionsSnapshot` — non-mutating snapshot of logical channels and patterns with active handlers (for monitoring/health).
+
+`IPubSubMessage` carries `channel` (logical name without prefix), `pattern?`, `data` (deserialized; falls back to the raw string when JSON parsing fails), and `raw`. `IPubSubSubscription.unsubscribe()` removes one handler; the Redis subscription is released with the last handler. The `@Subscribe` decorator is discovery-based (channels and patterns). Delivery is at-most-once, fire-and-forget.
 
 ### Idempotency — `IDEMPOTENCY_SERVICE` (`IIdempotencyService`)
 

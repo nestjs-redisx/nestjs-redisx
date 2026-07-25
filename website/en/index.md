@@ -1,7 +1,7 @@
 ---
 layout: home
 title: 'NestJS RedisX — Modular Redis Toolkit for NestJS'
-description: 'Production Redis toolkit for NestJS: L1+L2 cache, distributed locks, rate limiting, circuit breaker, idempotency, streams, metrics, and OpenTelemetry tracing plugins.'
+description: 'Production Redis toolkit for NestJS: L1+L2 cache, distributed locks, rate limiting, circuit breaker, Pub/Sub, idempotency, streams, metrics, and OpenTelemetry tracing plugins.'
 
 hero:
   name: "NestJS RedisX"
@@ -45,6 +45,12 @@ features:
     title: Circuit Breaker
     details: Distributed closed/open/half-open breaker shared across instances via Redis. Fail-fast rejection, capped recovery probes, and per-call fallbacks.
     link: /en/reference/circuit-breaker/
+
+  - icon:
+      src: /icons/radio.svg
+    title: Pub/Sub
+    details: Typed publish/subscribe across instances with pattern subscriptions, @Subscribe auto-discovery, and a managed dedicated subscriber connection.
+    link: /en/reference/pubsub/
 
   - icon:
       src: /icons/radio.svg
@@ -97,6 +103,7 @@ The NestJS ecosystem offers several Redis integration options. This table helps 
 | Lock Auto-renewal | ✓ | — | — | — | — |
 | Rate Limiting | ✓ | — | — | ~¹ | — |
 | Circuit Breaker | ✓ | — | — | — | — |
+| Pub/Sub Messaging | ✓ | — | — | — | Manual |
 | Request Idempotency | ✓ | — | — | — | — |
 | Streams + Consumer Groups | ✓ | — | — | — | Manual |
 | | | | | | |
@@ -166,6 +173,7 @@ The foundation of NestJS RedisX providing:
 | [Locks](/en/reference/locks/) | 1.0.0 | Distributed locks with auto-renewal and retry strategies |
 | [Rate Limit](/en/reference/rate-limit/) | 1.0.0 | Fixed window, sliding window, and token bucket algorithms |
 | [Circuit Breaker](/en/reference/circuit-breaker/) | 1.6.0 | Distributed closed/open/half-open breaker with fallbacks |
+| [Pub/Sub](/en/reference/pubsub/) | 1.7.0 | Typed publish/subscribe with @Subscribe auto-discovery |
 | [Idempotency](/en/reference/idempotency/) | 1.0.0 | Request deduplication with fingerprinting and response replay |
 | [Streams](/en/reference/streams/) | 1.0.0 | Redis Streams with consumer groups and dead letter queues |
 | [Metrics](/en/reference/metrics/) | 1.0.0 | Prometheus metrics export with Grafana dashboards |

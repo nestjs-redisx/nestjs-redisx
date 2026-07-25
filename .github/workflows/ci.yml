@@ -137,7 +137,7 @@ jobs:
           TARBALLS_DIR=$(mktemp -d)
           echo "TARBALLS_DIR=$TARBALLS_DIR" >> $GITHUB_ENV
 
-          for pkg in core cache locks rate-limit idempotency streams metrics tracing testing; do
+          for pkg in core cache locks rate-limit circuit-breaker pubsub idempotency streams metrics tracing testing; do
             echo "Packing @nestjs-redisx/$pkg..."
             cd packages/$pkg
             npm pack --pack-destination "$TARBALLS_DIR"
@@ -160,6 +160,8 @@ jobs:
             "$TARBALLS_DIR"/nestjs-redisx-cache-*.tgz \
             "$TARBALLS_DIR"/nestjs-redisx-locks-*.tgz \
             "$TARBALLS_DIR"/nestjs-redisx-rate-limit-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-circuit-breaker-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-pubsub-*.tgz \
             "$TARBALLS_DIR"/nestjs-redisx-idempotency-*.tgz \
             "$TARBALLS_DIR"/nestjs-redisx-streams-*.tgz \
             "$TARBALLS_DIR"/nestjs-redisx-metrics-*.tgz \
@@ -203,6 +205,18 @@ jobs:
             it('should import rate-limit exports', async () => {
               const rl = await import('@nestjs-redisx/rate-limit');
               expect(rl.RateLimitPlugin).toBeDefined();
+            });
+
+            it('should import circuit-breaker exports', async () => {
+              const cb = await import('@nestjs-redisx/circuit-breaker');
+              expect(cb.CircuitBreakerPlugin).toBeDefined();
+              expect(cb.CircuitBreakerState).toBeDefined();
+            });
+
+            it('should import pubsub exports', async () => {
+              const pubsub = await import('@nestjs-redisx/pubsub');
+              expect(pubsub.PubSubPlugin).toBeDefined();
+              expect(pubsub.Subscribe).toBeDefined();
             });
 
             it('should import idempotency exports', async () => {

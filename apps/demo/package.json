@@ -1,7 +1,7 @@
 {
   "name": "@nestjs-redisx/demo",
   "version": "0.0.7",
-  "description": "Demo app — source of all documentation code snippets",
+  "description": "Demo app \u2014 source of all documentation code snippets",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
@@ -22,6 +22,7 @@
     "@nestjs-redisx/metrics": "^1.0.0",
     "@nestjs-redisx/tracing": "^1.0.0",
     "@nestjs-redisx/circuit-breaker": "^1.0.0",
+    "@nestjs-redisx/pubsub": "^1.0.0",
     "@nestjs-redisx/testing": "^1.0.0",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^4.0.2",

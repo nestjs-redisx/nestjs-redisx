@@ -4,6 +4,15 @@ All notable changes to NestJS RedisX are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-07-24
+
+### Added
+
+- `@nestjs-redisx/pubsub`: new package — typed Redis Pub/Sub for real-time cross-instance messaging. Provides `PubSubPlugin`, `PUBSUB_SERVICE` (`publish` / `subscribe` / `psubscribe` / `unsubscribeAll` / `getSubscriptions`), and a `@Subscribe` decorator with automatic discovery for channels and Redis glob patterns. Payloads are JSON-serialized with generics; non-JSON messages from other systems are delivered as raw strings (fail-open interop). The plugin creates and manages a **dedicated subscriber connection** (`<client>:pubsub-subscriber`) cloned from the named client's config and driver — a Redis connection in subscriber mode cannot execute regular commands, so your main client keeps working. Multiple handlers per channel multiplex over a single Redis subscription; the subscription is released when the last handler unsubscribes, and everything cleans up on shutdown. Handler errors are isolated (logged, never break the dispatch loop). Optional `channelPrefix` namespaces events without leaking into handler-visible names.
+- `core`: the driver layer now delivers Pub/Sub messages — `DriverEvent.MESSAGE` / `DriverEvent.PMESSAGE` events are emitted by both drivers (`ioredis` native events; `node-redis` via its v4 listener-based `subscribe` API). With the `node-redis` driver, Pub/Sub is supported on single-node connections; `subscriptionClient()` throws a clear error on Cluster/Sentinel (use `ioredis` for those topologies).
+- `core`: `RedisClientManager` now records each client's `driverType` in its metadata, and `createClient()` honors a per-client driver override — so runtime-created clients (like the Pub/Sub subscriber) inherit the right driver (including the in-memory test driver).
+- `@nestjs-redisx/testing`: the in-memory driver now implements `PUBLISH` / `SUBSCRIBE` / `UNSUBSCRIBE` / `PSUBSCRIBE` / `PUNSUBSCRIBE` via a process-wide Pub/Sub bus with glob pattern matching — the real `PubSubPlugin` (including its dedicated subscriber client) round-trips messages hermetically in unit tests.
+
 ## [1.6.1] - 2026-07-24
 
 ### Fixed

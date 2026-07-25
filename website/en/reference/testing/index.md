@@ -75,16 +75,17 @@ Redis's *own* behavior still belong in integration tests against a real Redis.
 | ✅ Test with the in-memory driver | 🔺 Test against real Redis |
 |---|---|
 | Cache hit/miss, TTL, stampede, tag invalidation | Cluster cross-slot routing & hash-tag correctness |
-| Lock acquisition / contention / release | Redis Pub/Sub fan-out across connections |
+| Lock acquisition / contention / release | Sharded Pub/Sub & cross-process fan-out |
 | Rate-limit algorithms (token bucket, windows) | Sentinel failover & reconnection behavior |
 | Idempotency check-and-lock, replay, fingerprint | Real network latency / throughput / load |
 | Streams produce → consumer group → ack / claim | Exact `BLOCK` timeout / long-poll timing |
+| Pub/Sub publish → @Subscribe handlers (in-process bus) | |
 
 ::: warning Known limitations
 Be aware of what the in-memory driver intentionally does **not** simulate:
 
 - **Single-node semantics** — one keyspace; no `SELECT`, no cluster cross-slot (`CROSSSLOT`) checks or hash-tag routing. A missing hash-tag bug passes in-memory but can fail on a real cluster.
-- **No Pub/Sub** — Redis publish/subscribe is not implemented (the plugins do not rely on it for their core logic).
+- **Pub/Sub is process-wide** — publish/subscribe works via an in-process bus with single-node semantics (real cross-connection delivery inside one test process, but not across processes or shards).
 - **Blocking reads return promptly** — `BLOCK` on `XREADGROUP`/`XREAD` does not wait the full timeout. Delivery is still correct; only the timing differs.
 - **Correctness tool, not a performance simulator** — don't use it for load or latency testing.
 - **Unsupported commands fail loudly** — an unimplemented command throws `MemoryDriverError` instead of silently returning a wrong result.
