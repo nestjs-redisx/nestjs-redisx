@@ -4,7 +4,7 @@ import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 
 import { createDriver } from '../../driver';
 import { DriverType } from '../../types';
-import { IRedisDriver, DriverEvent } from '../../interfaces';
+import { IRedisDriver, DriverEvent, ManagerCommandHook } from '../../interfaces';
 import { DEFAULT_CLIENT_NAME } from '../../shared/constants';
 import { RedisXError, ErrorCode } from '../../errors';
 import { ConnectionConfig, IClientMetadata, ConnectionStatus } from '../../types';
@@ -97,6 +97,9 @@ interface IManagedClient {
  */
 @Injectable()
 export class RedisClientManager implements IRedisDriverManager, OnModuleDestroy {
+  /** Manager-wide command hook, applied to all current and future clients. */
+  private commandHook: ManagerCommandHook | null = null;
+
   private readonly logger = new Logger(RedisClientManager.name);
 
   /**
@@ -211,6 +214,10 @@ export class RedisClientManager implements IRedisDriverManager, OnModuleDestroy 
     // Setup event handlers
     this.setupDriverEventHandlers(managedClient);
 
+    // Apply the manager-wide command hook (if one is installed) so
+    // runtime-created clients are observed too
+    this.applyCommandHook(name, driver);
+
     // Register client
     this.clients.set(name, managedClient);
 
@@ -235,6 +242,27 @@ export class RedisClientManager implements IRedisDriverManager, OnModuleDestroy 
    */
   getClientNames(): string[] {
     return Array.from(this.clients.keys());
+  }
+
+  /**
+   * Installs a hook around raw command execution on ALL clients — current and
+   * future (including runtime-created ones, e.g. a Pub/Sub subscriber).
+   * Pass null to remove. Used by observability plugins (e.g. tracing) to
+   * create per-command spans; the hook receives the client name as context.
+   */
+  setCommandHook(hook: ManagerCommandHook | null): void {
+    this.commandHook = hook;
+    for (const [name, managedClient] of this.clients) {
+      this.applyCommandHook(name, managedClient.driver);
+    }
+  }
+
+  private applyCommandHook(name: string, driver: IRedisDriver): void {
+    if (typeof driver.setCommandHook !== 'function') {
+      return; // custom driver without hook support
+    }
+    const hook = this.commandHook;
+    driver.setCommandHook(hook ? (command, args, exec) => hook(command, args, exec, { clientName: name }) : null);
   }
 
   /**

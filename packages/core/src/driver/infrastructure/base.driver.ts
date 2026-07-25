@@ -1,7 +1,7 @@
 import EventEmitter from 'events';
 
 import { Logger } from '@nestjs/common';
-import { IRedisDriver, IPipeline, IMulti, ISetOptions, IScanOptions, IStreamAddOptions, IStreamReadOptions, IStreamReadGroupOptions, IStreamEntry, StreamReadResult, IStreamInfo, IStreamPendingInfo, IStreamPendingEntry, DriverEvent, DriverEventHandler, ICopyOptions, IRestoreOptions, ILposOptions, IZStoreOptions, IZRangeByScoreOptions, GeoUnit, IGeoSearchOptions, IGeoSearchResult } from '../../interfaces';
+import { IRedisDriver, IPipeline, IMulti, ISetOptions, IScanOptions, IStreamAddOptions, IStreamReadOptions, IStreamReadGroupOptions, IStreamEntry, StreamReadResult, IStreamInfo, IStreamPendingInfo, IStreamPendingEntry, DriverEvent, DriverEventHandler, DriverCommandHook, ICopyOptions, IRestoreOptions, ILposOptions, IZStoreOptions, IZRangeByScoreOptions, GeoUnit, IGeoSearchOptions, IGeoSearchResult } from '../../interfaces';
 import { DriverError, TimeoutError } from '../../shared/errors';
 import { ConnectionConfig } from '../../types';
 
@@ -25,6 +25,8 @@ export abstract class BaseRedisDriver implements IRedisDriver {
   protected connected = false;
   protected connecting = false;
   protected readonly enableLogging: boolean;
+  /** Adapter's original executeCommand, captured on first hook installation. */
+  private unhookedExecuteCommand?: (command: string, ...args: unknown[]) => Promise<unknown>;
 
   constructor(
     protected readonly config: ConnectionConfig,
@@ -55,6 +57,24 @@ export abstract class BaseRedisDriver implements IRedisDriver {
    * @param args - Command arguments
    */
   protected abstract executeCommand(command: string, ...args: unknown[]): Promise<unknown>;
+
+  /**
+   * Installs a hook around raw command execution (or removes it with null).
+   * Every command issued through this driver flows through the hook — used by
+   * observability plugins (e.g. tracing) to create per-command spans. The
+   * adapter's own executeCommand stays untouched; the hook wraps it via an
+   * instance-level override, so setting a new hook replaces the previous one.
+   */
+  setCommandHook(hook: DriverCommandHook | null): void {
+    this.unhookedExecuteCommand ??= this.executeCommand.bind(this);
+    const original = this.unhookedExecuteCommand;
+
+    if (!hook) {
+      this.executeCommand = (command: string, ...args: unknown[]) => original(command, ...args);
+      return;
+    }
+    this.executeCommand = (command: string, ...args: unknown[]) => hook(command, args, () => original(command, ...args));
+  }
 
   /**
    * Creates pipeline instance.

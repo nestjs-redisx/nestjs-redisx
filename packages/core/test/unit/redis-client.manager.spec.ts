@@ -559,4 +559,56 @@ describe('RedisClientManager', () => {
       expect(manager.hasClient('test2')).toBe(false);
     });
   });
+
+  describe('setCommandHook', () => {
+    it('should apply the hook to already-created clients with the client name as context', async () => {
+      // Given
+      const config = createMockConnectionConfig('ioredis');
+      const driver = (await manager.createClient('orders', config)) as unknown as MockRedisDriver;
+      const hook = vi.fn((_c: string, _a: readonly unknown[], exec: () => Promise<unknown>) => exec());
+
+      // When
+      manager.setCommandHook(hook);
+
+      // Then — the driver received a wrapper that injects { clientName }
+      expect(driver.setCommandHook).toHaveBeenCalledWith(expect.any(Function));
+      const wrapper = driver.setCommandHook.mock.calls.at(-1)![0] as (c: string, a: readonly unknown[], e: () => Promise<unknown>) => Promise<unknown>;
+      const exec = vi.fn().mockResolvedValue('ok');
+      await wrapper('GET', ['k'], exec);
+      expect(hook).toHaveBeenCalledWith('GET', ['k'], exec, { clientName: 'orders' });
+    });
+
+    it('should apply the hook to clients created AFTER installation (e.g. a Pub/Sub subscriber)', async () => {
+      // Given
+      const hook = vi.fn((_c: string, _a: readonly unknown[], exec: () => Promise<unknown>) => exec());
+      manager.setCommandHook(hook);
+
+      // When
+      const late = (await manager.createClient('late', createMockConnectionConfig('ioredis'))) as unknown as MockRedisDriver;
+
+      // Then
+      expect(late.setCommandHook).toHaveBeenCalledWith(expect.any(Function));
+    });
+
+    it('should clear hooks on all clients when passed null', async () => {
+      // Given
+      const driver = (await manager.createClient('a', createMockConnectionConfig('ioredis'))) as unknown as MockRedisDriver;
+      manager.setCommandHook(vi.fn());
+
+      // When
+      manager.setCommandHook(null);
+
+      // Then
+      expect(driver.setCommandHook).toHaveBeenLastCalledWith(null);
+    });
+
+    it('should skip drivers that do not support hooking', async () => {
+      // Given — a custom driver without setCommandHook
+      const driver = (await manager.createClient('plain', createMockConnectionConfig('ioredis'))) as unknown as Record<string, unknown>;
+      driver.setCommandHook = undefined;
+
+      // When / Then — no throw
+      expect(() => manager.setCommandHook(vi.fn())).not.toThrow();
+    });
+  });
 });

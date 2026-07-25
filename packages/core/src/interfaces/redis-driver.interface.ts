@@ -1105,7 +1105,32 @@ export interface IRedisDriver {
    * Removes all listeners for event.
    */
   removeAllListeners(event?: DriverEvent): void;
+
+  /**
+   * Installs a hook around raw command execution (or removes it with null).
+   * Used by observability plugins (e.g. tracing) to wrap every command;
+   * the hook MUST call `exec()` exactly once and return/propagate its result.
+   * Optional: custom driver implementations may not support hooking.
+   */
+  setCommandHook?(hook: DriverCommandHook | null): void;
 }
+
+/**
+ * Hook wrapped around raw driver command execution.
+ *
+ * @param command - Redis command name (as issued by the driver layer)
+ * @param args - Command arguments
+ * @param exec - Executes the underlying command; call exactly once
+ */
+export type DriverCommandHook = (command: string, args: readonly unknown[], exec: () => Promise<unknown>) => Promise<unknown>;
+
+/**
+ * Manager-level command hook: like {@link DriverCommandHook} but also receives
+ * the name of the client the command runs on. Installed via
+ * `RedisClientManager.setCommandHook` and applied to all current AND future
+ * clients (including runtime-created ones, e.g. a Pub/Sub subscriber).
+ */
+export type ManagerCommandHook = (command: string, args: readonly unknown[], exec: () => Promise<unknown>, context: { clientName: string }) => Promise<unknown>;
 
 /**
  * Options for SET command.

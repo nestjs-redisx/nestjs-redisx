@@ -298,6 +298,8 @@ export class MockRedisDriver implements IRedisDriver {
     }
   }
 
+  setCommandHook = vi.fn();
+
   private emit(event: DriverEvent, ...args: any[]): void {
     this.eventListeners.get(event)?.forEach((handler) => handler(...args));
   }

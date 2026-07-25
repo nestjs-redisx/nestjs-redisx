@@ -3426,4 +3426,75 @@ describe('BaseRedisDriver', () => {
       });
     });
   });
+
+  describe('setCommandHook', () => {
+    beforeEach(async () => {
+      driver.doConnectSpy.mockResolvedValue(undefined);
+      await driver.connect();
+    });
+
+    it('should route every command through the hook and return its result', async () => {
+      // Given
+      driver.executeCommandSpy.mockResolvedValue('value');
+      const hook = vi.fn((_command: string, _args: readonly unknown[], exec: () => Promise<unknown>) => exec());
+
+      // When
+      driver.setCommandHook(hook);
+      const result = await driver.get('user:1');
+
+      // Then
+      expect(result).toBe('value');
+      expect(hook).toHaveBeenCalledWith('GET', ['user:1'], expect.any(Function));
+      expect(driver.executeCommandSpy).toHaveBeenCalledWith('GET', 'user:1');
+    });
+
+    it('should let the hook observe command failures', async () => {
+      // Given
+      driver.executeCommandSpy.mockRejectedValue(new Error('READONLY'));
+      const seen: string[] = [];
+      driver.setCommandHook(async (command, _args, exec) => {
+        try {
+          return await exec();
+        } catch (error) {
+          seen.push(`${command}:${(error as Error).message}`);
+          throw error;
+        }
+      });
+
+      // When / Then — the failure propagates AND the hook saw it
+      await expect(driver.set('k', 'v')).rejects.toThrow();
+      expect(seen).toEqual(['SET:READONLY']);
+    });
+
+    it('should replace the previous hook instead of stacking', async () => {
+      // Given
+      driver.executeCommandSpy.mockResolvedValue(null);
+      const first = vi.fn((_c: string, _a: readonly unknown[], exec: () => Promise<unknown>) => exec());
+      const second = vi.fn((_c: string, _a: readonly unknown[], exec: () => Promise<unknown>) => exec());
+
+      // When
+      driver.setCommandHook(first);
+      driver.setCommandHook(second);
+      await driver.get('k');
+
+      // Then — only the latest hook runs, exactly once
+      expect(first).not.toHaveBeenCalled();
+      expect(second).toHaveBeenCalledTimes(1);
+    });
+
+    it('should restore direct execution when the hook is removed', async () => {
+      // Given
+      driver.executeCommandSpy.mockResolvedValue(null);
+      const hook = vi.fn((_c: string, _a: readonly unknown[], exec: () => Promise<unknown>) => exec());
+      driver.setCommandHook(hook);
+
+      // When
+      driver.setCommandHook(null);
+      await driver.get('k');
+
+      // Then
+      expect(hook).not.toHaveBeenCalled();
+      expect(driver.executeCommandSpy).toHaveBeenCalledWith('GET', 'k');
+    });
+  });
 });
