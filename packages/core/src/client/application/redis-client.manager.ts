@@ -185,6 +185,7 @@ export class RedisClientManager implements IRedisDriverManager, OnModuleDestroy 
     const metadata: IClientMetadata = {
       name,
       config,
+      driverType: options?.driverType ?? this.defaultDriverType,
       status: ConnectionStatus.DISCONNECTED,
       reconnectAttempts: 0,
       ...(options?.metadata || {}),

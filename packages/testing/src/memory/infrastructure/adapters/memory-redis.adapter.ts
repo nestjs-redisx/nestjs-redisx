@@ -1,7 +1,8 @@
-import { BaseRedisDriver, type ConnectionConfig, type IPipeline, type IMulti, type ISetOptions } from '@nestjs-redisx/core';
+import { BaseRedisDriver, type ConnectionConfig, type IPipeline, type IMulti, type ISetOptions, DriverEvent } from '@nestjs-redisx/core';
 
 import { MemoryStore } from '../../domain/store/memory-store';
 import { CommandExecutor } from '../../application/services/command-executor.service';
+import { memoryPubSubBus, IMemoryPubSubSubscriber } from '../../domain/pubsub/memory-pubsub-bus';
 import { ICommandExecutor } from '../../application/ports/command-executor.port';
 
 /**
@@ -110,10 +111,49 @@ export class MemoryRedisAdapter extends BaseRedisDriver {
   private readonly store: MemoryStore;
   private readonly executor: CommandExecutor;
 
+  /** Bridges the module-global Pub/Sub bus to this adapter's driver events. */
+  private readonly pubSubSubscriber: IMemoryPubSubSubscriber = {
+    onMessage: (channel, message) => this.emit(DriverEvent.MESSAGE, channel, message),
+    onPMessage: (pattern, channel, message) => this.emit(DriverEvent.PMESSAGE, pattern, channel, message),
+  };
+
   constructor(config: ConnectionConfig, options?: { enableLogging?: boolean }) {
     super(config, options);
     this.store = new MemoryStore();
     this.executor = new CommandExecutor(this.store);
+  }
+
+  /**
+   * Pub/Sub overrides: delivery spans ALL memory adapters in the process via a
+   * shared bus (single-node semantics), so a plugin's dedicated subscriber
+   * client receives messages published through any other client.
+   */
+  override publish(channel: string, message: string): Promise<number> {
+    return Promise.resolve(memoryPubSubBus.publish(channel, message));
+  }
+
+  override subscribe(...channels: string[]): Promise<void> {
+    for (const channel of channels) {
+      memoryPubSubBus.subscribe(this.pubSubSubscriber, channel);
+    }
+    return Promise.resolve();
+  }
+
+  override unsubscribe(...channels: string[]): Promise<void> {
+    memoryPubSubBus.unsubscribe(this.pubSubSubscriber, channels);
+    return Promise.resolve();
+  }
+
+  override psubscribe(...patterns: string[]): Promise<void> {
+    for (const pattern of patterns) {
+      memoryPubSubBus.psubscribe(this.pubSubSubscriber, pattern);
+    }
+    return Promise.resolve();
+  }
+
+  override punsubscribe(...patterns: string[]): Promise<void> {
+    memoryPubSubBus.punsubscribe(this.pubSubSubscriber, patterns);
+    return Promise.resolve();
   }
 
   /** Exposes the backing store for assertions / manual reset in tests. */
@@ -128,6 +168,7 @@ export class MemoryRedisAdapter extends BaseRedisDriver {
 
   protected doDisconnect(): Promise<void> {
     // No real connection — keep data; a fresh adapter starts empty.
+    memoryPubSubBus.removeSubscriber(this.pubSubSubscriber);
     return Promise.resolve();
   }
 

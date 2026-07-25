@@ -186,6 +186,53 @@ export class NodeRedisAdapter extends BaseRedisDriver {
    * Node-redis sendCommand returns ['field1', 'value1', 'field2', 'value2']
    * but we need { field1: 'value1', field2: 'value2' }
    */
+  /**
+   * Pub/Sub overrides: node-redis v4 delivers messages ONLY through listeners
+   * passed to subscribe()/pSubscribe() (a raw SUBSCRIBE via sendCommand would
+   * put the connection in subscriber mode without any delivery path). Incoming
+   * messages are re-emitted as DriverEvent.MESSAGE / PMESSAGE.
+   *
+   * Supported on single-node clients (use a dedicated connection); cluster and
+   * sentinel pub/sub are not supported by this adapter — use ioredis for those
+   * topologies.
+   */
+  override async subscribe(...channels: string[]): Promise<void> {
+    const client = this.subscriptionClient('SUBSCRIBE');
+    await client.subscribe(channels, (message: string, channel: string) => {
+      this.emit(DriverEvent.MESSAGE, channel, message);
+    });
+  }
+
+  override async unsubscribe(...channels: string[]): Promise<void> {
+    const client = this.subscriptionClient('UNSUBSCRIBE');
+    await client.unsubscribe(channels);
+  }
+
+  override async psubscribe(...patterns: string[]): Promise<void> {
+    const client = this.subscriptionClient('PSUBSCRIBE');
+    // Register per pattern so the emitted event can carry the pattern.
+    for (const pattern of patterns) {
+      await client.pSubscribe(pattern, (message: string, channel: string) => {
+        this.emit(DriverEvent.PMESSAGE, pattern, channel, message);
+      });
+    }
+  }
+
+  override async punsubscribe(...patterns: string[]): Promise<void> {
+    const client = this.subscriptionClient('PUNSUBSCRIBE');
+    await client.pUnsubscribe(patterns);
+  }
+
+  private subscriptionClient(command: string): RedisClientType {
+    if (!this.client) {
+      throw new ConnectionError('Client not initialized');
+    }
+    if (this.isCluster || this.isSentinel) {
+      throw new CommandError(command, [], new Error('Pub/Sub is not supported by the node-redis adapter on cluster/sentinel topologies. Use the ioredis driver for Pub/Sub on these topologies.'));
+    }
+    return this.client as RedisClientType;
+  }
+
   override async hgetall(key: string): Promise<Record<string, string>> {
     this.assertConnected();
     const result = await this.executeCommand('HGETALL', key);

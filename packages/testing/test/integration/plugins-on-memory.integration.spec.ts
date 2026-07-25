@@ -6,6 +6,7 @@ import { CachePlugin, CACHE_SERVICE, type ICacheService } from '@nestjs-redisx/c
 import { RateLimitPlugin, RATE_LIMIT_SERVICE, type IRateLimitService } from '@nestjs-redisx/rate-limit';
 import { IdempotencyPlugin, IDEMPOTENCY_SERVICE, type IIdempotencyService } from '@nestjs-redisx/idempotency';
 import { CircuitBreakerPlugin, CIRCUIT_BREAKER_SERVICE, CircuitBreakerOpenError, type ICircuitBreakerService } from '@nestjs-redisx/circuit-breaker';
+import { PubSubPlugin, PUBSUB_SERVICE, type IPubSubService, type IPubSubMessage } from '@nestjs-redisx/pubsub';
 import { StreamsPlugin, STREAM_PRODUCER, STREAM_CONSUMER, type IStreamProducer, type IStreamConsumer, type ConsumerHandle } from '@nestjs-redisx/streams';
 
 import { RedisTestingModule } from '../../src';
@@ -328,6 +329,36 @@ describe('Plugins on the in-memory driver (no Redis)', () => {
       await cb.reset('dep');
       expect((await cb.getState('dep')).state).toBe('closed');
       await expect(cb.execute('dep', () => Promise.resolve('real'))).resolves.toBe('real');
+    });
+  });
+
+  describe('PubSubPlugin', () => {
+    it('round-trips a typed message through the dedicated subscriber connection', async () => {
+      // Given
+      app = await Test.createTestingModule({
+        imports: [
+          RedisModule.forRoot({
+            clients: { type: 'single', host: 'x', port: 1 },
+            global: { driver: MEMORY_DRIVER_TYPE },
+            plugins: [new PubSubPlugin()],
+          }),
+        ],
+      }).compile();
+      await app.init();
+      const pubsub = app.get<IPubSubService>(PUBSUB_SERVICE);
+
+      const got: IPubSubMessage[] = [];
+      await pubsub.subscribe<{ n: number }>('events.tick', (msg) => {
+        got.push(msg);
+      });
+
+      // When
+      const receivers = await pubsub.publish('events.tick', { n: 1 });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      // Then — the in-memory bus spans the publisher and subscriber clients
+      expect(receivers).toBeGreaterThanOrEqual(1);
+      expect(got[0]).toMatchObject({ channel: 'events.tick', data: { n: 1 } });
     });
   });
 

@@ -34,6 +34,16 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // Sibling packages resolve to sources so the core driver registry (and
+      // the in-memory pub/sub bus) are single shared instances.
+      '@nestjs-redisx/core': path.resolve(__dirname, '../core/src'),
+      '@nestjs-redisx/pubsub': path.resolve(__dirname, '../pubsub/src'),
+      '@nestjs-redisx/circuit-breaker': path.resolve(__dirname, '../circuit-breaker/src'),
+      '@nestjs-redisx/cache': path.resolve(__dirname, '../cache/src'),
+      '@nestjs-redisx/locks': path.resolve(__dirname, '../locks/src'),
+      '@nestjs-redisx/rate-limit': path.resolve(__dirname, '../rate-limit/src'),
+      '@nestjs-redisx/idempotency': path.resolve(__dirname, '../idempotency/src'),
+      '@nestjs-redisx/streams': path.resolve(__dirname, '../streams/src'),
     },
   },
 });

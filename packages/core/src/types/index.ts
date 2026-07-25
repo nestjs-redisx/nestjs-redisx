@@ -454,6 +454,9 @@ export interface IRedisModuleAsyncOptions extends Pick<ModuleMetadata, 'imports'
  * Client metadata stored in the registry.
  */
 export interface IClientMetadata {
+  /** Driver type this client was created with ('ioredis' | 'node-redis' | registered custom). */
+  driverType?: string;
+
   /**
    * Client name.
    */

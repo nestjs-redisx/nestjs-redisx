@@ -250,6 +250,12 @@ export enum ErrorCode {
   /** Circuit breaker configuration is invalid */
   CIRCUIT_BREAKER_CONFIG_INVALID = 'CIRCUIT_BREAKER_CONFIG_INVALID',
 
+  /** Pub/Sub publish failed */
+  PUBSUB_PUBLISH_FAILED = 'PUBSUB_PUBLISH_FAILED',
+
+  /** Pub/Sub subscribe failed */
+  PUBSUB_SUBSCRIBE_FAILED = 'PUBSUB_SUBSCRIBE_FAILED',
+
   /** Plugin is invalid */
   PLUGIN_INVALID = 'PLUGIN_INVALID',
 

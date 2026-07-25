@@ -722,7 +722,9 @@ export interface IRedisDriver {
   publish(channel: string, message: string): Promise<number>;
 
   /**
-   * Subscribes to channels.
+   * Subscribes to channels. Incoming messages are delivered via
+   * `DriverEvent.MESSAGE` as `(channel, message)`. The connection enters
+   * subscriber mode — use a DEDICATED connection for subscriptions.
    */
   subscribe(...channels: string[]): Promise<void>;
 
@@ -732,7 +734,8 @@ export interface IRedisDriver {
   unsubscribe(...channels: string[]): Promise<void>;
 
   /**
-   * Subscribes to channels by pattern.
+   * Subscribes to channels by glob pattern. Incoming messages are delivered
+   * via `DriverEvent.PMESSAGE` as `(pattern, channel, message)`.
    */
   psubscribe(...patterns: string[]): Promise<void>;
 
@@ -1394,12 +1397,17 @@ export enum DriverEvent {
   ERROR = 'error',
   RECONNECTING = 'reconnecting',
   END = 'end',
+  /** Pub/Sub message on a subscribed channel: handler(channel, message). */
+  MESSAGE = 'message',
+  /** Pub/Sub message via pattern subscription: handler(pattern, channel, message). */
+  PMESSAGE = 'pmessage',
 }
 
 /**
- * Driver event handler.
+ * Driver event handler. MESSAGE delivers (channel, message); PMESSAGE
+ * delivers (pattern, channel, message); other events pass a single payload.
  */
-export type DriverEventHandler = (data?: unknown) => void;
+export type DriverEventHandler = (...args: unknown[]) => void;
 
 /**
  * Options for COPY command.

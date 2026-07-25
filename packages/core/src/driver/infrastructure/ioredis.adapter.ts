@@ -268,6 +268,15 @@ export class IoRedisAdapter extends BaseRedisDriver {
     this.client.on('end', () => {
       this.emit(DriverEvent.END);
     });
+
+    // Pub/Sub delivery (only fires once the connection subscribes)
+    this.client.on('message', (channel: string, message: string) => {
+      this.emit(DriverEvent.MESSAGE, channel, message);
+    });
+
+    this.client.on('pmessage', (pattern: string, channel: string, message: string) => {
+      this.emit(DriverEvent.PMESSAGE, pattern, channel, message);
+    });
   }
 
   /**

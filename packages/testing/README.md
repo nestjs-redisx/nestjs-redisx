@@ -54,10 +54,11 @@ RedisModule.forRoot({
 ## Scope
 
 Supports the data structures and scripting used by the cache, locks, rate-limit,
-idempotency, and streams plugins: strings, hashes, sets, sorted sets, lists,
-streams (with consumer groups, PEL, `XACK`/`XCLAIM`/`XPENDING`), keys/TTL, and a
-bounded Lua interpreter. Single-node semantics only — no cluster cross-slot or
-Pub/Sub, and blocking reads return promptly rather than waiting.
+pubsub, idempotency, and streams plugins: strings, hashes, sets, sorted sets,
+lists, streams (with consumer groups, PEL, `XACK`/`XCLAIM`/`XPENDING`), keys/TTL,
+Pub/Sub (via a process-wide bus with glob pattern matching), and a bounded Lua
+interpreter. Single-node semantics only — no cluster cross-slot or cross-process
+delivery, and blocking reads return promptly rather than waiting.
 
 ## Documentation
 

@@ -1609,8 +1609,8 @@ export abstract class BaseRedisDriver implements IRedisDriver {
   /**
    * Emits driver event.
    */
-  protected emit(event: DriverEvent, data?: unknown): void {
-    this.eventEmitter.emit(event, data);
+  protected emit(event: DriverEvent, ...args: unknown[]): void {
+    this.eventEmitter.emit(event, ...args);
   }
 
   /**
