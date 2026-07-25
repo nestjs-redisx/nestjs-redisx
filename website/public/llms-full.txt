@@ -681,18 +681,28 @@ OpenTelemetry distributed tracing for Redis operations.
 ```typescript
 new TracingPlugin({
   serviceName: 'my-service',
-  exporter: 'otlp',           // 'otlp' | 'jaeger' | 'zipkin' | 'console'
-  exporterUrl: 'http://jaeger:4318',
-  sampling: {
-    strategy: 'ratio',         // 'always' | 'never' | 'ratio' | 'parent-based'
-    ratio: 0.1,                // sample 10% of traces
+  exporter: {
+    type: 'otlp',              // 'otlp' | 'jaeger' | 'zipkin' | 'console'
+    endpoint: 'http://collector:4318/v1/traces',
   },
+  sampling: {
+    strategy: 'parent',        // 'always' | 'never' | 'ratio' | 'parent' (default: 'parent')
+    ratio: 0.1,                // root-span ratio for 'ratio' and 'parent'
+  },
+  traceRedisCommands: true,    // native redis.<COMMAND> spans (default: true)
+  spans: { includeArgs: false, includeResult: false, maxArgLength: 100, excludeCommands: [] },
 })
 ```
 
+Sampling defaults to parent-based (OTel SDK convention): Redis spans follow the sampling decision of the request trace they belong to; root spans fall back to `ratio`. For keep-all-errors / keep-slow policies use tail sampling in the OpenTelemetry Collector — RedisX spans carry ERROR status and recorded exceptions.
+
+### Automatic Redis Command Spans
+
+Every command executed through RedisX drivers is wrapped natively in a `redis.<COMMAND>` CLIENT span (no external instrumentation package) covering all named clients and runtime-created connections. Spans parent onto the active OpenTelemetry context, so with standard HTTP instrumentation a cache lookup appears inside the HTTP request's trace. `spans.excludeCommands` skips commands; `includeArgs`/`includeResult` gate payload attributes (truncated to `maxArgLength`). Note: the plugin registers a NodeTracerProvider; if you bootstrap your own OTel SDK first, your SDK owns the pipeline and the plugin's exporter/sampling options are inert.
+
 ### Span Attributes
 
-Each Redis span includes: `db.system: "redis"`, `db.operation`, `db.redis.key`, `redisx.plugin` (cache/locks/rate-limit), `redisx.cache.hit` (boolean), `redisx.duration_ms`.
+Each Redis command span includes: `db.system: "redis"`, `db.operation`, `db.statement`, `redisx.client`, `redisx.duration_ms`, and optional `db.statement.args` / `db.statement.result`. Plugin-level spans (cache/locks/rate-limit) add `redisx.plugin`, `redisx.cache.hit` (boolean).
 
 ## Testing Utilities
 

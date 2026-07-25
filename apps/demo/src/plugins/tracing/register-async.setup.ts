@@ -19,7 +19,9 @@ import { TracingPlugin } from '@nestjs-redisx/tracing';
               endpoint: config.get('OTLP_ENDPOINT', 'http://localhost:4318'),
             },
             sampling: {
-              strategy: 'ratio' as const,
+              // Parent-based (the default): Redis spans follow the request
+              // trace's head-sampling decision; ratio applies to root spans.
+              strategy: 'parent' as const,
               ratio: config.get('TRACING_SAMPLE_RATIO', 1.0),
             },
             resourceAttributes: {

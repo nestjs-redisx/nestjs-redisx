@@ -38,7 +38,7 @@ graph LR
 
 ### Always Sample
 
-Collect 100% of traces.
+Collect 100% of traces — including Redis spans for requests whose own trace was NOT sampled upstream, which produces orphaned spans. Prefer the default `'parent'` strategy in instrumented apps.
 
 ```typescript
 {
@@ -111,14 +111,15 @@ Traces collected = Total requests × Ratio
 | 10,000-100,000 | 0.01 (1%) | 100-1,000 |
 | > 100,000 | 0.001 (0.1%) | 100-1,000 |
 
-### Parent-Based Sampling
+### Parent-Based Sampling (default)
 
-Follow parent span's sampling decision.
+Follow the parent span's sampling decision; root spans fall back to `ratio`. This is the plugin default (matching the OTel SDK's `parentbased_always_on`): if your app head-samples request traces, Redis spans automatically follow that decision instead of orphaning.
 
 ```typescript
 {
   sampling: {
     strategy: 'parent',
+    ratio: 1.0, // applied to ROOT spans only (no parent decision to follow)
   }
 }
 ```
@@ -599,6 +600,29 @@ Ensures complete distributed traces.
 | 100% | $1000 | Complete |
 | 10% | $100 | Good |
 | 1% | $10 | Representative |
+
+## Keeping Errors and Slow Traces (Tail Sampling)
+
+Head-based sampling decides at the START of a request, so it cannot "always keep errors" — the outcome isn't known yet. That policy belongs in the OpenTelemetry Collector's [`tail_sampling` processor](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/tailsamplingprocessor), which buffers complete traces and decides after the fact. RedisX spans carry `ERROR` status and recorded exceptions, so an error policy picks them up with no extra wiring:
+
+```yaml
+# otel-collector config
+processors:
+  tail_sampling:
+    decision_wait: 10s
+    policies:
+      - name: keep-errors
+        type: status_code
+        status_code: { status_codes: [ERROR] }
+      - name: keep-slow
+        type: latency
+        latency: { threshold_ms: 500 }
+      - name: sample-the-rest
+        type: probabilistic
+        probabilistic: { sampling_percentage: 5 }
+```
+
+A production baseline that composes well: `strategy: 'parent'` in the app (Redis spans follow the request decision), a low head ratio at the edge, and collector tail sampling to force-keep errors and latency outliers.
 
 ## Next Steps
 

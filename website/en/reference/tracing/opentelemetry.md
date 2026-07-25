@@ -48,6 +48,10 @@ npm install @opentelemetry/sdk-node \
             @opentelemetry/exporter-trace-otlp-http
 ```
 
+::: warning One global provider wins
+`TracingPlugin` registers its own `NodeTracerProvider` on startup, and OpenTelemetry honors only ONE global tracer provider — the first one registered. If you bootstrap your own SDK (like the `NodeSDK` setups on this page), initialize it **before** the application loads (the standard `node -r ./tracing.js` / top-of-main import pattern): your SDK then owns the pipeline, the plugin's `exporter`/`sampling` options are inert, and all RedisX spans flow through your SDK's exporter and sampler on the same traces. Configure sampling and exporting in ONE place — whichever side registered first.
+:::
+
 ## Basic Setup
 
 ### 1. Create Tracing Configuration

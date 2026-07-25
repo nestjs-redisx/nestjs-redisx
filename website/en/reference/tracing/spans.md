@@ -7,6 +7,17 @@ description: 'Create custom spans with ITracingService and withSpan in NestJS �
 
 Create custom spans to trace application-specific operations.
 
+## Automatic Redis Command Spans
+
+With `traceRedisCommands: true` (the default), every command executed through RedisX drivers is wrapped in a `redis.<COMMAND>` CLIENT span natively — no external instrumentation package. Spans carry `db.system`, `db.operation`, `db.statement`, `redisx.client` (the named client, including runtime-created ones like the Pub/Sub subscriber), and `redisx.duration_ms`; `db.statement.args` / `db.statement.result` appear only when `spans.includeArgs` / `spans.includeResult` are enabled (truncated to `spans.maxArgLength`). Commands listed in `spans.excludeCommands` are skipped. Each span parents onto the active trace context:
+
+```
+GET /api/users/123
+├── HTTP GET /api/users/123 (50ms)
+│   ├── redis.GET (1.2ms) ← cache lookup, same trace
+│   └── redis.SETEX (0.9ms)
+```
+
 ## TracingService
 
 Inject `ITracingService` to create custom spans.

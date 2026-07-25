@@ -27,17 +27,22 @@ export interface ITracingPluginOptions {
   sampleRate?: number;
 
   /**
-   * Enable automatic Redis command tracing.
-   * @remarks Requires `@opentelemetry/instrumentation-redis` to be installed and configured separately.
-   * This option logs a warning if enabled without the instrumentation package.
+   * Trace every Redis command executed through RedisX drivers as a
+   * `redis.<COMMAND>` CLIENT span — native, no external instrumentation
+   * package required. Covers all named clients and runtime-created ones
+   * (e.g. the Pub/Sub subscriber connection). Spans honor
+   * `spans.excludeCommands`, `spans.includeArgs`, `spans.includeResult`,
+   * and `spans.maxArgLength`, and parent onto the active trace context.
    * @default true
    */
   traceRedisCommands?: boolean;
 
   /**
-   * Enable automatic HTTP request tracing.
-   * @remarks Requires `@opentelemetry/instrumentation-http` to be installed and configured separately.
-   * This option logs a warning if enabled without the instrumentation package.
+   * Startup check for HTTP request tracing.
+   * @remarks HTTP instrumentation cannot be registered by this plugin — it
+   * must load BEFORE the `http` module is imported, i.e. in your own
+   * OpenTelemetry bootstrap. When enabled, the plugin warns at startup if
+   * `@opentelemetry/instrumentation-http` is not installed.
    * @default true
    */
   traceHttpRequests?: boolean;
@@ -80,8 +85,11 @@ export interface ITracingPluginOptions {
      * - 'always' — always create spans
      * - 'never' — never create spans
      * - 'ratio' — sample based on `ratio` (0-1)
-     * - 'parent' — inherit from parent span, fallback to ratio-based
-     * @default 'always'
+     * - 'parent' — inherit the parent span's sampling decision; root spans
+     *   fall back to ratio-based sampling
+     * @default 'parent' — OTel SDK convention; with 'always', an app that
+     * head-samples its request traces would still emit RedisX spans for
+     * unsampled requests (orphaned spans whose parents were dropped)
      */
     strategy?: 'always' | 'never' | 'ratio' | 'parent';
 

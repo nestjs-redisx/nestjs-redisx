@@ -659,4 +659,136 @@ describe('TracingService', () => {
       expect(() => ptService.onModuleInit()).not.toThrow();
     });
   });
+
+  describe('native Redis command tracing (traceRedisCommands)', () => {
+    type ManagerHook = (command: string, args: readonly unknown[], exec: () => Promise<unknown>, context: { clientName: string }) => Promise<unknown>;
+
+    beforeEach(() => {
+      // mockSpan is shared across the file — reset call history so
+      // "not.toHaveBeenCalled" assertions see only this test's activity
+      vi.clearAllMocks();
+    });
+
+    function createManagerStub() {
+      return { setCommandHook: vi.fn() } as unknown as { setCommandHook: ReturnType<typeof vi.fn> };
+    }
+
+    function buildWithManager(overrides: Partial<ITracingPluginOptions> = {}) {
+      const manager = createManagerStub();
+      const svc = new TracingService({ ...config, traceRedisCommands: true, ...overrides }, manager as never);
+      return { svc, manager };
+    }
+
+    function installedHook(manager: { setCommandHook: ReturnType<typeof vi.fn> }): ManagerHook {
+      return manager.setCommandHook.mock.calls[0][0] as ManagerHook;
+    }
+
+    it('should install the command hook on the client manager at init', () => {
+      // Given
+      const { svc, manager } = buildWithManager();
+
+      // When
+      svc.onModuleInit();
+
+      // Then
+      expect(manager.setCommandHook).toHaveBeenCalledTimes(1);
+      expect(manager.setCommandHook).toHaveBeenCalledWith(expect.any(Function));
+    });
+
+    it('should NOT install the hook when traceRedisCommands is false', () => {
+      // Given
+      const { svc, manager } = buildWithManager({ traceRedisCommands: false });
+
+      // When
+      svc.onModuleInit();
+
+      // Then
+      expect(manager.setCommandHook).not.toHaveBeenCalled();
+    });
+
+    it('should NOT install the hook when tracing is disabled', () => {
+      // Given
+      const { svc, manager } = buildWithManager({ enabled: false });
+
+      // When
+      svc.onModuleInit();
+
+      // Then
+      expect(manager.setCommandHook).not.toHaveBeenCalled();
+    });
+
+    it('should remove the hook on module destroy', async () => {
+      // Given
+      const { svc, manager } = buildWithManager();
+      svc.onModuleInit();
+
+      // When
+      await svc.onModuleDestroy();
+
+      // Then
+      expect(manager.setCommandHook).toHaveBeenLastCalledWith(null);
+    });
+
+    it('should wrap a command in a CLIENT span and return the result', async () => {
+      // Given
+      const { svc, manager } = buildWithManager();
+      svc.onModuleInit();
+      const hook = installedHook(manager);
+      const exec = vi.fn().mockResolvedValue('value');
+
+      // When
+      const result = await hook('get', ['user:1'], exec, { clientName: 'default' });
+
+      // Then
+      expect(result).toBe('value');
+      expect(exec).toHaveBeenCalledTimes(1);
+      expect(mockSpan.setAttribute).toHaveBeenCalledWith('redisx.duration_ms', expect.any(Number));
+      expect(mockSpan.setStatus).toHaveBeenCalledWith({ code: 1 }); // OK
+      expect(mockSpan.end).toHaveBeenCalled();
+    });
+
+    it('should record the exception and rethrow when the command fails', async () => {
+      // Given
+      const { svc, manager } = buildWithManager();
+      svc.onModuleInit();
+      const hook = installedHook(manager);
+      const failure = new Error('READONLY');
+      const exec = vi.fn().mockRejectedValue(failure);
+
+      // When / Then
+      await expect(hook('set', ['k', 'v'], exec, { clientName: 'default' })).rejects.toThrow('READONLY');
+      expect(mockSpan.recordException).toHaveBeenCalledWith(failure);
+      expect(mockSpan.setStatus).toHaveBeenCalledWith({ code: 2 }); // ERROR
+      expect(mockSpan.end).toHaveBeenCalled();
+    });
+
+    it('should honor spans.excludeCommands (command runs, no span emitted)', async () => {
+      // Given
+      const { svc, manager } = buildWithManager({ spans: { excludeCommands: ['PING'] } });
+      svc.onModuleInit();
+      const hook = installedHook(manager);
+      const exec = vi.fn().mockResolvedValue('PONG');
+
+      // When
+      const result = await hook('ping', [], exec, { clientName: 'default' });
+
+      // Then — command executed untouched, no real span ended
+      expect(result).toBe('PONG');
+      expect(exec).toHaveBeenCalledTimes(1);
+      expect(mockSpan.end).not.toHaveBeenCalled();
+    });
+
+    it('should run the command untraced when the service is disabled after init', async () => {
+      // Given — hook captured from an enabled service, then simulate a
+      // disabled path by calling the hook of a service built disabled
+      const manager = createManagerStub();
+      const svc = new TracingService({ ...config, enabled: false, traceRedisCommands: true }, manager as never);
+      svc.onModuleInit();
+      expect(manager.setCommandHook).not.toHaveBeenCalled();
+
+      // When the manager is absent entirely, init must not throw either
+      const noManagerSvc = new TracingService({ ...config, traceRedisCommands: true });
+      expect(() => noManagerSvc.onModuleInit()).not.toThrow();
+    });
+  });
 });

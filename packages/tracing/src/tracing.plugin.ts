@@ -17,7 +17,10 @@ const DEFAULT_TRACING_CONFIG: Required<Omit<ITracingPluginOptions, 'isGlobal' | 
   traceRedisCommands: true,
   traceHttpRequests: true,
   sampling: {
-    strategy: 'always',
+    // Parent-based by default (OTel SDK convention): Redis spans follow the
+    // sampling decision of the request trace they belong to; root spans fall
+    // back to `ratio` (1.0 = all sampled when there is no upstream sampler).
+    strategy: 'parent',
     ratio: 1.0,
   },
   spans: {

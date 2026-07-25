@@ -29,7 +29,9 @@ describe('TracingPlugin', () => {
       sampleRate: 1.0,
       traceRedisCommands: true,
       traceHttpRequests: true,
-      sampling: { strategy: 'always', ratio: 1.0 },
+      // parent-based by default (OTel SDK convention): follow the request
+      // trace's sampling decision; roots fall back to ratio
+      sampling: { strategy: 'parent', ratio: 1.0 },
       spans: { includeArgs: false, includeResult: false, maxArgLength: 100, excludeCommands: [] },
       pluginTracing: true,
     });

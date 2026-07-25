@@ -32,7 +32,7 @@ interface ITracingPluginOptions {
 
   // Sampling strategy
   sampling?: {
-    strategy?: 'always' | 'never' | 'ratio' | 'parent';  // @default 'always'
+    strategy?: 'always' | 'never' | 'ratio' | 'parent';  // @default 'parent'
     ratio?: number;                                         // @default 1.0
   };
 
@@ -51,8 +51,8 @@ interface ITracingPluginOptions {
   sampleRate?: number;             // @default 1.0
 
   // Enable/disable features
-  traceRedisCommands?: boolean;  // @default true (requires @opentelemetry/instrumentation-ioredis)
-  traceHttpRequests?: boolean;   // @default true (requires @opentelemetry/instrumentation-http)
+  traceRedisCommands?: boolean;  // @default true — native redis.<COMMAND> spans, no extra packages
+  traceHttpRequests?: boolean;   // @default true — startup check only, see below
   pluginTracing?: boolean;       // @default true
 }
 ```
@@ -264,8 +264,10 @@ Add custom attributes to all spans.
 }
 ```
 
-::: warning External Dependency
-`traceRedisCommands` and `traceHttpRequests` require installing the corresponding OpenTelemetry instrumentation packages (`@opentelemetry/instrumentation-ioredis`, `@opentelemetry/instrumentation-http`). The plugin will log a warning at startup if these packages are not installed.
+Command tracing is **native**: every command executed through RedisX drivers is wrapped in a `redis.<COMMAND>` CLIENT span at the driver layer — no external instrumentation package needed. It covers all named clients and runtime-created connections (e.g. the Pub/Sub subscriber), honors `spans.excludeCommands` / `includeArgs` / `includeResult` / `maxArgLength`, and each span parents onto the active trace context, so Redis commands appear inside the HTTP request trace that triggered them.
+
+::: warning traceHttpRequests is a startup check
+Incoming-HTTP instrumentation cannot be registered by this plugin — `@opentelemetry/instrumentation-http` must load **before** the `http` module is imported, i.e. in your own OpenTelemetry bootstrap file. With `traceHttpRequests: true` the plugin only verifies the package is installed and logs a warning when it is missing.
 :::
 
 ### Trace Plugin Operations
