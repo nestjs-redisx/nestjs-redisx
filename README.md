@@ -49,6 +49,8 @@
 | **Cache** | Two-Tier Cache | L1 memory + L2 Redis with anti-stampede, SWR, and tag invalidation |
 | **Locks** | Distributed Locks | Redis-based locking with auto-renewal and retry strategies |
 | **Rate Limit** | Rate Limiting | Fixed window, sliding window, and token bucket algorithms |
+| **Circuit Breaker** | Distributed Circuit Breaker | Closed/open/half-open breaker with fail-fast rejection and fallbacks |
+| **Pub/Sub** | Typed Pub/Sub | Publish/subscribe with pattern subscriptions and `@Subscribe` auto-discovery |
 | **Idempotency** | Request Idempotency | Deduplication with fingerprinting and response replay |
 | **Streams** | Redis Streams | Consumer groups, dead-letter queues, and backpressure |
 | **Metrics** | Prometheus Metrics | Command latencies, cache hit rates, and custom metrics |
@@ -124,6 +126,8 @@ export class UserService {
 | Stampede Protection | **Yes** | - | - | - |
 | Distributed Locks | **Yes** | - | - | Manual |
 | Rate Limiting | **Yes** | - | - | - |
+| Circuit Breaker | **Yes** | - | - | - |
+| Pub/Sub | **Yes** | - | - | Manual |
 | Idempotency | **Yes** | - | - | - |
 | Prometheus + OTel | **Yes** | - | - | - |
 
