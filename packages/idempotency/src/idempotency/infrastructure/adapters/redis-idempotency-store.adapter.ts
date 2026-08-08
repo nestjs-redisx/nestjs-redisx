@@ -4,7 +4,7 @@ import { IRedisDriver } from '@nestjs-redisx/core';
 import { IDEMPOTENCY_REDIS_DRIVER } from '../../../shared/constants';
 import { IIdempotencyRecord } from '../../../shared/types';
 import { IIdempotencyStore, ICheckAndLockResult, ICompleteData } from '../../application/ports/idempotency-store.port';
-import { CHECK_AND_LOCK_SCRIPT } from '../scripts/lua-scripts';
+import { CHECK_AND_LOCK_SCRIPT, STORE_RECORD_SCRIPT } from '../scripts/lua-scripts';
 
 /**
  * Redis-based idempotency store implementation
@@ -12,14 +12,16 @@ import { CHECK_AND_LOCK_SCRIPT } from '../scripts/lua-scripts';
 @Injectable()
 export class RedisIdempotencyStoreAdapter implements IIdempotencyStore, OnModuleInit {
   private checkAndLockSha: string | null = null;
+  private storeRecordSha: string | null = null;
 
   constructor(@Inject(IDEMPOTENCY_REDIS_DRIVER) private readonly driver: IRedisDriver) {}
 
   /**
-   * Pre-load Lua script on module initialization
+   * Pre-load Lua scripts on module initialization
    */
   async onModuleInit(): Promise<void> {
     this.checkAndLockSha = await this.driver.scriptLoad(CHECK_AND_LOCK_SCRIPT);
+    this.storeRecordSha = await this.driver.scriptLoad(STORE_RECORD_SCRIPT);
   }
 
   async checkAndLock(key: string, fingerprint: string, lockTimeoutMs: number, validateFingerprint = true): Promise<ICheckAndLockResult> {
@@ -68,13 +70,12 @@ export class RedisIdempotencyStoreAdapter implements IIdempotencyStore, OnModule
       completedAt: String(data.completedAt),
     };
     // Persist the fingerprint too: if the record expired mid-handler (handler
-    // ran longer than lockTimeout), HMSET re-creates the key — without the
+    // ran longer than lockTimeout), the write re-creates the key — without the
     // fingerprint every later replay would be misread as a mismatch (422).
     if (data.fingerprint) {
       fields.fingerprint = data.fingerprint;
     }
-    await this.driver.hmset(key, fields);
-    await this.driver.expire(key, ttlSeconds);
+    await this.storeRecord(key, fields, ttlSeconds);
   }
 
   async fail(key: string, error: string, ttlSeconds: number, fingerprint?: string): Promise<void> {
@@ -86,10 +87,23 @@ export class RedisIdempotencyStoreAdapter implements IIdempotencyStore, OnModule
     if (fingerprint) {
       fields.fingerprint = fingerprint;
     }
-    await this.driver.hmset(key, fields);
-    // Set an explicit expiry so the failed record does not rely on the leftover
-    // lock TTL; once it expires a fresh attempt with the same key is allowed.
-    await this.driver.expire(key, ttlSeconds);
+    // The explicit (short) expiry means a fresh attempt with the same key is
+    // allowed once the failure window passes.
+    await this.storeRecord(key, fields, ttlSeconds);
+  }
+
+  /**
+   * Writes all record fields AND the TTL atomically (single Lua script).
+   * Two separate HMSET + EXPIRE commands left a crash window where the record
+   * either kept the leftover lock TTL (early expiry -> duplicate execution)
+   * or was re-created without any TTL at all (immortal key -> memory leak).
+   */
+  private async storeRecord(key: string, fields: Record<string, string>, ttlSeconds: number): Promise<void> {
+    const args: (string | number)[] = [ttlSeconds * 1000];
+    for (const [field, value] of Object.entries(fields)) {
+      args.push(field, value);
+    }
+    await this.driver.evalsha(this.storeRecordSha!, [key], args);
   }
 
   async get(key: string): Promise<IIdempotencyRecord | null> {

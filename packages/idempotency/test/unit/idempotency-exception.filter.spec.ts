@@ -70,6 +70,22 @@ describe('IdempotencyExceptionFilter', () => {
     expect(mockHttpAdapter.reply).toHaveBeenCalledWith(mockResponse, expect.objectContaining({ statusCode: HttpStatus.CONFLICT }), HttpStatus.CONFLICT);
   });
 
+  it('should include a machine-readable code so clients can DISTINGUISH the 409 variants', () => {
+    // Given — two different situations both mapped to 409
+    const timeout = new IdempotencyTimeoutError('key-t');
+    const failed = new IdempotencyFailedError('key-f', 'boom');
+
+    // When
+    filter.catch(timeout, mockHost);
+    filter.catch(failed, mockHost);
+
+    // Then — same status, different codes (in-progress vs previous-failed)
+    const codes = mockHttpAdapter.reply.mock.calls.map((c: unknown[]) => (c[1] as { code: string }).code);
+    expect(codes[0]).toBeDefined();
+    expect(codes[1]).toBeDefined();
+    expect(codes[0]).not.toBe(codes[1]);
+  });
+
   it('should map IdempotencyRecordNotFoundError to 409 Conflict (retryable, never a bare 500)', () => {
     // Given - the in-flight record vanished mid-wait (first attempt died)
     const error = new IdempotencyRecordNotFoundError('key-4');

@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { RedisModule } from '@nestjs-redisx/core';
+import { RedisModule, CLIENT_MANAGER, type RedisClientManager } from '@nestjs-redisx/core';
 import { LocksPlugin, LOCK_SERVICE, type ILockService, LockAcquisitionError } from '@nestjs-redisx/locks';
 import { CachePlugin, CACHE_SERVICE, type ICacheService } from '@nestjs-redisx/cache';
 import { RateLimitPlugin, RATE_LIMIT_SERVICE, type IRateLimitService } from '@nestjs-redisx/rate-limit';
@@ -202,6 +202,75 @@ describe('Plugins on the in-memory driver (no Redis)', () => {
       const mismatch = await idem.checkAndLock('pay:1', 'fp-b');
       expect(mismatch.isNew).toBe(false);
       expect(mismatch.fingerprintMismatch).toBe(true);
+    });
+
+    it('complete() re-creating an expired record still sets a TTL (atomic write — no immortal keys)', async () => {
+      // Given — a very short lock so the processing record expires mid-handler
+      app = await Test.createTestingModule({
+        imports: [
+          RedisModule.forRoot({
+            clients: { type: 'single', host: 'x', port: 1 },
+            global: { driver: MEMORY_DRIVER_TYPE },
+            plugins: [new IdempotencyPlugin({ lockTimeout: 100 })],
+          }),
+        ],
+      }).compile();
+      await app.init();
+      const idem = app.get<IIdempotencyService>(IDEMPOTENCY_SERVICE);
+      const manager = app.get<RedisClientManager>(CLIENT_MANAGER);
+      const driver = await manager.getClient();
+
+      const first = await idem.checkAndLock('pay:slow', 'fp-slow');
+      expect(first.isNew).toBe(true);
+
+      // When — the "handler" outlives the retention window (2x lockTimeout),
+      // so complete() re-creates the key from scratch
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      expect(await driver.pttl('idempotency:pay:slow')).toBe(-2); // record is gone
+      await idem.complete('pay:slow', { statusCode: 200, body: { ok: true } }, { fingerprint: 'fp-slow' });
+
+      // Then — the re-created record carries a real TTL (previously HMSET and
+      // EXPIRE were two commands; a crash between them left the key immortal)
+      const pttl = await driver.pttl('idempotency:pay:slow');
+      expect(pttl).toBeGreaterThan(0);
+
+      // And it replays normally
+      const replay = await idem.checkAndLock('pay:slow', 'fp-slow');
+      expect(replay.isNew).toBe(false);
+      expect(replay.record?.status).toBe('completed');
+    });
+
+    it('retains a stale processing record past lockTimeout and takes it over ATOMICALLY', async () => {
+      // Given
+      app = await Test.createTestingModule({
+        imports: [
+          RedisModule.forRoot({
+            clients: { type: 'single', host: 'x', port: 1 },
+            global: { driver: MEMORY_DRIVER_TYPE },
+            plugins: [new IdempotencyPlugin({ lockTimeout: 100 })],
+          }),
+        ],
+      }).compile();
+      await app.init();
+      const idem = app.get<IIdempotencyService>(IDEMPOTENCY_SERVICE);
+      const manager = app.get<RedisClientManager>(CLIENT_MANAGER);
+      const driver = await manager.getClient();
+
+      const first = await idem.checkAndLock('pay:crash', 'fp-crash');
+      expect(first.isNew).toBe(true);
+
+      // Then — the record is retained for ~2x lockTimeout, NOT just the lock
+      // window: that retention is what makes the takeover atomic in Lua
+      expect(await driver.pttl('idempotency:pay:crash')).toBeGreaterThan(100);
+
+      // When — the lock goes stale (holder presumed dead) but the record still exists
+      await new Promise((resolve) => setTimeout(resolve, 130));
+      const stillThere = await idem.get('pay:crash');
+      expect(stillThere?.status).toBe('processing');
+
+      // Then — the next contender takes over atomically inside the script
+      const takeover = await idem.checkAndLock('pay:crash', 'fp-crash');
+      expect(takeover.isNew).toBe(true);
     });
   });
 

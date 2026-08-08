@@ -148,6 +148,43 @@ describe('IdempotencyService', () => {
       expect(mockStore.checkAndLock).toHaveBeenCalledTimes(2);
     });
 
+    it('should TAKE OVER a STALE processing record (lock exceeded, record still retained)', async () => {
+      // Given — the record still EXISTS (retention = 2x lockTimeout) but its
+      // lock is stale: the original attempt exceeded lockTimeout without
+      // completing. The takeover goes through checkAndLock, where the Lua
+      // stale branch resolves it atomically.
+      config.lockTimeout = 1000;
+      service = new IdempotencyService(config, mockStore);
+      const staleRecord: IIdempotencyRecord = { key: 'idempotency:key-stale', fingerprint: 'fp-stale', status: 'processing', startedAt: Date.now() - 5000 };
+      mockStore.checkAndLock.mockResolvedValueOnce({ status: 'processing' }).mockResolvedValueOnce({ status: 'new' });
+      mockStore.get.mockResolvedValue(staleRecord);
+
+      // When
+      const result = await service.checkAndLock('key-stale', 'fp-stale');
+
+      // Then — this caller owns the key now and must execute the handler
+      expect(result).toEqual({ isNew: true });
+      expect(mockStore.checkAndLock).toHaveBeenCalledTimes(2);
+    });
+
+    it('should NOT attempt takeover while the processing record is FRESH', async () => {
+      // Given — startedAt is recent; the lock holder is presumed alive
+      config.lockTimeout = 30000;
+      service = new IdempotencyService(config, mockStore);
+      const fresh: IIdempotencyRecord = { key: 'idempotency:key-fresh', fingerprint: 'fp-fresh', status: 'processing', startedAt: Date.now() };
+      const completed: IIdempotencyRecord = { key: 'idempotency:key-fresh', fingerprint: 'fp-fresh', status: 'completed', statusCode: 200, response: '"done"', startedAt: Date.now() };
+      mockStore.checkAndLock.mockResolvedValueOnce({ status: 'processing' });
+      mockStore.get.mockResolvedValueOnce(fresh).mockResolvedValue(completed);
+
+      // When
+      const result = await service.checkAndLock('key-fresh', 'fp-fresh');
+
+      // Then — no takeover attempt (checkAndLock called only once), replay
+      expect(mockStore.checkAndLock).toHaveBeenCalledTimes(1);
+      expect(result.isNew).toBe(false);
+      expect(result.record).toEqual(completed);
+    });
+
     it('should keep waiting when another waiter wins the takeover, then replay its result', async () => {
       // Given — record vanished; our retry loses ('processing' again); the
       // winner then completes and we replay its record.

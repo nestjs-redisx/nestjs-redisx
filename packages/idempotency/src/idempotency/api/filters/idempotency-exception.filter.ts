@@ -30,6 +30,10 @@ export class IdempotencyExceptionFilter implements ExceptionFilter {
       statusCode: status,
       message: exception.message,
       error: this.reasonPhrase(status),
+      // Machine-readable reason so clients can distinguish the 409 variants
+      // (concurrent request still in progress vs previous attempt failed vs
+      // record vanished) without parsing the human-readable message.
+      code: exception.code,
       idempotencyKey: exception.idempotencyKey || undefined,
     };
 

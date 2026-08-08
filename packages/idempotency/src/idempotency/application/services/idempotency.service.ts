@@ -133,8 +133,20 @@ export class IdempotencyService implements IIdempotencyService {
     while (Date.now() - startTime < waitTimeout) {
       const record = await this.store.get(key);
 
-      if (!record) {
-        // First attempt died — race for the lock (atomic Lua SET-if-absent).
+      if (record && (record.status === 'completed' || record.status === 'failed')) {
+        return record;
+      }
+
+      // Takeover triggers:
+      // - record vanished (retention expired) — backstop path, or
+      // - record still exists but its lock is STALE (the original attempt
+      //   exceeded lockTimeout without completing — presumed dead). The
+      //   record is retained past the staleness threshold precisely so this
+      //   takeover happens ATOMICALLY inside the Lua script: exactly one
+      //   contender flips startedAt and wins; everyone else keeps waiting.
+      const lockIsStale = record !== null && record.status === 'processing' && record.startedAt > 0 && Date.now() - record.startedAt > lockTimeoutMs;
+
+      if (!record || lockIsStale) {
         const retry = await this.store.checkAndLock(key, fingerprint, lockTimeoutMs, validateFingerprint);
 
         if (retry.status === 'new') {
@@ -148,8 +160,6 @@ export class IdempotencyService implements IIdempotencyService {
           throw new IdempotencyFingerprintMismatchError(key);
         }
         // 'processing' — another waiter won the takeover; keep waiting.
-      } else if (record.status === 'completed' || record.status === 'failed') {
-        return record;
       }
 
       await this.sleep(POLL_INTERVAL_MS);

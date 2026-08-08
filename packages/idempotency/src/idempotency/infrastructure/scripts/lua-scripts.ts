@@ -33,13 +33,18 @@ local validate = ARGV[4] ~= '0'
 local existing = redis.call('HGETALL', key)
 
 if #existing == 0 then
-  -- New request - create lock
+  -- New request - create lock.
+  -- The key is retained for 2x lock_timeout: the lock is considered STALE
+  -- after lock_timeout (see the takeover branch below), but the record must
+  -- still exist at that moment for the takeover to be atomic. With retention
+  -- equal to the staleness threshold the key would already be expired and the
+  -- branch would be dead code (takeover then degrades to a delete-then-race).
   redis.call('HMSET', key,
     'fingerprint', fingerprint,
     'status', 'processing',
     'startedAt', now
   )
-  redis.call('PEXPIRE', key, lock_timeout)
+  redis.call('PEXPIRE', key, lock_timeout * 2)
   return {'new'}
 end
 
@@ -56,15 +61,18 @@ end
 
 -- Check status
 if record.status == 'processing' then
-  -- Check if lock expired (stale)
+  -- The lock is stale once the original attempt exceeded lock_timeout
+  -- (presumed dead: it crashed between checkAndLock and complete). The key
+  -- itself lives for 2x lock_timeout, so this takeover is ATOMIC: exactly one
+  -- contender flips startedAt and wins; the rest keep seeing 'processing'.
   local started = tonumber(record.startedAt)
   if now - started > lock_timeout then
-    -- Stale lock - take over
     redis.call('HMSET', key,
+      'fingerprint', fingerprint,
       'status', 'processing',
       'startedAt', now
     )
-    redis.call('PEXPIRE', key, lock_timeout)
+    redis.call('PEXPIRE', key, lock_timeout * 2)
     return {'new'}
   end
   return {'processing'}
@@ -78,4 +86,29 @@ return {
   record.headers or '',
   record.error or ''
 }
+`.trim();
+
+/**
+ * Atomically writes a completed/failed record: all hash fields AND the TTL in
+ * one script. The previous implementation issued HMSET and EXPIRE as two
+ * separate commands; a crash between them either left the response under the
+ * leftover lock TTL (early expiry -> duplicate execution) or, when the record
+ * had already expired mid-handler, re-created the key WITHOUT a TTL (immortal
+ * record -> memory leak).
+ *
+ * KEYS[1] = idempotency key
+ * ARGV[1] = ttl (ms)
+ * ARGV[2..] = alternating field/value pairs
+ *
+ * Returns 1.
+ */
+export const STORE_RECORD_SCRIPT = `
+local key = KEYS[1]
+local ttl_ms = tonumber(ARGV[1])
+
+for i = 2, #ARGV, 2 do
+  redis.call('HSET', key, ARGV[i], ARGV[i + 1])
+end
+redis.call('PEXPIRE', key, ttl_ms)
+return 1
 `.trim();

@@ -21,7 +21,7 @@ describe('RedisIdempotencyStoreAdapter', () => {
   });
 
   describe('onModuleInit', () => {
-    it('should load Lua script on initialization', async () => {
+    it('should load BOTH Lua scripts on initialization (check-and-lock + store-record)', async () => {
       // Given
       mockDriver.scriptLoad.mockResolvedValue('sha123456');
 
@@ -29,7 +29,9 @@ describe('RedisIdempotencyStoreAdapter', () => {
       await adapter.onModuleInit();
 
       // Then
-      expect(mockDriver.scriptLoad).toHaveBeenCalledWith(expect.stringContaining('redis.call'));
+      expect(mockDriver.scriptLoad).toHaveBeenCalledTimes(2);
+      expect(mockDriver.scriptLoad).toHaveBeenCalledWith(expect.stringContaining('HGETALL'));
+      expect(mockDriver.scriptLoad).toHaveBeenCalledWith(expect.stringContaining('PEXPIRE'));
     });
   });
 
@@ -138,7 +140,13 @@ describe('RedisIdempotencyStoreAdapter', () => {
   });
 
   describe('complete', () => {
-    it('should store completed data with TTL', async () => {
+    beforeEach(async () => {
+      mockDriver.scriptLoad.mockResolvedValueOnce('shaCheckAndLock').mockResolvedValueOnce('shaStoreRecord');
+      await adapter.onModuleInit();
+      mockDriver.evalsha.mockResolvedValue(1);
+    });
+
+    it('should store the record fields AND the TTL in ONE atomic script call', async () => {
       // Given
       const key = 'test-key';
       const data = {
@@ -152,43 +160,43 @@ describe('RedisIdempotencyStoreAdapter', () => {
       // When
       await adapter.complete(key, data, ttl);
 
-      // Then
-      expect(mockDriver.hmset).toHaveBeenCalledWith(key, {
-        status: 'completed',
-        statusCode: '201',
-        response: '{"id":123}',
-        headers: '{"Content-Type":"application/json"}',
-        completedAt: String(data.completedAt),
-      });
-      expect(mockDriver.expire).toHaveBeenCalledWith(key, ttl);
+      // Then — a single evalsha with the TTL (ms) and all field/value pairs;
+      // NO separate hmset/expire commands (a crash between them either kept
+      // the leftover lock TTL or re-created the key without any TTL)
+      expect(mockDriver.evalsha).toHaveBeenCalledTimes(1);
+      expect(mockDriver.evalsha).toHaveBeenCalledWith('shaStoreRecord', [key], [ttl * 1000, 'status', 'completed', 'statusCode', '201', 'response', '{"id":123}', 'headers', '{"Content-Type":"application/json"}', 'completedAt', String(data.completedAt)]);
+      expect(mockDriver.hmset).not.toHaveBeenCalled();
+      expect(mockDriver.expire).not.toHaveBeenCalled();
     });
 
-    it('should handle missing optional fields', async () => {
+    it('should persist the fingerprint when provided (mid-handler expiry safety)', async () => {
       // Given
       const key = 'test-key';
       const data = {
+        fingerprint: 'fp-canonical',
         statusCode: 200,
         response: '{}',
         completedAt: Date.now(),
       };
-      const ttl = 86400;
 
       // When
-      await adapter.complete(key, data, ttl);
+      await adapter.complete(key, data, 86400);
 
       // Then
-      expect(mockDriver.hmset).toHaveBeenCalledWith(key, {
-        status: 'completed',
-        statusCode: '200',
-        response: '{}',
-        headers: '',
-        completedAt: String(data.completedAt),
-      });
+      const args = mockDriver.evalsha.mock.calls[0][2] as unknown[];
+      expect(args).toContain('fingerprint');
+      expect(args).toContain('fp-canonical');
     });
   });
 
   describe('fail', () => {
-    it('should store failed status with error message', async () => {
+    beforeEach(async () => {
+      mockDriver.scriptLoad.mockResolvedValueOnce('shaCheckAndLock').mockResolvedValueOnce('shaStoreRecord');
+      await adapter.onModuleInit();
+      mockDriver.evalsha.mockResolvedValue(1);
+    });
+
+    it('should store failed status with error message atomically with its expiry', async () => {
       // Given
       const key = 'test-key';
       const error = 'Internal server error';
@@ -196,23 +204,17 @@ describe('RedisIdempotencyStoreAdapter', () => {
       // When
       await adapter.fail(key, error, 30);
 
-      // Then
-      expect(mockDriver.hmset).toHaveBeenCalledWith(key, {
-        status: 'failed',
-        error,
-        completedAt: expect.any(String),
-      });
-    });
-
-    it('should set an expiry on the failed record', async () => {
-      // Given
-      const key = 'test-key';
-
-      // When
-      await adapter.fail(key, 'boom', 30);
-
-      // Then - the failed record expires instead of relying on the lock TTL
-      expect(mockDriver.expire).toHaveBeenCalledWith(key, 30);
+      // Then — one atomic script call carrying both the fields and the TTL
+      expect(mockDriver.evalsha).toHaveBeenCalledTimes(1);
+      const [sha, keys, args] = mockDriver.evalsha.mock.calls[0] as [string, string[], unknown[]];
+      expect(sha).toBe('shaStoreRecord');
+      expect(keys).toEqual([key]);
+      expect(args[0]).toBe(30 * 1000);
+      expect(args).toContain('status');
+      expect(args).toContain('failed');
+      expect(args).toContain(error);
+      expect(mockDriver.hmset).not.toHaveBeenCalled();
+      expect(mockDriver.expire).not.toHaveBeenCalled();
     });
   });
 
@@ -369,13 +371,21 @@ describe('RedisIdempotencyStoreAdapter', () => {
   });
 
   describe('fingerprint persistence (rewrites after lock expiry)', () => {
+    beforeEach(async () => {
+      mockDriver.scriptLoad.mockResolvedValueOnce('shaCheckAndLock').mockResolvedValueOnce('shaStoreRecord');
+      await adapter.onModuleInit();
+      mockDriver.evalsha.mockResolvedValue(1);
+    });
+
     it('complete() should persist the fingerprint when provided', async () => {
       // Given / When
       await adapter.complete('idempotency:k1', { fingerprint: 'fp-1', statusCode: 201, response: '{"id":1}', completedAt: 123 }, 3600);
 
-      // Then — HMSET includes the fingerprint so a record re-created after
-      // lock expiry still matches future replays (no spurious 422)
-      expect(mockDriver.hmset).toHaveBeenCalledWith('idempotency:k1', expect.objectContaining({ status: 'completed', fingerprint: 'fp-1' }));
+      // Then — the atomic write includes the fingerprint so a record
+      // re-created after lock expiry still matches future replays (no 422)
+      const args = mockDriver.evalsha.mock.calls[0][2] as unknown[];
+      expect(args).toContain('fingerprint');
+      expect(args).toContain('fp-1');
     });
 
     it('fail() should persist the fingerprint when provided', async () => {
@@ -383,7 +393,9 @@ describe('RedisIdempotencyStoreAdapter', () => {
       await adapter.fail('idempotency:k2', 'boom', 30, 'fp-2');
 
       // Then
-      expect(mockDriver.hmset).toHaveBeenCalledWith('idempotency:k2', expect.objectContaining({ status: 'failed', fingerprint: 'fp-2' }));
+      const args = mockDriver.evalsha.mock.calls[0][2] as unknown[];
+      expect(args).toContain('fingerprint');
+      expect(args).toContain('fp-2');
     });
 
     it('get() should tolerate records without fingerprint/startedAt (legacy rewrites)', async () => {

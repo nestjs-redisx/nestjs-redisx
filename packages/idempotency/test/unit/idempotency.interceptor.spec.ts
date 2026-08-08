@@ -387,6 +387,92 @@ describe('IdempotencyInterceptor', () => {
       expect(config.fingerprintGenerator).toHaveBeenCalledWith(mockContext);
       expect(mockService.checkAndLock).toHaveBeenCalledWith('key11', 'custom-fingerprint', expect.any(Object));
     });
+
+    it('should produce the SAME fingerprint for bodies that differ only in key order (canonicalization)', async () => {
+      // Given — two semantically identical bodies, different key order
+      const captureFingerprint = async (body: unknown, key: string): Promise<string> => {
+        mockRequest = { headers: { 'idempotency-key': key }, method: 'POST', url: '/api/test', body, query: {} };
+        mockService.checkAndLock.mockClear();
+        mockService.checkAndLock.mockResolvedValue({ isNew: true });
+        const result = await interceptor.intercept(mockContext, mockNext);
+        await new Promise((resolve) => result.subscribe(resolve));
+        return mockService.checkAndLock.mock.calls[0][1] as string;
+      };
+
+      // When
+      const fp1 = await captureFingerprint({ amount: 100, currency: 'USD', meta: { b: 2, a: 1 } }, 'k-order-1');
+      const fp2 = await captureFingerprint({ meta: { a: 1, b: 2 }, currency: 'USD', amount: 100 }, 'k-order-2');
+      const fpDifferent = await captureFingerprint({ amount: 999, currency: 'USD', meta: { a: 1, b: 2 } }, 'k-order-3');
+
+      // Then — order-insensitive at every nesting level, but data-sensitive
+      expect(fp1).toBe(fp2);
+      expect(fpDifferent).not.toBe(fp1);
+    });
+  });
+
+  describe('legacy fingerprint fallback (upgrade transition)', () => {
+    it('should retry with the legacy (order-sensitive) fingerprint on mismatch and replay the pre-upgrade record', async () => {
+      // Given — an UNSORTED body (canonical differs from legacy) and a stored
+      // record created by a pre-canonicalization version
+      mockRequest.headers['idempotency-key'] = 'key-legacy';
+      mockRequest.body = { b: 2, a: 1 };
+      const record: IIdempotencyRecord = {
+        key: 'key-legacy',
+        fingerprint: 'legacy-fp',
+        status: 'completed',
+        statusCode: 200,
+        response: JSON.stringify({ ok: true }),
+        startedAt: 1,
+      };
+      mockService.checkAndLock
+        .mockResolvedValueOnce({ isNew: false, fingerprintMismatch: true }) // canonical fp
+        .mockResolvedValueOnce({ isNew: false, record }); // legacy fp
+
+      // When
+      const result = await interceptor.intercept(mockContext, mockNext);
+      const body = await firstValueFrom(result);
+
+      // Then — two attempts with DIFFERENT fingerprints, then a normal replay
+      expect(mockService.checkAndLock).toHaveBeenCalledTimes(2);
+      const [firstFp, secondFp] = [mockService.checkAndLock.mock.calls[0][1], mockService.checkAndLock.mock.calls[1][1]];
+      expect(firstFp).not.toBe(secondFp);
+      expect(body).toEqual({ ok: true });
+      expect(mockNext.handle).not.toHaveBeenCalled();
+    });
+
+    it('should NOT retry when the body is already ordered (legacy fingerprint equals canonical)', async () => {
+      // Given — sorted flat body: canonical === legacy, a mismatch is genuine
+      mockRequest.headers['idempotency-key'] = 'key-genuine';
+      mockRequest.body = { a: 1, b: 2 };
+      mockService.checkAndLock.mockResolvedValue({ isNew: false, fingerprintMismatch: true });
+
+      // When / Then
+      await expect(interceptor.intercept(mockContext, mockNext)).rejects.toThrow(IdempotencyFingerprintMismatchError);
+      expect(mockService.checkAndLock).toHaveBeenCalledTimes(1);
+    });
+
+    it('should still throw when the legacy fingerprint mismatches too (genuinely different request)', async () => {
+      // Given
+      mockRequest.headers['idempotency-key'] = 'key-real-mismatch';
+      mockRequest.body = { z: 1, a: 2 };
+      mockService.checkAndLock.mockResolvedValue({ isNew: false, fingerprintMismatch: true });
+
+      // When / Then — both attempts mismatch -> 422 path
+      await expect(interceptor.intercept(mockContext, mockNext)).rejects.toThrow(IdempotencyFingerprintMismatchError);
+      expect(mockService.checkAndLock).toHaveBeenCalledTimes(2);
+    });
+
+    it('should NOT apply the legacy fallback when a custom fingerprintGenerator is configured', async () => {
+      // Given — the algorithm is the user's; a mismatch is theirs to own
+      mockRequest.headers['idempotency-key'] = 'key-custom-gen';
+      config.fingerprintGenerator = vi.fn().mockReturnValue('user-fp');
+      interceptor = new IdempotencyInterceptor(mockService, config, mockReflector, mockAdapterHost as any);
+      mockService.checkAndLock.mockResolvedValue({ isNew: false, fingerprintMismatch: true });
+
+      // When / Then
+      await expect(interceptor.intercept(mockContext, mockNext)).rejects.toThrow(IdempotencyFingerprintMismatchError);
+      expect(mockService.checkAndLock).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('error handling', () => {

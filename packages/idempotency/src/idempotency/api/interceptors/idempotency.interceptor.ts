@@ -8,6 +8,7 @@ import { tap } from 'rxjs/operators';
 import { IDEMPOTENCY_SERVICE, IDEMPOTENCY_PLUGIN_OPTIONS } from '../../../shared/constants';
 import { IdempotencyFingerprintMismatchError, IdempotencyFailedError } from '../../../shared/errors';
 import { IIdempotencyPluginOptions, IIdempotencyRecord } from '../../../shared/types';
+import { canonicalStringify } from '../../../shared/utils/canonical-stringify';
 import { IIdempotencyService } from '../../application/ports/idempotency-service.port';
 import { IDEMPOTENT_OPTIONS, IIdempotentOptions } from '../decorators/idempotent.decorator';
 
@@ -65,6 +66,23 @@ export class IdempotencyInterceptor implements NestInterceptor {
         ttl: options.ttl,
         validateFingerprint: options.validateFingerprint,
       });
+
+      // Upgrade transition: records created by versions whose default
+      // fingerprint was NOT canonicalized (plain JSON.stringify, key-order
+      // sensitive) would mismatch against the canonical fingerprint of the
+      // same request. Before rejecting, retry once with the legacy
+      // fingerprint; a match means "same request, pre-upgrade record" and the
+      // flow proceeds normally (replay / wait / takeover). Only applies to
+      // the built-in generator — custom generators are the user's algorithm.
+      if (checkResult.fingerprintMismatch && !this.config.fingerprintGenerator) {
+        const legacyFingerprint = await this.generateLegacyFingerprint(context, options);
+        if (legacyFingerprint !== fingerprint) {
+          checkResult = await this.idempotencyService.checkAndLock(key, legacyFingerprint, {
+            ttl: options.ttl,
+            validateFingerprint: options.validateFingerprint,
+          });
+        }
+      }
     } catch (error) {
       // The idempotency store is unavailable (e.g. Redis is down). Honor the
       // configured errorPolicy: 'fail-open' proceeds without idempotency
@@ -144,6 +162,22 @@ export class IdempotencyInterceptor implements NestInterceptor {
       return this.config.fingerprintGenerator(context);
     }
 
+    // Canonical serialization: object keys are sorted recursively, so two
+    // semantically identical bodies with different key order (re-serialized
+    // by a proxy, another client, an LLM) produce the SAME fingerprint.
+    return this.buildDefaultFingerprint(context, options, canonicalStringify);
+  }
+
+  /**
+   * Fingerprint as computed by pre-canonicalization versions (plain
+   * JSON.stringify, key-order sensitive). Used only as a one-shot fallback
+   * comparison during the upgrade transition window (records live defaultTtl).
+   */
+  private async generateLegacyFingerprint(context: ExecutionContext, options: IIdempotentOptions): Promise<string> {
+    return this.buildDefaultFingerprint(context, options, (value) => JSON.stringify(value));
+  }
+
+  private buildDefaultFingerprint(context: ExecutionContext, options: IIdempotentOptions, serialize: (value: unknown) => string): string {
     const request = context.switchToHttp().getRequest();
     const fields = options.fingerprintFields ?? this.config.fingerprintFields ?? ['method', 'path', 'body'];
 
@@ -151,8 +185,8 @@ export class IdempotencyInterceptor implements NestInterceptor {
 
     if (fields.includes('method')) parts.push(request.method);
     if (fields.includes('path')) parts.push(this.getRequestPath(request));
-    if (fields.includes('body')) parts.push(JSON.stringify(request.body ?? {}));
-    if (fields.includes('query')) parts.push(JSON.stringify(request.query ?? {}));
+    if (fields.includes('body')) parts.push(serialize(request.body ?? {}));
+    if (fields.includes('query')) parts.push(serialize(request.query ?? {}));
 
     const data = parts.join('|');
     return this.hash(data);
