@@ -256,6 +256,29 @@ describe('@Cached decorator', () => {
       expect(mockCacheService.getOrSet).toHaveBeenCalledWith('user:42', expect.any(Function), expect.any(Object));
     });
 
+    it('auto-generated keys hash object args with the FROZEN algorithm (golden vector)', async () => {
+      // Given — no explicit key: `Class:method:<hash(arg)>`; the hash is the
+      // shared public hashKey(). If this golden value changes, every user's
+      // auto-generated cache key silently shifts on upgrade.
+      registerCachePluginOptions({});
+
+      class Svc {
+        @Cached({ ttl: 60 })
+        async calc(body: Record<string, number>) {
+          return body;
+        }
+      }
+
+      // When — key order must not matter
+      const svc = new Svc();
+      await svc.calc({ b: 2, a: 1 });
+      await svc.calc({ a: 1, b: 2 });
+
+      // Then — both calls hit the same key with the frozen 43258cff783fe703
+      expect(mockCacheService.getOrSet).toHaveBeenNthCalledWith(1, 'Svc:calc:43258cff783fe703', expect.any(Function), expect.any(Object));
+      expect(mockCacheService.getOrSet).toHaveBeenNthCalledWith(2, 'Svc:calc:43258cff783fe703', expect.any(Function), expect.any(Object));
+    });
+
     it('should enrich key with global contextKeys', async () => {
       // Given
       const contextStore = new Map([['tenantId', 'acme']]);

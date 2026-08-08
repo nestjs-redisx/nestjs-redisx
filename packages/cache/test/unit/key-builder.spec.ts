@@ -434,6 +434,47 @@ describe('KeyBuilder', () => {
       // Then
       expect(key1).not.toBe(key2);
     });
+
+    it('deprecated hash() output stays EXACTLY as before (backward compatibility contract)', () => {
+      // Given / When — golden vectors; existing user keys must not shift
+      const sorted = KeyBuilder.create().hash({ a: 1, b: 2 }).build();
+      const unsorted = KeyBuilder.create().hash({ b: 2, a: 1 }).build();
+
+      // Then — same (order-dependent, weak) outputs as always
+      expect(sorted).toBe('kz8hg0');
+      expect(unsorted).toBe('k2g9cg');
+      expect(sorted).not.toBe(unsorted); // the documented flaw is preserved on purpose
+    });
+  });
+
+  describe('hashStable', () => {
+    it('should produce the SAME segment regardless of key order (recursive)', () => {
+      // Given / When
+      const key1 = KeyBuilder.create()
+        .prefix('calc')
+        .hashStable({ b: 2, a: 1, m: { y: 2, x: 1 } })
+        .build();
+      const key2 = KeyBuilder.create()
+        .prefix('calc')
+        .hashStable({ m: { x: 1, y: 2 }, a: 1, b: 2 })
+        .build();
+
+      // Then
+      expect(key1).toBe(key2);
+      expect(key1).toMatch(/^calc:[a-f0-9]{16}$/);
+    });
+
+    it('should match the @Cached auto-key algorithm (shared frozen hashKey)', () => {
+      // Given
+      const body = { b: 2, a: 1 };
+
+      // When / Then — golden vector shared with stable-hash.spec
+      expect(KeyBuilder.create().hashStable(body).build()).toBe('43258cff783fe703');
+    });
+
+    it('should differ for genuinely different objects', () => {
+      expect(KeyBuilder.create().hashStable({ id: 1 }).build()).not.toBe(KeyBuilder.create().hashStable({ id: 2 }).build());
+    });
   });
 
   describe('build', () => {

@@ -42,6 +42,7 @@
  */
 
 import { CacheKeyError } from './shared/errors';
+import { hashKey } from './shared/utils/stable-hash';
 
 export interface IKeyBuilderOptions {
   /**
@@ -231,7 +232,14 @@ export class KeyBuilder {
 
   /**
    * Adds a hash segment from an object.
-   * Useful for cache keys based on complex objects.
+   *
+   * @deprecated Order-dependent (plain `JSON.stringify`, no key sorting) and
+   * 32-bit — `{a:1,b:2}` and `{b:2,a:1}` produce DIFFERENT segments, and
+   * collisions become likely at tens of thousands of distinct objects (the
+   * cache can then serve the wrong value). Use {@link KeyBuilder.hashStable}
+   * (or the standalone `hashKey()`) instead. The output of this method is
+   * intentionally unchanged for backward compatibility — existing keys keep
+   * working; it will be removed in 2.0.
    *
    * @param obj - Object to hash
    * @returns This builder for chaining
@@ -239,6 +247,32 @@ export class KeyBuilder {
   hash(obj: unknown): this {
     const hash = this.simpleHash(JSON.stringify(obj));
     return this.segment(hash);
+  }
+
+  /**
+   * Adds a STABLE hash segment from an object — the same frozen algorithm the
+   * `@Cached` decorator uses for auto-generated keys: recursive key-sorted
+   * serialization hashed with SHA-256, truncated to 16 hex chars.
+   * `{a:1,b:2}` and `{b:2,a:1}` produce the SAME segment at every nesting
+   * level; array order is preserved.
+   *
+   * For cache keys only — the 64-bit truncation is not suitable for identity
+   * or anything security-sensitive.
+   *
+   * @example
+   * ```typescript
+   * const key = KeyBuilder.create()
+   *   .prefix('calc')
+   *   .hashStable(requestBody)
+   *   .build();
+   * // 'calc:a1b2c3d4e5f60789'
+   * ```
+   *
+   * @param obj - Object to hash
+   * @returns This builder for chaining
+   */
+  hashStable(obj: unknown): this {
+    return this.segment(hashKey(obj));
   }
 
   /**

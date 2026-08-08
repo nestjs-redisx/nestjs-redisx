@@ -90,6 +90,28 @@ const user = await this.cache.getOrSet<User>(
 );
 ```
 
+### Hashing Objects into Keys
+
+When the cache key is "this whole request body", use `hashKey()` — the same
+**frozen** algorithm the `@Cached` decorator uses for auto-generated keys:
+object keys are sorted recursively (so `{a:1,b:2}` and `{b:2,a:1}` produce the
+same key), the result is SHA-256 truncated to 16 hex chars. No hand-rolled
+"sort keys then hash" helpers needed:
+
+<<< @/apps/demo/src/plugins/cache/hash-key.usage.ts{typescript}
+
+The fluent builder offers the same algorithm as `KeyBuilder.hashStable()`.
+
+::: warning Stability contract
+The `hashKey` algorithm is frozen — its output is part of the public API,
+because your cache keys are derived from it. It will never change in place
+(a change would silently invalidate every derived key on upgrade); any future
+algorithm ships under a new name. `KeyBuilder.hash()` is **deprecated**: it is
+key-order-sensitive and 32-bit (collision-prone) — prefer `hashStable()` /
+`hashKey()`. Its output is intentionally unchanged for backward compatibility.
+Scope note: `hashKey` is for cache keys, not identity or security.
+:::
+
 ### Delete
 
 ```typescript

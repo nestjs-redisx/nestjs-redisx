@@ -5,11 +5,10 @@
  * Works on ANY Injectable class methods (services, repositories, etc).
  */
 
-import { createHash } from 'crypto';
-
 import { Logger } from '@nestjs/common';
 import 'reflect-metadata';
 import { CACHE_OPTIONS_KEY } from '../../../shared/constants';
+import { hashKey } from '../../../shared/utils/stable-hash';
 
 const logger = new Logger('Cached');
 
@@ -365,65 +364,13 @@ function serializeArg(arg: unknown): string {
 
   if (typeof arg === 'object') {
     try {
-      const stable = stableStringify(arg);
-      return hashForKey(stable);
+      // Same frozen algorithm as the public hashKey() — moving it must never
+      // change the generated cache keys (guarded by a golden-vector test).
+      return hashKey(arg);
     } catch {
       return 'object';
     }
   }
 
   return 'unknown';
-}
-
-/**
- * Produces a short, deterministic, CacheKey-safe hash from a string.
- * Uses SHA-256 truncated to 16 hex chars (64 bits).
- */
-function hashForKey(input: string): string {
-  return createHash('sha256').update(input).digest('hex').slice(0, 16);
-}
-
-/**
- * Produces a deterministic JSON string by sorting object keys recursively.
- * Ensures {b:2, a:1} and {a:1, b:2} produce the same cache key.
- */
-function stableStringify(value: unknown): string {
-  if (value === null || value === undefined) {
-    return 'null';
-  }
-
-  // Functions and symbols are not serializable (matches JSON.stringify behavior)
-  if (typeof value === 'function' || typeof value === 'symbol') {
-    return 'null';
-  }
-
-  if (typeof value !== 'object') {
-    // BigInt throws in JSON.stringify; convert to string for safe key generation
-    if (typeof value === 'bigint') {
-      return String(value);
-    }
-    return JSON.stringify(value);
-  }
-
-  // Arrays: preserve order, serialize undefined/functions as null (matches JSON.stringify)
-  if (Array.isArray(value)) {
-    return '[' + value.map((item) => (item === undefined || typeof item === 'function' || typeof item === 'symbol' ? 'null' : stableStringify(item))).join(',') + ']';
-  }
-
-  if (value instanceof Date) {
-    return JSON.stringify(value);
-  }
-
-  // Plain objects: sort keys, skip undefined/function/symbol values (matches JSON.stringify)
-  const obj = value as Record<string, unknown>;
-  const keys = Object.keys(obj).sort();
-  const parts: string[] = [];
-  for (const key of keys) {
-    const v = obj[key];
-    if (v === undefined || typeof v === 'function' || typeof v === 'symbol') {
-      continue; // JSON.stringify skips these in objects
-    }
-    parts.push(JSON.stringify(key) + ':' + stableStringify(v));
-  }
-  return '{' + parts.join(',') + '}';
 }

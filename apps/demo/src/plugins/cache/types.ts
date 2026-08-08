@@ -136,3 +136,9 @@ export abstract class ProductServiceStub {
 export declare function loadAppConfig(): Promise<ConfigValue>;
 export declare function loadFeatureFlags(): Promise<ConfigValue>;
 export declare function loadCategories(): Promise<Category[]>;
+
+export interface CalculateRequestDto {
+  amount: number;
+  currency: string;
+  options?: Record<string, unknown>;
+}

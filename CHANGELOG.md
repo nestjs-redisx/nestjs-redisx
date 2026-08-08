@@ -4,7 +4,7 @@ All notable changes to NestJS RedisX are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.7.1] - 2026-08-08
+## [1.8.0] - 2026-08-08
 
 ### Fixed
 
@@ -14,6 +14,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Added
 
+- `cache`: public **`hashKey(value)`** — hash any JSON-serializable value into a stable, CacheKey-safe 16-hex segment using the SAME frozen algorithm the `@Cached` decorator uses for auto-generated keys (recursive key-sorted serialization + SHA-256 truncated to 64 bits). `{a:1,b:2}` and `{b:2,a:1}` produce the same key at every nesting level; Date/BigInt/undefined are handled. Built for the manual path — `cache.getOrSet(`calc:${hashKey(dto)}`, loader)` — so nobody has to hand-roll a key sorter. `stableStringify(value)` (the canonical serialization) is exported too, and `KeyBuilder.hashStable(obj)` adds the same hash as a fluent segment. The algorithm is a frozen contract: it will never change in place; guarded by golden-vector tests.
+- `cache`: `KeyBuilder.hash()` is **deprecated** (removal in 2.0): it is key-order-sensitive (`{a:1,b:2}` ≠ `{b:2,a:1}`) and 32-bit — collisions become likely at tens of thousands of distinct objects, and a collision makes the cache serve the wrong value. Its output is intentionally unchanged so existing keys keep working; migrate to `hashStable()` / `hashKey()`.
 - `idempotency`: the exception filter's response body now carries a machine-readable `code` (e.g. `IDEMPOTENCY_TIMEOUT` vs `IDEMPOTENCY_FAILED`), so clients can distinguish the 409 variants — concurrent request still in progress vs previous attempt failed — without parsing the human-readable message.
 - `idempotency`: documentation now states explicitly that `defaultTtl` is the deduplication **window** (a retry after expiry re-executes; keep the durable "was this operation performed" answer in your database for money movement), that `errorPolicy: 'fail-open'` trades the idempotency guarantee for availability, and how to register the interceptor for byte-accurate response replay (idempotency outermost, response transforms deeper).
 

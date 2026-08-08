@@ -63,3 +63,6 @@ export { JsonSerializer, MsgpackSerializer } from './serializers';
 
 // Utilities
 export { KeyBuilder, type IKeyBuilderOptions } from './key-builder';
+
+// Stable object hashing for cache keys (same frozen algorithm as @Cached auto-keys)
+export { hashKey, stableStringify } from './shared/utils/stable-hash';
