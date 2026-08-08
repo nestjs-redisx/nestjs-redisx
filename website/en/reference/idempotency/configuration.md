@@ -61,7 +61,18 @@ reached on the gating `checkAndLock` call:
 - `'fail-closed'` (default) — the request is **rejected** (the store error propagates). Use this
   when correctness matters more than availability (e.g. payments).
 - `'fail-open'` — the request **proceeds without idempotency protection** (a warning is logged).
-  Use this when availability matters more than deduplication during an outage.
+  Use this when availability matters more than deduplication during an outage — and understand
+  the trade: while the store is down, **retries execute again** (duplicates are possible by
+  design). For money movement keep the default `'fail-closed'`.
+:::
+
+::: warning `defaultTtl` is the deduplication window — not a permanent guarantee
+Idempotency records expire after `defaultTtl` (24h by default). A client that retries the
+same `Idempotency-Key` **after** the record expired is indistinguishable from a new request:
+the handler executes again, silently. Size `defaultTtl` to comfortably exceed your clients'
+longest retry horizon, and for payments treat this plugin as the first line of defense — the
+durable source of truth for "was this operation performed" belongs in your database
+(e.g. a unique constraint or a ledger), not in a TTL-bound cache.
 :::
 
 ## Configuration by Use Case

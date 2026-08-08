@@ -582,10 +582,12 @@ export class PaymentsController {
 ### How It Works
 
 1. Client sends request with `Idempotency-Key: <unique-key>` header
-2. First request: executes handler, caches response in Redis
+2. First request: executes handler, caches response in Redis (the record fields and TTL are written in ONE atomic Lua script)
 3. Duplicate request (same key): returns cached response without executing handler
 4. Concurrent request (same key, first still processing): waits for first to complete, returns same result
 5. Mismatched request (same key, different body): returns 422 error if fingerprinting enabled
+
+The default fingerprint serializes the body (and query, when included) CANONICALLY — object keys sorted recursively — so two semantically identical bodies with different key order produce the same fingerprint (no false 422 from field ordering; array order is preserved). Records expire after `defaultTtl`: a retry AFTER expiry is indistinguishable from a new request and executes again — size the TTL past your clients' retry horizon and keep the durable "was this done" answer in your database for money movement.
 
 ## Streams Plugin
 
@@ -825,7 +827,7 @@ States: CLOSED counts failures in a rolling `windowMs`; at `failureThreshold` it
 - `get(key: string): Promise<IIdempotencyRecord | null>` — read the stored record.
 - `delete(key: string): Promise<boolean>` — remove a record.
 
-Errors map to HTTP via the built-in filter: fingerprint mismatch → 422, previous-failed/timeout/vanished-in-flight → 409, missing key → 400. `errorPolicy` ('fail-open' | 'fail-closed', default 'fail-closed') decides behavior when the store is unavailable. If the first attempt dies before completing (its processing record expires by lock TTL), a concurrent waiter atomically TAKES OVER and executes the request itself. The interceptor engages at most once per request even when bound multiple times (global registration + @Idempotent is safe; never add @UseInterceptors(IdempotencyInterceptor) manually — @Idempotent already includes it). `validateFingerprint: false` (plugin or per-@Idempotent) replays a reused key without comparing request contents.
+Errors map to HTTP via the built-in filter: fingerprint mismatch → 422, previous-failed/timeout/vanished-in-flight → 409, missing key → 400; the body carries a machine-readable `code` (e.g. IDEMPOTENCY_TIMEOUT vs IDEMPOTENCY_FAILED) so clients can distinguish the 409 variants. `errorPolicy` ('fail-open' | 'fail-closed', default 'fail-closed') decides behavior when the store is unavailable; fail-open trades the idempotency guarantee for availability (duplicates are possible while the store is down). `lockTimeout` is a STALENESS threshold, not the record lifetime: processing records are retained for 2x lockTimeout, so once the first attempt exceeds lockTimeout without completing, the next request or waiter takes the lock over ATOMICALLY inside the Lua script and executes the handler itself. The interceptor engages at most once per request even when bound multiple times (global registration + @Idempotent is safe; never add @UseInterceptors(IdempotencyInterceptor) manually — @Idempotent already includes it). `validateFingerprint: false` (plugin or per-@Idempotent) replays a reused key without comparing request contents.
 
 ### Streams Producer — `STREAM_PRODUCER` (`IStreamProducer`)
 

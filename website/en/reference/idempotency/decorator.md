@@ -60,6 +60,24 @@ async createOrder() {}
 async createPayment() {}
 ```
 
+## Response Replay Fidelity
+
+What gets stored for replay is the **handler's return value as observed by the
+idempotency interceptor**, serialized with `JSON.stringify`. Two practical
+consequences:
+
+- **Interceptor order matters.** Response-transforming interceptors (e.g.
+  `ClassSerializerInterceptor` with `@Exclude`/`@Transform`) apply their
+  transforms only if they run *deeper* than idempotency. Register idempotency
+  as the **outermost** interceptor (global `APP_INTERCEPTOR` or first in the
+  chain) so the captured body is the already-transformed shape — then the
+  replayed response matches the original.
+- **It is a JSON round-trip, not a byte copy.** `Date` instances become ISO
+  strings at capture (and stay strings on replay), `undefined` fields are
+  dropped, and `toJSON()` runs at capture time. For plain-JSON endpoints the
+  replay is effectively identical; for custom serialization, verify the replay
+  path explicitly.
+
 ## Header Caching
 
 Cache and replay response headers:

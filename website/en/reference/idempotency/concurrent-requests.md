@@ -151,11 +151,23 @@ new IdempotencyPlugin({
 ```
 Request starts: t=0
 Lock acquired: t=0
-Lock expires: t=30000 (if not released)
+Lock stale:   t=30000 (holder presumed dead — the next contender TAKES OVER)
+Record kept:  until t=60000 (2x lockTimeout retention)
 ```
 
+`lockTimeout` is a **staleness threshold**, not the record's lifetime. The
+processing record is retained for **2x lockTimeout**: once the original attempt
+exceeds `lockTimeout` without completing (it crashed between locking and
+storing its response), the record still exists — so the next request or waiter
+takes the lock over **atomically inside the Lua script**. Exactly one
+contender wins and executes the handler; everyone else keeps waiting on the
+new owner's record. The takeover never fires while the holder is within its
+lock window.
+
 ::: warning Choose Wisely
-If lockTimeout is too short, legitimate operations may fail. If too long, concurrent requests wait unnecessarily.
+`lockTimeout` must exceed your slowest legitimate handler: if it is too short a
+SLOW-BUT-ALIVE first attempt is presumed dead and a second execution starts in
+parallel. If too long, recovery after a real crash is delayed.
 :::
 
 ### Wait Timeout
