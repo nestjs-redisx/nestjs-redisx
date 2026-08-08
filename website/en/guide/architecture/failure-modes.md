@@ -143,17 +143,24 @@ export class HealthController {
 
 ### Cache: Serve Stale
 
+Two independent policies compose here: SWR (freshness — serve stale while
+refreshing in the background) and stale-if-error (availability — serve the
+last known value while the loader keeps failing):
+
 ```typescript
 @Cached({
   ttl: 300,
-  staleWhileRevalidate: true,
-  staleTime: 3600,  // Serve stale for 1 hour
-  onError: 'stale', // Return stale on error
+  swr: { enabled: true, staleTime: 3600 },            // refresh in background for 1h
+  staleIfError: { enabled: true, window: 86400 },     // survive outages for 24h
 })
 async getProduct(id: string) {
   return this.productService.fetch(id);
 }
 ```
+
+Every stale-on-error serve emits a warn log and increments
+`redisx_cache_stale_if_error_served_total`, so an outage stays visible. See
+[Stale-If-Error](/en/reference/cache/swr#stale-if-error).
 
 ### Locks: Time-bounded Operations
 

@@ -182,6 +182,11 @@ new CachePlugin({
     enabled: true,
     lockTimeout: 10000,  // ms to wait for lock during regeneration
   },
+  staleIfError: {           // serve last-known-good when the loader FAILS
+    enabled: false,          // opt-in (default: false)
+    defaultWindow: 86400,    // seconds beyond normal expiry; always finite
+    // shouldServe: (error) => !/404|410/.test(error.message),
+  },
   swr: {
     enabled: false,
     staleTime: 300,      // seconds to serve stale while refreshing
@@ -301,6 +306,10 @@ async updateUser(id: string, data: UpdateUserDto): Promise<User> {
 3. Miss → execute method, store in L2 + L1, return result
 4. If stampede protection enabled: only one request regenerates per cluster — concurrent local requests share the in-flight promise, and other instances wait for the distributed lock and reuse the cached value
 5. If SWR enabled: serve stale immediately, refresh in background
+
+### Stale-If-Error
+
+With `staleIfError` enabled, entries are physically retained for `window` seconds beyond their normal expiry (`keepUntil = ttl + staleTime + window`); between expiry and keepUntil the value is invisible to the success path (healthy loaders reload fresh data) and is served ONLY when the loader throws. `shouldServe(error)` filters which errors qualify (default: any — exclude 404/410-style "data is gone" errors to avoid serving dead data forever). Retries are lazy and request-driven (no background timer), coalesced by stampede protection. Every stale-on-error serve logs a warning and increments `redisx_cache_stale_if_error_served_total`. The window must be a finite number (fail-fast `CacheConfigError` otherwise) — for a practically infinite outage budget set an explicit large value. Per-call: `getOrSet(key, loader, { staleIfError: { enabled, window, shouldServe } })`; per-method: same object on `@Cached`. Entries of non-users keep exactly the previous TTL (zero blast radius). SIE is the availability policy; SWR is the freshness policy — independent toggles that compose.
 
 ## Locks Plugin
 

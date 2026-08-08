@@ -50,6 +50,15 @@ new CachePlugin({
     defaultStaleTime: 60,     // Stale window in seconds (default: 60)
   },
 
+  // Stale-If-Error: serve the last known value when the loader FAILS,
+  // for defaultWindow seconds beyond the normal expiry. Availability policy,
+  // independent of SWR — see the SWR page for semantics and guardrails.
+  staleIfError: {
+    enabled: false,           // Opt-in (default: false)
+    defaultWindow: 86400,     // Seconds; always finite (explicit = bounded memory)
+    // shouldServe: (error) => !/404|410/.test(error.message),
+  },
+
   // Tag-Based Invalidation
   tags: {
     enabled: true,            // Enable tag system (default: true)

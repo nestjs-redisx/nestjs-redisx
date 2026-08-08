@@ -168,6 +168,62 @@ Or with the Service API directly:
 - **SWR + stampede** — both work together: `getOrSet()` uses stampede protection for fresh loads, SWR for background revalidation
 - **Don't use SWR for security-critical data** — tokens, permissions, auth state must always be fresh
 
+## Stale-If-Error
+
+SWR answers a **freshness** question: "may I serve slightly old data while I
+refresh in the background?" Stale-if-error (RFC 5861's second directive)
+answers an **availability** question: "may I serve the last known value when
+the loader FAILS?" They are independent toggles with separate windows:
+
+```
+staleAt   = now + ttl                     # fresh -> stale (SWR revalidates)
+expiresAt = staleAt + staleTime           # end of the SWR window
+keepUntil = expiresAt + staleIfError.window  # retained for error-serving only
+```
+
+Between `expiresAt` and `keepUntil` the value is **retained but invisible** to
+the success path (a healthy loader reloads fresh data as usual). Only when the
+loader throws does the cache fall back to it.
+
+<<< @/apps/demo/src/plugins/cache/stale-if-error.setup.ts{typescript}
+
+Per-call and per-method overrides mirror the plugin shape:
+
+```typescript
+await cache.getOrSet('report:q3', loadReport, {
+  ttl: 3600,
+  staleIfError: { enabled: true, window: 86400 },
+});
+
+@Cached({ ttl: 3600, staleIfError: { enabled: true, window: 86400 } })
+async getReport(id: string) { ... }
+```
+
+**Semantics and guardrails:**
+
+- **Lazy, request-driven.** There is no background timer: a failed loader is
+  retried by the next request (concurrent retries are coalesced by stampede
+  protection). If nobody asks, nothing refreshes.
+- **`window` is always a finite number.** For a "practically infinite" outage
+  budget set an explicit large value (e.g. 30 days) — an explicit number keeps
+  Redis memory bounded. Invalid windows fail fast at bootstrap
+  (`CacheConfigError`).
+- **`shouldServe(error)` decides what qualifies** (default: any error). Exclude
+  errors that mean the data is gone for good (404/410, revoked access) —
+  serving those stale forever silently exposes dead data.
+- **Observable by design.** Every stale-on-error serve emits a warn log and
+  increments `redisx_cache_stale_if_error_served_total` — an outage cannot
+  hide behind a green cache.
+- **Memory cost is opt-in.** Entries of non-users keep exactly the previous
+  TTL; only SIE-enabled entries are retained longer (ttl + staleTime + window).
+
+::: tip SIE vs Circuit Breaker
+Stale-if-error protects **reads through the cache**: last-known-good per key.
+The [Circuit Breaker plugin](../circuit-breaker/) protects **any operation**
+and stops hammering a dead upstream. For long outages they compose: breaker
+fails fast, cache serves stale.
+:::
+
 ## Next Steps
 
 - [Cache Warming](./warmup) — Pre-populate cache on startup

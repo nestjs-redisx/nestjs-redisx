@@ -29,7 +29,7 @@ NestJS RedisX is designed for production NestJS applications that need Redis bey
 - [Service API](https://nestjs-redisx.dev/en/reference/cache/service-api): Programmatic cache get/set/delete/invalidate with ICacheService.
 - [Tag Invalidation](https://nestjs-redisx.dev/en/reference/cache/tags): Invalidate groups of cache entries by semantic tags.
 - [Anti-Stampede](https://nestjs-redisx.dev/en/reference/cache/stampede): Prevent thundering herd with lock-based cache regeneration.
-- [Stale-While-Revalidate](https://nestjs-redisx.dev/en/reference/cache/swr): Serve stale data while refreshing cache in the background.
+- [Stale-While-Revalidate](https://nestjs-redisx.dev/en/reference/cache/swr): Serve stale data while refreshing in the background (SWR) and serve the last known value while the loader fails (stale-if-error).
 - [Cache Warming](https://nestjs-redisx.dev/en/reference/cache/warmup): Pre-populate cache entries on application startup.
 
 ## Locks Plugin
