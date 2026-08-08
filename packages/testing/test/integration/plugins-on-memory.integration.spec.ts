@@ -274,6 +274,63 @@ describe('Plugins on the in-memory driver (no Redis)', () => {
     });
   });
 
+  describe('CachePlugin stale-if-error', () => {
+    it('serves the last known value when the loader fails, until the SIE window closes', async () => {
+      // Given — 1s TTL, no SWR, 3s stale-if-error window
+      app = await Test.createTestingModule({
+        imports: [
+          RedisModule.forRoot({
+            clients: { type: 'single', host: 'x', port: 1 },
+            global: { driver: MEMORY_DRIVER_TYPE },
+            plugins: [new CachePlugin({ l1: { enabled: false }, staleIfError: { enabled: true, defaultWindow: 3 } })],
+          }),
+        ],
+      }).compile();
+      await app.init();
+      const cache = app.get<ICacheService>(CACHE_SERVICE);
+
+      // Populate through the real pipeline
+      const first = await cache.getOrSet('sie:report', async () => 'v1', { ttl: 1 });
+      expect(first).toBe('v1');
+
+      // When — past the TTL the entry is a miss on the success path...
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+      const failing = vi.fn().mockRejectedValue(new Error('upstream down'));
+      const served = await cache.getOrSet('sie:report', failing, { ttl: 1 });
+
+      // Then — ...but the retained value is served when the loader FAILS
+      expect(served).toBe('v1');
+      expect(failing).toHaveBeenCalledTimes(1);
+
+      // And a healthy loader takes back over immediately (expired = normal miss)
+      const recovered = await cache.getOrSet('sie:report', async () => 'v2', { ttl: 1 });
+      expect(recovered).toBe('v2');
+    });
+
+    it('rethrows once the retained value is gone (window passed, key expired from Redis)', async () => {
+      // Given — 1s TTL + 1s window: full retention is ~2s
+      app = await Test.createTestingModule({
+        imports: [
+          RedisModule.forRoot({
+            clients: { type: 'single', host: 'x', port: 1 },
+            global: { driver: MEMORY_DRIVER_TYPE },
+            plugins: [new CachePlugin({ l1: { enabled: false }, staleIfError: { enabled: true, defaultWindow: 1 } })],
+          }),
+        ],
+      }).compile();
+      await app.init();
+      const cache = app.get<ICacheService>(CACHE_SERVICE);
+
+      await cache.getOrSet('sie:gone', async () => 'v1', { ttl: 1 });
+
+      // When — beyond TTL + window nothing is retained
+      await new Promise((resolve) => setTimeout(resolve, 2200));
+
+      // Then — the loader error propagates (nothing safe to serve)
+      await expect(cache.getOrSet('sie:gone', vi.fn().mockRejectedValue(new Error('still down')), { ttl: 1 })).rejects.toThrow('still down');
+    });
+  });
+
   describe('StreamsPlugin', () => {
     it('round-trips messages producer → consumer group → ack (no Redis)', async () => {
       // Given

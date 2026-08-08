@@ -23,6 +23,7 @@ import { CACHE_PLUGIN_OPTIONS, CACHE_REDIS_DRIVER, CACHE_SERVICE, DEFAULT_CACHE_
 import { ICachePluginOptions } from './shared/types';
 import { StampedeProtectionService } from './stampede/infrastructure/stampede-protection.service';
 import { SwrManagerService } from './swr/infrastructure/swr-manager.service';
+import { validateStaleIfError } from './shared/utils/validate-stale-if-error';
 import { TagIndexRepository } from './tags/infrastructure/repositories/tag-index.repository';
 import { LuaScriptLoader } from './tags/infrastructure/services/lua-script-loader.service';
 
@@ -63,6 +64,7 @@ export class CachePlugin implements IRedisXPlugin {
       l2: { ...DEFAULT_CACHE_CONFIG.l2, ...options.l2 },
       stampede: { ...DEFAULT_CACHE_CONFIG.stampede, ...options.stampede },
       swr: { ...DEFAULT_CACHE_CONFIG.swr, ...options.swr },
+      staleIfError: validateStaleIfError({ ...DEFAULT_CACHE_CONFIG.staleIfError, ...options.staleIfError }),
       tags: { ...DEFAULT_CACHE_CONFIG.tags, ...options.tags },
       warmup: { ...DEFAULT_CACHE_CONFIG.warmup, ...options.warmup },
       keys: { ...DEFAULT_CACHE_CONFIG.keys, ...options.keys },

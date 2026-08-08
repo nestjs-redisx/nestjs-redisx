@@ -86,17 +86,27 @@ export class SwrManagerService implements ISwrManager {
     });
   }
 
-  createSwrEntry<T>(value: T, freshTtl: number, staleTtl?: number): SwrEntry<T> {
+  createSwrEntry<T>(value: T, freshTtl: number, staleTtl?: number, keepSeconds?: number): SwrEntry<T> {
     const now = Date.now();
     const freshTtlMs = freshTtl * 1000;
     const staleTtlMs = (staleTtl ?? this.staleTtl) * 1000;
+    const expiresAt = now + freshTtlMs + staleTtlMs;
 
-    return {
+    const entry: SwrEntry<T> = {
       value,
       cachedAt: now,
       staleAt: now + freshTtlMs,
-      expiresAt: now + freshTtlMs + staleTtlMs,
+      expiresAt,
     };
+
+    // Stale-if-error retention: keepUntil is set ONLY when the feature is on,
+    // so entries (and their Redis TTL) of non-users are byte-identical to
+    // before the feature existed.
+    if (keepSeconds !== undefined) {
+      entry.keepUntil = expiresAt + keepSeconds * 1000;
+    }
+
+    return entry;
   }
 
   getStats() {

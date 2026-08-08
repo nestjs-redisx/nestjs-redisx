@@ -1209,4 +1209,139 @@ describe('CacheService (Internal)', () => {
       }
     });
   });
+
+  describe('stale-if-error (getOrSet)', () => {
+    let mockMetrics: { incrementCounter: ReturnType<typeof vi.fn>; observeHistogram: ReturnType<typeof vi.fn> };
+
+    function buildSieService(pluginSie?: { enabled?: boolean; defaultWindow?: number; shouldServe?: (error: Error) => boolean }) {
+      mockMetrics = { incrementCounter: vi.fn(), observeHistogram: vi.fn() };
+      return new CacheService(mockDriver, mockL1Store, mockL2Store, mockStampede, mockTagIndex, mockSwrManager, { ...options, staleIfError: pluginSie ?? { enabled: true } }, mockMetrics as never);
+    }
+
+    function retainedEntry(overrides: Partial<{ staleAt: number; expiresAt: number; keepUntil: number }> = {}) {
+      const now = Date.now();
+      return {
+        value: 'last-known-good',
+        cachedAt: now - 10_000,
+        staleAt: overrides.staleAt ?? now - 5_000,
+        expiresAt: overrides.expiresAt ?? now - 1_000, // past the SWR window
+        keepUntil: overrides.keepUntil ?? now + 60_000, // still retained
+      };
+    }
+
+    it('should serve the retained value when the loader fails inside the keepUntil window', async () => {
+      // Given — entry is past expiresAt (load path) but inside keepUntil
+      const sieService = buildSieService();
+      const entry = retainedEntry();
+      mockL2Store.getSwr.mockResolvedValueOnce(entry).mockResolvedValueOnce(entry);
+      mockSwrManager.isExpired.mockReturnValue(true);
+      const loader = vi.fn().mockRejectedValue(new Error('upstream 503'));
+
+      // When
+      const result = await sieService.getOrSet('calc:k1', loader);
+
+      // Then — the error is swallowed, the retained value is served, observably
+      expect(result).toBe('last-known-good');
+      expect(loader).toHaveBeenCalledTimes(1);
+      expect(mockMetrics.incrementCounter).toHaveBeenCalledWith('redisx_cache_stale_if_error_served_total');
+    });
+
+    it('should rethrow when the keepUntil window has passed (nothing safe to serve)', async () => {
+      // Given
+      const sieService = buildSieService();
+      const expired = retainedEntry({ keepUntil: Date.now() - 1 });
+      mockL2Store.getSwr.mockResolvedValue(expired);
+      mockSwrManager.isExpired.mockReturnValue(true);
+
+      // When / Then
+      await expect(sieService.getOrSet('calc:k2', vi.fn().mockRejectedValue(new Error('down')))).rejects.toThrow('down');
+    });
+
+    it('should rethrow when no entry is retained at all (first-ever load)', async () => {
+      // Given
+      const sieService = buildSieService();
+      mockL2Store.getSwr.mockResolvedValue(null);
+
+      // When / Then
+      await expect(sieService.getOrSet('calc:k3', vi.fn().mockRejectedValue(new Error('cold miss')))).rejects.toThrow('cold miss');
+      expect(mockMetrics.incrementCounter).not.toHaveBeenCalledWith('redisx_cache_stale_if_error_served_total');
+    });
+
+    it('should respect shouldServe: a disqualified error is rethrown (e.g. 404 = data is gone)', async () => {
+      // Given — predicate excludes "not found" errors
+      const sieService = buildSieService({ enabled: true, shouldServe: (error) => !error.message.includes('404') });
+      const entry = retainedEntry();
+      mockL2Store.getSwr.mockResolvedValue(entry);
+      mockSwrManager.isExpired.mockReturnValue(true);
+
+      // When / Then — 404 is NOT served stale; 503 is
+      await expect(sieService.getOrSet('calc:k4', vi.fn().mockRejectedValue(new Error('404 not found')))).rejects.toThrow('404');
+      await expect(sieService.getOrSet('calc:k4', vi.fn().mockRejectedValue(new Error('503 unavailable')))).resolves.toBe('last-known-good');
+    });
+
+    it('should rethrow the ORIGINAL loader error when the predicate itself throws', async () => {
+      // Given
+      const sieService = buildSieService({
+        enabled: true,
+        shouldServe: () => {
+          throw new Error('predicate bug');
+        },
+      });
+      mockL2Store.getSwr.mockResolvedValue(retainedEntry());
+      mockSwrManager.isExpired.mockReturnValue(true);
+
+      // When / Then — the predicate bug never masks the loader failure
+      await expect(sieService.getOrSet('calc:k5', vi.fn().mockRejectedValue(new Error('real outage')))).rejects.toThrow('real outage');
+    });
+
+    it('should write entries WITH keepUntil when enabled (retention window = TTL + SWR + sie window)', async () => {
+      // Given — SIE on, SWR off: staleTime must be 0 and window passed through
+      const sieService = buildSieService({ enabled: true, defaultWindow: 3600 });
+      mockL2Store.getSwr.mockResolvedValue(null);
+      const loader = vi.fn().mockResolvedValue('fresh');
+
+      // When
+      const result = await sieService.getOrSet('calc:k6', loader);
+
+      // Then
+      expect(result).toBe('fresh');
+      expect(mockSwrManager.createSwrEntry).toHaveBeenCalledWith('fresh', expect.any(Number), 0, 3600);
+      expect(mockL2Store.setSwr).toHaveBeenCalled();
+    });
+
+    it('should NOT set keepUntil for SWR-only users (zero blast radius)', async () => {
+      // Given — SWR on, SIE off: entries and their TTL stay exactly as before
+      const swrOnly = new CacheService(mockDriver, mockL1Store, mockL2Store, mockStampede, mockTagIndex, mockSwrManager, { ...options, swr: { enabled: true, defaultStaleTime: 60 } });
+      mockL2Store.getSwr.mockResolvedValue(null);
+
+      // When
+      await swrOnly.getOrSet('calc:k7', vi.fn().mockResolvedValue('v'));
+
+      // Then — keepSeconds argument is undefined
+      expect(mockSwrManager.createSwrEntry).toHaveBeenCalledWith('v', expect.any(Number), 60, undefined);
+    });
+
+    it('should support per-call enablement when the plugin default is off', async () => {
+      // Given — plugin SIE off; per-call opt-in with its own window
+      const plainService = new CacheService(mockDriver, mockL1Store, mockL2Store, mockStampede, mockTagIndex, mockSwrManager, options);
+      const entry = retainedEntry();
+      mockL2Store.getSwr.mockResolvedValue(entry);
+      mockSwrManager.isExpired.mockReturnValue(true);
+
+      // When
+      const result = await plainService.getOrSet('calc:k8', vi.fn().mockRejectedValue(new Error('boom')), { staleIfError: { enabled: true, window: 600 } });
+
+      // Then
+      expect(result).toBe('last-known-good');
+    });
+
+    it('should fail fast on an invalid per-call window', async () => {
+      // Given
+      const sieService = buildSieService();
+
+      // When / Then
+      await expect(sieService.getOrSet('calc:k9', vi.fn().mockResolvedValue('v'), { staleIfError: { enabled: true, window: 0 } })).rejects.toThrow(/staleIfError window/);
+      await expect(sieService.getOrSet('calc:k9', vi.fn().mockResolvedValue('v'), { staleIfError: { enabled: true, window: -5 } })).rejects.toThrow(/staleIfError window/);
+    });
+  });
 });

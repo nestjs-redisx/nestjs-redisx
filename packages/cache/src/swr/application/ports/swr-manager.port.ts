@@ -73,7 +73,12 @@ export interface ISwrManager {
    * @param staleTtl - Optional time in seconds for stale period (defaults to config)
    * @returns SWR entry with timestamps
    */
-  createSwrEntry<T>(value: T, freshTtl: number, staleTtl?: number): SwrEntry<T>;
+  /**
+   * Builds an SWR entry. `keepSeconds` (stale-if-error) extends PHYSICAL
+   * retention past `expiresAt`: between expiresAt and keepUntil the value is
+   * served only when the loader fails.
+   */
+  createSwrEntry<T>(value: T, freshTtl: number, staleTtl?: number, keepSeconds?: number): SwrEntry<T>;
 
   /**
    * Gets SWR manager statistics.

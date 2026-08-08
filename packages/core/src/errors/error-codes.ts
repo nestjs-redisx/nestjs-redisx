@@ -154,6 +154,9 @@ export enum ErrorCode {
   /** Invalid TLS configuration */
   CFG_INVALID_TLS = 'CFG_INVALID_TLS',
 
+  /** Cache plugin configuration is invalid */
+  CACHE_CONFIG_INVALID = 'CACHE_CONFIG_INVALID',
+
   /** Cache key is invalid */
   CACHE_KEY_INVALID = 'CACHE_KEY_INVALID',
 

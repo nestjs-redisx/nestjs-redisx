@@ -8,6 +8,7 @@ import { IRedisDriver, ErrorCode } from '@nestjs-redisx/core';
 
 import { CACHE_REDIS_DRIVER, L1_CACHE_STORE, L2_CACHE_STORE, STAMPEDE_PROTECTION, TAG_INDEX, SWR_MANAGER, CACHE_PLUGIN_OPTIONS } from '../../../shared/constants';
 import { CacheError, CacheKeyError, StampedeError } from '../../../shared/errors';
+import { validateStaleIfError } from '../../../shared/utils/validate-stale-if-error';
 import { CacheSetOptions, CacheGetOrSetOptions, CacheStats, ICachePluginOptions } from '../../../shared/types';
 import { IStampedeProtection } from '../../../stampede/application/ports/stampede-protection.port';
 import { ISwrManager } from '../../../swr/application/ports/swr-manager.port';
@@ -53,6 +54,7 @@ export class CacheService implements ICacheService {
   private readonly stampedeFallback: 'load' | 'error' | 'null';
   private readonly swrEnabled: boolean;
   private readonly tagsEnabled: boolean;
+  private readonly sieEnabled: boolean;
 
   private readonly keyPrefix: string;
 
@@ -73,6 +75,7 @@ export class CacheService implements ICacheService {
     this.stampedeEnabled = options.stampede?.enabled ?? true;
     this.stampedeFallback = options.stampede?.fallback ?? 'load';
     this.swrEnabled = options.swr?.enabled ?? false;
+    this.sieEnabled = options.staleIfError?.enabled ?? false;
     this.tagsEnabled = options.tags?.enabled ?? true;
   }
 
@@ -199,10 +202,14 @@ export class CacheService implements ICacheService {
     const normalizedKey = this.validateAndNormalizeKey(key);
     const enrichedKey = this.enrichKeyWithContext(normalizedKey, options.varyBy);
 
-    // Check if SWR is enabled for this call
+    // Check if SWR / stale-if-error are enabled for this call. SIE shares the
+    // SWR entry format (it needs the lifecycle metadata), so either toggle
+    // routes through the SWR flow; with SWR off, staleTime is 0 and the entry
+    // is fresh right up to its expiry.
     const swrEnabled = options.swr?.enabled ?? this.swrEnabled;
+    const sie = this.resolveStaleIfError(options);
 
-    if (swrEnabled) {
+    if (swrEnabled || sie.enabled) {
       // SWR flow
       const swrEntry = await this.l2Store.getSwr<T>(enrichedKey);
 
@@ -213,7 +220,7 @@ export class CacheService implements ICacheService {
           // Data is valid (fresh or stale)
           const isStale = this.swrManager.isStale(swrEntry);
 
-          if (isStale && this.swrManager.shouldRevalidate(enrichedKey)) {
+          if (isStale && swrEnabled && this.swrManager.shouldRevalidate(enrichedKey)) {
             // Trigger background revalidation
             void this.swrManager.scheduleRevalidation(
               enrichedKey,
@@ -222,7 +229,7 @@ export class CacheService implements ICacheService {
                 // Write proper SWR entry (not CacheEntry) to preserve staleAt/expiresAt metadata
                 const staleTime = options.swr?.staleTime ?? this.options.swr?.defaultStaleTime ?? 60;
                 const ttl = options.ttl ?? this.options.l2?.defaultTtl ?? 3600;
-                const swrEntryNew = this.swrManager.createSwrEntry(freshValue, ttl, staleTime);
+                const swrEntryNew = this.swrManager.createSwrEntry(freshValue, ttl, staleTime, sie.enabled ? sie.window : undefined);
                 await this.l2Store.setSwr(enrichedKey, swrEntryNew);
 
                 // Also update L1 for fast reads
@@ -244,19 +251,31 @@ export class CacheService implements ICacheService {
       // SWR miss or expired — load and cache with SWR metadata. The write
       // happens INSIDE the stampede flight (writeBack), so it is covered by
       // the distributed lock and no plain CacheEntry is double-written.
-      const staleTime = options.swr?.staleTime ?? this.options.swr?.defaultStaleTime ?? 60;
+      // With SWR disabled (stale-if-error only) staleTime is 0: the entry is
+      // fresh until expiry, then retained keepUntil for error-serving only.
+      const staleTime = swrEnabled ? (options.swr?.staleTime ?? this.options.swr?.defaultStaleTime ?? 60) : 0;
       const ttl = options.ttl ?? this.options.l2?.defaultTtl ?? 3600;
 
-      return this.loadWithStampede(enrichedKey, loader, options, {
-        writeBack: async (value: T) => {
-          const swrEntryNew = this.swrManager.createSwrEntry(value, ttl, staleTime);
-          await this.l2Store.setSwr(enrichedKey, swrEntryNew);
-        },
-        recheck: async () => {
-          const entry = await this.l2Store.getSwr<T>(enrichedKey);
-          return entry && !this.swrManager.isExpired(entry) ? entry.value : null;
-        },
-      });
+      try {
+        return await this.loadWithStampede(enrichedKey, loader, options, {
+          writeBack: async (value: T) => {
+            const swrEntryNew = this.swrManager.createSwrEntry(value, ttl, staleTime, sie.enabled ? sie.window : undefined);
+            await this.l2Store.setSwr(enrichedKey, swrEntryNew);
+          },
+          recheck: async () => {
+            const entry = await this.l2Store.getSwr<T>(enrichedKey);
+            return entry && !this.swrManager.isExpired(entry) ? entry.value : null;
+          },
+        });
+      } catch (error) {
+        // Stale-if-error: the loader (or the whole load path) failed — serve
+        // the retained value if one exists inside its keepUntil window.
+        const served = await this.serveStaleOnError<T>(enrichedKey, sie, error as Error);
+        if (served.hit) {
+          return served.value as T;
+        }
+        throw error;
+      }
     }
 
     // Regular flow (no SWR) — use enrichedKey directly to avoid double-enrichment
@@ -348,6 +367,61 @@ export class CacheService implements ICacheService {
    *
    * @private
    */
+  /**
+   * Resolves the effective stale-if-error policy for a call (per-call override
+   * over plugin defaults) and fail-fast validates per-call values.
+   */
+  private resolveStaleIfError(options: CacheGetOrSetOptions): { enabled: boolean; window: number; shouldServe: (error: Error) => boolean } {
+    const enabled = options.staleIfError?.enabled ?? this.sieEnabled;
+    if (options.staleIfError) {
+      validateStaleIfError(options.staleIfError);
+    }
+    return {
+      enabled,
+      window: options.staleIfError?.window ?? this.options.staleIfError?.defaultWindow ?? 86400,
+      shouldServe: options.staleIfError?.shouldServe ?? this.options.staleIfError?.shouldServe ?? (() => true),
+    };
+  }
+
+  /**
+   * Serves the retained value after a loader failure, when stale-if-error is
+   * enabled, the entry still exists inside its keepUntil window, and the
+   * error qualifies per shouldServe. Observable by design: a warn log and a
+   * metric fire on every stale-on-error serve, so an outage cannot hide
+   * behind a green cache.
+   */
+  private async serveStaleOnError<T>(key: string, sie: { enabled: boolean; window: number; shouldServe: (error: Error) => boolean }, error: Error): Promise<{ hit: boolean; value?: T }> {
+    if (!sie.enabled) {
+      return { hit: false };
+    }
+
+    const entry = await this.l2Store.getSwr<T>(key);
+    if (!entry) {
+      return { hit: false };
+    }
+
+    const keepUntil = entry.keepUntil ?? entry.expiresAt;
+    if (Date.now() > keepUntil) {
+      return { hit: false };
+    }
+
+    let qualifies: boolean;
+    try {
+      qualifies = sie.shouldServe(error);
+    } catch (predicateError) {
+      // A throwing predicate must not mask the original loader error.
+      this.logger.error(`staleIfError.shouldServe threw for key "${key}": ${(predicateError as Error).message}`);
+      return { hit: false };
+    }
+    if (!qualifies) {
+      return { hit: false };
+    }
+
+    this.logger.warn(`Serving stale-on-error for key "${key}" (loader failed: ${error.message}). ` + `The upstream is failing; the value is served from the stale-if-error window.`);
+    this.metrics?.incrementCounter('redisx_cache_stale_if_error_served_total');
+    return { hit: true, value: entry.value };
+  }
+
   private async handleStampedeFallback<T>(loadAndWrite: () => Promise<T>, error: StampedeError): Promise<T> {
     switch (this.stampedeFallback) {
       case 'load':

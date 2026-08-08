@@ -241,9 +241,10 @@ export class L2RedisStoreAdapter implements IL2CacheStore {
       const fullKey = this.buildKey(key);
       const serialized = this.serializer.serialize(swrEntry);
 
-      // Calculate TTL from expiresAt timestamp
+      // Physical retention: keepUntil (stale-if-error) when present,
+      // otherwise the SWR expiry — non-SIE entries keep today's TTL exactly.
       const now = Date.now();
-      const ttlMs = swrEntry.expiresAt - now;
+      const ttlMs = (swrEntry.keepUntil ?? swrEntry.expiresAt) - now;
 
       if (ttlMs <= 0) {
         // Entry already expired, don't save it

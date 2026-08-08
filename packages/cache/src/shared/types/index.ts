@@ -45,6 +45,33 @@ export interface ICachePluginOptions {
     defaultStaleTime?: number; // default: 60 (seconds)
   };
 
+  /**
+   * Stale-if-error (RFC 5861): serve the last known value when the loader
+   * FAILS, for `defaultWindow` seconds beyond the normal lifetime. Independent
+   * of SWR (freshness policy); this is the availability policy. Entries are
+   * physically retained until the window ends, so this affects Redis memory
+   * only when enabled.
+   */
+  staleIfError?: {
+    /** default: false */
+    enabled?: boolean;
+    /**
+     * Seconds to retain AND serve the value on loader errors, beyond the
+     * normal expiry (TTL + SWR staleTime). Always a finite number — for a
+     * "practically infinite" outage budget set an explicit large value
+     * (e.g. 30 days): an explicit number keeps Redis memory bounded.
+     * default: 86400 (24h)
+     */
+    defaultWindow?: number;
+    /**
+     * Decides whether a given loader error qualifies for stale serving
+     * (default: any error). Use it to EXCLUDE errors that mean the data is
+     * gone for good (404/410, revoked access) — serving stale forever on
+     * those silently exposes dead data.
+     */
+    shouldServe?: (error: Error) => boolean;
+  };
+
   /** Tag invalidation config */
   tags?: {
     enabled?: boolean; // default: true
@@ -131,6 +158,15 @@ export interface ICacheGetOrSetOptions extends ICacheSetOptions {
     enabled?: boolean;
     staleTime?: number;
   };
+
+  /** Per-call stale-if-error override (see plugin `staleIfError`). */
+  staleIfError?: {
+    enabled?: boolean;
+    /** Seconds to retain and serve on loader errors beyond normal expiry. */
+    window?: number;
+    /** Whether this error qualifies for stale serving (default: any). */
+    shouldServe?: (error: Error) => boolean;
+  };
   skipStampede?: boolean;
   /** Skip caching if this function returns true for the loaded value. */
   unless?: (result: unknown) => boolean;
@@ -167,6 +203,14 @@ export interface ISwrEntry<T> {
 
   /** Timestamp when value expires completely (ms) */
   expiresAt: number;
+
+  /**
+   * Timestamp until which the value is physically retained for
+   * stale-if-error serving (ms). Present only when staleIfError is enabled;
+   * between expiresAt and keepUntil the value is used ONLY when the loader
+   * fails — on the success path this range behaves as a miss.
+   */
+  keepUntil?: number;
 }
 
 /**

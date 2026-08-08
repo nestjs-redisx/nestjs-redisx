@@ -35,6 +35,7 @@ interface IDecoratorCacheService {
       tags?: string[];
       strategy?: 'l1-only' | 'l2-only' | 'l1-l2';
       swr?: { enabled?: boolean; staleTime?: number };
+      staleIfError?: { enabled?: boolean; window?: number; shouldServe?: (error: Error) => boolean };
       unless?: (result: unknown) => boolean;
     },
   ): Promise<T>;
@@ -146,6 +147,19 @@ export interface ICachedOptions {
   varyBy?: string[];
 
   /**
+   * Stale-if-error configuration (per-method override, see plugin
+   * `staleIfError`): serve the last known value when the loader fails,
+   * for `window` seconds beyond the normal expiry.
+   */
+  staleIfError?: {
+    enabled?: boolean;
+    /** Seconds to retain and serve on loader errors beyond normal expiry. */
+    window?: number;
+    /** Whether this error qualifies for stale serving (default: any). */
+    shouldServe?: (error: Error) => boolean;
+  };
+
+  /**
    * Stale-while-revalidate configuration.
    * If enabled, serves stale data while revalidating in background.
    */
@@ -222,6 +236,7 @@ export function Cached(options: ICachedOptions = {}): MethodDecorator {
           tags,
           strategy: options.strategy,
           swr: options.swr,
+          staleIfError: options.staleIfError,
           unless: options.unless ? (result: unknown) => options.unless!(result, ...args) : undefined,
         });
       } catch (error) {

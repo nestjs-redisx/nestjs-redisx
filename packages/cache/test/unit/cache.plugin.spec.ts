@@ -109,6 +109,37 @@ describe('CachePlugin', () => {
   });
 
   describe('configuration options', () => {
+    it('should merge staleIfError defaults (disabled, 24h window)', () => {
+      // Given / When
+      const providers = new CachePlugin().getProviders();
+      const configProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === CACHE_PLUGIN_OPTIONS);
+      const config = (configProvider as any).useValue;
+
+      // Then
+      expect(config.staleIfError).toMatchObject({ enabled: false, defaultWindow: 86400 });
+    });
+
+    it('should fail fast at construction on an invalid staleIfError window', () => {
+      // Given / When / Then — zero, negative, and non-finite windows all throw
+      expect(() => new CachePlugin({ staleIfError: { enabled: true, defaultWindow: 0 } }).getProviders()).toThrow(/staleIfError window/);
+      expect(() => new CachePlugin({ staleIfError: { enabled: true, defaultWindow: -60 } }).getProviders()).toThrow(/staleIfError window/);
+      expect(() => new CachePlugin({ staleIfError: { enabled: true, defaultWindow: Infinity } }).getProviders()).toThrow(/staleIfError window/);
+    });
+
+    it('should accept a valid staleIfError configuration', () => {
+      // Given
+      const shouldServe = (error: Error) => !error.message.includes('404');
+
+      // When
+      const providers = new CachePlugin({ staleIfError: { enabled: true, defaultWindow: 2592000, shouldServe } }).getProviders();
+      const configProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === CACHE_PLUGIN_OPTIONS);
+      const config = (configProvider as any).useValue;
+
+      // Then
+      expect(config.staleIfError).toMatchObject({ enabled: true, defaultWindow: 2592000 });
+      expect(config.staleIfError.shouldServe).toBe(shouldServe);
+    });
+
     it('should accept l1 cache configuration', () => {
       // Given
       const options = {

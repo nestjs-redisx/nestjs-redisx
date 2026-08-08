@@ -59,6 +59,10 @@ export const DEFAULT_CACHE_CONFIG = {
     enabled: false,
     defaultStaleTime: 60,
   },
+  staleIfError: {
+    enabled: false,
+    defaultWindow: 86400,
+  },
   tags: {
     enabled: true,
     indexPrefix: '_tag:',

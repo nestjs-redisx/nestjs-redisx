@@ -48,7 +48,7 @@ export { CacheInterceptor as DeclarativeCacheInterceptor } from './decorators/ca
 export type { ICachePluginOptions, IContextProvider, IWarmupKey, CacheSetOptions, CacheGetOrSetOptions, CacheStats, SwrEntry, StampedeResult, StampedeOptions, ScanResult, IInvalidationOptions, IInvalidationRuleProps } from './shared/types';
 
 // Errors
-export { CacheError, CacheKeyError, SerializationError, LoaderError, StampedeError, TagInvalidationError } from './shared/errors';
+export { CacheError, CacheKeyError, CacheConfigError, SerializationError, LoaderError, StampedeError, TagInvalidationError } from './shared/errors';
 
 // Constants
 export { CACHE_PLUGIN_OPTIONS, CACHE_REDIS_DRIVER, CACHE_SERVICE, L1_CACHE_STORE, L2_CACHE_STORE, STAMPEDE_PROTECTION, TAG_INDEX, SWR_MANAGER, SERIALIZER, LUA_SCRIPT_LOADER, INVALIDATION_REGISTRY, EVENT_INVALIDATION_SERVICE, AMQP_CONNECTION, CACHE_OPTIONS_KEY, INVALIDATE_TAGS_KEY, DEFAULT_CACHE_CONFIG } from './shared/constants';

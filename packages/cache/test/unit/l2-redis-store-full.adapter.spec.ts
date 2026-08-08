@@ -612,6 +612,46 @@ describe('L2RedisStoreAdapter (Full)', () => {
       expect(mockDriver.setex).toHaveBeenCalledWith('cache:test-key', expect.any(Number), expect.any(String));
     });
 
+    it('should derive the Redis TTL from keepUntil when present (stale-if-error retention)', async () => {
+      // Given — keepUntil extends 1 hour past expiresAt
+      const key = 'sie-key';
+      const now = Date.now();
+      const swrEntry: SwrEntry<string> = {
+        value: 'v',
+        cachedAt: now,
+        staleAt: now + 30000,
+        expiresAt: now + 60000,
+        keepUntil: now + 60000 + 3600000,
+      };
+
+      // When
+      await adapter.setSwr(key, swrEntry);
+
+      // Then — TTL covers the whole retention window (~3660s), not just expiresAt (~60s)
+      const ttlSeconds = mockDriver.setex.mock.calls.at(-1)![1] as number;
+      expect(ttlSeconds).toBeGreaterThan(3600);
+      expect(ttlSeconds).toBeLessThanOrEqual(3661);
+    });
+
+    it('should keep deriving TTL from expiresAt when keepUntil is absent (non-SIE unchanged)', async () => {
+      // Given
+      const key = 'plain-key';
+      const now = Date.now();
+      const swrEntry: SwrEntry<string> = {
+        value: 'v',
+        cachedAt: now,
+        staleAt: now + 30000,
+        expiresAt: now + 60000,
+      };
+
+      // When
+      await adapter.setSwr(key, swrEntry);
+
+      // Then — exactly today's behavior (~60s)
+      const ttlSeconds = mockDriver.setex.mock.calls.at(-1)![1] as number;
+      expect(ttlSeconds).toBeLessThanOrEqual(60);
+    });
+
     it('should not save expired entry', async () => {
       // Given
       const key = 'test-key';

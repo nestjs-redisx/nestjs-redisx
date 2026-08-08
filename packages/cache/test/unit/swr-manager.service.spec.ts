@@ -333,6 +333,25 @@ describe('SwrManagerService', () => {
       expect(entry.expiresAt).toBe(entry.cachedAt + 60000 + 600000);
     });
 
+    it('should set keepUntil beyond expiresAt when a stale-if-error window is given', () => {
+      // Given
+      const keepSeconds = 3600;
+
+      // When
+      const entry = service.createSwrEntry('v', 60, 300, keepSeconds);
+
+      // Then — keepUntil = expiresAt + window
+      expect(entry.keepUntil).toBe(entry.expiresAt + 3600000);
+    });
+
+    it('should NOT set keepUntil when no window is given (non-SIE entries unchanged)', () => {
+      // Given / When
+      const entry = service.createSwrEntry('v', 60, 300);
+
+      // Then
+      expect(entry.keepUntil).toBeUndefined();
+    });
+
     it('should use default staleTtl when not provided', () => {
       // Given
       const value = 'test-value';
