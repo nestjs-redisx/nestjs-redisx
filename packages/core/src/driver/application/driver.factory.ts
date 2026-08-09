@@ -3,6 +3,7 @@ import { RedisXError, ErrorCode } from '../../errors';
 import { ConnectionConfig, DriverType } from '../../types';
 import { IoRedisAdapter } from '../infrastructure/ioredis.adapter';
 import { NodeRedisAdapter } from '../infrastructure/node-redis.adapter';
+import { normalizeConnectionConfig } from './parse-redis-url';
 
 /**
  * Driver factory options.
@@ -69,9 +70,13 @@ export function registerDriver(type: string, factory: DriverFactoryFn): void {
  * );
  * ```
  */
-export function createDriver(config: ConnectionConfig, options?: IDriverFactoryOptions): IRedisDriver {
+export function createDriver(rawConfig: ConnectionConfig, options?: IDriverFactoryOptions): IRedisDriver {
   const driverType = options?.type ?? 'ioredis';
   const enableLogging = options?.enableLogging ?? false;
+
+  // Expand a single-connection `url` (e.g. REDIS_URL) into concrete fields so
+  // every adapter — built-in or custom — receives a normalized config.
+  const config = normalizeConnectionConfig(rawConfig);
 
   switch (driverType) {
     case 'ioredis':

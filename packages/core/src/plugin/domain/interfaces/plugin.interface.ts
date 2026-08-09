@@ -33,8 +33,14 @@ export interface IPluginAsyncOptions<T = unknown> {
   /**
    * Factory function that returns plugin options.
    * Receives injected dependencies as arguments.
+   *
+   * Parameters are typed `any[]` (matching NestJS's own `useFactory`) so a
+   * strongly-typed factory such as `(config: ConfigService) => ({ ... })`
+   * assigns cleanly under `strict` — `unknown[]` would reject it via parameter
+   * contravariance.
    */
-  useFactory: (...args: unknown[]) => T | Promise<T>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  useFactory: (...args: any[]) => T | Promise<T>;
 }
 
 /**

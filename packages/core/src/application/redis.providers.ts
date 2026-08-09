@@ -9,7 +9,7 @@ import { IRedisModuleOptions, IRedisModuleAsyncOptions, IRedisModuleOptionsFacto
  * Type guard to check if clients config is a single connection.
  */
 function isISingleConnectionConfig(clients: ConnectionConfig | Record<string, ConnectionConfig>): clients is ConnectionConfig {
-  return 'type' in clients || 'host' in clients || 'nodes' in clients || 'sentinels' in clients;
+  return 'type' in clients || 'host' in clients || 'nodes' in clients || 'sentinels' in clients || 'url' in clients;
 }
 
 /**

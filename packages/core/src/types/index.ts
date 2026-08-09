@@ -90,6 +90,17 @@ export interface ISingleConnectionConfig extends IBaseConnectionConfig {
   type?: 'single';
 
   /**
+   * Full connection URL, e.g. `redis://user:pass@host:6379/0` or
+   * `rediss://…` for TLS. Convenient for 12-factor deployments that expose a
+   * single `REDIS_URL` (Heroku, Railway, Upstash, docker-compose, `.env`).
+   *
+   * Parsed into `host` / `port` / `username` / `password` / `db`, and
+   * `rediss://` enables TLS. Any field also set explicitly on the config
+   * overrides the value parsed from the URL.
+   */
+  url?: string;
+
+  /**
    * Redis host.
    * @default 'localhost'
    */
@@ -431,8 +442,14 @@ export interface IRedisModuleAsyncOptions extends Pick<ModuleMetadata, 'imports'
 
   /**
    * Factory function returning options.
+   *
+   * Parameters are typed `any[]` (matching NestJS's own `useFactory`) so a
+   * strongly-typed factory such as `(config: ConfigService) => ({ ... })`
+   * assigns cleanly under `strict`. With `unknown[]`, parameter contravariance
+   * rejects the typed factory and forces an in-body cast of the inject array.
    */
-  useFactory?: (...args: unknown[]) => Promise<IRedisModuleOptions> | IRedisModuleOptions;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  useFactory?: (...args: any[]) => Promise<IRedisModuleOptions> | IRedisModuleOptions;
 
   /**
    * Dependencies to inject into factory.
