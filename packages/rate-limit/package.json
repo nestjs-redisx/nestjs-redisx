@@ -1,6 +1,6 @@
 {
   "name": "@nestjs-redisx/rate-limit",
-  "version": "1.8.1",
+  "version": "1.9.0",
   "description": "Rate limiting plugin for NestJS RedisX with multiple algorithms (fixed-window, sliding-window, token-bucket)",
   "author": "NestJS RedisX Team",
   "license": "MIT",
