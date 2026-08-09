@@ -816,6 +816,8 @@ export class CacheService implements ICacheService {
         maxLength: this.options.keys?.maxLength ?? 1024,
         version: this.options.keys?.version,
         separator: this.options.keys?.separator ?? ':',
+        validation: this.options.keys?.validation ?? 'safe',
+        pattern: this.options.keys?.pattern,
         // Don't include prefix here - it's added by L2 store
         prefix: '',
       };

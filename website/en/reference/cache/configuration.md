@@ -72,6 +72,8 @@ new CachePlugin({
     maxLength: 1024,          // Max key length (default: 1024)
     version: 'v1',            // Key version for length validation (default: 'v1')
     separator: ':',           // Key separator (default: ':')
+    validation: 'safe',       // 'safe' (default) | 'strict' | 'off'
+    // pattern: /^[a-z0-9:/-]+$/, // optional custom allowlist (overrides mode)
   },
 
   // Cache Warming
@@ -113,15 +115,24 @@ new CachePlugin({
 ## Allowed Key and Tag Characters
 
 ::: warning Cache keys and tags are validated — invalid characters throw
-Cache **keys** may contain only the following characters: `A-Z a-z 0-9 - _ : .`
-(alphanumerics, hyphen, underscore, colon, dot). Whitespace and any other
-character are rejected. A violating key throws a `CacheKeyError`. This
-validation **cannot be disabled**.
+Cache **keys** are validated by `keys.validation` (default **`'safe'`**):
 
-Cache **tags** are stricter: they are normalized to **lowercase** and may
-contain only `a-z 0-9 - _ : .`. Uppercase letters are lowercased
-automatically; any other invalid character throws `CacheError`. Tags are also
-limited to 128 characters.
+- **`'safe'`** — rejects only empty keys, whitespace, and control characters.
+  Everything else is allowed, because Redis keys are binary-safe — so `/`, `?`,
+  `=`, `%`, and unicode are valid, and **URL / path keys work out of the box**
+  (`cache.getOrSet('http:/api/users/123', …)`).
+- **`'strict'`** — allows only `A-Z a-z 0-9 - _ : .` (the pre-1.9.2 behavior),
+  for teams that want to enforce clean, predictable keys.
+- **`'off'`** — no character check (only empty + length).
+- **`pattern`** — a custom `RegExp` allowlist that overrides the mode.
+
+A violating key throws a `CacheKeyError`. For arbitrary URLs — especially with
+query strings — prefer hashing the URL into a bounded key with `hashKey()`
+(see [Service API](./service-api)) rather than storing the raw URL.
+
+Cache **tags** are normalized to **lowercase** and may contain only
+`a-z 0-9 - _ : .`; other characters throw `CacheError`, and tags are limited to
+128 characters. (Tag rules are independent of `keys.validation`.)
 
 These rules apply to every cache operation, including keys produced by the
 `@Cached` / `@Cacheable` decorators after placeholder interpolation.

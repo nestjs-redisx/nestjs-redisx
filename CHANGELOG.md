@@ -4,6 +4,16 @@ All notable changes to NestJS RedisX are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.2] - 2026-08-09
+
+### Changed
+
+- `cache`: key validation no longer rejects `/` (and other URL characters) by default. The validator previously allowed only `[A-Za-z0-9-_:.]`, so URL / path keys — the natural key for HTTP-response caching — threw `CacheKeyError` on write and silently missed on read (Redis keys are binary-safe; the restriction was artificial). The new default `keys.validation: 'safe'` rejects only what is genuinely dangerous (empty keys, whitespace, control characters) and allows everything else, so `cache.getOrSet('http:/api/users/123', …)` works out of the box. The previous behavior is available as `keys.validation: 'strict'`.
+
+### Added
+
+- `cache`: `keys.validation` option — `'safe'` (default), `'strict'` (the historical `[A-Za-z0-9-_:.]` allowlist), or `'off'` (only empty + length checks) — plus `keys.pattern` for a custom allowlist `RegExp` that overrides the mode. Exposed `KeyValidationMode` / `ICacheKeyOptions`. For arbitrary URLs (especially with query strings) the docs recommend hashing the URL with `hashKey()` for a bounded, collision-resistant key.
+
 ## [1.9.1] - 2026-08-09
 
 ### Fixed

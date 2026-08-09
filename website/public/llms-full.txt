@@ -796,7 +796,7 @@ Every public service method, grouped by injection token. Inject the token to use
 - `getStats(): Promise<CacheStats>` — hit/miss/size statistics (async).
 - `wrap<T>(...)` — helper that wraps a function call with getOrSet semantics.
 
-Key chars are restricted to `[A-Za-z0-9-_:.]` (else `CacheKeyError`); tags are lowercase. `stampede.fallback` ('load' | 'error' | 'null', default 'load') controls behavior when stampede protection times out.
+Cache keys are validated by `keys.validation`: 'safe' (default) rejects only empty/whitespace/control chars (Redis is binary-safe, so `/`, `?`, `=`, unicode and URL/path keys are allowed); 'strict' keeps the `[A-Za-z0-9-_:.]` allowlist; 'off' skips the char check; a custom `keys.pattern` RegExp overrides the mode. For arbitrary URLs prefer `hashKey(url)`. Tags are lowercase `[a-z0-9-_:.]`. `stampede.fallback` ('load' | 'error' | 'null', default 'load') controls behavior when stampede protection times out.
 
 Standalone helpers: `hashKey(value)` hashes any JSON-serializable value into a stable 16-hex cache-key segment — the SAME frozen algorithm `@Cached` uses for auto-generated keys (recursive key-sorted serialization + SHA-256/16), so `{a:1,b:2}` and `{b:2,a:1}` produce the same key; `stableStringify(value)` exposes the canonical serialization itself; `KeyBuilder.hashStable(obj)` adds the same hash as a fluent-builder segment. The algorithm is frozen (changing it would invalidate derived keys); it is for cache keys, not identity/security. `KeyBuilder.hash()` is DEPRECATED (key-order-sensitive, 32-bit, collision-prone) — its output is unchanged for backward compatibility and it will be removed in 2.0.
 

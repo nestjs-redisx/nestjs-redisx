@@ -76,6 +76,7 @@ export const DEFAULT_CACHE_CONFIG = {
     maxLength: 1024,
     version: 'v1',
     separator: ':',
+    validation: 'safe' as const,
   },
   invalidation: {
     enabled: true,

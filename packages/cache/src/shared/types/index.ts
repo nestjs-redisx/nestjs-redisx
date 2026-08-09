@@ -92,6 +92,21 @@ export interface ICachePluginOptions {
     maxLength?: number; // default: 1024
     version?: string; // default: 'v1'
     separator?: string; // default: ':'
+    /**
+     * Character validation for cache keys.
+     * - 'safe' (default): reject only empty/whitespace/control characters —
+     *   Redis keys are binary-safe, so `/`, `?`, `=`, `%`, unicode, etc. are
+     *   allowed (URL / path keys work out of the box).
+     * - 'strict': allow only `[A-Za-z0-9-_:.]` (pre-1.9.2 behavior).
+     * - 'off': no character validation (only empty + length).
+     * @default 'safe'
+     */
+    validation?: 'safe' | 'strict' | 'off';
+    /**
+     * Custom allowlist pattern; the key must match it (overrides `validation`'s
+     * character check). Empty/whitespace/control/length rules still apply.
+     */
+    pattern?: RegExp;
   };
 
   /** Event-driven invalidation config */

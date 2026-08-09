@@ -17,7 +17,7 @@ export type { IInvalidationRegistry, IResolvedInvalidation } from './invalidatio
 export type { IEventInvalidationService, IInvalidationResult, InvalidationHandler } from './invalidation/application/ports/event-invalidation.port';
 
 // Value Objects
-export { CacheKey } from './cache/domain/value-objects/cache-key.vo';
+export { CacheKey, type ICacheKeyOptions, type KeyValidationMode } from './cache/domain/value-objects/cache-key.vo';
 export { CacheEntry } from './cache/domain/value-objects/cache-entry.vo';
 export { TTL } from './cache/domain/value-objects/ttl.vo';
 export { EventPattern } from './invalidation/domain/value-objects/event-pattern.vo';
