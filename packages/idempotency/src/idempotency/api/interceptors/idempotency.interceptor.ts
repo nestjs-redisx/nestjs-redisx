@@ -75,7 +75,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
       // flow proceeds normally (replay / wait / takeover). Only applies to
       // the built-in generator — custom generators are the user's algorithm.
       if (checkResult.fingerprintMismatch && !this.config.fingerprintGenerator) {
-        const legacyFingerprint = await this.generateLegacyFingerprint(context, options);
+        const legacyFingerprint = this.generateLegacyFingerprint(context, options);
         if (legacyFingerprint !== fingerprint) {
           checkResult = await this.idempotencyService.checkAndLock(key, legacyFingerprint, {
             ttl: options.ttl,
@@ -173,7 +173,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
    * JSON.stringify, key-order sensitive). Used only as a one-shot fallback
    * comparison during the upgrade transition window (records live defaultTtl).
    */
-  private async generateLegacyFingerprint(context: ExecutionContext, options: IIdempotentOptions): Promise<string> {
+  private generateLegacyFingerprint(context: ExecutionContext, options: IIdempotentOptions): string {
     return this.buildDefaultFingerprint(context, options, (value) => JSON.stringify(value));
   }
 

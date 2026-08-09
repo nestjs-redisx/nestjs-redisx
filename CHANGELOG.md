@@ -4,6 +4,13 @@ All notable changes to NestJS RedisX are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.1] - 2026-08-08
+
+### Fixed
+
+- `cache`: `hashKey()` / `stableStringify()` collapsed every `Map` and `Set` to `{}` — all Maps (and all Sets) serialized identically, so distinct inputs produced the same cache key and could receive each other's cached values (this also affected `@Cached` auto-generated keys for methods taking Map/Set arguments). Maps now serialize as sorted, type-prefixed entries and Sets as sorted, type-prefixed items; the Map entry order is sorted by the `(key, value)` pair so it is fully insertion-order-independent even when distinct object keys share the same canonical form. Keys for values that do not contain a Map or Set at any depth are byte-identical (existing golden vectors unchanged). The idempotency package's `canonicalStringify` is updated in parity. Thanks [@qrver](https://github.com/qrver) ([#13](https://github.com/nestjs-redisx/nestjs-redisx/pull/13)).
+- `idempotency`: `generateLegacyFingerprint` was declared `async` without an `await` (a lint warning shipped in 1.8.0); it is now synchronous. No behavior change.
+
 ## [1.8.0] - 2026-08-08
 
 ### Fixed
