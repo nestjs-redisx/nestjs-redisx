@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { Logger } from '@nestjs/common';
 import { Cached, registerCacheServiceGetter, registerCachePluginOptions, type ICachedOptions } from '../../src/cache/api/decorators/cached.decorator';
 import { CACHE_OPTIONS_KEY } from '../../src/shared/constants';
+import { LoaderError } from '../../src/shared/errors';
 
 describe('@Cached decorator', () => {
   class TestClass {
@@ -559,8 +561,8 @@ describe('@Cached decorator', () => {
       expect(mockCacheService.getOrSet).not.toHaveBeenCalled();
     });
 
-    it('should fall back to original method when getOrSet throws', async () => {
-      // Given
+    it('should fall back to original method on a genuine CACHE-infrastructure error', async () => {
+      // Given — getOrSet itself rejects (e.g. Redis down), loader never ran
       mockCacheService.getOrSet.mockRejectedValue(new Error('Redis down'));
 
       class Svc {
@@ -574,8 +576,62 @@ describe('@Cached decorator', () => {
       const svc = new Svc();
       const result = await svc.getUser('42');
 
-      // Then
+      // Then — fail-open: the method runs and returns its value
       expect(result).toEqual({ id: '42' });
+    });
+
+    it('should propagate a LOADER error as-is, run the method ONCE, and not log a cache error', async () => {
+      // Given — the default mock actually invokes the loader, so the method's
+      // own error surfaces through getOrSet (the "find or throw 404" pattern)
+      const errorSpy = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+      const calls = vi.fn();
+      class NotFound extends Error {}
+
+      class Svc {
+        @Cached({ key: 'user:{0}' })
+        async getUser(id: string) {
+          calls();
+          throw new NotFound(`user ${id} not found`);
+        }
+      }
+
+      // When / Then — the ORIGINAL error propagates unchanged
+      const svc = new Svc();
+      await expect(svc.getUser('42')).rejects.toBeInstanceOf(NotFound);
+
+      // And the method executed exactly once (no double DB hit)...
+      expect(calls).toHaveBeenCalledTimes(1);
+      // ...and it was NOT logged as a cache error (no log spam on 404s)
+      expect(errorSpy).not.toHaveBeenCalled();
+
+      errorSpy.mockRestore();
+    });
+
+    it('should unwrap a LoaderError and rethrow its cause (stampede-wrapped path)', async () => {
+      // Given — with stampede protection, a loader error reaches the decorator
+      // wrapped as LoaderError(cause = the business error)
+      const errorSpy = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+      const calls = vi.fn();
+      class NotFound extends Error {}
+      const original = new NotFound('gone');
+      mockCacheService.getOrSet.mockImplementation(async () => {
+        calls();
+        throw new LoaderError('user:42', original);
+      });
+
+      class Svc {
+        @Cached({ key: 'user:{0}' })
+        async getUser(id: string) {
+          return { id };
+        }
+      }
+
+      // When / Then — the ORIGINAL business error surfaces, not the LoaderError
+      const svc = new Svc();
+      await expect(svc.getUser('42')).rejects.toBe(original);
+      expect(calls).toHaveBeenCalledTimes(1);
+      expect(errorSpy).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
     });
 
     it('should pass swr options to getOrSet', async () => {
@@ -626,6 +682,24 @@ describe('@Cached decorator', () => {
       await svc.getUser('42');
 
       // Then
+      expect(mockCacheService.getOrSet).toHaveBeenCalledWith('user:42', expect.any(Function), expect.objectContaining({ tags: ['user:42', 'users'] }));
+    });
+
+    it('should interpolate {n} templates in static tags (same as the key)', async () => {
+      // Given — the reported footgun: tags:['user:{0}'] used to become the
+      // literal 'user:{0}', silently breaking invalidation
+      class Svc {
+        @Cached({ key: 'user:{0}', tags: ['user:{0}', 'users'] })
+        async getUser(id: string) {
+          return { id };
+        }
+      }
+
+      // When
+      const svc = new Svc();
+      await svc.getUser('42');
+
+      // Then — the template is resolved; the plain tag is left untouched
       expect(mockCacheService.getOrSet).toHaveBeenCalledWith('user:42', expect.any(Function), expect.objectContaining({ tags: ['user:42', 'users'] }));
     });
 

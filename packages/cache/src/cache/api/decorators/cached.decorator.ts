@@ -8,9 +8,13 @@
 import { Logger } from '@nestjs/common';
 import 'reflect-metadata';
 import { CACHE_OPTIONS_KEY } from '../../../shared/constants';
+import { LoaderError } from '../../../shared/errors';
 import { hashKey } from '../../../shared/utils/stable-hash';
 
 const logger = new Logger('Cached');
+
+/** Marks an error as thrown by the wrapped method (not the cache layer). */
+const LOADER_ERROR = Symbol('redisx.cached.loaderError');
 
 /**
  * Cache service interface for decorator use.
@@ -226,12 +230,26 @@ export function Cached(options: ICachedOptions = {}): MethodDecorator {
       // Build cache key with context enrichment
       const key = buildCacheKey(this, propertyKey.toString(), args, options);
 
-      // Resolve tags (static array or function of args)
-      const tags = typeof options.tags === 'function' ? options.tags(...args) : options.tags;
+      // Resolve tags (static array or function of args); interpolate {n}
+      // templates in static tags the same way as the key.
+      const tags = resolveTags(options.tags, args);
+
+      // Tag errors thrown by the wrapped method so they can be told apart from
+      // genuine cache-infrastructure failures below.
+      const loader = async (): Promise<unknown> => {
+        try {
+          return await originalMethod.apply(this, args);
+        } catch (error) {
+          if (error && typeof error === 'object') {
+            (error as Record<symbol, unknown>)[LOADER_ERROR] = true;
+          }
+          throw error;
+        }
+      };
 
       // Delegate to getOrSet — stampede protection is handled internally
       try {
-        return await cacheService.getOrSet(key, () => originalMethod.apply(this, args), {
+        return await cacheService.getOrSet(key, loader, {
           ttl: options.ttl,
           tags,
           strategy: options.strategy,
@@ -240,8 +258,20 @@ export function Cached(options: ICachedOptions = {}): MethodDecorator {
           unless: options.unless ? (result: unknown) => options.unless!(result, ...args) : undefined,
         });
       } catch (error) {
-        logger.error(`@Cached: getOrSet error for key ${key}:`, error);
-        // Fail-open: execute method without cache
+        // The wrapped method itself threw (e.g. a NotFoundException). It is NOT
+        // a cache failure: propagate the ORIGINAL error as-is, without
+        // re-running the method (no double DB hit) and without logging it as a
+        // cache error. With stampede protection the loader error arrives
+        // wrapped as LoaderError (unwrap its cause so the caller sees its own
+        // exception, e.g. -> 404); without stampede it arrives raw but tagged.
+        if (error instanceof LoaderError) {
+          throw error.cause ?? error;
+        }
+        if (error && typeof error === 'object' && (error as Record<symbol, unknown>)[LOADER_ERROR]) {
+          throw error;
+        }
+        // Genuine cache-infrastructure error → fail-open: run the method once.
+        logger.error(`@Cached: cache error for key ${key}, executing method without cache:`, error);
         return originalMethod.apply(this, args);
       }
     };
@@ -347,6 +377,24 @@ function enrichWithContext(key: string, options: ICachedOptions): string {
  */
 function sanitizeForKey(value: string): string {
   return String(value).replace(/[^a-zA-Z0-9\-_]/g, '_');
+}
+
+/**
+ * Resolves the `tags` option to concrete tag strings.
+ *
+ * A function receives the call arguments. A static array supports the SAME
+ * `{n}` template placeholders as `key` — so `tags: ['user:{0}']` becomes
+ * `['user:42']` instead of the literal `user:{0}` (which would never match on
+ * invalidation).
+ */
+function resolveTags(tags: ICachedOptions['tags'], args: unknown[]): string[] | undefined {
+  if (tags === undefined) {
+    return undefined;
+  }
+  if (typeof tags === 'function') {
+    return tags(...args);
+  }
+  return tags.map((tag) => (tag.includes('{') ? interpolateKey(tag, args) : tag));
 }
 
 /**
