@@ -12,6 +12,10 @@
  * is NOT a substitute — a replacer array is an allow-list of property names,
  * so nested keys absent from the top level are silently DROPPED from the
  * output (different bodies would fingerprint identically).
+ *
+ * Kept in semantic parity with the cache package's `stableStringify`
+ * (packages/cache/src/shared/utils/stable-hash.ts) - including Map/Set
+ * handling - so the two copies never drift.
  */
 export function canonicalStringify(value: unknown): string {
   if (value === null || value === undefined) {
@@ -38,6 +42,27 @@ export function canonicalStringify(value: unknown): string {
 
   if (value instanceof Date) {
     return JSON.stringify(value);
+  }
+
+  // Map: sorted, type-prefixed entries - deterministic regardless of
+  // insertion order and distinct from an equivalent plain object.
+  // (JSON bodies parsed from HTTP never contain Maps, but the copies must
+  // not drift semantically from the cache package's stableStringify.)
+  if (value instanceof Map) {
+    const entries = [...value.entries()].map(([k, v]) => [canonicalStringify(k), canonicalStringify(v)] as const);
+    // Sort by the serialized (key, value) pair — key alone leaves ties (distinct
+    // object keys with identical canonical form) broken by insertion order.
+    entries.sort(([keyA, valueA], [keyB, valueB]) => {
+      if (keyA !== keyB) return keyA < keyB ? -1 : 1;
+      return valueA < valueB ? -1 : valueA > valueB ? 1 : 0;
+    });
+    return 'Map{' + entries.map(([k, v]) => k + ':' + v).join(',') + '}';
+  }
+
+  // Set: semantically unordered - sorted, type-prefixed items.
+  if (value instanceof Set) {
+    const items = [...value].map((item) => canonicalStringify(item)).sort();
+    return 'Set[' + items.join(',') + ']';
   }
 
   // Plain objects: sort keys, skip undefined/function/symbol values

@@ -71,4 +71,44 @@ describe('canonicalStringify', () => {
   it('should serialize undefined/function array items as null like JSON.stringify', () => {
     expect(canonicalStringify([1, undefined, () => 1])).toBe('[1,null,null]');
   });
+
+  it('should serialize Maps deterministically and type-distinct (parity with cache stableStringify)', () => {
+    // Given
+    const m1 = new Map<string, number>([
+      ['a', 1],
+      ['b', 2],
+    ]);
+    const m2 = new Map<string, number>([
+      ['b', 2],
+      ['a', 1],
+    ]);
+
+    // When / Then
+    expect(canonicalStringify(m1)).toBe('Map{"a":1,"b":2}');
+    expect(canonicalStringify(m1)).toBe(canonicalStringify(m2));
+    expect(canonicalStringify(m1)).not.toBe(canonicalStringify({ a: 1, b: 2 }));
+  });
+
+  it('should serialize Sets order-insensitively and distinct from arrays', () => {
+    expect(canonicalStringify(new Set([2, 1, 3]))).toBe('Set[1,2,3]');
+    expect(canonicalStringify(new Set([1, 2]))).not.toBe(canonicalStringify([1, 2]));
+  });
+
+  it('should stay deterministic when distinct Map keys serialize identically', () => {
+    // Given — different references, identical canonical form (parity with the
+    // cache package's stableStringify fix)
+    const k1 = { a: 1 };
+    const k2 = { a: 1 };
+    const first = new Map<unknown, string>([
+      [k1, 'x'],
+      [k2, 'y'],
+    ]);
+    const second = new Map<unknown, string>([
+      [k2, 'y'],
+      [k1, 'x'],
+    ]);
+
+    // When / Then
+    expect(canonicalStringify(first)).toBe(canonicalStringify(second));
+  });
 });

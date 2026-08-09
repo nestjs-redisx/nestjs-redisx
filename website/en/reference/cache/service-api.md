@@ -96,7 +96,8 @@ When the cache key is "this whole request body", use `hashKey()` — the same
 **frozen** algorithm the `@Cached` decorator uses for auto-generated keys:
 object keys are sorted recursively (so `{a:1,b:2}` and `{b:2,a:1}` produce the
 same key), the result is SHA-256 truncated to 16 hex chars. No hand-rolled
-"sort keys then hash" helpers needed:
+"sort keys then hash" helpers needed. Maps and Sets are serialized deterministically
+(sorted, type-prefixed), so distinct Maps/Sets produce distinct keys.
 
 <<< @/apps/demo/src/plugins/cache/hash-key.usage.ts{typescript}
 

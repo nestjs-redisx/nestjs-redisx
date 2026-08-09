@@ -60,4 +60,76 @@ describe('hashKey', () => {
       expect(hashKey(input)).toBe(expected);
     });
   });
+
+  describe('Map and Set support', () => {
+    it('distinct Maps no longer collide (previously ALL Maps serialized to {})', () => {
+      // Given / When / Then
+      expect(hashKey(new Map([['a', 1]]))).not.toBe(hashKey(new Map([['b', 999]])));
+      expect(hashKey(new Map([['a', 1]]))).not.toBe(hashKey({}));
+      expect(hashKey(new Set(['x']))).not.toBe(hashKey({}));
+    });
+
+    it('Map is type-distinct from an equivalent plain object', () => {
+      expect(hashKey(new Map([['a', 1]]))).not.toBe(hashKey({ a: 1 }));
+    });
+
+    it('Map is insertion-order-insensitive', () => {
+      // Given
+      const m1 = new Map<string, number>([
+        ['a', 1],
+        ['b', 2],
+      ]);
+      const m2 = new Map<string, number>([
+        ['b', 2],
+        ['a', 1],
+      ]);
+
+      // When / Then
+      expect(hashKey(m1)).toBe(hashKey(m2));
+    });
+
+    it('Set is order-insensitive and distinct from an array', () => {
+      expect(hashKey(new Set([1, 2, 3]))).toBe(hashKey(new Set([3, 2, 1])));
+      expect(hashKey(new Set([1, 2]))).not.toBe(hashKey([1, 2]));
+    });
+
+    it('nested Map/Set inside objects are canonicalized too', () => {
+      // Given
+      const a = { tags: new Set(['b', 'a']), meta: new Map([['k', 1]]) };
+      const b = { meta: new Map([['k', 1]]), tags: new Set(['a', 'b']) };
+
+      // When / Then
+      expect(hashKey(a)).toBe(hashKey(b));
+    });
+
+    it('Map stays deterministic when distinct keys serialize identically', () => {
+      // Given — two different object references with the same canonical form.
+      // Sorting entries by key alone would leave the tie broken by insertion
+      // order; the (key, value) comparator makes both orderings converge.
+      const k1 = { a: 1 };
+      const k2 = { a: 1 };
+      const first = new Map<unknown, string>([
+        [k1, 'x'],
+        [k2, 'y'],
+      ]);
+      const second = new Map<unknown, string>([
+        [k2, 'y'],
+        [k1, 'x'],
+      ]);
+
+      // When / Then
+      expect(hashKey(first)).toBe(hashKey(second));
+    });
+
+    describe('FROZEN ALGORITHM (golden vectors for Map/Set)', () => {
+      // Same contract as above: do NOT update these values - a changed
+      // algorithm ships under a new name.
+      it.each([
+        [new Map([['a', 1]]), '3a92e341c499c7ab'],
+        [new Set([1, 2, 3]), '25cef1d27a85c7be'],
+      ])('hashKey(%o) === %s', (input, expected) => {
+        expect(hashKey(input)).toBe(expected);
+      });
+    });
+  });
 });
