@@ -54,13 +54,19 @@ export function stableStringify(value: unknown): string {
   }
 
   // Map: serialize entries with canonicalized keys AND values, sorted by the
-  // serialized key - deterministic regardless of insertion order. The 'Map{'
+  // serialized (key, value) pair - deterministic regardless of insertion
+  // order. Sorting by key alone is not enough: distinct object keys can share
+  // the same canonical serialization (e.g. two {a:1} references), leaving the
+  // comparator to return 0 and the tie broken by insertion order. The 'Map{'
   // prefix keeps new Map([['a',1]]) distinct from the plain object {a:1}.
   // (Previously Maps fell through to the plain-object branch and ALL of them
   // serialized to '{}' - every Map collided on one cache key.)
   if (value instanceof Map) {
     const entries = [...value.entries()].map(([k, v]) => [stableStringify(k), stableStringify(v)] as const);
-    entries.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+    entries.sort(([keyA, valueA], [keyB, valueB]) => {
+      if (keyA !== keyB) return keyA < keyB ? -1 : 1;
+      return valueA < valueB ? -1 : valueA > valueB ? 1 : 0;
+    });
     return 'Map{' + entries.map(([k, v]) => k + ':' + v).join(',') + '}';
   }
 

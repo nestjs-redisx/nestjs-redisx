@@ -93,4 +93,22 @@ describe('canonicalStringify', () => {
     expect(canonicalStringify(new Set([2, 1, 3]))).toBe('Set[1,2,3]');
     expect(canonicalStringify(new Set([1, 2]))).not.toBe(canonicalStringify([1, 2]));
   });
+
+  it('should stay deterministic when distinct Map keys serialize identically', () => {
+    // Given — different references, identical canonical form (parity with the
+    // cache package's stableStringify fix)
+    const k1 = { a: 1 };
+    const k2 = { a: 1 };
+    const first = new Map<unknown, string>([
+      [k1, 'x'],
+      [k2, 'y'],
+    ]);
+    const second = new Map<unknown, string>([
+      [k2, 'y'],
+      [k1, 'x'],
+    ]);
+
+    // When / Then
+    expect(canonicalStringify(first)).toBe(canonicalStringify(second));
+  });
 });

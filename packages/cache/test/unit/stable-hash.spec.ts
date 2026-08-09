@@ -102,6 +102,25 @@ describe('hashKey', () => {
       expect(hashKey(a)).toBe(hashKey(b));
     });
 
+    it('Map stays deterministic when distinct keys serialize identically', () => {
+      // Given — two different object references with the same canonical form.
+      // Sorting entries by key alone would leave the tie broken by insertion
+      // order; the (key, value) comparator makes both orderings converge.
+      const k1 = { a: 1 };
+      const k2 = { a: 1 };
+      const first = new Map<unknown, string>([
+        [k1, 'x'],
+        [k2, 'y'],
+      ]);
+      const second = new Map<unknown, string>([
+        [k2, 'y'],
+        [k1, 'x'],
+      ]);
+
+      // When / Then
+      expect(hashKey(first)).toBe(hashKey(second));
+    });
+
     describe('FROZEN ALGORITHM (golden vectors for Map/Set)', () => {
       // Same contract as above: do NOT update these values - a changed
       // algorithm ships under a new name.

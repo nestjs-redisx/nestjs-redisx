@@ -50,7 +50,12 @@ export function canonicalStringify(value: unknown): string {
   // not drift semantically from the cache package's stableStringify.)
   if (value instanceof Map) {
     const entries = [...value.entries()].map(([k, v]) => [canonicalStringify(k), canonicalStringify(v)] as const);
-    entries.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+    // Sort by the serialized (key, value) pair — key alone leaves ties (distinct
+    // object keys with identical canonical form) broken by insertion order.
+    entries.sort(([keyA, valueA], [keyB, valueB]) => {
+      if (keyA !== keyB) return keyA < keyB ? -1 : 1;
+      return valueA < valueB ? -1 : valueA > valueB ? 1 : 0;
+    });
     return 'Map{' + entries.map(([k, v]) => k + ':' + v).join(',') + '}';
   }
 
