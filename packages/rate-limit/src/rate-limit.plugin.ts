@@ -29,6 +29,8 @@ const DEFAULT_RATE_LIMIT_CONFIG: Required<Omit<IRateLimitPluginOptions, 'isGloba
     retryAfter: 'Retry-After',
   },
   errorPolicy: 'fail-closed',
+  trustProxy: false,
+  registerExceptionFilter: true,
 };
 
 /**
@@ -85,6 +87,8 @@ export class RateLimitPlugin implements IRedisXPlugin {
       includeHeaders: options.includeHeaders ?? DEFAULT_RATE_LIMIT_CONFIG.includeHeaders,
       headers: { ...DEFAULT_RATE_LIMIT_CONFIG.headers, ...options.headers },
       errorPolicy: options.errorPolicy ?? DEFAULT_RATE_LIMIT_CONFIG.errorPolicy,
+      trustProxy: options.trustProxy ?? DEFAULT_RATE_LIMIT_CONFIG.trustProxy,
+      registerExceptionFilter: options.registerExceptionFilter ?? DEFAULT_RATE_LIMIT_CONFIG.registerExceptionFilter,
       skip: options.skip,
       errorFactory: options.errorFactory,
     };
@@ -109,7 +113,7 @@ export class RateLimitPlugin implements IRedisXPlugin {
           useValue: RateLimitPlugin.mergeDefaults(this.options),
         };
 
-    return [
+    const providers: Provider[] = [
       optionsProvider,
       // Plugin-specific Redis driver (resolves named client)
       {
@@ -130,9 +134,17 @@ export class RateLimitPlugin implements IRedisXPlugin {
       Reflector,
       // Guard must be in providers for proper DI
       RateLimitGuard,
-      // Global exception filter to return 429 instead of 500
-      { provide: APP_FILTER, useClass: RateLimitExceptionFilter },
     ];
+
+    // Global exception filter (429 for exceeded, 503 for store failure).
+    // Opt-out via registerExceptionFilter: false to use your own filter and
+    // response envelope. Construction-time flag: honored for synchronous
+    // construction; registerAsync keeps the default (registered).
+    if (this.options.registerExceptionFilter !== false) {
+      providers.push({ provide: APP_FILTER, useClass: RateLimitExceptionFilter });
+    }
+
+    return providers;
   }
 
   getExports(): Array<string | symbol | Provider> {

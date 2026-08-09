@@ -5,6 +5,8 @@ import { RATE_LIMIT_PLUGIN_OPTIONS, RATE_LIMIT_SERVICE, RATE_LIMIT_STORE, RATE_L
 import { RateLimitService } from '../../src/rate-limit/application/services/rate-limit.service';
 import { RedisRateLimitStoreAdapter } from '../../src/rate-limit/infrastructure/adapters/redis-rate-limit-store.adapter';
 import { CLIENT_MANAGER, REDIS_CLIENTS_INITIALIZATION } from '@nestjs-redisx/core';
+import { APP_FILTER } from '@nestjs/core';
+import { RateLimitExceptionFilter } from '../../src/rate-limit/api/filters/rate-limit-exception.filter';
 import type { IRateLimitPluginOptions } from '../../src/shared/types';
 
 describe('RateLimitPlugin', () => {
@@ -182,6 +184,26 @@ describe('RateLimitPlugin', () => {
       // Then
       // Options, Driver, Store, Service, Reflector, RateLimitGuard, ExceptionFilter
       expect(providers).toHaveLength(7);
+    });
+
+    it('should register the global exception filter (APP_FILTER) by default', () => {
+      // Given / When
+      const providers = new RateLimitPlugin().getProviders();
+
+      // Then
+      const filter = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === APP_FILTER);
+      expect(filter).toBeDefined();
+      expect((filter as { useClass: unknown }).useClass).toBe(RateLimitExceptionFilter);
+    });
+
+    it('should NOT register the exception filter when registerExceptionFilter is false', () => {
+      // Given / When
+      const providers = new RateLimitPlugin({ registerExceptionFilter: false }).getProviders();
+
+      // Then — opt-out leaves rate-limit errors to the host app's own filters
+      const filter = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === APP_FILTER);
+      expect(filter).toBeUndefined();
+      expect(providers).toHaveLength(6);
     });
   });
 

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi, type MockedObject } from 'vitest'
 import type { ArgumentsHost } from '@nestjs/common';
 import { HttpStatus } from '@nestjs/common';
 import { RateLimitExceptionFilter } from '../../src/rate-limit/api/filters/rate-limit-exception.filter';
-import { RateLimitExceededError } from '../../src/shared/errors';
+import { RateLimitExceededError, RateLimitScriptError } from '../../src/shared/errors';
 import type { IRateLimitResult } from '../../src/shared/types';
 
 describe('RateLimitExceptionFilter', () => {
@@ -193,6 +193,32 @@ describe('RateLimitExceptionFilter', () => {
 
       // When/Then
       expect(() => filterWithoutAdapter.catch(error, mockHost)).toThrow(/HttpAdapterHost is not initialized/);
+    });
+  });
+
+  describe('store failure (RateLimitScriptError)', () => {
+    it('should map a store failure to 503, not an uncaught 500', () => {
+      // Given — fail-closed raises RateLimitScriptError when Redis is down
+      const error = new RateLimitScriptError('Rate limit check failed: connection refused');
+
+      // When
+      filter.catch(error, mockHost);
+
+      // Then — clean 503 Service Unavailable
+      expect(mockHttpAdapter.reply).toHaveBeenCalledWith(mockResponse, expect.objectContaining({ statusCode: HttpStatus.SERVICE_UNAVAILABLE, error: 'Service Unavailable' }), HttpStatus.SERVICE_UNAVAILABLE);
+    });
+
+    it('should not leak internal error text in the 503 body', () => {
+      // Given
+      const error = new RateLimitScriptError('Rate limit check failed: NOSCRIPT secret internals');
+
+      // When
+      filter.catch(error, mockHost);
+
+      // Then
+      const body = mockHttpAdapter.reply.mock.calls[0][1];
+      expect(body.message).toBe('Rate limiting is temporarily unavailable');
+      expect(JSON.stringify(body)).not.toContain('NOSCRIPT');
     });
   });
 });

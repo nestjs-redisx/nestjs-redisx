@@ -164,20 +164,24 @@ export class RateLimitGuard implements CanActivate {
    * Get client IP address.
    */
   private getClientIp(request: Request & { ip?: string; ips?: string[] }): string {
-    // Check X-Forwarded-For header
-    const forwardedFor = (request.headers as unknown as Record<string, string>)['x-forwarded-for'];
-    if (forwardedFor) {
-      const ips = forwardedFor.split(',').map((ip) => ip.trim());
-      return ips[0] || 'unknown';
+    // Secure default: take the IP from the framework. `request.ip` respects the
+    // app's own trust-proxy configuration (Express `trust proxy` / Fastify
+    // `trustProxy`), so it is the real client IP and cannot be spoofed by a
+    // client-supplied header. Only read forwarding headers ourselves when the
+    // operator explicitly opts in via `trustProxy: true`.
+    if (this.config.trustProxy === true) {
+      const forwardedFor = (request.headers as unknown as Record<string, string>)['x-forwarded-for'];
+      if (forwardedFor) {
+        const ips = forwardedFor.split(',').map((ip) => ip.trim());
+        if (ips[0]) return ips[0];
+      }
+
+      const realIp = (request.headers as unknown as Record<string, string>)['x-real-ip'];
+      if (realIp) {
+        return realIp;
+      }
     }
 
-    // Check X-Real-IP header
-    const realIp = (request.headers as unknown as Record<string, string>)['x-real-ip'];
-    if (realIp) {
-      return realIp;
-    }
-
-    // Fall back to request.ip
     return request.ip || 'unknown';
   }
 

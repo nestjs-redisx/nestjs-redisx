@@ -75,10 +75,38 @@ export interface IRateLimitPluginOptions {
   /**
    * Error handling strategy.
    * - fail-open: Allow request on error (high availability)
-   * - fail-closed: Reject request on error (strict enforcement)
+   * - fail-closed: Reject request on error (strict enforcement) — the store
+   *   error surfaces as `RateLimitScriptError`, which the built-in filter maps
+   *   to `503 Service Unavailable` (not an uncaught 500).
    * @default 'fail-closed'
    */
   errorPolicy?: 'fail-open' | 'fail-closed';
+
+  /**
+   * Trust proxy-forwarded client IP headers (`X-Forwarded-For`, `X-Real-IP`)
+   * when the key is derived from the client IP.
+   *
+   * **Default `false` (secure).** With `false`, the IP is taken from the
+   * framework (`request.ip`), which is un-spoofable: if your app runs behind a
+   * proxy, configure the framework's own trust setting (Express `trust proxy`
+   * / Fastify `trustProxy`) and `request.ip` becomes the real client IP.
+   *
+   * Set `true` ONLY when a trusted proxy in front of you overwrites
+   * `X-Forwarded-For`; otherwise any client can spoof the header and mint a
+   * fresh rate-limit bucket per request (bypassing login/password-reset
+   * throttling).
+   * @default false
+   */
+  trustProxy?: boolean;
+
+  /**
+   * Register the built-in global exception filter (`APP_FILTER`) that maps
+   * rate-limit errors to HTTP responses (429 for exceeded, 503 for store
+   * failure). Set `false` to handle `RateLimitError` with your own filter and
+   * response envelope.
+   * @default true
+   */
+  registerExceptionFilter?: boolean;
 
   /**
    * Skip rate limiting for certain conditions.

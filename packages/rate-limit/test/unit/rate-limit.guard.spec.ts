@@ -161,23 +161,39 @@ describe('RateLimitGuard', () => {
       expect(mockService.check).toHaveBeenCalledWith('192.168.1.1', expect.any(Object));
     });
 
-    it('should extract IP from X-Forwarded-For header', async () => {
-      // Given
+    it('should IGNORE spoofable forwarding headers by default (secure default)', async () => {
+      // Given — a client tries to spoof its IP; trustProxy defaults to false
+      mockRequest.ip = '192.168.1.1';
       mockRequest.headers['x-forwarded-for'] = '10.0.0.1, 10.0.0.2';
-
-      // When
-      await guard.canActivate(mockContext);
-
-      // Then
-      expect(mockService.check).toHaveBeenCalledWith('10.0.0.1', expect.any(Object));
-    });
-
-    it('should extract IP from X-Real-IP header', async () => {
-      // Given
       mockRequest.headers['x-real-ip'] = '172.16.0.1';
 
       // When
       await guard.canActivate(mockContext);
+
+      // Then — the framework IP is used, not the attacker-controlled header
+      expect(mockService.check).toHaveBeenCalledWith('192.168.1.1', expect.any(Object));
+    });
+
+    it('should extract IP from X-Forwarded-For only when trustProxy is enabled', async () => {
+      // Given
+      const trusted = new RateLimitGuard(mockService, { ...config, trustProxy: true }, mockReflector, mockAdapterHost as any);
+      mockRequest.ip = '192.168.1.1';
+      mockRequest.headers['x-forwarded-for'] = '10.0.0.1, 10.0.0.2';
+
+      // When
+      await trusted.canActivate(mockContext);
+
+      // Then — leftmost forwarded IP
+      expect(mockService.check).toHaveBeenCalledWith('10.0.0.1', expect.any(Object));
+    });
+
+    it('should fall back to X-Real-IP under trustProxy when X-Forwarded-For is absent', async () => {
+      // Given
+      const trusted = new RateLimitGuard(mockService, { ...config, trustProxy: true }, mockReflector, mockAdapterHost as any);
+      mockRequest.headers['x-real-ip'] = '172.16.0.1';
+
+      // When
+      await trusted.canActivate(mockContext);
 
       // Then
       expect(mockService.check).toHaveBeenCalledWith('172.16.0.1', expect.any(Object));
