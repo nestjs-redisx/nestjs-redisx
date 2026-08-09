@@ -4,6 +4,12 @@ All notable changes to NestJS RedisX are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.1] - 2026-08-09
+
+### Fixed
+
+- `cache`: `{n}` tag-template interpolation is now applied in **all** proxy decorators, not just `@Cached`. In 1.9.0 `@Cached` interpolated static `tags` (`['user:{0}']` → `['user:42']`) but `@InvalidateTags` and `@InvalidateOn` still took them literally — so a value cached under tag `user:42` was never invalidated by `@InvalidateTags({ tags: ['user:{0}'] })` (which targeted the literal `user:{0}`, and even threw on the `{}` characters). All three decorators now share one `interpolateTags` implementation, so the tag written on read and the tag invalidated on write are produced identically. A cross-decorator round-trip test (cache write → invalidate → re-read misses) guards against the asymmetry regressing. The legacy interceptor decorators (`@Cacheable`/`@CacheEvict`) use the named-parameter (`{param}`) syntax and are internally consistent (both literal); templated tags there remain a separate, non-dangerous feature gap.
+
 ## [1.9.0] - 2026-08-09
 
 ### Security

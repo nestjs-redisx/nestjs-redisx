@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { InvalidateTags, type IInvalidateTagsOptions } from '../../src/cache/api/decorators/invalidate-tags.decorator';
+import { registerCacheServiceGetter } from '../../src/cache/api/decorators/cached.decorator';
 import { INVALIDATE_TAGS_KEY } from '../../src/shared/constants';
 
 describe('@InvalidateTags decorator', () => {
@@ -199,6 +200,65 @@ describe('@InvalidateTags decorator', () => {
       if (typeof metadata.tags === 'function') {
         expect(metadata.tags(42, 'product')).toEqual(['product:42', 'product:all']);
       }
+    });
+  });
+
+  describe('runtime tag interpolation (symmetry with @Cached)', () => {
+    let invalidateTags: ReturnType<typeof vi.fn>;
+
+    const register = () => {
+      invalidateTags = vi.fn().mockResolvedValue(0);
+      registerCacheServiceGetter(() => ({ invalidateTags }) as never);
+    };
+
+    afterEach(() => {
+      registerCacheServiceGetter(null as unknown as () => never);
+    });
+
+    it('should interpolate {n} placeholders in STATIC tags (the reported half-fix bug)', async () => {
+      // Given — the exact scenario: @Cached would write tag 'user:42', so
+      // @InvalidateTags must invalidate 'user:42', not the literal 'user:{0}'
+      register();
+      class Svc {
+        @InvalidateTags({ tags: ['user:{0}', 'users'] })
+        async update(id: string): Promise<void> {}
+      }
+
+      // When
+      await new Svc().update('42');
+
+      // Then
+      expect(invalidateTags).toHaveBeenCalledWith(['user:42', 'users']);
+    });
+
+    it('should still resolve function tags', async () => {
+      // Given
+      register();
+      class Svc {
+        @InvalidateTags({ tags: (id: string) => [`user:${id}`] })
+        async update(id: string): Promise<void> {}
+      }
+
+      // When
+      await new Svc().update('7');
+
+      // Then
+      expect(invalidateTags).toHaveBeenCalledWith(['user:7']);
+    });
+
+    it('should leave non-template static tags untouched', async () => {
+      // Given
+      register();
+      class Svc {
+        @InvalidateTags({ tags: ['users', 'products'] })
+        async update(): Promise<void> {}
+      }
+
+      // When
+      await new Svc().update();
+
+      // Then
+      expect(invalidateTags).toHaveBeenCalledWith(['users', 'products']);
     });
   });
 });

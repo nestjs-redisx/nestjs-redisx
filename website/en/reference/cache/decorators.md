@@ -250,7 +250,7 @@ template like `user:{0}` is interpolated (not stored as the literal string):
 async getUser(id: string) { }
 ```
 
-For anything beyond positional args, use a function:
+The same {n} interpolation applies to @InvalidateTags and @InvalidateOn static tags, so a tag written on read is the tag invalidated on write. For anything beyond positional args, use a function:
 
 ```typescript
 @Cached({

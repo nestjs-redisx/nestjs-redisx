@@ -7,7 +7,7 @@
  */
 
 import 'reflect-metadata';
-import { getCacheService } from '../../../cache/api/decorators/cached.decorator';
+import { getCacheService, interpolateTags } from '../../../cache/api/decorators/cached.decorator';
 
 export const INVALIDATE_ON_OPTIONS = Symbol.for('INVALIDATE_ON_OPTIONS');
 
@@ -168,7 +168,9 @@ function resolveTags(tags: string[] | ((result: unknown, args: unknown[]) => str
     return tags(result, args);
   }
 
-  return tags;
+  // Static tags interpolate {n} placeholders over the method args, matching
+  // @Cached — so a tag written on read is invalidated here, not silently missed.
+  return interpolateTags(tags, args);
 }
 
 /**

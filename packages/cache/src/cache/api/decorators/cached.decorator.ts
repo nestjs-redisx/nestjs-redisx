@@ -380,20 +380,32 @@ function sanitizeForKey(value: string): string {
 }
 
 /**
- * Resolves the `tags` option to concrete tag strings.
+ * Resolves a `tags` option to concrete tag strings.
  *
  * A function receives the call arguments. A static array supports the SAME
  * `{n}` template placeholders as `key` — so `tags: ['user:{0}']` becomes
  * `['user:42']` instead of the literal `user:{0}` (which would never match on
- * invalidation).
+ * invalidation). Shared by `@Cached` and `@InvalidateTags` so the tag written
+ * on read and the tag invalidated on write are produced identically.
  */
-function resolveTags(tags: ICachedOptions['tags'], args: unknown[]): string[] | undefined {
+export function resolveTags(tags: string[] | ((...args: unknown[]) => string[]) | undefined, args: unknown[]): string[] | undefined {
   if (tags === undefined) {
     return undefined;
   }
   if (typeof tags === 'function') {
     return tags(...args);
   }
+  return interpolateTags(tags, args);
+}
+
+/**
+ * Interpolates `{n}` positional placeholders in each static tag with the
+ * method arguments — the single source of truth shared by every proxy-based
+ * decorator (`@Cached`, `@InvalidateTags`, `@InvalidateOn`) so the tag written
+ * on read and the tag invalidated on write are produced IDENTICALLY. Tags
+ * without a `{` are returned untouched.
+ */
+export function interpolateTags(tags: string[], args: unknown[]): string[] {
   return tags.map((tag) => (tag.includes('{') ? interpolateKey(tag, args) : tag));
 }
 

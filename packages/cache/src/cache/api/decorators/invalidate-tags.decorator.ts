@@ -7,7 +7,7 @@
 
 import { Logger } from '@nestjs/common';
 import 'reflect-metadata';
-import { getCacheService } from './cached.decorator';
+import { getCacheService, interpolateTags } from './cached.decorator';
 import { INVALIDATE_TAGS_KEY } from '../../../shared/constants';
 
 const logger = new Logger('InvalidateTags');
@@ -58,8 +58,10 @@ export function InvalidateTags(options: IInvalidateTagsOptions): MethodDecorator
     descriptor.value = async function (...args: unknown[]): Promise<unknown> {
       const cacheService = getCacheService();
 
-      // Resolve tags
-      const tags = typeof options.tags === 'function' ? options.tags(...args) : options.tags;
+      // Resolve tags. Static tags interpolate {n} placeholders exactly like
+      // @Cached, so the tag written on read (@Cached) and the tag invalidated
+      // here match — otherwise invalidation silently no-ops.
+      const tags = typeof options.tags === 'function' ? options.tags(...args) : interpolateTags(options.tags, args);
 
       // Invalidate BEFORE if configured
       if (when === 'before' && cacheService && tags.length > 0) {
