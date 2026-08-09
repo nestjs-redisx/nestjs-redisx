@@ -84,6 +84,9 @@ Single instance (default):
 
 ```typescript
 { clients: { host: 'localhost', port: 6379 } }
+// or a single connection URL (12-factor / REDIS_URL): rediss:// enables TLS,
+// a trailing /N selects the DB; explicit fields override URL-parsed ones
+{ clients: { url: 'redis://user:pass@host:6379/0' } }
 ```
 
 Redis Cluster:
@@ -378,8 +381,13 @@ new RateLimitPlugin({
   defaultPoints: 100,                   // max requests
   defaultDuration: 60,                  // time window in seconds
   keyPrefix: 'rl:',
+  errorPolicy: 'fail-closed',           // store down -> reject as 503 (or 'fail-open' to allow)
+  trustProxy: false,                    // default: use request.ip (un-spoofable); true reads X-Forwarded-For
+  registerExceptionFilter: true,        // false -> handle RateLimitError with your own filter
 })
 ```
+
+IP keying is secure by default: with `trustProxy: false` the client IP is taken from the framework (`request.ip`, honoring the app's own trust-proxy config), NOT from client-supplied `X-Forwarded-For` / `X-Real-IP` — so a client cannot spoof the header to mint a fresh bucket and bypass the limit. Enable `trustProxy: true` only behind a trusted proxy that overwrites those headers. On a store (Redis) failure under `fail-closed`, the built-in filter returns `503 Service Unavailable` (not an uncaught 500); `RateLimitScriptError` is mapped by catching the base `RateLimitError`. Set `registerExceptionFilter: false` to use your own filter/response envelope.
 
 ### @RateLimit Decorator + Guard
 

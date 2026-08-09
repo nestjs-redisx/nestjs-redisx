@@ -50,8 +50,21 @@ new RateLimitPlugin({
     retryAfter: 'Retry-After',
   },
 
-  // Error Handling
+  // Error Handling. 'fail-closed' rejects when the store is unavailable —
+  // surfaced as a clean 503 Service Unavailable by the built-in filter (not a
+  // 500). 'fail-open' allows the request instead.
   errorPolicy: 'fail-closed', // 'fail-closed' | 'fail-open'
+
+  // Trust proxy-forwarded IP headers when the key is derived from the client
+  // IP. Default false (secure): the IP comes from the framework (request.ip),
+  // which cannot be spoofed by a client header. Enable ONLY behind a trusted
+  // proxy that overwrites X-Forwarded-For — otherwise a client can spoof the
+  // header and mint a fresh bucket per request, bypassing the limit.
+  trustProxy: false,
+
+  // Register the built-in global exception filter (APP_FILTER). Set false to
+  // map RateLimitError to HTTP with your own filter / response envelope.
+  registerExceptionFilter: true,
 
   skip: (context) => {
     const req = context.switchToHttp().getRequest();

@@ -4,6 +4,27 @@ All notable changes to NestJS RedisX are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-08-09
+
+### Security
+
+- `rate-limit`: **client IP is no longer derived from spoofable forwarding headers by default.** `getClientIp` previously read `X-Forwarded-For` / `X-Real-IP` unconditionally, so any client could set the header and mint a fresh rate-limit bucket per request — bypassing throttling on login/password-reset endpoints. The IP now comes from the framework (`request.ip`, which honors the app's own `trust proxy` / `trustProxy` setting and is un-spoofable). Reading forwarding headers is opt-in via the new `trustProxy: true` (enable only behind a trusted proxy that overwrites them).
+
+### Changed
+
+- `rate-limit`: a store (Redis) failure under the default `errorPolicy: 'fail-closed'` now returns **`503 Service Unavailable`** instead of an uncaught **`500`**. The built-in filter previously only caught `RateLimitExceededError`; `RateLimitScriptError` (raised on store failure) is not a subclass, so every request 500'd while Redis was down. The filter now catches the base `RateLimitError` and maps exceeded → 429, store failure → 503 (matching the already-documented behavior).
+- `cache`: `@Cached` static `tags` now interpolate `{n}` argument placeholders like `key` does — `tags: ['user:{0}']` becomes `['user:42']` instead of the literal `user:{0}` (which silently never matched on invalidation).
+
+### Added
+
+- `core`: single connection config accepts a **`url`** (e.g. `REDIS_URL`) — `redis://user:pass@host:6379/0`, `rediss://` for TLS, DB number in the path. Parsed into `host`/`port`/`username`/`password`/`db`/`tls`; explicitly-set fields override URL-parsed ones. Exposes `parseRedisUrl` / `normalizeConnectionConfig`. Removes the need to hand-parse `REDIS_URL` for Heroku/Railway/Upstash/docker-compose deployments.
+- `rate-limit`: new options `trustProxy` (default `false`) and `registerExceptionFilter` (default `true`, set `false` to handle `RateLimitError` with your own filter and response envelope).
+- `core`: `useFactory` in `forRootAsync` / plugin `registerAsync` is now typed `(...args: any[])` (matching NestJS) so a strongly-typed factory such as `(config: ConfigService) => ({ ... })` compiles under `strict` — previously `unknown[]` rejected it via parameter contravariance and forced an in-body cast.
+
+### Fixed
+
+- `cache`: `@Cached` on a method that throws (e.g. a `NotFoundException` from a "find or throw 404" method) previously logged the error as a cache failure and, fail-open, **executed the method a second time** (double DB hit). Loader errors are now told apart from cache-infrastructure errors: the original error propagates unchanged, the method runs once, and nothing is logged; fail-open re-execution happens only on a genuine cache failure (Redis unreachable, serialization).
+
 ## [1.8.1] - 2026-08-08
 
 ### Fixed

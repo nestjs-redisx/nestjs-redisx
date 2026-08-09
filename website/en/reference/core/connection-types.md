@@ -71,18 +71,24 @@ RedisModule.forRoot({
 
 ### Connection URL
 
-For cloud services that provide connection URLs:
+12-factor platforms (Heroku, Railway, Upstash, docker-compose, `.env`) expose a
+single `REDIS_URL`. Pass it directly as `url` — no manual parsing:
 
 ```typescript
-// Parse URL manually or use environment variables
-const redisUrl = new URL(process.env.REDIS_URL);
+RedisModule.forRoot({
+  clients: { url: process.env.REDIS_URL }, // redis://user:pass@host:6379/0
+})
+```
 
+`rediss://` enables TLS, and a database number in the path (`…/2`) selects the
+DB. Any field also set explicitly overrides the value parsed from the URL:
+
+```typescript
 RedisModule.forRoot({
   clients: {
-    host: redisUrl.hostname,
-    port: parseInt(redisUrl.port),
-    password: redisUrl.password,
-    tls: redisUrl.protocol === 'rediss:' ? { enabled: true } : undefined,
+    url: 'rediss://:secret@cache.upstash.io:6379/0',
+    keyPrefix: 'myapp:',      // merged on top of the URL
+    tls: { rejectUnauthorized: false }, // merged over the rediss:// TLS
   },
 })
 ```

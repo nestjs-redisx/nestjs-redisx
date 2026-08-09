@@ -56,6 +56,24 @@ Require `DeclarativeCacheInterceptor` in the request pipeline. Only work in **co
 
 Details on each item from the table above.
 
+### Errors From the Method vs the Cache
+
+`@Cached` distinguishes the two. If the decorated method itself throws (e.g. a
+`NotFoundException` from a "find or throw 404" method), the **original error
+propagates unchanged**, the method runs **once** (no double DB hit), and it is
+**not** logged as a cache error. Fail-open — re-running the method without the
+cache — happens only on a genuine cache-infrastructure error (Redis
+unreachable, serialization failure). So you can wrap a throwing method directly:
+
+```typescript
+@Cached({ key: 'user:{0}', ttl: 300 })
+async getUser(id: string): Promise<User> {
+  const user = await this.repo.findById(id);
+  if (!user) throw new NotFoundException(); // propagates as 404, method runs once
+  return user;
+}
+```
+
 ### Callback Extraction — Standard JS Caveat
 
 Extracting a method as a standalone function loses `this` context. This is standard JavaScript behavior, not specific to RedisX:
@@ -220,6 +238,19 @@ async getOrgUser(orgId: string, userId: string) { }
 ```
 
 ### Dynamic Tags
+
+Static tags support the same `{n}` argument placeholders as `key`, so a
+template like `user:{0}` is interpolated (not stored as the literal string):
+
+```typescript
+@Cached({
+  key: 'user:{0}',
+  tags: ['user:{0}', 'users'], // -> ['user:42', 'users']
+})
+async getUser(id: string) { }
+```
+
+For anything beyond positional args, use a function:
 
 ```typescript
 @Cached({

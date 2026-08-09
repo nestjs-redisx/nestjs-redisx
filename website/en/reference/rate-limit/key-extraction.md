@@ -32,24 +32,33 @@ Limits by client IP address.
 @RateLimit({ key: 'ip', points: 100 })
 ```
 
-### Extracting Real IP
+### Extracting Real IP (behind a proxy)
 
-Behind proxies/load balancers:
+By default the IP comes from the framework (`request.ip`) and is **not** taken
+from client-supplied headers. This is secure: a client cannot spoof
+`X-Forwarded-For` to get a fresh bucket per request (which would bypass the
+limit on login/password-reset endpoints).
+
+When you run behind a proxy or load balancer, tell the **framework** to trust
+it — then `request.ip` becomes the real, un-spoofable client IP:
 
 ```typescript
-// Trust X-Forwarded-For header
-app.set('trust proxy', true);
+// Express
+app.set('trust proxy', 1); // number of proxies in front of you
 
-// Or configure custom extraction
-new RateLimitPlugin({
-  defaultKeyExtractor: (ctx) => {
-    const req = ctx.switchToHttp().getRequest();
-    return req.headers['x-real-ip'] ||
-           req.headers['x-forwarded-for']?.split(',')[0] ||
-           req.ip;
-  },
-})
+// Fastify
+// new FastifyAdapter({ trustProxy: true })
 ```
+
+::: danger Do not blindly trust forwarding headers
+`trustProxy: true` on the plugin makes it read `X-Forwarded-For` / `X-Real-IP`
+directly. Enable it ONLY when a trusted proxy overwrites those headers; a
+public-facing app that trusts them lets any client spoof its IP.
+
+```typescript
+new RateLimitPlugin({ trustProxy: true }) // opt-in, behind a trusted proxy only
+```
+:::
 
 ### When to Use
 
