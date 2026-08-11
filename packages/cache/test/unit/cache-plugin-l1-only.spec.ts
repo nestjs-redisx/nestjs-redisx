@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { Provider } from '@nestjs/common';
 import { REDIS_DRIVER } from '@nestjs-redisx/core';
 
@@ -73,6 +73,38 @@ describe('CachePlugin — l1-only wiring', () => {
 
       // When the options factory resolves — Then it fails fast
       await expect(optionsFactory(providers)()).rejects.toThrow(CacheConfigError);
+    });
+  });
+
+  describe('l1-l2 driver provider + imports', () => {
+    it('driver factory resolves the named client from the manager', async () => {
+      // Given the default (l1-l2) wiring with a named client
+      const provider = byToken(new CachePlugin({ client: 'primary' }).getProviders(), CACHE_REDIS_DRIVER);
+      const fakeDriver = { isConnected: () => true };
+      const manager = { getClient: vi.fn().mockResolvedValue(fakeDriver) };
+
+      // When the driver factory runs
+      const result = await provider.useFactory(manager, undefined, { client: 'primary' });
+
+      // Then it resolves the named client
+      expect(manager.getClient).toHaveBeenCalledWith('primary');
+      expect(result).toBe(fakeDriver);
+    });
+
+    it('driver factory rethrows a clear error when the client is not found', async () => {
+      // Given the default client and a manager that cannot resolve it
+      const provider = byToken(new CachePlugin().getProviders(), CACHE_REDIS_DRIVER);
+      const manager = { getClient: vi.fn().mockRejectedValue(new Error('missing')) };
+
+      // When / Then
+      await expect(provider.useFactory(manager, undefined, {})).rejects.toThrow(/Redis client "default" not found/);
+    });
+
+    it('getImports returns [] by default and the async imports when provided', () => {
+      class DummyModule {}
+      expect(new CachePlugin().getImports()).toEqual([]);
+      const plugin = CachePlugin.registerAsync({ imports: [DummyModule], useFactory: () => ({}) });
+      expect(plugin.getImports()).toEqual([DummyModule]);
     });
   });
 });

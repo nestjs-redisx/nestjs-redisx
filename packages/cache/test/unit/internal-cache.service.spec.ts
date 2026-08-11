@@ -1344,4 +1344,21 @@ describe('CacheService (Internal)', () => {
       await expect(sieService.getOrSet('calc:k9', vi.fn().mockResolvedValue('v'), { staleIfError: { enabled: true, window: -5 } })).rejects.toThrow(/staleIfError window/);
     });
   });
+
+  describe('deleteMany in l1-only mode', () => {
+    it('deletes each key via the L2 store instead of the driver pipeline', async () => {
+      // Given an l1-only service (the L2 tier is the in-memory store, no driver)
+      const l1OnlyService = new CacheService(mockDriver, mockL1Store, mockL2Store, mockStampede, mockTagIndex, mockSwrManager, { ...options, mode: 'l1-only' });
+      mockL2Store.delete.mockResolvedValue(true);
+
+      // When
+      const deleted = await l1OnlyService.deleteMany(['a', 'b']);
+
+      // Then — per-key l2Store.delete, and the driver pipeline is NOT used
+      expect(deleted).toBe(2);
+      expect(mockL2Store.delete).toHaveBeenCalledWith('a');
+      expect(mockL2Store.delete).toHaveBeenCalledWith('b');
+      expect(mockDriver.pipeline).not.toHaveBeenCalled();
+    });
+  });
 });
