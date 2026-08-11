@@ -25,11 +25,13 @@ const describeIntegration = skipIntegration ? describe.skip : describe;
 
 const REDIS_HOST = process.env.REDIS_HOST || 'localhost';
 const REDIS_PORT = Number(process.env.REDIS_PORT || 6379);
+// Isolated Redis DB so parallel integration files never flush each other's keys.
+const REDIS_DB = 4;
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 async function flushRedis(): Promise<void> {
-  const client = new Redis({ host: REDIS_HOST, port: REDIS_PORT, lazyConnect: true });
+  const client = new Redis({ host: REDIS_HOST, port: REDIS_PORT, db: REDIS_DB, lazyConnect: true });
   await client.connect();
   await client.flushdb();
   await client.quit();
@@ -45,7 +47,7 @@ async function createService(fallback: 'load' | 'error' | 'null'): Promise<{ mod
             stampede: { enabled: true, lockTimeout: 5000, waitTimeout: 200, fallback },
           }),
         ],
-        useFactory: () => ({ clients: { type: 'single', host: REDIS_HOST, port: REDIS_PORT } }),
+        useFactory: () => ({ clients: { type: 'single', host: REDIS_HOST, port: REDIS_PORT, db: REDIS_DB } }),
       }),
     ],
   }).compile();

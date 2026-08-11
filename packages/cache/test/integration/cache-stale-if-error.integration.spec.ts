@@ -24,6 +24,8 @@ const describeIntegration = skipIntegration ? describe.skip : describe;
 
 const REDIS_HOST = process.env.REDIS_HOST || 'localhost';
 const REDIS_PORT = Number(process.env.REDIS_PORT || 6379);
+// Isolated Redis DB so parallel integration files never flush each other's keys.
+const REDIS_DB = 3;
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
@@ -36,7 +38,7 @@ describeIntegration('Cache stale-if-error (live Redis)', () => {
     app = await Test.createTestingModule({
       imports: [
         RedisModule.forRoot({
-          clients: { type: 'single', host: REDIS_HOST, port: REDIS_PORT },
+          clients: { type: 'single', host: REDIS_HOST, port: REDIS_PORT, db: REDIS_DB },
           plugins: [
             new CachePlugin({
               l1: { enabled: false },
@@ -48,7 +50,7 @@ describeIntegration('Cache stale-if-error (live Redis)', () => {
     }).compile();
     await app.init();
     cache = app.get<ICacheService>(CACHE_SERVICE);
-    redis = new Redis({ host: REDIS_HOST, port: REDIS_PORT });
+    redis = new Redis({ host: REDIS_HOST, port: REDIS_PORT, db: REDIS_DB });
   });
 
   beforeEach(async () => {

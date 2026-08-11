@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { RedisModule, CLIENT_MANAGER, type RedisClientManager } from '@nestjs-redisx/core';
 import { LocksPlugin, LOCK_SERVICE, type ILockService, LockAcquisitionError } from '@nestjs-redisx/locks';
-import { CachePlugin, CACHE_SERVICE, type ICacheService } from '@nestjs-redisx/cache';
+import { CachePlugin, CACHE_SERVICE, Cached, InvalidateTags, type ICacheService } from '@nestjs-redisx/cache';
 import { RateLimitPlugin, RATE_LIMIT_SERVICE, type IRateLimitService } from '@nestjs-redisx/rate-limit';
 import { IdempotencyPlugin, IDEMPOTENCY_SERVICE, type IIdempotencyService } from '@nestjs-redisx/idempotency';
 import { CircuitBreakerPlugin, CIRCUIT_BREAKER_SERVICE, CircuitBreakerOpenError, type ICircuitBreakerService } from '@nestjs-redisx/circuit-breaker';
@@ -271,6 +271,106 @@ describe('Plugins on the in-memory driver (no Redis)', () => {
       // Then — the next contender takes over atomically inside the script
       const takeover = await idem.checkAndLock('pay:crash', 'fp-crash');
       expect(takeover.isNew).toBe(true);
+    });
+  });
+
+  describe('CachePlugin URL / path keys (no Redis)', () => {
+    it('caches under a URL-shaped key by default (safe validation allows "/")', async () => {
+      // Given
+      app = await Test.createTestingModule({
+        imports: [
+          RedisModule.forRoot({
+            clients: { type: 'single', host: 'x', port: 1 },
+            global: { driver: MEMORY_DRIVER_TYPE },
+            plugins: [new CachePlugin({ l1: { enabled: false } })],
+          }),
+        ],
+      }).compile();
+      await app.init();
+      const cache = app.get<ICacheService>(CACHE_SERVICE);
+
+      const key = 'http:/api/users/123'; // URL-shaped, contains '/'
+      let loads = 0;
+
+      // When — write then read back through getOrSet
+      const first = await cache.getOrSet(key, async () => {
+        loads++;
+        return { id: 123 };
+      });
+      const second = await cache.getOrSet(key, async () => {
+        loads++;
+        return { id: 999 };
+      });
+
+      // Then — no CacheKeyError; the value is actually cached (loader ran once)
+      expect(first).toEqual({ id: 123 });
+      expect(second).toEqual({ id: 123 });
+      expect(loads).toBe(1);
+    });
+
+    it('rejects a URL key under strict validation (opt-in clean-key policy)', async () => {
+      // Given
+      app = await Test.createTestingModule({
+        imports: [
+          RedisModule.forRoot({
+            clients: { type: 'single', host: 'x', port: 1 },
+            global: { driver: MEMORY_DRIVER_TYPE },
+            plugins: [new CachePlugin({ l1: { enabled: false }, keys: { validation: 'strict' } })],
+          }),
+        ],
+      }).compile();
+      await app.init();
+      const cache = app.get<ICacheService>(CACHE_SERVICE);
+
+      // When / Then — writes fail-closed with a clear key error
+      await expect(cache.getOrSet('http:/api/users/123', async () => ({ id: 1 }))).rejects.toThrow(/invalid characters/i);
+    });
+  });
+
+  describe('@Cached + @InvalidateTags template symmetry (no Redis)', () => {
+    it('invalidates a tag written with {n} templates by @Cached via @InvalidateTags', async () => {
+      // Given — a real booted app so the decorators are wired to the running
+      // cache service. Both decorators use the SAME `{0}` tag template.
+      let dbHits = 0;
+
+      class ProfileService {
+        @Cached({ key: 'profile:{0}', tags: ['user:{0}'] })
+        async getProfile(id: string): Promise<{ id: string; hits: number }> {
+          dbHits++;
+          return { id, hits: dbHits };
+        }
+
+        @InvalidateTags({ tags: ['user:{0}'] })
+        async updateProfile(id: string): Promise<void> {
+          // no-op; the decorator invalidates tag `user:<id>` afterwards
+        }
+      }
+
+      app = await Test.createTestingModule({
+        imports: [
+          RedisModule.forRoot({
+            clients: { type: 'single', host: 'x', port: 1 },
+            global: { driver: MEMORY_DRIVER_TYPE },
+            plugins: [new CachePlugin()],
+          }),
+        ],
+      }).compile();
+      await app.init();
+      const svc = new ProfileService();
+
+      // When — first read misses (loads), second read hits the cache
+      await svc.getProfile('123');
+      await svc.getProfile('123');
+      expect(dbHits).toBe(1);
+
+      // And an update invalidates the tag the read wrote
+      await svc.updateProfile('123');
+
+      // Then — the next read MISSES again (tag actually matched and cleared).
+      // Before the fix @InvalidateTags cleared the literal 'user:{0}', so the
+      // 'user:123' entry survived and this stayed a hit (dbHits would be 1).
+      await svc.getProfile('123');
+      expect(dbHits).toBe(2);
     });
   });
 
