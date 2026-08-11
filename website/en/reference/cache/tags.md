@@ -19,6 +19,10 @@ Tag keys when caching, invalidate by tag later.
 
 Tags are stored as **Redis SETs**. Each tag maintains a set of cache keys that belong to it.
 
+::: tip In `mode: 'l1-only'`
+The tag index is kept in an **in-memory map** instead of Redis SETs — tag invalidation works the same, single-instance (per process).
+:::
+
 ```
 Redis structure:
   cache:_tag:users          → SET { "cache:user:1", "cache:user:2", "cache:users:list:1" }

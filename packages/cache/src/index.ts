@@ -45,7 +45,7 @@ export { generateKey, generateKeys, getParameterNames, getNestedValue, evaluateT
 export { CacheInterceptor as DeclarativeCacheInterceptor } from './decorators/cache.interceptor';
 
 // Types
-export type { ICachePluginOptions, IContextProvider, IWarmupKey, CacheSetOptions, CacheGetOrSetOptions, CacheStats, SwrEntry, StampedeResult, StampedeOptions, ScanResult, IInvalidationOptions, IInvalidationRuleProps } from './shared/types';
+export type { CacheMode, ICachePluginOptions, IContextProvider, IWarmupKey, CacheSetOptions, CacheGetOrSetOptions, CacheStats, SwrEntry, StampedeResult, StampedeOptions, ScanResult, IInvalidationOptions, IInvalidationRuleProps } from './shared/types';
 
 // Errors
 export { CacheError, CacheKeyError, CacheConfigError, SerializationError, LoaderError, StampedeError, TagInvalidationError } from './shared/errors';

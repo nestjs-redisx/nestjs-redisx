@@ -19,6 +19,10 @@ new CachePlugin({
   // When true, CacheService is available in all modules without explicit import
   isGlobal: false,
 
+  // Deployment topology (default: 'l1-l2')
+  // 'l1-only' runs entirely in local memory with NO Redis — see below.
+  mode: 'l1-l2',
+
   // L1 Memory Cache
   l1: {
     enabled: true,            // Enable L1 cache (default: true)
@@ -109,6 +113,55 @@ new CachePlugin({
       routingKeys: ['#'],
     },
   },
+})
+```
+
+## Running without Redis (`l1-only`)
+
+By default the cache is **`l1-l2`**: an in-memory L1 in front of a Redis L2,
+which requires a reachable Redis connection. Set **`mode: 'l1-only'`** to run
+the cache **entirely in local process memory, with no Redis** — the app boots
+even when Redis is unreachable.
+
+<<< @/apps/demo/src/plugins/cache/l1-only.setup.ts{typescript}
+
+**What works in `l1-only`:** `get` / `set` / `getOrSet`, `getMany` / `setMany`,
+`ttl`, tag invalidation, `invalidateByPattern`, SWR, stale-if-error, and
+in-process singleflight (stampede coalescing) — all backed by an in-memory
+store that keeps the **live** object (no serialization, so a value is stored
+once and shared with L1, not duplicated — this matters for large values).
+
+::: warning Single-instance only
+`l1-only` is **per-process**: nothing is shared across instances and
+invalidation (tags, events) affects only the local process. Use it for a single
+instance, a sidecar/proxy, local development, or tests — not for cross-instance
+cache coherence (use `l1-l2` with Redis for that).
+:::
+
+**Sizing.** The single in-memory tier is sized by the **`l1`** block
+(`maxSize`, `evictionPolicy`, `ttl`); `l2.defaultTtl` / `l2.maxTtl` still supply
+default TTLs.
+
+**Fail-fast.** Because `l1-only` has no Redis, options that require one are
+rejected at startup with a `CacheConfigError` (never silently ignored):
+
+- a named `client` (there is no Redis client to select),
+- `l1.enabled: false` (nothing would be left to cache),
+- `l2.enabled: false` (redundant — the L2 tier is already in-memory),
+- `invalidation.source: 'amqp'` (needs an external broker).
+
+Tags, SWR and stale-if-error are **not** rejected — they work in memory.
+
+> `RedisModule` still needs a `clients` block, but in `l1-only` the cache never
+> opens that connection, so an unreachable host is fine.
+
+**With `registerAsync`.** `mode` is a deployment-structural choice, so set it on
+the async options (next to `useFactory`), not returned by the factory:
+
+```typescript
+CachePlugin.registerAsync({
+  mode: 'l1-only',
+  useFactory: () => ({ l1: { maxSize: 1000 } }),
 })
 ```
 

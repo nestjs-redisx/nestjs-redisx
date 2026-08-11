@@ -22,6 +22,7 @@ The Cache Plugin provides a two-tier caching solution for NestJS applications.
 ## Key Features
 
 - **Two-Tier Architecture** — In-memory L1 cache with Redis L2 backend
+- **Runs without Redis** — optional [`l1-only` mode](./configuration#running-without-redis-l1-only) for a full in-memory, single-instance cache (the app boots with no Redis)
 - **Stampede Protection** — Prevents cache avalanche on expiry
 - **Stale-While-Revalidate** — Serve stale data while refreshing in background
 - **Tag-Based Invalidation** — Invalidate groups of related cache entries

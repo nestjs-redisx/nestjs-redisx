@@ -20,6 +20,10 @@ When a popular cache entry expires, many requests arrive simultaneously — pote
 
 Only ONE request fetches from database, others wait for its result.
 
+::: tip In `mode: 'l1-only'`
+There is no distributed lock (no Redis) — coalescing falls back to **in-process singleflight**, which is the complete, correct protection for a single instance.
+:::
+
 ## How It Works
 
 Stampede protection uses a **two-layer architecture**:

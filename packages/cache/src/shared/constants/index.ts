@@ -36,6 +36,7 @@ export const INVALIDATE_TAGS_KEY = 'cache:invalidate:tags';
  * Default configuration values.
  */
 export const DEFAULT_CACHE_CONFIG = {
+  mode: 'l1-l2' as const,
   l1: {
     enabled: true,
     maxSize: 1000,

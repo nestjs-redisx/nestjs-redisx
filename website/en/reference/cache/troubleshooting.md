@@ -243,6 +243,20 @@ new CachePlugin({
 })
 ```
 
+## Application Fails to Start Without Redis
+
+**Symptom:** the app crashes at startup with a connection error (e.g. `ECONNREFUSED`) when Redis is unreachable — even though you only wanted an in-memory cache.
+
+**Cause:** the default `mode: 'l1-l2'` requires Redis, and RedisModule connects at boot.
+
+**Solution:** run the cache in local memory with `mode: 'l1-only'` — the app then boots with no Redis:
+
+```typescript
+new CachePlugin({ mode: 'l1-only' })
+```
+
+Tags, SWR, stale-if-error and singleflight keep working (single-instance). Full details in [Configuration → Running without Redis](./configuration#running-without-redis-l1-only).
+
 ## Error Reference
 
 Catch specific error classes for programmatic handling:

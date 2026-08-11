@@ -5,6 +5,13 @@
 export type { IContextProvider } from './context-provider.interface';
 
 /**
+ * Cache deployment topology.
+ * - `'l1-l2'` — L1 in-memory + L2 Redis (the default; needs a Redis connection).
+ * - `'l1-only'` — run entirely in local process memory, with NO Redis.
+ */
+export type CacheMode = 'l1-l2' | 'l1-only';
+
+/**
  * Cache plugin configuration.
  */
 export interface ICachePluginOptions {
@@ -13,6 +20,25 @@ export interface ICachePluginOptions {
 
   /** Named Redis client to use. @default 'default' */
   client?: string;
+
+  /**
+   * Deployment topology for the cache.
+   *
+   * - `'l1-l2'` (default) — L1 in-memory in front of L2 Redis. Requires a
+   *   reachable Redis connection; cross-instance sharing and invalidation.
+   * - `'l1-only'` — run the cache entirely in local process memory with NO
+   *   Redis. The L2 tier is served by an in-memory store that holds live
+   *   object references, so each value is stored once and shared with L1 (no
+   *   duplication). Tags, SWR, stale-if-error and singleflight all work, but
+   *   **single-instance only**: nothing is shared across processes and
+   *   invalidation affects the local instance. Size it via the `l1` block.
+   *
+   * This is a deployment-structural choice, so for `registerAsync` it is set
+   * on the async options (alongside `useFactory`), not returned by the factory.
+   *
+   * @default 'l1-l2'
+   */
+  mode?: CacheMode;
 
   /** L1 in-memory cache config */
   l1?: {

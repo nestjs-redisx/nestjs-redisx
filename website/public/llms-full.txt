@@ -171,6 +171,7 @@ Two-tier caching: L1 in-memory (per-instance) + L2 Redis (shared). Features: ant
 
 ```typescript
 new CachePlugin({
+  mode: 'l1-l2',           // or 'l1-only' — run in-memory with NO Redis (single-instance)
   l1: {
     enabled: true,
     maxSize: 1000,       // max entries in memory
@@ -196,6 +197,8 @@ new CachePlugin({
   },
 })
 ```
+
+**`mode: 'l1-only'`** runs the cache entirely in local process memory with NO Redis — the app boots even when Redis is unreachable. get/set/getOrSet, getMany/setMany, ttl, tags, invalidateByPattern, SWR, stale-if-error and in-process singleflight all work, backed by an in-memory store that keeps the live object (a value is stored once and shared with L1 — no duplication, which matters for large values). SINGLE-INSTANCE only: nothing is shared across processes and invalidation is local. Size it via the `l1` block. Fail-fast `CacheConfigError` at startup if an l1-only config also sets a `client`, `l1.enabled:false`, `l2.enabled:false`, or `invalidation.source:'amqp'` (options that need Redis or a broker); tags/SWR/stale-if-error are NOT rejected. `RedisModule` still needs a `clients` block but never connects it in l1-only.
 
 ### @Cached Decorator
 

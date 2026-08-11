@@ -49,6 +49,12 @@ export class StampedeProtectionService implements IStampedeProtection {
   private readonly flights = new Map<string, IFlight<unknown>>();
   private readonly lockTimeout: number;
   private readonly waitTimeout: number;
+  /**
+   * Whether the cross-instance (Layer 2) lock is used. Disabled in
+   * `mode: 'l1-only'`, where there is no Redis and a single process — the
+   * local singleflight (Layer 1) is already the complete, correct protection.
+   */
+  private readonly distributed: boolean;
   private prevented = 0;
 
   constructor(
@@ -59,6 +65,7 @@ export class StampedeProtectionService implements IStampedeProtection {
   ) {
     this.lockTimeout = options.stampede?.lockTimeout ?? 5000;
     this.waitTimeout = options.stampede?.waitTimeout ?? 10000;
+    this.distributed = (options.mode ?? 'l1-l2') !== 'l1-only';
   }
 
   async protect<T>(key: string, loader: () => Promise<T>, recheck?: () => Promise<T | null>): Promise<IStampedeResult<T>> {
@@ -96,35 +103,39 @@ export class StampedeProtectionService implements IStampedeProtection {
     let lock: { lockKey: string; lockValue: string } | undefined;
 
     try {
-      // Layer 2: Try distributed lock (cross-instance coordination)
-      try {
-        const lockValue = this.generateLockValue();
-        const lockTtlSeconds = Math.ceil(this.lockTimeout / 1000);
+      // Layer 2: distributed lock (cross-instance coordination). Skipped in
+      // l1-only mode — no Redis, single process, so Layer 1 already coalesces
+      // everything and there is nothing to coordinate across instances.
+      if (this.distributed) {
+        try {
+          const lockValue = this.generateLockValue();
+          const lockTtlSeconds = Math.ceil(this.lockTimeout / 1000);
 
-        const acquired = await this.tryAcquireLock(lockKey, lockValue, lockTtlSeconds);
+          const acquired = await this.tryAcquireLock(lockKey, lockValue, lockTtlSeconds);
 
-        if (acquired) {
-          lock = { lockKey, lockValue };
+          if (acquired) {
+            lock = { lockKey, lockValue };
+          }
+        } catch {
+          // Lock acquisition failed — proceed without distributed lock
         }
-      } catch {
-        // Lock acquisition failed — proceed without distributed lock
+
+        // Lock held by ANOTHER instance: wait for it to finish (the lock is
+        // released only after the leader wrote the value to the cache), then
+        // recheck the cache instead of duplicating the load. Falls through to
+        // our own loader if the leader failed, its lock expired, or the wait
+        // timed out — availability over strict coordination.
+        if (!lock && recheck) {
+          const shared = await this.waitForDistributedLoad(lockKey, recheck, key);
+          if (shared !== null) {
+            this.prevented++;
+            flight.resolve(shared);
+            return { value: shared, cached: true, waited: true };
+          }
+        }
       }
 
-      // Lock held by ANOTHER instance: wait for it to finish (the lock is
-      // released only after the leader wrote the value to the cache), then
-      // recheck the cache instead of duplicating the load. Falls through to
-      // our own loader if the leader failed, its lock expired, or the wait
-      // timed out — availability over strict coordination.
-      if (!lock && recheck) {
-        const shared = await this.waitForDistributedLoad(lockKey, recheck, key);
-        if (shared !== null) {
-          this.prevented++;
-          flight.resolve(shared);
-          return { value: shared, cached: true, waited: true };
-        }
-      }
-
-      // Execute loader (we are the leader, or coordination fell through)
+      // Execute loader (we are the leader, coordination fell through, or l1-only)
       try {
         const value = await this.executeLoader(loader, key);
         flight.resolve(value);

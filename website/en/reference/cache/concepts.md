@@ -61,6 +61,24 @@ Control which layers store a cached value:
 await cache.set('key', value, { strategy: 'l2-only' });
 ```
 
+## Deployment Mode (`mode`)
+
+`mode` sets the cache **topology** for the whole plugin — distinct from the
+per-call `strategy` above (which only chooses tiers for a single operation):
+
+| Mode | Redis | Description |
+|------|-------|-------------|
+| `'l1-l2'` (default) | Required | L1 in front of a Redis L2; cross-instance sharing and invalidation. |
+| `'l1-only'` | **None** | The entire cache runs in local process memory — the app boots with no Redis. Single-instance. |
+
+::: warning `mode: 'l1-only'` is NOT `strategy: 'l1-only'`
+- **`mode: 'l1-only'`** (plugin option) — no Redis at all, app-wide; the L2 tier is served from memory and nothing ever connects to Redis.
+- **`strategy: 'l1-only'`** (per-call / per-decorator) — write this ONE value to L1 only, in a normal `l1-l2` app that still has Redis.
+:::
+
+In `l1-only`, tags, SWR, stale-if-error and singleflight all keep working —
+single-instance, in memory. See [Configuration → Running without Redis](./configuration#running-without-redis-l1-only).
+
 ## Cache Keys
 
 ### Key Structure in Redis

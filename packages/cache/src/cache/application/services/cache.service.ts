@@ -55,6 +55,8 @@ export class CacheService implements ICacheService {
   private readonly swrEnabled: boolean;
   private readonly tagsEnabled: boolean;
   private readonly sieEnabled: boolean;
+  /** mode: 'l1-only' — the L2 tier is the in-memory store; no Redis driver. */
+  private readonly l1Only: boolean;
 
   private readonly keyPrefix: string;
 
@@ -77,6 +79,7 @@ export class CacheService implements ICacheService {
     this.swrEnabled = options.swr?.enabled ?? false;
     this.sieEnabled = options.staleIfError?.enabled ?? false;
     this.tagsEnabled = options.tags?.enabled ?? true;
+    this.l1Only = (options.mode ?? 'l1-l2') === 'l1-only';
   }
 
   async get<T>(key: string): Promise<T | null> {
@@ -499,22 +502,33 @@ export class CacheService implements ICacheService {
         }
       }
 
-      // Delete from L2 using pipeline for batch operation
+      // Delete from L2. In l1-only the L2 tier is the in-memory store (no
+      // driver/pipeline), so delete per key; otherwise use a Redis pipeline
+      // for a single batched round-trip.
       if (this.l2Enabled && normalizedKeys.length > 0) {
-        const fullKeys = normalizedKeys.map((k) => `${this.keyPrefix}${k}`);
-        const pipeline = this.driver.pipeline();
-
-        for (const fullKey of fullKeys) {
-          pipeline.del(fullKey);
-        }
-
-        const results = await pipeline.exec();
-
-        if (results) {
-          for (let i = 0; i < results.length; i++) {
-            const [error, result] = results[i]!;
-            if (!error && typeof result === 'number' && result > 0) {
+        if (this.l1Only) {
+          const l2Results = await Promise.all(normalizedKeys.map((k) => this.l2Store.delete(k)));
+          for (let i = 0; i < l2Results.length; i++) {
+            if (l2Results[i]) {
               deleted[i] = true;
+            }
+          }
+        } else {
+          const fullKeys = normalizedKeys.map((k) => `${this.keyPrefix}${k}`);
+          const pipeline = this.driver.pipeline();
+
+          for (const fullKey of fullKeys) {
+            pipeline.del(fullKey);
+          }
+
+          const results = await pipeline.exec();
+
+          if (results) {
+            for (let i = 0; i < results.length; i++) {
+              const [error, result] = results[i]!;
+              if (!error && typeof result === 'number' && result > 0) {
+                deleted[i] = true;
+              }
             }
           }
         }

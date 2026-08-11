@@ -7,6 +7,10 @@ description: 'Guide to SWR in @nestjs-redisx/cache: staleTime windows, cachedAt 
 
 Return cached data immediately, refresh in background.
 
+::: tip Works without Redis
+SWR needs only local storage, so it also works in [`mode: 'l1-only'`](./configuration#running-without-redis-l1-only) (no Redis) — single-instance.
+:::
+
 ## When to Use
 
 | Use Case | SWR? | Reason |
