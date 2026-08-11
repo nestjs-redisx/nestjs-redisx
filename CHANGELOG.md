@@ -4,6 +4,12 @@ All notable changes to NestJS RedisX are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2026-08-11
+
+### Added
+
+- `cache`: **`mode: 'l1-only'`** — run the cache entirely in local process memory, with **no Redis**. The app boots even when Redis is unreachable — previously `l2.enabled: false` was not enough, because `RedisModule` connects its default client at startup regardless of the cache. In `l1-only` the L2 tier is served by an in-memory store that keeps the **live** object (the same instance L1 holds), so a value is stored once and shared across tiers with no duplication — which matters for large values. Tags, SWR, stale-if-error and stampede singleflight all keep working, **single-instance** (per process); size the cache via the `l1` block. Fail-fast `CacheConfigError` at bootstrap when `l1-only` is combined with something that genuinely needs Redis or an external broker (`client`, `l1.enabled: false`, `l2.enabled: false`, `invalidation.source: 'amqp'`); storage-backed features (tags/SWR/stale-if-error) are not rejected because they work in memory. The default `mode: 'l1-l2'` is unchanged and requires Redis as before. Exposes the `CacheMode` type. This is distinct from the per-call `strategy: 'l1-only'`, which only skips the L2 write for one value in an otherwise Redis-backed app. Closes #14, #15.
+
 ## [1.9.2] - 2026-08-09
 
 ### Changed
