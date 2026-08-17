@@ -4,6 +4,18 @@ All notable changes to NestJS RedisX are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.0] - 2026-08-16
+
+### Added
+
+- `tracing`: **`provider` option (`'auto'` | `'external'` | `'standalone'`, default `'auto'`)** — the plugin now integrates with an application's existing OpenTelemetry setup instead of competing with it. Previously it always constructed and registered its own `NodeTracerProvider`: initialized after the app's SDK it silently ran an orphan pipeline (an OTLP exporter that received nothing, yet was the one shut down on close); initialized first, it captured the application's spans into the plugin's exporter. Now, when a global tracer provider is already registered, the plugin becomes a pure `@opentelemetry/api` consumer — RedisX spans flow through the app's exporter and sampler, and the plugin **never overrides** a registered provider (`'standalone'` warns and uses the app's provider instead). An own provider is built only when no global provider exists (`'auto'`, preserving the 1.10.0 out-of-the-box behavior) or on explicit `'standalone'`. The OpenTelemetry SDK packages are loaded via dynamic `import()` strictly on the own-provider path — apps with their own SDK never load the plugin's copy; `@opentelemetry/api` is the only static OpenTelemetry import left.
+- `tracing`: **duplicate-span protection** for the native command hook. With `@opentelemetry/instrumentation-ioredis` (or `instrumentation-redis-4`) active, both the instrumentation and the hook would emit a span per Redis command. The hook now detects an active instrumentation (shimmer `__wrapped` probe, evaluated per command — late enable and runtime `disable()` are both handled) and pauses itself, logging once per state change. `traceRedisCommands: 'force'` emits both deliberately.
+- `metrics`: **`registry` option (`'own'` | `'default'` | `Registry` instance, default `'own'`)** — register RedisX metrics into the application's existing prom-client registry so they appear on the app's own `/metrics` endpoint (combine with `exposeEndpoint: false`). With an external registry the plugin behaves as a guest: on shutdown it removes only its own metrics (never `clear()`s the registry), `defaultLabels` are applied only when explicitly configured, and `collectDefaultMetrics` becomes opt-in (the application almost certainly collects process metrics there already). The `'own'` default keeps the 1.10.0 behavior unchanged.
+
+### Changed
+
+- `metrics`: `prom-client` moved from a bundled dependency to a **peer dependency** (auto-installed by npm 7+ / pnpm 8+; yarn classic users add it to their dependencies). This is what makes the `registry` option safe: plugin and application always share a single prom-client instance, so a passed-in `Registry` is guaranteed to be compatible.
+
 ## [1.10.0] - 2026-08-11
 
 ### Added
