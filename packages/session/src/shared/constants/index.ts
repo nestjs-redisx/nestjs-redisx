@@ -27,6 +27,14 @@ export const SESSION_STORE = Symbol.for('SESSION_STORE');
 export const SESSION_REDIS_DRIVER = Symbol.for('SESSION_REDIS_DRIVER');
 
 /**
+ * Upper bound for any session TTL / absolute lifetime (10 years).
+ * Values beyond ~1e14 ms stringify in exponent notation inside Lua and abort
+ * PEXPIRE mid-script AFTER the payload SET — Redis does not roll scripts
+ * back, so the result would be a persisted, uncappable session key.
+ */
+export const MAX_SESSION_TTL_MS = 315_360_000_000;
+
+/**
  * Default session configuration.
  * Single source of truth for the plugin's mergeDefaults.
  *

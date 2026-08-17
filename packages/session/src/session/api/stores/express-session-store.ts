@@ -109,8 +109,17 @@ export async function toExpressStore(store: ISessionStore, options: IExpressSess
       );
     }
 
-    touch(sid: string, session: SessionData, callback?: (err?: unknown) => void): void {
+    override touch(sid: string, session: SessionData, callback?: (err?: unknown) => void): void {
       const ttlMs = ttlMsFromSession(session, Date.now(), options.ttlMs);
+      if (ttlMs !== undefined && ttlMs <= 0) {
+        // The cookie already expired — end the session instead of erroring
+        // inside express-session's response end path.
+        store.destroy(sid).then(
+          () => invokeCallback(callback, null),
+          (error: unknown) => invokeCallback(callback, error),
+        );
+        return;
+      }
       store.touch(sid, { ttlMs }).then(
         () => invokeCallback(callback, null),
         (error: unknown) => invokeCallback(callback, error),

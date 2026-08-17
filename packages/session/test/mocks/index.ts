@@ -19,6 +19,8 @@ export function createMockDriver(): MockedObject<IRedisDriver> {
     zadd: vi.fn().mockResolvedValue(1),
     zrem: vi.fn().mockResolvedValue(1),
     hget: vi.fn().mockResolvedValue(null),
+    hset: vi.fn().mockResolvedValue(1),
+    exists: vi.fn().mockResolvedValue(0),
     hgetall: vi.fn().mockResolvedValue({}),
     del: vi.fn().mockResolvedValue(1),
   } as unknown as MockedObject<IRedisDriver>;

@@ -23,4 +23,4 @@ export type { ISessionPluginOptions, ISessionSetOptions, ISessionMetadata, ISess
 export { SessionError, SessionStoreError, InvalidSessionConfigError, SessionLimitExceededError, SessionMiddlewareMissingError, SessionSerializationError } from './shared/errors';
 
 // Constants (DI tokens)
-export { SESSION_PLUGIN_OPTIONS, SESSION_SERVICE, SESSION_STORE, SESSION_REDIS_DRIVER, DEFAULT_SESSION_CONFIG } from './shared/constants';
+export { SESSION_PLUGIN_OPTIONS, SESSION_SERVICE, SESSION_STORE, SESSION_REDIS_DRIVER, DEFAULT_SESSION_CONFIG, MAX_SESSION_TTL_MS } from './shared/constants';

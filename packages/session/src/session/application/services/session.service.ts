@@ -26,7 +26,10 @@ export class SessionService<T = unknown> implements ISessionService<T> {
   async getSessionsByUser(userId: string): Promise<Array<ISessionInfo<T>>> {
     const ids = await this.store.getUserSessionIds(userId);
     const sessions = await Promise.all(ids.map((id) => this.getSession(id)));
-    return sessions.filter((session): session is ISessionInfo<T> => session !== null);
+    // Ownership check: a stale index entry may point at a sid that was since
+    // re-saved under another user (account switch without sid regeneration) —
+    // it must never leak onto this user's device page.
+    return sessions.filter((session): session is ISessionInfo<T> => session !== null && (session.metadata?.userId === undefined || session.metadata.userId === userId));
   }
 
   count(): Promise<number> {
@@ -42,16 +45,32 @@ export class SessionService<T = unknown> implements ISessionService<T> {
   }
 
   async revokeAll(userId: string): Promise<number> {
-    return this.revokeSessions(await this.store.getUserSessionIds(userId));
+    return this.revokeSessions(await this.revocableIds(userId));
   }
 
   async revokeAllExcept(userId: string, currentSessionId: string): Promise<number> {
-    const ids = (await this.store.getUserSessionIds(userId)).filter((id) => id !== currentSessionId);
-    return this.revokeSessions(ids);
+    const ids = await this.revocableIds(userId);
+    return this.revokeSessions(ids.filter((id) => id !== currentSessionId));
   }
 
   recordActivity(sessionId: string, activity: ISessionActivity): Promise<void> {
     return this.store.recordActivity(sessionId, activity);
+  }
+
+  /**
+   * Session IDs this user may revoke: everything in their index except entries
+   * whose metadata now names a DIFFERENT owner (a sid re-saved under another
+   * account must never be destroyed from here). Entries whose session is gone
+   * are kept in the list on purpose — destroying them is what cleans a dirty
+   * index (phantom seats).
+   */
+  private async revocableIds(userId: string): Promise<string[]> {
+    const ids = await this.store.getUserSessionIds(userId);
+    const owners = await Promise.all(ids.map((id) => this.store.getMetadata(id)));
+    return ids.filter((_id, index) => {
+      const owner = owners[index]?.userId;
+      return owner === undefined || owner === userId;
+    });
   }
 
   private async revokeSessions(sessionIds: string[]): Promise<number> {

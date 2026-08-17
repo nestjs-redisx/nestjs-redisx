@@ -181,6 +181,49 @@ describe('RedisSessionStoreAdapter', () => {
       // When / Then
       await expect(adapter.get('sid-1')).rejects.toThrow(SessionStoreError);
     });
+
+    it('should repair lost ownership: re-stamp userId and re-index on read', async () => {
+      // Given: metadata lost its userId (eviction/TTL skew healed createdAt
+      // only) — the payload still identifies the owner via the extractor
+      const adapter = await initAdapter(driver, baseOptions());
+      routeEvalsha(driver, {
+        get: () => [1, '{"cookie":{},"passport":{"user":"user-7"}}', ''],
+        reserve: () => [1, 1],
+      });
+      driver.hget.mockResolvedValue(String(NOW + 45_000));
+
+      // When
+      const result = await adapter.get('sid-1');
+
+      // Then: identity restored and both indexes re-scored — revokeAll works again
+      expect(result).toEqual({ cookie: {}, passport: { user: 'user-7' } });
+      expect(driver.hset).toHaveBeenCalledWith('sess:{sid-1}:meta', 'userId', 'user-7');
+      const reserves = callsOf(driver, 'reserve');
+      expect(reserves).toContainEqual([['sess:user:user-7'], ['sid-1', NOW + 45_000, NOW, 0, 0]]);
+      expect(reserves).toContainEqual([['sess:index'], ['sid-1', NOW + 45_000, NOW, 0, 0]]);
+    });
+
+    it('should not attempt ownership repair for anonymous sessions', async () => {
+      // Given
+      const adapter = await initAdapter(driver, baseOptions());
+      routeEvalsha(driver, { get: () => [1, '{"cookie":{}}', ''] });
+
+      // When
+      await adapter.get('sid-1');
+
+      // Then
+      expect(driver.hset).not.toHaveBeenCalled();
+    });
+
+    it('should never fail a read because ownership repair failed', async () => {
+      // Given
+      const adapter = await initAdapter(driver, baseOptions());
+      routeEvalsha(driver, { get: () => [1, '{"cookie":{},"passport":{"user":"user-7"}}', ''] });
+      driver.hset.mockRejectedValue(new Error('down'));
+
+      // When / Then: the payload is still served
+      expect(await adapter.get('sid-1')).toEqual({ cookie: {}, passport: { user: 'user-7' } });
+    });
   });
 
   describe('set', () => {
@@ -251,7 +294,7 @@ describe('RedisSessionStoreAdapter', () => {
       await adapter.set('sid-1', { cookie: {} }, { ttlMs: 1_000.7 });
     });
 
-    it.each([Number.NaN, 0, -5, Number.POSITIVE_INFINITY])('should reject the invalid TTL %s without writing anything', async (ttlMs) => {
+    it.each([Number.NaN, 0, -5, Number.POSITIVE_INFINITY, 1e21, Number.MAX_SAFE_INTEGER])('should reject the invalid TTL %s without writing anything', async (ttlMs) => {
       // Given
       const adapter = await initAdapter(driver, baseOptions());
 
@@ -423,9 +466,10 @@ describe('RedisSessionStoreAdapter', () => {
       expect(userReserves[1]![1]).toEqual(['sid-2', NOW + 60_000, NOW, 0, 0]);
     });
 
-    it('should release the reserved seat when the write fails after a reject-policy reservation', async () => {
+    it('should release the reserved seat when the write fails and no session exists', async () => {
       // Given
       const adapter = await initAdapter(driver, baseOptions({ maxSessionsPerUser: 1, maxSessionsPolicy: 'reject' }));
+      driver.exists.mockResolvedValue(0);
       routeEvalsha(driver, {
         reserve: () => [1, 1],
         set: () => {
@@ -435,7 +479,25 @@ describe('RedisSessionStoreAdapter', () => {
 
       // When / Then
       await expect(adapter.set('sid-1', { cookie: {}, passport: { user: 'user-7' } })).rejects.toThrow(SessionStoreError);
+      expect(driver.exists).toHaveBeenCalledWith('sess:{sid-1}');
       expect(driver.zrem).toHaveBeenCalledWith('sess:user:user-7', 'sid-1');
+    });
+
+    it('should NOT release the seat when a session is actually live after a failed write', async () => {
+      // Given: a failed RE-SAVE (or a timed-out write that landed) — blindly
+      // compensating would un-index a live session (unrevocable + limit bypass)
+      const adapter = await initAdapter(driver, baseOptions({ maxSessionsPerUser: 1, maxSessionsPolicy: 'reject' }));
+      driver.exists.mockResolvedValue(1);
+      routeEvalsha(driver, {
+        reserve: () => [1, 1],
+        set: () => {
+          throw new Error('READONLY You cannot write against a replica');
+        },
+      });
+
+      // When / Then
+      await expect(adapter.set('sid-1', { cookie: {}, passport: { user: 'user-7' } })).rejects.toThrow(SessionStoreError);
+      expect(driver.zrem).not.toHaveBeenCalled();
     });
 
     it('should evict the oldest sessions over the limit under the evict-oldest policy', async () => {
@@ -573,7 +635,7 @@ describe('RedisSessionStoreAdapter', () => {
       expect(callsOf(driver, 'reserve')).toEqual([]);
     });
 
-    it.each([Number.NaN, 0, -5])('should reject the invalid TTL %s', async (ttlMs) => {
+    it.each([Number.NaN, 0, -5, 1e21])('should reject the invalid TTL %s', async (ttlMs) => {
       // Given
       const adapter = await initAdapter(driver, baseOptions());
 
@@ -658,6 +720,46 @@ describe('RedisSessionStoreAdapter', () => {
       expect(await adapter.destroy('gone')).toBe(false);
       expect(onDestroyed).not.toHaveBeenCalled();
       expect(metrics.incrementCounter).not.toHaveBeenCalled();
+    });
+
+    it('should re-derive the owner from the payload when metadata was lost', async () => {
+      // Given: metadata evicted, payload intact — destroy is the only public
+      // repair path, so it must not leave a phantom seat behind
+      const adapter = await initAdapter(driver, baseOptions());
+      routeEvalsha(driver, { destroy: () => [1, '', '{"cookie":{},"passport":{"user":"user-7"}}'] });
+
+      // When
+      const result = await adapter.destroy('sid-1');
+
+      // Then
+      expect(result).toBe(true);
+      expect(driver.zrem).toHaveBeenCalledWith('sess:user:user-7', 'sid-1');
+      expect(driver.zrem).toHaveBeenCalledWith('sess:index', 'sid-1');
+    });
+
+    it('should tolerate an unparseable payload while recovering the owner', async () => {
+      // Given
+      const adapter = await initAdapter(driver, baseOptions());
+      routeEvalsha(driver, { destroy: () => [1, '', '{corrupt'] });
+
+      // When / Then: still destroyed, global index still cleaned
+      expect(await adapter.destroy('sid-1')).toBe(true);
+      expect(driver.zrem).toHaveBeenCalledWith('sess:index', 'sid-1');
+    });
+
+    it('should clean the owner index even when only metadata remained (phantom repair)', async () => {
+      // Given: payload gone (evicted) but metadata + index entry linger — destroy
+      // is the public repair path and must not discard the owner it just read
+      const adapter = await initAdapter(driver, baseOptions(), metrics);
+      routeEvalsha(driver, { destroy: () => [0, 'user-7', ''] });
+
+      // When
+      const result = await adapter.destroy('sid-ghost');
+
+      // Then: reported as non-existent, but the phantom seat is freed
+      expect(result).toBe(false);
+      expect(driver.zrem).toHaveBeenCalledWith('sess:user:user-7', 'sid-ghost');
+      expect(driver.zrem).toHaveBeenCalledWith('sess:index', 'sid-ghost');
     });
   });
 

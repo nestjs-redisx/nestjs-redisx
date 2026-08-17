@@ -62,9 +62,10 @@ return {created, expiresAt, prevUserId}
 /**
  * Read a session payload, enforcing the absolute lifetime cap.
  *
- * When the metadata's `createdAt` is missing (metadata key lost to eviction
- * or TTL skew) the cap window is RE-ARMED from `now` and persisted — the
- * session must not become immortal just because its metadata vanished.
+ * When the metadata is missing (key lost to eviction or TTL skew) it is
+ * healed: `createdAt` is re-armed from `now` (the cap must not reset on every
+ * access) and the full timestamp triple is restored from the payload's PTTL.
+ * The adapter re-derives the owner from the payload afterwards.
  *
  * KEYS[1] payload, KEYS[2] metadata
  * ARGV: nowMs, capMs (0 = off)
@@ -78,22 +79,25 @@ local payload = redis.call('GET', KEYS[1])
 if not payload then
   return {0}
 end
+local now = tonumber(ARGV[1])
 local userId = redis.call('HGET', KEYS[2], 'userId')
 if not userId then
   userId = ''
 end
+local createdAt = tonumber(redis.call('HGET', KEYS[2], 'createdAt'))
+if not createdAt then
+  createdAt = now
+  local dttl = redis.call('PTTL', KEYS[1])
+  if dttl > 0 then
+    redis.call('HSET', KEYS[2], 'createdAt', createdAt, 'lastSeenAt', now, 'expiresAt', now + dttl)
+    redis.call('PEXPIRE', KEYS[2], dttl)
+  else
+    redis.call('HSET', KEYS[2], 'createdAt', createdAt)
+  end
+end
 local cap = tonumber(ARGV[2])
 if cap > 0 then
-  local createdAt = tonumber(redis.call('HGET', KEYS[2], 'createdAt'))
-  if not createdAt then
-    createdAt = tonumber(ARGV[1])
-    redis.call('HSET', KEYS[2], 'createdAt', createdAt)
-    local dttl = redis.call('PTTL', KEYS[1])
-    if dttl > 0 then
-      redis.call('PEXPIRE', KEYS[2], dttl)
-    end
-  end
-  if tonumber(ARGV[1]) - createdAt >= cap then
+  if now - createdAt >= cap then
     redis.call('DEL', KEYS[1], KEYS[2])
     return {-1, userId}
   end
@@ -150,7 +154,13 @@ return {1, expiresAt, userId}
  *
  * KEYS[1] payload, KEYS[2] metadata
  *
- * Returns `{existed(0|1), userId}`.
+ * Returns `{existed(0|1), userId, payload}`:
+ * - the owner is reported even when only the metadata remained (existed=0), and
+ * - when the metadata (hence the owner) was lost, the payload is returned so
+ *   the adapter can re-derive the owner via `userIdExtractor`.
+ *
+ * Destroy is the public repair path for a dirty per-user index, so it must
+ * never discard ownership information it can still reach.
  */
 export const DESTROY_SESSION_SCRIPT = `
 -- session:destroy
@@ -159,11 +169,12 @@ local userId = redis.call('HGET', KEYS[2], 'userId')
 if not userId then
   userId = ''
 end
-redis.call('DEL', KEYS[1], KEYS[2])
-if existed == 1 then
-  return {1, userId}
+local payload = ''
+if userId == '' and existed == 1 then
+  payload = redis.call('GET', KEYS[1]) or ''
 end
-return {0, ''}
+redis.call('DEL', KEYS[1], KEYS[2])
+return {existed, userId, payload}
 `.trim();
 
 /**

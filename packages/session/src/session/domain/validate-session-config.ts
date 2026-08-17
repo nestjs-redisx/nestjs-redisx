@@ -4,6 +4,7 @@
  * invalid config must never reach the store.
  */
 
+import { MAX_SESSION_TTL_MS } from '../../shared/constants';
 import { InvalidSessionConfigError } from '../../shared/errors';
 import { SessionLimitPolicy } from '../../shared/types';
 
@@ -32,6 +33,12 @@ export function validateSessionConfig(config: IValidatableSessionConfig): void {
     throw new InvalidSessionConfigError('keyPrefix must be a non-empty string');
   }
 
+  if (config.keyPrefix.includes('{') || config.keyPrefix.includes('}')) {
+    // Braces would inject an empty/foreign cluster hash tag into every key,
+    // splitting payload and metadata across slots (CROSSSLOT on cluster).
+    throw new InvalidSessionConfigError(`keyPrefix must not contain "{" or "}" (got ${JSON.stringify(config.keyPrefix)})`);
+  }
+
   if (!isPositiveInteger(config.defaultTtlMs)) {
     throw new InvalidSessionConfigError(`defaultTtlMs must be a positive integer (got ${config.defaultTtlMs})`);
   }
@@ -54,5 +61,8 @@ export function validateSessionConfig(config: IValidatableSessionConfig): void {
 }
 
 function isPositiveInteger(value: number): boolean {
-  return Number.isInteger(value) && value > 0;
+  // isSafeInteger rejects absurd magnitudes like 1e21, which Number.isInteger
+  // accepts but which abort PEXPIRE inside the Lua scripts; the explicit
+  // upper bound (10 years) keeps index-score arithmetic sane as well.
+  return Number.isSafeInteger(value) && value > 0 && value <= MAX_SESSION_TTL_MS;
 }

@@ -1,7 +1,7 @@
 import { Injectable, Inject, Logger, OnModuleInit, Optional } from '@nestjs/common';
 import { IRedisDriver } from '@nestjs-redisx/core';
 
-import { SESSION_PLUGIN_OPTIONS, SESSION_REDIS_DRIVER, DEFAULT_SESSION_CONFIG } from '../../../shared/constants';
+import { SESSION_PLUGIN_OPTIONS, SESSION_REDIS_DRIVER, DEFAULT_SESSION_CONFIG, MAX_SESSION_TTL_MS } from '../../../shared/constants';
 import { SessionError, SessionLimitExceededError, SessionSerializationError, SessionStoreError } from '../../../shared/errors';
 import { ISessionActivity, ISessionEventInfo, ISessionEvents, ISessionMetadata, ISessionPluginOptions, ISessionSetOptions, SessionEndReason } from '../../../shared/types';
 import { defaultUserIdExtractor, parseSessionMetadata } from '../../domain/session-metadata';
@@ -85,14 +85,22 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
         return null;
       }
 
+      let payload: unknown;
       try {
-        return JSON.parse(result[1] as string) as unknown;
+        payload = JSON.parse(result[1] as string) as unknown;
       } catch {
         // Self-heal: a corrupt payload would otherwise fail every request.
         this.logger.warn(`Session "${sessionId}" payload is corrupt JSON; destroying it`);
         await this.removeSession(sessionId);
         return null;
       }
+
+      if (this.asUserId(result[2]) === undefined) {
+        // Metadata lost its owner (eviction / TTL skew): re-derive it from the
+        // payload so the device page and revokeAll see this session again.
+        await this.repairOwnership(sessionId, payload);
+      }
+      return payload;
     } catch (error) {
       throw this.wrapError(`get failed for session "${sessionId}"`, error);
     }
@@ -127,10 +135,11 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
         result = (await this.runScript('set', this.sessionKeys(sessionId), [payload, ttlMs, now, userId ?? '', cap])) as Array<number | string>;
       } catch (error) {
         // Compensation: a reservation without a session must not burn a seat.
+        // Guarded by a liveness probe — on a failed RE-SAVE (or a timed-out
+        // write that actually landed) the entry belongs to a LIVE session and
+        // must stay indexed, or the session becomes unrevocable.
         if (reserved && userId !== undefined) {
-          await this.driver.zrem(this.userIndexKey(userId), sessionId).catch((cleanupError: unknown) => {
-            this.logger.warn(`Failed to release reserved seat for user "${userId}": ${(cleanupError as Error).message}`);
-          });
+          await this.releaseSeatIfDead(userId, sessionId);
         }
         throw error;
       }
@@ -156,7 +165,7 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
           await this.evictOldest(userId, sessionId, (activeCount ?? 0) - maxSessions);
         }
       }
-      await this.reserve(this.globalIndexKey(), sessionId, expiresAt, now, 0, 0);
+      await this.reserve(this.globalIndexKey(), sessionId, expiresAt, now, 0, false);
 
       if (status === 1) {
         this.countMetric('redisx_session_created_total');
@@ -187,9 +196,9 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
       const expiresAt = result[1] as number;
       const userId = this.asUserId(result[2]);
       if (userId !== undefined) {
-        await this.reserve(this.userIndexKey(userId), sessionId, expiresAt, now, 0, 0);
+        await this.reserve(this.userIndexKey(userId), sessionId, expiresAt, now, 0, false);
       }
-      await this.reserve(this.globalIndexKey(), sessionId, expiresAt, now, 0, 0);
+      await this.reserve(this.globalIndexKey(), sessionId, expiresAt, now, 0, false);
       return true;
     } catch (error) {
       throw this.wrapError(`touch failed for session "${sessionId}"`, error);
@@ -312,8 +321,8 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
   private resolveTtlMs(ttlMs: number | undefined): number {
     const requested = ttlMs ?? this.defaultTtlMs();
     const resolved = Math.floor(requested);
-    if (!Number.isFinite(resolved) || resolved < 1) {
-      throw new SessionStoreError(`Invalid session TTL ${String(requested)}ms: expected a positive finite number of milliseconds`);
+    if (!Number.isSafeInteger(resolved) || resolved < 1 || resolved > MAX_SESSION_TTL_MS) {
+      throw new SessionStoreError(`Invalid session TTL ${String(requested)}ms: expected a positive number of milliseconds up to ${MAX_SESSION_TTL_MS} (10 years)`);
     }
     return resolved;
   }
@@ -357,6 +366,55 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
     return undefined;
   }
 
+  /**
+   * Release a reservation ONLY when no session actually exists for the sid —
+   * blind compensation would un-index a live session after a failed re-save
+   * or a timed-out write that landed.
+   */
+  private async releaseSeatIfDead(userId: string, sessionId: string): Promise<void> {
+    try {
+      const [dataKey] = this.sessionKeys(sessionId);
+      if ((await this.driver.exists(dataKey)) === 0) {
+        await this.driver.zrem(this.userIndexKey(userId), sessionId);
+      }
+    } catch (cleanupError) {
+      this.logger.warn(`Failed to release reserved seat for user "${userId}": ${(cleanupError as Error).message}`);
+    }
+  }
+
+  /**
+   * Best-effort ownership repair after metadata loss: re-stamp `userId` from
+   * the payload (via the extractor) and re-score both indexes so revocation,
+   * the device page, and seat accounting see the session again. Must never
+   * fail the read it rides on.
+   */
+  private async repairOwnership(sessionId: string, payload: unknown): Promise<void> {
+    try {
+      const userId = this.extractUserIdSafe(payload);
+      if (userId === undefined) {
+        return; // genuinely anonymous — nothing to repair
+      }
+      await this.driver.hset(this.metaKey(sessionId), 'userId', userId);
+      const expiresAt = Number(await this.driver.hget(this.metaKey(sessionId), 'expiresAt'));
+      const now = Date.now();
+      if (Number.isFinite(expiresAt) && expiresAt > now) {
+        await this.reserve(this.userIndexKey(userId), sessionId, expiresAt, now, 0, false);
+        await this.reserve(this.globalIndexKey(), sessionId, expiresAt, now, 0, false);
+      }
+    } catch (error) {
+      this.logger.warn(`Ownership repair failed for session "${sessionId}": ${(error as Error).message}`);
+    }
+  }
+
+  /** Like extractUserId, but swallowing extractor errors (repair is best-effort). */
+  private extractUserIdSafe(session: unknown): string | undefined {
+    try {
+      return this.extractUserId('', session);
+    } catch {
+      return undefined;
+    }
+  }
+
   /** Index write/refresh — always via Lua (sweep + score + index-key TTL). */
   private reserve(indexKey: string, sessionId: string, expiresAt: number, now: number, max: number, reject: boolean): Promise<unknown> {
     return this.runScript('reserve', [indexKey], [sessionId, expiresAt, now, max, reject ? 1 : 0]);
@@ -386,13 +444,30 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
     }
   }
 
-  /** Remove payload+metadata and clean both index entries. */
+  /**
+   * Remove payload+metadata and clean both index entries.
+   * When the metadata (hence the owner) was lost, the owner is re-derived from
+   * the payload the script returned — otherwise the per-user index would keep
+   * a phantom seat that no public API could ever clean.
+   */
   private async removeSession(sessionId: string): Promise<{ existed: boolean; userId?: string }> {
     const result = (await this.runScript('destroy', this.sessionKeys(sessionId), [])) as Array<number | string>;
     const existed = result[0] === 1;
-    const userId = this.asUserId(result[1]);
+    const userId = this.asUserId(result[1]) ?? this.userIdFromRawPayload(result[2]);
     await this.cleanIndexes(sessionId, userId);
     return { existed, userId };
+  }
+
+  /** Owner of a raw JSON payload, or undefined when absent/unparseable. */
+  private userIdFromRawPayload(raw: unknown): string | undefined {
+    if (typeof raw !== 'string' || raw.length === 0) {
+      return undefined;
+    }
+    try {
+      return this.extractUserIdSafe(JSON.parse(raw));
+    } catch {
+      return undefined;
+    }
   }
 
   /** A session died from the absolute lifetime cap inside a script. */

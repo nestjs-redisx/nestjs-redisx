@@ -175,6 +175,22 @@ describe('toExpressStore', () => {
       expect(store.touch).toHaveBeenCalledWith('sid-1', { ttlMs: 10_000 });
     });
 
+    it('should end the session instead of touching it when the cookie already expired', async () => {
+      // Given: cookie.maxAge 0 / sub-millisecond — a throwing touch would turn
+      // into a 500 inside express-session's response end path
+      const expressStore = await toExpressStore(store);
+      const session = { cookie: { expires: new Date(NOW - 5) } };
+
+      // When
+      await new Promise<void>((resolve, reject) => {
+        expressStore.touch('sid-1', session as never, (err?: unknown) => (err ? reject(err as Error) : resolve()));
+      });
+
+      // Then
+      expect(store.touch).not.toHaveBeenCalled();
+      expect(store.destroy).toHaveBeenCalledWith('sid-1');
+    });
+
     it('should propagate touch errors to the callback', async () => {
       // Given
       const expressStore = await toExpressStore(store);

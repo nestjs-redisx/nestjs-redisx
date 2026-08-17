@@ -367,6 +367,58 @@ describe('Session on the in-memory driver (no Redis)', () => {
     expect(await store.get('sid-1')).toBeNull();
   });
 
+  it('frees the phantom seat when destroying a session whose payload was evicted', async () => {
+    // Given: 1-seat reject policy; the payload key vanishes but metadata and
+    // the index entry linger (partial eviction)
+    const { store } = await boot({ maxSessionsPerUser: 1, maxSessionsPolicy: 'reject' });
+    await store.set('sid-ghost', userSession('user-1'));
+    const manager = app!.get<{ getClient(name: string): Promise<{ del(...keys: string[]): Promise<number> }> }>(CLIENT_MANAGER);
+    const driver = await manager.getClient('default');
+    await driver.del('sess:{sid-ghost}');
+
+    // When: destroy is the public repair path
+    await store.destroy('sid-ghost');
+
+    // Then: the seat is free again
+    await expect(store.set('sid-new', userSession('user-1'))).resolves.toBeUndefined();
+    expect(await store.get('sid-new')).not.toBeNull();
+  });
+
+  it('frees the seat when destroying a session whose metadata was lost', async () => {
+    // Given: 1-seat reject policy; the metadata key is evicted (payload alive)
+    const { store } = await boot({ maxSessionsPerUser: 1, maxSessionsPolicy: 'reject' });
+    await store.set('sid-1', userSession('user-1'));
+    const manager = app!.get<{ getClient(name: string): Promise<{ del(...keys: string[]): Promise<number> }> }>(CLIENT_MANAGER);
+    const driver = await manager.getClient('default');
+    await driver.del('sess:{sid-1}:meta');
+
+    // When: the user logs out (destroy re-derives the owner from the payload)
+    expect(await store.destroy('sid-1')).toBe(true);
+
+    // Then: the seat is free — no lockout
+    expect(await store.countByUser('user-1')).toBe(0);
+    await expect(store.set('sid-2', userSession('user-1'))).resolves.toBeUndefined();
+  });
+
+  it('repairs lost ownership on read: the device page and revokeAll work again after metadata loss', async () => {
+    // Given: metadata key vanishes entirely (eviction / TTL skew)
+    const { service, store } = await boot();
+    await store.set('sid-1', userSession('user-1'));
+    const manager = app!.get<{ getClient(name: string): Promise<{ del(...keys: string[]): Promise<number> }> }>(CLIENT_MANAGER);
+    const driver = await manager.getClient('default');
+    await driver.del('sess:{sid-1}:meta');
+
+    // When: the next read heals metadata AND re-derives the owner from the payload
+    expect(await store.get('sid-1')).not.toBeNull();
+
+    // Then: identity, metadata, device page, and revocation all recovered
+    const meta = await store.getMetadata('sid-1');
+    expect(meta?.userId).toBe('user-1');
+    expect((await service.getSessionsByUser('user-1')).map((d) => d.id)).toEqual(['sid-1']);
+    expect(await service.revokeAll('user-1')).toBe(1);
+    expect(await store.get('sid-1')).toBeNull();
+  });
+
   it('exposes getSession for a single-session lookup', async () => {
     // Given
     const { service, store } = await boot();

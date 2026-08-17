@@ -30,6 +30,27 @@ describe('validateSessionConfig', () => {
     expect(() => validateSessionConfig(validConfig({ keyPrefix: '' }))).toThrow(InvalidSessionConfigError);
   });
 
+  it.each(['ses{s}:', '{app}:', 'a}b:'])('should throw when keyPrefix %j contains braces (cluster hash-tag safety)', (keyPrefix) => {
+    // Given: braces in the prefix create an empty/foreign hash tag, splitting
+    // payload and metadata across cluster slots for EVERY session
+
+    // When / Then
+    expect(() => validateSessionConfig(validConfig({ keyPrefix }))).toThrow(InvalidSessionConfigError);
+  });
+
+  it.each([1e21, Number.MAX_SAFE_INTEGER])('should throw when defaultTtlMs is the absurd value %s', (defaultTtlMs) => {
+    // Given: values >= 1e21 stringify in exponent notation and abort PEXPIRE
+    // mid-script AFTER the payload SET (immortal key)
+
+    // When / Then
+    expect(() => validateSessionConfig(validConfig({ defaultTtlMs }))).toThrow(InvalidSessionConfigError);
+  });
+
+  it.each([1e21, Number.MAX_SAFE_INTEGER])('should throw when absoluteLifetimeMs is the absurd value %s', (absoluteLifetimeMs) => {
+    // When / Then
+    expect(() => validateSessionConfig(validConfig({ absoluteLifetimeMs }))).toThrow(InvalidSessionConfigError);
+  });
+
   it.each([0, -1, 1.5, NaN, Infinity])('should throw when defaultTtlMs is %s', (defaultTtlMs) => {
     // When / Then
     expect(() => validateSessionConfig(validConfig({ defaultTtlMs }))).toThrow(InvalidSessionConfigError);
