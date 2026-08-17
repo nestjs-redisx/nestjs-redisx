@@ -191,6 +191,42 @@ describe('toExpressStore', () => {
     });
   });
 
+  describe('callback discipline', () => {
+    it('should invoke the get callback exactly once even when it throws', async () => {
+      // Given
+      const expressStore = await toExpressStore(store);
+      store.get.mockResolvedValue({ cookie: {} });
+      const invocations: unknown[][] = [];
+
+      // When: an application callback that itself throws
+      expressStore.get('sid-1', (...args: unknown[]) => {
+        invocations.push(args);
+        throw new Error('boom inside app callback');
+      });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Then: the thrown error must NOT re-enter the callback as a store error
+      expect(invocations).toHaveLength(1);
+      expect(invocations[0]?.[0]).toBeNull();
+    });
+
+    it('should invoke the set callback exactly once even when it throws', async () => {
+      // Given
+      const expressStore = await toExpressStore(store);
+      const invocations: unknown[][] = [];
+
+      // When
+      expressStore.set('sid-1', { cookie: {} } as never, (...args: unknown[]) => {
+        invocations.push(args);
+        throw new Error('boom');
+      });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Then
+      expect(invocations).toHaveLength(1);
+    });
+  });
+
   describe('destroy', () => {
     it('should destroy the session', async () => {
       // Given

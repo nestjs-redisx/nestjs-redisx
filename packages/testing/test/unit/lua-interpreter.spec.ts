@@ -12,6 +12,17 @@ describe('LuaInterpreter', () => {
   const noCall: RedisCallPort = () => null;
   const run = (src: string, keys: string[] = [], argv: string[] = [], call: RedisCallPort = noCall): unknown => interp.run(src, keys, argv, call);
 
+  it('converts a nil Redis reply to Lua false (Redis semantics)', () => {
+    // Given: real Redis converts a nil bulk reply from redis.call into Lua
+    // false — `if x == false` must behave identically on the memory driver
+    const missGet: RedisCallPort = () => null;
+
+    // When / Then
+    expect(run("local v = redis.call('GET', KEYS[1])\nif v == false then return 1 end\nreturn 0", ['missing'], [], missGet)).toBe(1);
+    expect(run("local v = redis.call('GET', KEYS[1])\nif not v then return 1 end\nreturn 0", ['missing'], [], missGet)).toBe(1);
+    expect(run("return tonumber(redis.call('GET', KEYS[1])) or 7", ['missing'], [], missGet)).toBe(7);
+  });
+
   it('returns null for a script with no return', () => {
     expect(run('local x = 1')).toBeNull();
   });

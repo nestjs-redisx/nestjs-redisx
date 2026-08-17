@@ -101,6 +101,24 @@ describe('toFastifyStore', () => {
     expect(err).toBe(failure);
   });
 
+  it('should invoke the get callback exactly once even when it throws', async () => {
+    // Given
+    const fastifyStore = toFastifyStore(store);
+    store.get.mockResolvedValue({ cookie: {} });
+    const invocations: unknown[][] = [];
+
+    // When
+    fastifyStore.get('sid-1', (...args: unknown[]) => {
+      invocations.push(args);
+      throw new Error('boom inside app callback');
+    });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    // Then
+    expect(invocations).toHaveLength(1);
+    expect(invocations[0]?.[0]).toBeNull();
+  });
+
   it('should destroy sessions and propagate errors', async () => {
     // Given
     const fastifyStore = toFastifyStore(store);

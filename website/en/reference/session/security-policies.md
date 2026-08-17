@@ -48,6 +48,7 @@ login                    cap = 12h
 
 ## Consistency Notes
 
-- The `reject` reservation is atomic per user (single-key Lua — cluster-safe).
+- The `reject` reservation is atomic per user (single-key Lua — cluster-safe), its expiry score is clamped to the absolute lifetime cap (a capped-out session frees its seat on time), and a reservation whose session write fails is released again — a connection blip never burns a seat.
 - `evict-oldest` is a best-effort cross-key sequence: concurrent logins can transiently overshoot the limit by the number of in-flight requests.
-- Index entries are swept lazily by expiry score; a crashed process never leaves permanent garbage.
+- Index entries are swept lazily by expiry score, and index keys carry their own TTL (refreshed on every save AND touch, so rolling sessions never outlive their index); a crashed process never leaves permanent garbage.
+- One narrow race is accepted: a `touch` overlapping a concurrent `destroy` of the same session can transiently resurrect its index entry until the entry's expiry score sweeps it (bounded by the session TTL).

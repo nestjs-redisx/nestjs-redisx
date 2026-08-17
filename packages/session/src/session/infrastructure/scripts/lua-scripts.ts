@@ -7,6 +7,9 @@
  *   `{prefix+sid}:meta`), so multi-key scripts stay on one cluster slot.
  * - Index scripts (`reserve`, `count`, `range`) touch exactly ONE key each —
  *   cluster-safe without hash tags.
+ * - Missing replies are tested with `if not x` (never `== nil`): real Redis
+ *   maps nil bulk replies to Lua `false`, and the idiom is portable to the
+ *   @nestjs-redisx/testing memory interpreter.
  * - The `-- session:<name>` marker comment identifies each script (used by
  *   unit tests to route mocked EVALSHA calls); keep it on the first line.
  * - Language subset only (no cjson/pairs/while/string lib): the scripts must
@@ -19,8 +22,10 @@
  * KEYS[1] payload, KEYS[2] metadata
  * ARGV: payload JSON, ttlMs, nowMs, userId ('' = anonymous), capMs (0 = off)
  *
- * Returns `{created(0|1), expiresAt}`, or `{-1}` when the absolute lifetime
- * cap is already exhausted (the session is destroyed instead of written).
+ * Returns `{created(0|1), expiresAt, prevUserId}` (`prevUserId` = '' when the
+ * session had no owner — lets the adapter clean the previous owner's index on
+ * an account switch), or `{-1}` when the absolute lifetime cap is already
+ * exhausted (the session is destroyed instead of written).
  */
 export const SET_SESSION_SCRIPT = `
 -- session:set
@@ -30,6 +35,10 @@ local cap = tonumber(ARGV[5])
 local created = 0
 if redis.call('EXISTS', KEYS[1]) == 0 then
   created = 1
+end
+local prevUserId = redis.call('HGET', KEYS[2], 'userId')
+if not prevUserId then
+  prevUserId = ''
 end
 local createdAt = tonumber(redis.call('HGET', KEYS[2], 'createdAt')) or now
 if cap > 0 then
@@ -47,11 +56,15 @@ redis.call('SET', KEYS[1], ARGV[1])
 redis.call('PEXPIRE', KEYS[1], ttl)
 redis.call('HSET', KEYS[2], 'createdAt', createdAt, 'lastSeenAt', now, 'expiresAt', expiresAt, 'userId', ARGV[4])
 redis.call('PEXPIRE', KEYS[2], ttl)
-return {created, expiresAt}
+return {created, expiresAt, prevUserId}
 `.trim();
 
 /**
  * Read a session payload, enforcing the absolute lifetime cap.
+ *
+ * When the metadata's `createdAt` is missing (metadata key lost to eviction
+ * or TTL skew) the cap window is RE-ARMED from `now` and persisted — the
+ * session must not become immortal just because its metadata vanished.
  *
  * KEYS[1] payload, KEYS[2] metadata
  * ARGV: nowMs, capMs (0 = off)
@@ -62,16 +75,24 @@ return {created, expiresAt}
 export const GET_SESSION_SCRIPT = `
 -- session:get
 local payload = redis.call('GET', KEYS[1])
-if payload == false then
+if not payload then
   return {0}
 end
 local userId = redis.call('HGET', KEYS[2], 'userId')
-if userId == false then
+if not userId then
   userId = ''
 end
 local cap = tonumber(ARGV[2])
 if cap > 0 then
-  local createdAt = tonumber(redis.call('HGET', KEYS[2], 'createdAt')) or tonumber(ARGV[1])
+  local createdAt = tonumber(redis.call('HGET', KEYS[2], 'createdAt'))
+  if not createdAt then
+    createdAt = tonumber(ARGV[1])
+    redis.call('HSET', KEYS[2], 'createdAt', createdAt)
+    local dttl = redis.call('PTTL', KEYS[1])
+    if dttl > 0 then
+      redis.call('PEXPIRE', KEYS[2], dttl)
+    end
+  end
   if tonumber(ARGV[1]) - createdAt >= cap then
     redis.call('DEL', KEYS[1], KEYS[2])
     return {-1, userId}
@@ -82,6 +103,7 @@ return {1, payload, userId}
 
 /**
  * Slide the TTL (rolling sessions), refresh `lastSeenAt`, enforce the cap.
+ * Re-arms and persists `createdAt` when the metadata was lost (see get).
  *
  * KEYS[1] payload, KEYS[2] metadata
  * ARGV: ttlMs, nowMs, capMs (0 = off)
@@ -97,9 +119,13 @@ end
 local now = tonumber(ARGV[2])
 local ttl = tonumber(ARGV[1])
 local cap = tonumber(ARGV[3])
-local createdAt = tonumber(redis.call('HGET', KEYS[2], 'createdAt')) or now
+local createdAt = tonumber(redis.call('HGET', KEYS[2], 'createdAt'))
+if not createdAt then
+  createdAt = now
+  redis.call('HSET', KEYS[2], 'createdAt', createdAt)
+end
 local userId = redis.call('HGET', KEYS[2], 'userId')
-if userId == false then
+if not userId then
   userId = ''
 end
 if cap > 0 then
@@ -130,7 +156,7 @@ export const DESTROY_SESSION_SCRIPT = `
 -- session:destroy
 local existed = redis.call('EXISTS', KEYS[1])
 local userId = redis.call('HGET', KEYS[2], 'userId')
-if userId == false then
+if not userId then
   userId = ''
 end
 redis.call('DEL', KEYS[1], KEYS[2])
@@ -141,11 +167,15 @@ return {0, ''}
 `.trim();
 
 /**
- * Reserve a per-user session slot: sweep expired entries, enforce the seat
- * limit under the reject policy, index the session, and keep the index TTL
- * at least as long as its longest-lived member.
+ * Reserve/refresh an index slot: sweep expired entries, enforce the seat
+ * limit under the reject policy, (re-)score the member, and keep the index
+ * KEY's TTL at least as long as this member's lifetime — a bare ZADD would
+ * let the index key expire under rolling sessions while its sessions live.
  *
- * KEYS[1] user index (ZSET sid -> expiresAtMs)
+ * Used for BOTH the per-user index and the global index (with max=0,
+ * reject=0 it is a pure refresh).
+ *
+ * KEYS[1] index (ZSET sid -> expiresAtMs)
  * ARGV: sid, expiresAtMs, nowMs, max (0 = unlimited), rejectFlag (1 = reject at limit)
  *
  * Returns `{0, activeCount}` when rejected, `{1, activeCount}` when indexed.

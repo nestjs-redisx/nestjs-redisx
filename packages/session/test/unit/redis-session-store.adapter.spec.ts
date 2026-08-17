@@ -29,6 +29,11 @@ async function initAdapter(driver: MockedObject<IRedisDriver>, options: ISession
   return adapter;
 }
 
+/** All evalsha invocations of the given script, as [keys, args] tuples. */
+function callsOf(driver: MockedObject<IRedisDriver>, name: string): Array<[string[], Array<string | number>]> {
+  return driver.evalsha.mock.calls.filter(([sha]) => sha === `sha:${name}`).map(([, keys, args]) => [keys as string[], args as Array<string | number>]);
+}
+
 describe('RedisSessionStoreAdapter', () => {
   let driver: MockedObject<IRedisDriver>;
   let metrics: IMetricsMock;
@@ -61,6 +66,20 @@ describe('RedisSessionStoreAdapter', () => {
 
       // When / Then
       await expect(adapter.onModuleInit()).rejects.toThrow(SessionStoreError);
+    });
+  });
+
+  describe('session id validation', () => {
+    it.each(['', '}evil'])('should reject the invalid session id %j without touching Redis', async (sid) => {
+      // Given: '' and '}'-leading sids produce an empty cluster hash tag,
+      // splitting payload and metadata across slots
+      const adapter = await initAdapter(driver, baseOptions());
+
+      // When / Then
+      await expect(adapter.get(sid)).rejects.toThrow(SessionStoreError);
+      await expect(adapter.set(sid, { cookie: {} })).rejects.toThrow(SessionStoreError);
+      await expect(adapter.destroy(sid)).rejects.toThrow(SessionStoreError);
+      expect(driver.evalsha).not.toHaveBeenCalled();
     });
   });
 
@@ -165,7 +184,7 @@ describe('RedisSessionStoreAdapter', () => {
   });
 
   describe('set', () => {
-    it('should write the session, index the global ZSET, and emit onCreated for a new session', async () => {
+    it('should write the session, refresh the global index (with TTL), and emit onCreated for a new session', async () => {
       // Given
       const onCreated = vi.fn();
       const adapter = await initAdapter(driver, baseOptions({ events: { onCreated } }), metrics);
@@ -173,15 +192,17 @@ describe('RedisSessionStoreAdapter', () => {
         set: (keys, args) => {
           expect(keys).toEqual(['sess:{sid-1}', 'sess:{sid-1}:meta']);
           expect(args).toEqual(['{"cookie":{}}', 60_000, NOW, '', 0]);
-          return [1, NOW + 60_000];
+          return [1, NOW + 60_000, ''];
         },
+        reserve: () => [1, 1],
       });
 
       // When
       await adapter.set('sid-1', { cookie: {} });
 
-      // Then
-      expect(driver.zadd).toHaveBeenCalledWith('sess:index', NOW + 60_000, 'sid-1');
+      // Then: the global index goes through the reserve script (score + key TTL)
+      expect(callsOf(driver, 'reserve')).toEqual([[['sess:index'], ['sid-1', NOW + 60_000, NOW, 0, 0]]]);
+      expect(driver.zadd).not.toHaveBeenCalled();
       await vi.waitFor(() => expect(onCreated).toHaveBeenCalledWith({ sessionId: 'sid-1', userId: undefined }));
       expect(metrics.incrementCounter).toHaveBeenCalledWith('redisx_session_created_total');
     });
@@ -190,7 +211,7 @@ describe('RedisSessionStoreAdapter', () => {
       // Given
       const onCreated = vi.fn();
       const adapter = await initAdapter(driver, baseOptions({ events: { onCreated } }), metrics);
-      routeEvalsha(driver, { set: () => [0, NOW + 60_000] });
+      routeEvalsha(driver, { set: () => [0, NOW + 60_000, ''], reserve: () => [1, 1] });
 
       // When
       await adapter.set('sid-1', { cookie: {} });
@@ -206,54 +227,148 @@ describe('RedisSessionStoreAdapter', () => {
       routeEvalsha(driver, {
         set: (_keys, args) => {
           expect(args[1]).toBe(5_000);
-          return [1, NOW + 5_000];
+          return [1, NOW + 5_000, ''];
         },
+        reserve: () => [1, 1],
       });
 
       // When
       await adapter.set('sid-1', { cookie: {} }, { ttlMs: 5_000 });
     });
 
-    it('should index the session under its user when the extractor yields an id', async () => {
+    it('should floor fractional TTLs before they reach Redis', async () => {
       // Given
       const adapter = await initAdapter(driver, baseOptions());
-      const reserve = vi.fn((keys: string[], args: Array<string | number>) => {
-        expect(keys).toEqual(['sess:user:user-7']);
-        expect(args).toEqual(['sid-1', NOW + 60_000, NOW, 0, 0]);
-        return [1, 1];
+      routeEvalsha(driver, {
+        set: (_keys, args) => {
+          expect(args[1]).toBe(1_000);
+          return [1, NOW + 1_000, ''];
+        },
+        reserve: () => [1, 1],
       });
+
+      // When
+      await adapter.set('sid-1', { cookie: {} }, { ttlMs: 1_000.7 });
+    });
+
+    it.each([Number.NaN, 0, -5, Number.POSITIVE_INFINITY])('should reject the invalid TTL %s without writing anything', async (ttlMs) => {
+      // Given
+      const adapter = await initAdapter(driver, baseOptions());
+
+      // When / Then
+      await expect(adapter.set('sid-1', { cookie: {} }, { ttlMs })).rejects.toThrow(SessionStoreError);
+      expect(driver.evalsha).not.toHaveBeenCalled();
+    });
+
+    it('should reject null and undefined payloads', async () => {
+      // Given
+      const adapter = await initAdapter(driver, baseOptions());
+
+      // When / Then
+      await expect(adapter.set('sid-1', null)).rejects.toThrow(SessionSerializationError);
+      await expect(adapter.set('sid-1', undefined)).rejects.toThrow(SessionSerializationError);
+      expect(driver.evalsha).not.toHaveBeenCalled();
+    });
+
+    it('should index the session under its user with the actual expiry', async () => {
+      // Given
+      const adapter = await initAdapter(driver, baseOptions());
       routeEvalsha(driver, {
         set: (_keys, args) => {
           expect(args[3]).toBe('user-7');
-          return [1, NOW + 60_000];
+          return [1, NOW + 60_000, ''];
         },
-        reserve,
+        reserve: () => [1, 1],
       });
 
       // When
       await adapter.set('sid-1', { cookie: {}, passport: { user: 'user-7' } });
 
       // Then
-      expect(reserve).toHaveBeenCalledTimes(1);
+      const reserves = callsOf(driver, 'reserve');
+      expect(reserves).toContainEqual([['sess:user:user-7'], ['sid-1', NOW + 60_000, NOW, 0, 0]]);
+      expect(reserves).toContainEqual([['sess:index'], ['sid-1', NOW + 60_000, NOW, 0, 0]]);
     });
 
     it('should not touch the user index for anonymous sessions', async () => {
       // Given
       const adapter = await initAdapter(driver, baseOptions());
-      const reserve = vi.fn(() => [1, 1]);
-      routeEvalsha(driver, { set: () => [1, NOW + 60_000], reserve });
+      routeEvalsha(driver, { set: () => [1, NOW + 60_000, ''], reserve: () => [1, 1] });
 
       // When
       await adapter.set('sid-1', { cookie: {} });
 
       // Then
-      expect(reserve).not.toHaveBeenCalled();
+      const userReserves = callsOf(driver, 'reserve').filter(([keys]) => keys[0]!.startsWith('sess:user:'));
+      expect(userReserves).toEqual([]);
+    });
+
+    it.each([
+      ['empty string', { passport: { user: '' } }],
+      ['whitespace-free object', { passport: { user: {} } }],
+    ])('should treat a %s user id as anonymous', async (_label, session) => {
+      // Given
+      const adapter = await initAdapter(driver, baseOptions({ userIdExtractor: (s) => (s as { passport?: { user?: unknown } }).passport?.user as never }));
+      routeEvalsha(driver, { set: () => [1, NOW + 60_000, ''], reserve: () => [1, 1] });
+
+      // When
+      await adapter.set('sid-1', { cookie: {}, ...session });
+
+      // Then
+      const userReserves = callsOf(driver, 'reserve').filter(([keys]) => keys[0]!.startsWith('sess:user:'));
+      expect(userReserves).toEqual([]);
+    });
+
+    it('should stringify a finite numeric user id from a custom extractor', async () => {
+      // Given
+      const adapter = await initAdapter(driver, baseOptions({ userIdExtractor: () => 42 as never }));
+      routeEvalsha(driver, {
+        set: (_keys, args) => {
+          expect(args[3]).toBe('42');
+          return [1, NOW + 60_000, ''];
+        },
+        reserve: () => [1, 1],
+      });
+
+      // When
+      await adapter.set('sid-1', { cookie: {} });
+
+      // Then
+      expect(callsOf(driver, 'reserve')).toContainEqual([['sess:user:42'], ['sid-1', NOW + 60_000, NOW, 0, 0]]);
+    });
+
+    it('should remove the sid from the previous owner’s index when the user changes', async () => {
+      // Given: same sid re-saved under a different user (account switch)
+      const adapter = await initAdapter(driver, baseOptions());
+      routeEvalsha(driver, {
+        set: () => [0, NOW + 60_000, 'alice'],
+        reserve: () => [1, 1],
+      });
+
+      // When
+      await adapter.set('sid-1', { cookie: {}, passport: { user: 'bob' } });
+
+      // Then
+      expect(driver.zrem).toHaveBeenCalledWith('sess:user:alice', 'sid-1');
+      expect(callsOf(driver, 'reserve')).toContainEqual([['sess:user:bob'], ['sid-1', NOW + 60_000, NOW, 0, 0]]);
+    });
+
+    it('should de-index the sid entirely when the session becomes anonymous', async () => {
+      // Given
+      const adapter = await initAdapter(driver, baseOptions());
+      routeEvalsha(driver, { set: () => [0, NOW + 60_000, 'alice'], reserve: () => [1, 1] });
+
+      // When
+      await adapter.set('sid-1', { cookie: {} });
+
+      // Then
+      expect(driver.zrem).toHaveBeenCalledWith('sess:user:alice', 'sid-1');
     });
 
     it('should reject a new session over the seat limit under the reject policy without writing it', async () => {
       // Given
       const adapter = await initAdapter(driver, baseOptions({ maxSessionsPerUser: 2, maxSessionsPolicy: 'reject' }), metrics);
-      const set = vi.fn(() => [1, NOW + 60_000]);
+      const set = vi.fn(() => [1, NOW + 60_000, '']);
       routeEvalsha(driver, {
         reserve: (keys, args) => {
           expect(keys).toEqual(['sess:user:user-7']);
@@ -269,17 +384,58 @@ describe('RedisSessionStoreAdapter', () => {
       expect(metrics.incrementCounter).toHaveBeenCalledWith('redisx_session_limit_rejections_total');
     });
 
-    it('should write the session when the reject-policy reservation is granted', async () => {
+    it('should clamp the reject-policy reservation to the absolute lifetime cap', async () => {
+      // Given: 1-day TTL but only 1s of cap — the index score must not outlive
+      // the session by a day (zombie seat lockout)
+      const adapter = await initAdapter(driver, baseOptions({ maxSessionsPerUser: 1, maxSessionsPolicy: 'reject', absoluteLifetimeMs: 1_000, defaultTtlMs: 86_400_000 }));
+      const reserveArgs: Array<Array<string | number>> = [];
+      routeEvalsha(driver, {
+        reserve: (_keys, args) => {
+          reserveArgs.push(args);
+          return [1, 1];
+        },
+        set: () => [1, NOW + 1_000, ''],
+      });
+
+      // When
+      await adapter.set('sid-1', { cookie: {}, passport: { user: 'user-7' } });
+
+      // Then: pre-reservation is capped, and the index is refreshed with the
+      // actual expiry after the write
+      expect(reserveArgs[0]).toEqual(['sid-1', NOW + 1_000, NOW, 1, 1]);
+      expect(reserveArgs).toContainEqual(['sid-1', NOW + 1_000, NOW, 0, 0]);
+    });
+
+    it('should refresh the user index with the actual expiry after a granted reject-policy write', async () => {
       // Given
       const adapter = await initAdapter(driver, baseOptions({ maxSessionsPerUser: 2, maxSessionsPolicy: 'reject' }));
-      const set = vi.fn(() => [1, NOW + 60_000]);
-      routeEvalsha(driver, { reserve: () => [1, 2], set });
+      routeEvalsha(driver, {
+        reserve: () => [1, 2],
+        set: () => [1, NOW + 60_000, ''],
+      });
 
       // When
       await adapter.set('sid-2', { cookie: {}, passport: { user: 'user-7' } });
 
       // Then
-      expect(set).toHaveBeenCalledTimes(1);
+      const userReserves = callsOf(driver, 'reserve').filter(([keys]) => keys[0] === 'sess:user:user-7');
+      expect(userReserves).toHaveLength(2);
+      expect(userReserves[1]![1]).toEqual(['sid-2', NOW + 60_000, NOW, 0, 0]);
+    });
+
+    it('should release the reserved seat when the write fails after a reject-policy reservation', async () => {
+      // Given
+      const adapter = await initAdapter(driver, baseOptions({ maxSessionsPerUser: 1, maxSessionsPolicy: 'reject' }));
+      routeEvalsha(driver, {
+        reserve: () => [1, 1],
+        set: () => {
+          throw new Error('connection reset');
+        },
+      });
+
+      // When / Then
+      await expect(adapter.set('sid-1', { cookie: {}, passport: { user: 'user-7' } })).rejects.toThrow(SessionStoreError);
+      expect(driver.zrem).toHaveBeenCalledWith('sess:user:user-7', 'sid-1');
     });
 
     it('should evict the oldest sessions over the limit under the evict-oldest policy', async () => {
@@ -288,8 +444,8 @@ describe('RedisSessionStoreAdapter', () => {
       const adapter = await initAdapter(driver, baseOptions({ maxSessionsPerUser: 2, maxSessionsPolicy: 'evict-oldest', events: { onRevoked } }), metrics);
       const destroyed: string[] = [];
       routeEvalsha(driver, {
-        set: () => [1, NOW + 60_000],
-        reserve: () => [1, 3],
+        set: () => [1, NOW + 60_000, ''],
+        reserve: (keys) => (keys[0] === 'sess:index' ? [1, 1] : [1, 3]),
         range: () => ['sid-old', 'sid-mid', 'sid-new'],
         destroy: (keys) => {
           destroyed.push(keys[0]!);
@@ -315,13 +471,13 @@ describe('RedisSessionStoreAdapter', () => {
       // Given
       const onExpiredByCap = vi.fn();
       const adapter = await initAdapter(driver, baseOptions({ absoluteLifetimeMs: 1000, events: { onExpiredByCap } }));
-      routeEvalsha(driver, { set: () => [-1, 'user-7'] });
+      routeEvalsha(driver, { set: () => [-1] });
 
       // When
       await adapter.set('sid-1', { cookie: {}, passport: { user: 'user-7' } });
 
       // Then
-      expect(driver.zadd).not.toHaveBeenCalled();
+      expect(callsOf(driver, 'reserve')).toEqual([]);
       await vi.waitFor(() => expect(onExpiredByCap).toHaveBeenCalledWith({ sessionId: 'sid-1', userId: 'user-7' }));
     });
 
@@ -362,15 +518,27 @@ describe('RedisSessionStoreAdapter', () => {
           },
         }),
       );
-      routeEvalsha(driver, { set: () => [1, NOW + 60_000] });
+      routeEvalsha(driver, { set: () => [1, NOW + 60_000, ''], reserve: () => [1, 1] });
 
       // When / Then
+      await expect(adapter.set('sid-1', { cookie: {} })).resolves.toBeUndefined();
+    });
+
+    it('should survive a throwing metrics service', async () => {
+      // Given
+      metrics.incrementCounter.mockImplementation(() => {
+        throw new Error('registry gone');
+      });
+      const adapter = await initAdapter(driver, baseOptions(), metrics);
+      routeEvalsha(driver, { set: () => [1, NOW + 60_000, ''], reserve: () => [1, 1] });
+
+      // When / Then: the write must not be converted into an error
       await expect(adapter.set('sid-1', { cookie: {} })).resolves.toBeUndefined();
     });
   });
 
   describe('touch', () => {
-    it('should slide the TTL and refresh both index scores', async () => {
+    it('should slide the TTL and refresh both index entries AND their key TTLs', async () => {
       // Given
       const adapter = await initAdapter(driver, baseOptions());
       routeEvalsha(driver, {
@@ -379,15 +547,20 @@ describe('RedisSessionStoreAdapter', () => {
           expect(args).toEqual([60_000, NOW, 0]);
           return [1, NOW + 60_000, 'user-7'];
         },
+        reserve: () => [1, 1],
       });
 
       // When
       const result = await adapter.touch('sid-1');
 
-      // Then
+      // Then: index refresh goes through the reserve script (bare zadd would
+      // let the index KEY expire under rolling sessions — revokeAll would
+      // silently stop working)
       expect(result).toBe(true);
-      expect(driver.zadd).toHaveBeenCalledWith('sess:user:user-7', NOW + 60_000, 'sid-1');
-      expect(driver.zadd).toHaveBeenCalledWith('sess:index', NOW + 60_000, 'sid-1');
+      const reserves = callsOf(driver, 'reserve');
+      expect(reserves).toContainEqual([['sess:user:user-7'], ['sid-1', NOW + 60_000, NOW, 0, 0]]);
+      expect(reserves).toContainEqual([['sess:index'], ['sid-1', NOW + 60_000, NOW, 0, 0]]);
+      expect(driver.zadd).not.toHaveBeenCalled();
     });
 
     it('should return false for a missing session', async () => {
@@ -397,7 +570,16 @@ describe('RedisSessionStoreAdapter', () => {
 
       // When / Then
       expect(await adapter.touch('gone')).toBe(false);
-      expect(driver.zadd).not.toHaveBeenCalled();
+      expect(callsOf(driver, 'reserve')).toEqual([]);
+    });
+
+    it.each([Number.NaN, 0, -5])('should reject the invalid TTL %s', async (ttlMs) => {
+      // Given
+      const adapter = await initAdapter(driver, baseOptions());
+
+      // When / Then
+      await expect(adapter.touch('sid-1', { ttlMs })).rejects.toThrow(SessionStoreError);
+      expect(driver.evalsha).not.toHaveBeenCalled();
     });
 
     it('should report cap expiry and clean indexes when the absolute lifetime is exceeded', async () => {

@@ -1,6 +1,7 @@
 import type { SessionData, Store } from 'express-session';
 
 import { SessionMiddlewareMissingError } from '../../../shared/errors';
+import { invokeCallback } from './safe-callback';
 import { ISessionStore } from '../../application/ports/session-store.port';
 import { ttlMsFromSession } from './session-cookie-ttl';
 
@@ -79,41 +80,41 @@ export async function toExpressStore(store: ISessionStore, options: IExpressSess
 
   class RedisXExpressSessionStore extends BaseStore {
     get(sid: string, callback: (err?: unknown, session?: SessionData | null) => void): void {
-      store
-        .get(sid)
-        .then((session) => callback(null, (session as SessionData | null) ?? null))
-        .catch((error: unknown) => callback(error));
+      store.get(sid).then(
+        (session) => invokeCallback(callback, null, (session as SessionData | null) ?? null),
+        (error: unknown) => invokeCallback(callback, error),
+      );
     }
 
     set(sid: string, session: SessionData, callback?: (err?: unknown) => void): void {
       const ttlMs = ttlMsFromSession(session, Date.now(), options.ttlMs);
       if (ttlMs !== undefined && ttlMs <= 0) {
         // The cookie already expired — an expired session must not be written back.
-        store
-          .destroy(sid)
-          .then(() => callback?.(null))
-          .catch((error: unknown) => callback?.(error));
+        store.destroy(sid).then(
+          () => invokeCallback(callback, null),
+          (error: unknown) => invokeCallback(callback, error),
+        );
         return;
       }
-      store
-        .set(sid, session, { ttlMs })
-        .then(() => callback?.(null))
-        .catch((error: unknown) => callback?.(error));
+      store.set(sid, session, { ttlMs }).then(
+        () => invokeCallback(callback, null),
+        (error: unknown) => invokeCallback(callback, error),
+      );
     }
 
     destroy(sid: string, callback?: (err?: unknown) => void): void {
-      store
-        .destroy(sid)
-        .then(() => callback?.(null))
-        .catch((error: unknown) => callback?.(error));
+      store.destroy(sid).then(
+        () => invokeCallback(callback, null),
+        (error: unknown) => invokeCallback(callback, error),
+      );
     }
 
     touch(sid: string, session: SessionData, callback?: (err?: unknown) => void): void {
       const ttlMs = ttlMsFromSession(session, Date.now(), options.ttlMs);
-      store
-        .touch(sid, { ttlMs })
-        .then(() => callback?.(null))
-        .catch((error: unknown) => callback?.(error));
+      store.touch(sid, { ttlMs }).then(
+        () => invokeCallback(callback, null),
+        (error: unknown) => invokeCallback(callback, error),
+      );
     }
   }
 

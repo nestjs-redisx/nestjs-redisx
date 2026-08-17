@@ -1,4 +1,5 @@
 import { ISessionStore } from '../../application/ports/session-store.port';
+import { invokeCallback } from './safe-callback';
 import { ttlMsFromSession } from './session-cookie-ttl';
 
 /**
@@ -54,33 +55,33 @@ export interface IFastifySessionStore {
 export function toFastifyStore(store: ISessionStore, options: IFastifySessionStoreOptions = {}): IFastifySessionStore {
   return {
     get(sessionId, callback): void {
-      store
-        .get(sessionId)
-        .then((session) => callback(null, (session as IFastifySessionPayload | null) ?? null))
-        .catch((error: unknown) => callback(error));
+      store.get(sessionId).then(
+        (session) => invokeCallback(callback, null, (session as IFastifySessionPayload | null) ?? null),
+        (error: unknown) => invokeCallback(callback, error),
+      );
     },
 
     set(sessionId, session, callback): void {
       const ttlMs = ttlMsFromSession(session, Date.now(), options.ttlMs);
       if (ttlMs !== undefined && ttlMs <= 0) {
         // The cookie already expired — an expired session must not be written back.
-        store
-          .destroy(sessionId)
-          .then(() => callback(null))
-          .catch((error: unknown) => callback(error));
+        store.destroy(sessionId).then(
+          () => invokeCallback(callback, null),
+          (error: unknown) => invokeCallback(callback, error),
+        );
         return;
       }
-      store
-        .set(sessionId, session, { ttlMs })
-        .then(() => callback(null))
-        .catch((error: unknown) => callback(error));
+      store.set(sessionId, session, { ttlMs }).then(
+        () => invokeCallback(callback, null),
+        (error: unknown) => invokeCallback(callback, error),
+      );
     },
 
     destroy(sessionId, callback): void {
-      store
-        .destroy(sessionId)
-        .then(() => callback(null))
-        .catch((error: unknown) => callback(error));
+      store.destroy(sessionId).then(
+        () => invokeCallback(callback, null),
+        (error: unknown) => invokeCallback(callback, error),
+      );
     },
   };
 }

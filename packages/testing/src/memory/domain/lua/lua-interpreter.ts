@@ -343,7 +343,8 @@ export class LuaInterpreter {
 
   /** Converts a Redis reply (from the executor) into a Lua value. */
   private redisToLua(reply: unknown): LuaValue {
-    if (reply === null || reply === undefined) return null;
+    // Real Redis maps nil replies from redis.call into Lua false.
+    if (reply === null || reply === undefined) return false;
     if (typeof reply === 'number') return reply;
     if (typeof reply === 'string') return reply;
     if (typeof reply === 'boolean') return reply ? 1 : null;

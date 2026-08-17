@@ -4,6 +4,7 @@ import { CLIENT_MANAGER, RedisModule } from '@nestjs-redisx/core';
 import { MEMORY_DRIVER_TYPE } from '@nestjs-redisx/testing';
 
 import { SessionPlugin, SESSION_SERVICE, SESSION_STORE, SessionLimitExceededError, type ISessionService, type ISessionStore, type ISessionPluginOptions, type ISessionEventInfo } from '../../src';
+import { GET_SESSION_SCRIPT } from '../../src/session/infrastructure/scripts/lua-scripts';
 
 /**
  * End-to-end validation on the in-memory driver — NO Redis. Exercises the full
@@ -268,6 +269,102 @@ describe('Session on the in-memory driver (no Redis)', () => {
       expect(created).toEqual([{ sessionId: 'sid-1', userId: 'user-1' }]);
       expect(destroyed).toEqual([{ sessionId: 'sid-1', userId: 'user-1' }]);
     });
+  });
+
+  it('keeps revocation working for rolling sessions (index key TTL slides with touch)', async () => {
+    // Given: short TTL, session kept alive by touch alone (express-session
+    // with resave:false touches without saving)
+    const { service, store } = await boot({ defaultTtlMs: 300 });
+    await store.set('sid-roll', userSession('user-1'));
+
+    // When: the index key's original 300ms TTL elapses while touches continue
+    for (let i = 0; i < 6; i++) {
+      await wait(100);
+      expect(await store.touch('sid-roll')).toBe(true);
+    }
+
+    // Then: device page, counters, and revokeAll still see the session
+    expect(await service.countByUser('user-1')).toBe(1);
+    expect((await service.getSessionsByUser('user-1')).map((d) => d.id)).toEqual(['sid-roll']);
+    expect(await service.revokeAll('user-1')).toBe(1);
+    expect(await store.get('sid-roll')).toBeNull();
+  });
+
+  it('gives index keys a TTL so they never leak after their sessions die', async () => {
+    // Given
+    const { store } = await boot({ defaultTtlMs: 60_000 });
+    await store.set('sid-1', userSession('user-1'));
+    await store.touch('sid-1');
+    const manager = app!.get<{ getClient(name: string): Promise<{ pttl(key: string): Promise<number> }> }>(CLIENT_MANAGER);
+    const driver = await manager.getClient('default');
+
+    // Then: both index keys expire on their own
+    expect(await driver.pttl('sess:user:user-1')).toBeGreaterThan(0);
+    expect(await driver.pttl('sess:index')).toBeGreaterThan(0);
+  });
+
+  it('does not lock the user out when reject-policy seats die by the absolute cap', async () => {
+    // Given: 1 seat, reject policy, 150ms lifetime cap, 1-day default TTL
+    const { store } = await boot({ maxSessionsPerUser: 1, maxSessionsPolicy: 'reject', absoluteLifetimeMs: 150 });
+    await store.set('sid-1', userSession('user-1'));
+
+    // When: the session dies by the cap without ever being read again
+    await wait(220);
+
+    // Then: a fresh login must succeed — the index entry's score is clamped
+    // to the capped expiry, so the seat frees together with the session
+    await expect(store.set('sid-2', userSession('user-1'))).resolves.toBeUndefined();
+    expect(await store.get('sid-2')).not.toBeNull();
+  });
+
+  it('moves the sid between user indexes on an account switch', async () => {
+    // Given: alice's session re-saved under bob (no sid regeneration)
+    const { service, store } = await boot();
+    await store.set('sid-shared', userSession('alice'));
+
+    // When
+    await store.set('sid-shared', userSession('bob', { secret: 'bob-data' }));
+
+    // Then: alice's device page must NOT leak bob's session
+    expect(await service.getSessionsByUser('alice')).toEqual([]);
+    expect(await service.countByUser('alice')).toBe(0);
+    expect((await service.getSessionsByUser('bob')).map((d) => d.id)).toEqual(['sid-shared']);
+
+    // And destroy cleans the (only) current owner's index
+    await store.destroy('sid-shared');
+    expect(await service.countByUser('bob')).toBe(0);
+  });
+
+  it('treats a missing session as a plain miss on the memory driver (no corrupt-payload destroy)', async () => {
+    // Given: parity with real Redis — nil bulk replies must reach Lua as false
+    const { store } = await boot();
+    const manager = app!.get<{ getClient(name: string): Promise<{ eval(script: string, keys: string[], args: Array<string | number>): Promise<unknown> }> }>(CLIENT_MANAGER);
+    const driver = await manager.getClient('default');
+
+    // When: the get script runs directly against missing keys
+    const raw = (await driver.eval(GET_SESSION_SCRIPT, ['sess:{missing}', 'sess:{missing}:meta'], [Date.now(), 0])) as number[];
+
+    // Then: status 0 (miss), NOT status 1 with a bogus payload
+    expect(raw[0]).toBe(0);
+    expect(await store.get('missing')).toBeNull();
+  });
+
+  it('re-arms the absolute cap when session metadata is lost (no immortal sessions)', async () => {
+    // Given: cap 200ms; the metadata key vanishes (eviction / TTL skew)
+    const { store } = await boot({ absoluteLifetimeMs: 200, defaultTtlMs: 60_000 });
+    await store.set('sid-1', userSession('user-1'));
+    const manager = app!.get<{ getClient(name: string): Promise<{ del(...keys: string[]): Promise<number> }> }>(CLIENT_MANAGER);
+    const driver = await manager.getClient('default');
+    await driver.del('sess:{sid-1}:meta');
+
+    // When: the session keeps being touched past the (re-armed) cap window
+    expect(await store.touch('sid-1')).toBe(true);
+    await wait(250);
+
+    // Then: the cap fires from the re-stamped createdAt instead of resetting
+    // on every touch
+    expect(await store.touch('sid-1')).toBe(false);
+    expect(await store.get('sid-1')).toBeNull();
   });
 
   it('exposes getSession for a single-session lookup', async () => {

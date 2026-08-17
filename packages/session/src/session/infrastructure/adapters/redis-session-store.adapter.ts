@@ -39,9 +39,10 @@ type ScriptName = keyof typeof SCRIPTS;
  * - `sess:index` — global ZSET `sid -> expiresAtMs`
  *
  * Payload+metadata operations are atomic Lua on one cluster slot; index
- * operations are single-key (cluster-safe). Cross-key sequences (eviction,
- * index cleanup after destroy) are best-effort — stale index entries are
- * swept lazily by score.
+ * operations are single-key (cluster-safe) and always go through the reserve
+ * script, which also keeps the index KEY's TTL at least as long as its
+ * longest-lived refresh. Cross-key sequences (eviction, index cleanup after
+ * destroy) are best-effort — stale index entries are swept lazily by score.
  *
  * Time is obtained here via Date.now() and passed into the scripts as ARGV —
  * the Lua never reads time itself.
@@ -72,6 +73,7 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
 
   async get(sessionId: string): Promise<unknown | null> {
     try {
+      this.assertSessionId(sessionId);
       const result = (await this.runScript('get', this.sessionKeys(sessionId), [Date.now(), this.capMs()])) as Array<number | string>;
       const status = result[0];
 
@@ -97,43 +99,67 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
   }
 
   async set(sessionId: string, session: unknown, options?: ISessionSetOptions): Promise<void> {
+    this.assertSessionId(sessionId);
     const payload = this.serialize(sessionId, session);
     const userId = this.extractUserId(sessionId, session);
+    const ttlMs = this.resolveTtlMs(options?.ttlMs);
     const now = Date.now();
-    const ttlMs = options?.ttlMs ?? this.defaultTtlMs();
+    const cap = this.capMs();
     const maxSessions = this.options.maxSessionsPerUser;
     const rejectPolicy = this.options.maxSessionsPolicy === 'reject';
+    // Best estimate before the write: clamped to the cap so a reject-policy
+    // reservation can never outlive the session it reserves a seat for.
+    const estimatedExpiresAt = now + (cap > 0 ? Math.min(ttlMs, cap) : ttlMs);
 
     try {
-      // Reject policy: reserve the seat atomically BEFORE writing the session.
+      let reserved = false;
       if (userId !== undefined && maxSessions !== undefined && rejectPolicy) {
-        const [allowed] = (await this.reserve(userId, sessionId, now + ttlMs, now, maxSessions, true)) as number[];
+        const [allowed] = (await this.reserve(this.userIndexKey(userId), sessionId, estimatedExpiresAt, now, maxSessions, true)) as number[];
         if (allowed !== 1) {
-          this.metrics?.incrementCounter('redisx_session_limit_rejections_total');
+          this.countMetric('redisx_session_limit_rejections_total');
           throw new SessionLimitExceededError(userId, maxSessions);
         }
+        reserved = true;
       }
 
-      const result = (await this.runScript('set', this.sessionKeys(sessionId), [payload, ttlMs, now, userId ?? '', this.capMs()])) as number[];
-      const status = result[0];
+      let result: Array<number | string>;
+      try {
+        result = (await this.runScript('set', this.sessionKeys(sessionId), [payload, ttlMs, now, userId ?? '', cap])) as Array<number | string>;
+      } catch (error) {
+        // Compensation: a reservation without a session must not burn a seat.
+        if (reserved && userId !== undefined) {
+          await this.driver.zrem(this.userIndexKey(userId), sessionId).catch((cleanupError: unknown) => {
+            this.logger.warn(`Failed to release reserved seat for user "${userId}": ${(cleanupError as Error).message}`);
+          });
+        }
+        throw error;
+      }
 
+      const status = result[0];
       if (status === -1) {
         await this.onCapExpired(sessionId, userId);
         return;
       }
 
-      const expiresAt = result[1] ?? now + ttlMs;
-      await this.driver.zadd(this.globalIndexKey(), expiresAt, sessionId);
+      const expiresAt = (result[1] as number) ?? now + ttlMs;
 
-      if (userId !== undefined && !rejectPolicy) {
-        const [, activeCount] = (await this.reserve(userId, sessionId, expiresAt, now, maxSessions ?? 0, false)) as number[];
-        if (maxSessions !== undefined && (activeCount ?? 0) > maxSessions) {
+      // Account switch on the same sid: leave no trace in the previous
+      // owner's index (device-page leak + phantom seat otherwise).
+      const prevUserId = this.asUserId(result[2]);
+      if (prevUserId !== undefined && prevUserId !== userId) {
+        await this.driver.zrem(this.userIndexKey(prevUserId), sessionId);
+      }
+
+      if (userId !== undefined) {
+        const [, activeCount] = (await this.reserve(this.userIndexKey(userId), sessionId, expiresAt, now, rejectPolicy ? 0 : (maxSessions ?? 0), false)) as number[];
+        if (!rejectPolicy && maxSessions !== undefined && (activeCount ?? 0) > maxSessions) {
           await this.evictOldest(userId, sessionId, (activeCount ?? 0) - maxSessions);
         }
       }
+      await this.reserve(this.globalIndexKey(), sessionId, expiresAt, now, 0, 0);
 
       if (status === 1) {
-        this.metrics?.incrementCounter('redisx_session_created_total');
+        this.countMetric('redisx_session_created_total');
         this.emitEvent(this.events().onCreated, { sessionId, userId });
       }
     } catch (error) {
@@ -142,8 +168,9 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
   }
 
   async touch(sessionId: string, options?: ISessionSetOptions): Promise<boolean> {
+    this.assertSessionId(sessionId);
+    const ttlMs = this.resolveTtlMs(options?.ttlMs);
     const now = Date.now();
-    const ttlMs = options?.ttlMs ?? this.defaultTtlMs();
 
     try {
       const result = (await this.runScript('touch', this.sessionKeys(sessionId), [ttlMs, now, this.capMs()])) as Array<number | string>;
@@ -160,9 +187,9 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
       const expiresAt = result[1] as number;
       const userId = this.asUserId(result[2]);
       if (userId !== undefined) {
-        await this.driver.zadd(this.userIndexKey(userId), expiresAt, sessionId);
+        await this.reserve(this.userIndexKey(userId), sessionId, expiresAt, now, 0, 0);
       }
-      await this.driver.zadd(this.globalIndexKey(), expiresAt, sessionId);
+      await this.reserve(this.globalIndexKey(), sessionId, expiresAt, now, 0, 0);
       return true;
     } catch (error) {
       throw this.wrapError(`touch failed for session "${sessionId}"`, error);
@@ -171,12 +198,13 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
 
   async destroy(sessionId: string, reason: SessionEndReason = 'destroyed'): Promise<boolean> {
     try {
+      this.assertSessionId(sessionId);
       const { existed, userId } = await this.removeSession(sessionId);
       if (!existed) {
         return false;
       }
 
-      this.metrics?.incrementCounter('redisx_session_destroyed_total', { reason });
+      this.countMetric('redisx_session_destroyed_total', { reason });
       this.emitEvent(this.eventFor(reason), { sessionId, userId });
       return true;
     } catch (error) {
@@ -186,6 +214,7 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
 
   async getMetadata(sessionId: string): Promise<ISessionMetadata | null> {
     try {
+      this.assertSessionId(sessionId);
       const hash = await this.driver.hgetall(this.metaKey(sessionId));
       return parseSessionMetadata(hash);
     } catch (error) {
@@ -195,6 +224,7 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
 
   async recordActivity(sessionId: string, activity: ISessionActivity): Promise<void> {
     try {
+      this.assertSessionId(sessionId);
       await this.runScript('activity', [this.metaKey(sessionId)], [Date.now(), activity.ip ?? '', activity.userAgent ?? '']);
     } catch (error) {
       throw this.wrapError(`recordActivity failed for session "${sessionId}"`, error);
@@ -228,6 +258,17 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
   // ---------------------------------------------------------------------------
   // Internals
   // ---------------------------------------------------------------------------
+
+  /**
+   * An empty sid — or one starting with `}` — produces an EMPTY cluster hash
+   * tag, which makes Redis hash the whole key: payload and metadata would land
+   * on different slots and every multi-key script would fail with CROSSSLOT.
+   */
+  private assertSessionId(sessionId: string): void {
+    if (sessionId.length === 0 || sessionId.startsWith('}')) {
+      throw new SessionStoreError(`Invalid session id ${JSON.stringify(sessionId)}: it must be non-empty and must not start with "}"`);
+    }
+  }
 
   /** Payload + metadata keys share a hash tag -> same cluster slot. */
   private sessionKeys(sessionId: string): [string, string] {
@@ -263,7 +304,25 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
     return this.options.events ?? {};
   }
 
+  /**
+   * TTLs must be positive finite integers: PEXPIRE rejects anything else
+   * mid-script AFTER the payload SET, which would leave a persisted,
+   * uncappable session key behind (Redis does not roll scripts back).
+   */
+  private resolveTtlMs(ttlMs: number | undefined): number {
+    const requested = ttlMs ?? this.defaultTtlMs();
+    const resolved = Math.floor(requested);
+    if (!Number.isFinite(resolved) || resolved < 1) {
+      throw new SessionStoreError(`Invalid session TTL ${String(requested)}ms: expected a positive finite number of milliseconds`);
+    }
+    return resolved;
+  }
+
   private serialize(sessionId: string, session: unknown): string {
+    if (session === null || session === undefined) {
+      // 'null' would round-trip as a permanent miss that still holds a seat.
+      throw new SessionSerializationError(sessionId);
+    }
     let payload: string | undefined;
     try {
       payload = JSON.stringify(session);
@@ -276,22 +335,37 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
     return payload;
   }
 
+  /**
+   * Extractor results are normalized: only non-empty strings (and finite
+   * numbers, stringified) count as a user identity — an empty string would
+   * index sessions under `sess:user:` and orphan them forever.
+   */
   private extractUserId(sessionId: string, session: unknown): string | undefined {
     const extractor = this.options.userIdExtractor ?? defaultUserIdExtractor;
+    let raw: unknown;
     try {
-      return extractor(session);
+      raw = extractor(session);
     } catch (error) {
       throw new SessionStoreError(`userIdExtractor failed for session "${sessionId}": ${(error as Error).message}`, error as Error);
     }
+    if (typeof raw === 'string' && raw.length > 0) {
+      return raw;
+    }
+    if (typeof raw === 'number' && Number.isFinite(raw)) {
+      return String(raw);
+    }
+    return undefined;
   }
 
-  private reserve(userId: string, sessionId: string, expiresAt: number, now: number, max: number, reject: boolean): Promise<unknown> {
-    return this.runScript('reserve', [this.userIndexKey(userId)], [sessionId, expiresAt, now, max, reject ? 1 : 0]);
+  /** Index write/refresh — always via Lua (sweep + score + index-key TTL). */
+  private reserve(indexKey: string, sessionId: string, expiresAt: number, now: number, max: number, reject: boolean): Promise<unknown> {
+    return this.runScript('reserve', [indexKey], [sessionId, expiresAt, now, max, reject ? 1 : 0]);
   }
 
   /**
    * Destroy the oldest sessions (by createdAt) over the seat limit,
-   * never touching the session being written.
+   * never touching the session being written. A session whose createdAt is
+   * lost sorts first on purpose: it is a broken/phantom seat.
    */
   private async evictOldest(userId: string, keepSessionId: string, overBy: number): Promise<void> {
     const candidates = (await this.getUserSessionIds(userId)).filter((id) => id !== keepSessionId);
@@ -324,7 +398,7 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
   /** A session died from the absolute lifetime cap inside a script. */
   private async onCapExpired(sessionId: string, userId: string | undefined): Promise<void> {
     await this.cleanIndexes(sessionId, userId);
-    this.metrics?.incrementCounter('redisx_session_destroyed_total', { reason: 'expired-by-cap' });
+    this.countMetric('redisx_session_destroyed_total', { reason: 'expired-by-cap' });
     this.emitEvent(this.events().onExpiredByCap, { sessionId, userId });
   }
 
@@ -357,6 +431,19 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
       });
     } catch (error) {
       this.logger.warn(`Session event listener failed: ${(error as Error).message}`);
+    }
+  }
+
+  /** Metrics are observability — a broken metrics service must never fail a request. */
+  private countMetric(name: string, labels?: Record<string, string>): void {
+    try {
+      if (labels) {
+        this.metrics?.incrementCounter(name, labels);
+      } else {
+        this.metrics?.incrementCounter(name);
+      }
+    } catch (error) {
+      this.logger.warn(`Metrics increment failed for "${name}": ${(error as Error).message}`);
     }
   }
 
