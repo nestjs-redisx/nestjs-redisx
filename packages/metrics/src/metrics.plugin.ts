@@ -13,6 +13,7 @@ import { MetricsController } from './metrics/api/controllers/metrics.controller'
 
 const DEFAULT_METRICS_CONFIG: Required<Omit<IMetricsPluginOptions, 'isGlobal' | 'defaultLabels'>> = {
   enabled: true,
+  registry: 'own',
   prefix: 'redisx_',
   exposeEndpoint: true,
   endpoint: '/metrics',
@@ -68,13 +69,19 @@ export class MetricsPlugin implements IRedisXPlugin {
   }
 
   private static mergeDefaults(options: IMetricsPluginOptions): IMetricsPluginOptions {
+    const registry = options.registry ?? DEFAULT_METRICS_CONFIG.registry;
+    // External registry: the app almost certainly collects process metrics
+    // there already — duplicating them is opt-in, not the default.
+    const collectDefaultMetricsFallback = registry === 'own' ? DEFAULT_METRICS_CONFIG.collectDefaultMetrics : false;
+
     return {
       enabled: options.enabled ?? DEFAULT_METRICS_CONFIG.enabled,
+      registry,
       prefix: options.prefix ?? DEFAULT_METRICS_CONFIG.prefix,
       exposeEndpoint: options.exposeEndpoint ?? DEFAULT_METRICS_CONFIG.exposeEndpoint,
       endpoint: options.endpoint ?? DEFAULT_METRICS_CONFIG.endpoint,
       histogramBuckets: options.histogramBuckets ?? DEFAULT_METRICS_CONFIG.histogramBuckets,
-      collectDefaultMetrics: options.collectDefaultMetrics ?? DEFAULT_METRICS_CONFIG.collectDefaultMetrics,
+      collectDefaultMetrics: options.collectDefaultMetrics ?? collectDefaultMetricsFallback,
       commandMetrics: options.commandMetrics ?? DEFAULT_METRICS_CONFIG.commandMetrics,
       pluginMetrics: options.pluginMetrics ?? DEFAULT_METRICS_CONFIG.pluginMetrics,
       collectInterval: options.collectInterval ?? DEFAULT_METRICS_CONFIG.collectInterval,

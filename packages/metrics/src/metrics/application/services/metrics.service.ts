@@ -9,6 +9,8 @@ import { IMetricsService } from '../ports/metrics-service.port';
 @Injectable()
 export class MetricsService implements IMetricsService, OnModuleInit, OnModuleDestroy {
   private readonly registry: promClient.Registry;
+  /** True when the registry is created (and thus fully owned) by this service. */
+  private readonly ownRegistry: boolean;
   private readonly counters = new Map<string, promClient.Counter>();
   private readonly histograms = new Map<string, promClient.Histogram>();
   private readonly gauges = new Map<string, promClient.Gauge>();
@@ -27,8 +29,23 @@ export class MetricsService implements IMetricsService, OnModuleInit, OnModuleDe
     this.defaultLabels = config.defaultLabels ?? {};
     this.latencyBuckets = config.histogramBuckets ?? [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10];
 
-    this.registry = new promClient.Registry();
-    this.registry.setDefaultLabels(this.defaultLabels);
+    const registryOption = config.registry ?? 'own';
+    if (registryOption === 'own') {
+      this.registry = new promClient.Registry();
+      this.ownRegistry = true;
+    } else if (registryOption === 'default') {
+      this.registry = promClient.register;
+      this.ownRegistry = false;
+    } else {
+      this.registry = registryOption;
+      this.ownRegistry = false;
+    }
+
+    // Never overwrite the default labels of an external registry unless the
+    // user explicitly configured labels for this plugin.
+    if (this.ownRegistry || config.defaultLabels) {
+      this.registry.setDefaultLabels(this.defaultLabels);
+    }
   }
 
   onModuleInit(): void {
@@ -38,7 +55,11 @@ export class MetricsService implements IMetricsService, OnModuleInit, OnModuleDe
 
     this.registerStandardMetrics();
 
-    if (this.config.collectDefaultMetrics !== false) {
+    // Own registry: collect by default. External registry: opt-in only — the
+    // application almost certainly collects process metrics there already.
+    const collectDefault = this.ownRegistry ? this.config.collectDefaultMetrics !== false : this.config.collectDefaultMetrics === true;
+
+    if (collectDefault) {
       const collectInterval = this.config.collectInterval ?? 15000;
       promClient.collectDefaultMetrics({
         register: this.registry,
@@ -49,7 +70,18 @@ export class MetricsService implements IMetricsService, OnModuleInit, OnModuleDe
   }
 
   onModuleDestroy(): void {
-    this.registry.clear();
+    if (this.ownRegistry) {
+      this.registry.clear();
+    } else {
+      // External registry: remove ONLY the metrics this service registered —
+      // clearing would wipe the application's metrics.
+      for (const name of [...this.counters.keys(), ...this.histograms.keys(), ...this.gauges.keys()]) {
+        this.registry.removeSingleMetric(name);
+      }
+    }
+    this.counters.clear();
+    this.histograms.clear();
+    this.gauges.clear();
   }
 
   private registerStandardMetrics(): void {

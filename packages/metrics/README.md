@@ -8,7 +8,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/@nestjs-redisx/metrics)](https://www.npmjs.com/package/@nestjs-redisx/metrics)
 [![license](https://img.shields.io/npm/l/@nestjs-redisx/metrics)](https://opensource.org/licenses/MIT)
 
-Prometheus metrics plugin for NestJS RedisX. Exposes Redis command latencies, connection pool stats, cache hit rates, and custom metrics via a `/metrics` endpoint. `prom-client` is bundled.
+Prometheus metrics plugin for NestJS RedisX. Exposes Redis command latencies, connection pool stats, cache hit rates, and custom metrics via a `/metrics` endpoint — or straight into your application's existing prom-client registry (`registry: 'default'`). `prom-client` is a peer dependency, installed automatically by npm 7+ and pnpm 8+ (yarn classic: add it to your dependencies).
 
 ## Installation
 

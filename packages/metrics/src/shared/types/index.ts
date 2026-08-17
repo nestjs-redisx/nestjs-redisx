@@ -1,3 +1,5 @@
+import type { Registry } from 'prom-client';
+
 export interface IMetricsPluginOptions {
   /**
    * Make the module global.
@@ -19,8 +21,29 @@ export interface IMetricsPluginOptions {
 
   /**
    * Default labels added to all metrics.
+   *
+   * With an external registry (`registry: 'default'` or a provided
+   * instance), labels are only applied when this option is explicitly set —
+   * the plugin never overwrites the application's default labels otherwise.
    */
   defaultLabels?: Record<string, string>;
+
+  /**
+   * Which prom-client registry to register metrics into.
+   *
+   * - `'own'` — an isolated registry, exposed via the plugin's `/metrics`
+   *   endpoint and `getMetrics()`.
+   * - `'default'` — the global `promClient.register`, so RedisX metrics show
+   *   up on the application's existing `/metrics` endpoint.
+   * - a `Registry` instance — register into the provided registry.
+   *
+   * With an external registry (`'default'` or an instance) the plugin only
+   * removes its OWN metrics on shutdown and `collectDefaultMetrics` becomes
+   * opt-in (the application almost certainly collects process metrics
+   * already).
+   * @default 'own'
+   */
+  registry?: 'own' | 'default' | Registry;
 
   /**
    * Histogram buckets for latency (in seconds).
