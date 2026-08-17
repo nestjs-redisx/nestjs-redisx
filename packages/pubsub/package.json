@@ -29,7 +29,8 @@
     "docker:up": "cd ../.. && docker-compose up -d redis",
     "docker:down": "cd ../.. && docker-compose down",
     "lint": "eslint \"{src,test}/**/*.ts\"",
-    "format": "prettier --write \"{src,test}/**/*.ts\""
+    "format": "prettier --write \"{src,test}/**/*.ts\"",
+    "prepublishOnly": "node ../../scripts/check-changelog.mjs"
   },
   "keywords": [
     "nestjs",

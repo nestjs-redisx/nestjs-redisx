@@ -1,0 +1,26 @@
+name: Release Guard
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  changelog:
+    name: Changelog & version consistency
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # The script is dependency-free, so no npm ci is needed. The tagged
+      # version must match the root package.json, have a topmost dated
+      # CHANGELOG entry, lockstep package versions, and a current site nav.
+      - name: Verify the tagged version is fully recorded
+        run: node scripts/check-changelog.mjs "$GITHUB_REF_NAME"

@@ -32,7 +32,8 @@
     "test:docker": "npm run docker:up && sleep 3 && npm run test:integration; TEST_EXIT=$?; npm run docker:down; exit $TEST_EXIT",
     "test:all": "npm test && npm run test:integration",
     "lint": "eslint \"{src,test}/**/*.ts\"",
-    "format": "prettier --write \"{src,test}/**/*.ts\""
+    "format": "prettier --write \"{src,test}/**/*.ts\"",
+    "prepublishOnly": "node ../../scripts/check-changelog.mjs"
   },
   "keywords": [
     "nestjs",

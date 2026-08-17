@@ -38,7 +38,8 @@
     "docs:build": "npm run build -w website",
     "docs:preview": "npm run preview -w website",
     "check:llms": "node scripts/check-llms-full.mjs",
-    "prepare": "husky"
+    "prepare": "husky",
+    "check:changelog": "node scripts/check-changelog.mjs"
   },
   "devDependencies": {
     "@nestjs/cli": "^9.0.0 || ^10.0.0 || ^11.0.0",

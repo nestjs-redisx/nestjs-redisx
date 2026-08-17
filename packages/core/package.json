@@ -29,7 +29,8 @@
     "test:watch": "SKIP_INTEGRATION=true vitest",
     "test:cov": "SKIP_INTEGRATION=true vitest run --coverage",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "prepublishOnly": "node ../../scripts/check-changelog.mjs"
   },
   "keywords": [
     "nestjs",

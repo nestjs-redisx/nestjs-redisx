@@ -26,7 +26,8 @@
     "test:cov": "SKIP_INTEGRATION=true vitest run --coverage",
     "test:integration": "vitest run test/integration",
     "lint": "eslint \"{src,test}/**/*.ts\"",
-    "format": "prettier --write \"{src,test}/**/*.ts\""
+    "format": "prettier --write \"{src,test}/**/*.ts\"",
+    "prepublishOnly": "node ../../scripts/check-changelog.mjs"
   },
   "keywords": [
     "nestjs",

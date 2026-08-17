@@ -25,7 +25,8 @@
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
     "lint": "eslint \"src/**/*.ts\"",
-    "format": "prettier --write \"{src,test}/**/*.ts\""
+    "format": "prettier --write \"{src,test}/**/*.ts\"",
+    "prepublishOnly": "node ../../scripts/check-changelog.mjs"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.7.0",

@@ -37,6 +37,9 @@ jobs:
       - name: Verify llms-full.txt covers all public methods
         run: npm run check:llms
 
+      - name: Release guard (CHANGELOG entry, lockstep versions, site nav)
+        run: npm run check:changelog
+
   test:
     name: Test (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
