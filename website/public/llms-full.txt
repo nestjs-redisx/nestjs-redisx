@@ -1,6 +1,6 @@
 # NestJS RedisX
 
-> Modular Redis toolkit for NestJS with plugin architecture. Provides two-tier caching (L1 memory + L2 Redis), distributed locks, rate limiting, a distributed circuit breaker, typed Pub/Sub, idempotency, Redis Streams, Prometheus metrics, and OpenTelemetry tracing. Supports both ioredis and node-redis drivers. TypeScript-first, zero external dependencies per plugin (observability plugins integrate with your existing prom-client and OpenTelemetry setups).
+> Modular Redis toolkit for NestJS with plugin architecture. Provides two-tier caching (L1 memory + L2 Redis), distributed locks, rate limiting, a distributed circuit breaker, typed Pub/Sub, session management, idempotency, Redis Streams, Prometheus metrics, and OpenTelemetry tracing. Supports both ioredis and node-redis drivers. TypeScript-first, zero external dependencies per plugin (observability plugins integrate with your existing prom-client and OpenTelemetry setups).
 
 ## Installation
 
@@ -24,6 +24,7 @@ npm install @nestjs-redisx/locks        # Distributed locks
 npm install @nestjs-redisx/rate-limit   # Rate limiting
 npm install @nestjs-redisx/circuit-breaker # Distributed circuit breaker
 npm install @nestjs-redisx/pubsub       # Typed Pub/Sub messaging
+npm install @nestjs-redisx/session      # Session management (+ express-session or @fastify/session)
 npm install @nestjs-redisx/idempotency  # Request deduplication
 npm install @nestjs-redisx/streams      # Redis Streams
 npm install @nestjs-redisx/metrics      # Prometheus metrics
@@ -570,6 +571,62 @@ Multiple handlers per channel multiplex over ONE Redis subscription. Handler err
 
 Note: with the node-redis driver, Pub/Sub is supported on single-node connections; use ioredis for Pub/Sub over Cluster/Sentinel topologies.
 
+## Session Plugin
+
+Redis session management ("Spring Session for NestJS"). The base layer is a store for the session middleware you already run — `express-session` or `@fastify/session` — so Passport, `req.session`, cookie handling, fixation defense, and rotation stay with the middleware (migration from connect-redis is one line). On top of the same keys, `SESSION_SERVICE` adds what the Store contract cannot: a per-user device page, revoke-everywhere, seat limits, an absolute lifetime cap, and audit events. `express-session` / `@fastify/session` are OPTIONAL peer dependencies — install only the one you use.
+
+### SessionPlugin Configuration
+
+```typescript
+new SessionPlugin({
+  client: 'default',            // named Redis client
+  keyPrefix: 'sess:',           // Redis key namespace
+  defaultTtlMs: 86_400_000,     // TTL when the middleware sets no cookie expiry (1 day)
+  userIdExtractor: (session) => session?.passport?.user, // default: Passport convention
+  absoluteLifetimeMs: undefined, // absolute cap: force re-login regardless of activity (off by default)
+  maxSessionsPerUser: undefined, // per-user seat limit (off by default)
+  maxSessionsPolicy: 'evict-oldest', // or 'reject' -> SessionLimitExceededError at login
+  events: {                     // fire-and-forget audit hooks
+    onCreated: ({ sessionId, userId }) => {},
+    onDestroyed: ({ sessionId, userId }) => {},
+    onRevoked: ({ sessionId, userId }) => {},
+    onExpiredByCap: ({ sessionId, userId }) => {},
+  },
+})
+```
+
+### Middleware Wiring
+
+```typescript
+// express (main.ts) — one line replaces connect-redis:
+import session from 'express-session';
+import { SESSION_STORE, toExpressStore, ISessionStore } from '@nestjs-redisx/session';
+
+const store = app.get<ISessionStore>(SESSION_STORE);
+app.use(session({ secret: '...', resave: false, saveUninitialized: false, store: await toExpressStore(store) }));
+
+// fastify:
+import { toFastifyStore } from '@nestjs-redisx/session';
+await app.register(fastifyCookie);
+await app.register(fastifySession, { secret: '...', store: toFastifyStore(store) });
+```
+
+`toExpressStore()` is async (lazy optional peer load; throws `SessionMiddlewareMissingError` with an install hint when express-session is absent). TTL per write: `cookie.expires - now` when set, else the adapter `ttlMs`, else the plugin `defaultTtlMs`. An already-expired cookie destroys the session instead of writing it back.
+
+### Service Usage
+
+```typescript
+import { SESSION_SERVICE, ISessionService } from '@nestjs-redisx/session';
+
+const devices = await sessions.getSessionsByUser(userId); // device page: ip, userAgent, createdAt, lastSeenAt
+await sessions.revokeAllExcept(userId, req.sessionID);    // "log out everywhere else"
+await sessions.revokeAll(userId);                         // password change / compromise
+```
+
+### Semantics
+
+Keyspace: `sess:{<sid>}` (payload JSON, hash-tagged with `sess:{<sid>}:meta` metadata hash for cluster-atomic Lua) + `sess:user:<userId>` and `sess:index` ZSET indexes (`sid -> expiresAtMs`, swept lazily by score — accurate counts without SCAN). `createdAt` survives re-saves. Seat limits are enforced at the save that first indexes a user (with Passport: login); `reject` is an atomic per-user Lua reservation, `evict-oldest` destroys the oldest sessions by `createdAt` (best-effort under concurrency). The absolute lifetime cap clamps every TTL to the remaining window (sessions die on time without traffic) and destroys pre-cap sessions on their next access (firing `onExpiredByCap`). IP/user-agent metadata comes from an opt-in one-liner calling `recordActivity` after the session middleware. When MetricsPlugin is present, counters are emitted automatically: `redisx_session_created_total`, `redisx_session_destroyed_total{reason=destroyed|revoked|expired-by-cap}`, `redisx_session_limit_rejections_total`.
+
 ## Idempotency Plugin
 
 Request deduplication for payments, order creation, and mutations. Ensures operations execute exactly once even when clients retry.
@@ -695,7 +752,7 @@ Cache metrics: `cache_hits_total`, `cache_misses_total`, `cache_hit_ratio`, `cac
 Lock metrics: `lock_acquisitions_total`, `lock_wait_duration_seconds`, `lock_hold_duration_seconds`, `locks_active`.
 Rate limit metrics: `ratelimit_requests_total` (with status label: allowed/rejected).
 Stream metrics: `stream_messages_published_total`, `stream_messages_consumed_total`, `stream_processing_duration_seconds`.
-Idempotency metrics: `idempotency_requests_total` (with status: new/replay/conflict).
+Idempotency metrics: `idempotency_requests_total` (with status: new/replay/conflict). Session metrics: `session_created_total`, `session_destroyed_total` (reason: destroyed/revoked/expired-by-cap), `session_limit_rejections_total`.
 
 ## Tracing Plugin
 
@@ -734,7 +791,7 @@ Each Redis command span includes: `db.system: "redis"`, `db.operation`, `db.stat
 
 ## Testing Utilities
 
-`@nestjs-redisx/testing` provides an in-memory Redis driver so you can unit-test code that uses the cache, locks, rate-limit, circuit-breaker, pubsub, idempotency, and streams plugins **without a running Redis**. The plugins run their real production code — including their Lua scripts, stream consumer groups, and Pub/Sub subscriptions — against an in-memory keyspace. Install it as a devDependency: `npm install -D @nestjs-redisx/testing`.
+`@nestjs-redisx/testing` provides an in-memory Redis driver so you can unit-test code that uses the cache, locks, rate-limit, circuit-breaker, pubsub, session, idempotency, and streams plugins **without a running Redis**. The plugins run their real production code — including their Lua scripts, stream consumer groups, and Pub/Sub subscriptions — against an in-memory keyspace. Install it as a devDependency: `npm install -D @nestjs-redisx/testing`.
 
 ### RedisTestingModule (recommended)
 
@@ -846,6 +903,19 @@ States: CLOSED counts failures in a rolling `windowMs`; at `failureThreshold` it
 - `getSubscriptions(): IPubSubSubscriptionsSnapshot` — non-mutating snapshot of logical channels and patterns with active handlers (for monitoring/health).
 
 `IPubSubMessage` carries `channel` (logical name without prefix), `pattern?`, `data` (deserialized; falls back to the raw string when JSON parsing fails), and `raw`. `IPubSubSubscription.unsubscribe()` removes one handler; the Redis subscription is released with the last handler. The `@Subscribe` decorator is discovery-based (channels and patterns). Delivery is at-most-once, fire-and-forget.
+
+### Session — `SESSION_SERVICE` (`ISessionService`)
+
+- `getSession(sessionId: string): Promise<ISessionInfo<T> | null>` — read one session (parsed payload + metadata); enforces the absolute lifetime cap on read.
+- `getSessionsByUser(userId: string): Promise<Array<ISessionInfo<T>>>` — the device page: every live session of a user with metadata (ip, userAgent, createdAt, lastSeenAt, expiresAt).
+- `count(): Promise<number>` — all live sessions (global index, expired scores swept first).
+- `countByUser(userId: string): Promise<number>` — a user's live sessions.
+- `revoke(sessionId: string): Promise<boolean>` — terminate one session; true when it existed.
+- `revokeAll(userId: string): Promise<number>` — terminate every session of a user; returns the count.
+- `revokeAllExcept(userId: string, currentSessionId: string): Promise<number>` — "log out everywhere else": terminate all but the current session.
+- `recordActivity(sessionId: string, activity: ISessionActivity): Promise<void>` — stamp ip/userAgent and refresh lastSeenAt (no-op for missing sessions).
+
+The promise-based store behind the middleware adapters is exported as `SESSION_STORE` (`ISessionStore`: get/set/touch/destroy/getMetadata/recordActivity/getUserSessionIds/count/countByUser). Errors: `SessionStoreError`, `InvalidSessionConfigError`, `SessionLimitExceededError` (reject policy; surfaces via the middleware save / req.logIn callback), `SessionMiddlewareMissingError`, `SessionSerializationError`.
 
 ### Idempotency — `IDEMPOTENCY_SERVICE` (`IIdempotencyService`)
 
@@ -988,6 +1058,8 @@ export class JobWorker {
 | Duplicate form submissions | Idempotency |
 | Payment processing | Idempotency + Locks |
 | Cron job on multiple instances | Locks |
+| "Log out everywhere" / device page / session seat limits | Session |
+| PCI DSS forced re-login window | Session |
 | API abuse protection | Rate Limit |
 | Login brute force | Rate Limit |
 | Flaky third-party API | Circuit Breaker |
@@ -1002,8 +1074,8 @@ export class JobWorker {
 - **Proxy-based decorators**: @Cached, @WithLock, @WithCircuitBreaker work on any @Injectable() method, not just controllers. NestJS Interceptors only work on controller methods, so RedisX uses immediate method wrapping with lazy service injection.
 - **Plugin isolation**: Each plugin is a self-contained NestJS module. Import only what you need.
 - **Driver abstraction**: Both ioredis and node-redis supported through adapter pattern. Switch without code changes.
-- **Atomic operations**: Rate limiting, locks, idempotency, and the circuit breaker use Lua scripts for atomicity.
-- **No external dependencies**: Each plugin has zero npm dependencies beyond NestJS and the Redis driver. The two observability plugins are the deliberate exceptions: metrics uses `prom-client` (peer dependency, shared with the application), tracing uses `@opentelemetry/api` plus the OTel SDK loaded lazily only for the standalone provider mode.
+- **Atomic operations**: Rate limiting, locks, idempotency, sessions, and the circuit breaker use Lua scripts for atomicity.
+- **No external dependencies**: Each plugin has zero npm dependencies beyond NestJS and the Redis driver. The session plugin's middleware adapters treat `express-session`/`@fastify/session` as optional peers (loaded lazily). The two observability plugins are the deliberate exceptions: metrics uses `prom-client` (peer dependency, shared with the application), tracing uses `@opentelemetry/api` plus the OTel SDK loaded lazily only for the standalone provider mode.
 - **Global module**: RedisModule is global — import once in AppModule, inject anywhere.
 - **Composition over inheritance**: No base classes required. Decorators and services compose freely.
 

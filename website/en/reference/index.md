@@ -76,6 +76,7 @@ Self-contained feature modules for common Redis use cases.
 | [Rate Limit](./rate-limit/) | Multiple algorithms for API protection |
 | [Circuit Breaker](./circuit-breaker/) | Distributed closed/open/half-open breaker with fallbacks |
 | [Pub/Sub](./pubsub/) | Typed publish/subscribe with @Subscribe auto-discovery |
+| [Session](./session/) | Session store for express/fastify with device page, revocation, seat limits |
 | [Idempotency](./idempotency/) | Request deduplication with response replay |
 | [Streams](./streams/) | Redis Streams with consumer groups |
 | [Metrics](./metrics/) | Prometheus metrics export |

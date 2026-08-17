@@ -73,7 +73,7 @@ export default withMermaid(
         core: 'Core', cache: 'Cache', locks: 'Locks', 'rate-limit': 'Rate Limit',
         idempotency: 'Idempotency', streams: 'Streams', metrics: 'Metrics',
         tracing: 'Tracing', testing: 'Testing', plugins: 'Plugins',
-        'circuit-breaker': 'Circuit Breaker', pubsub: 'Pub/Sub',
+        'circuit-breaker': 'Circuit Breaker', pubsub: 'Pub/Sub', session: 'Session',
       };
       const parts = slug.split('/').filter(Boolean);
       if (parts.length >= 2) {
@@ -384,6 +384,21 @@ export default withMermaid(
               { text: 'Recipes', link: '/en/reference/pubsub/recipes' },
               { text: 'Testing', link: '/en/reference/pubsub/testing' },
               { text: 'Troubleshooting', link: '/en/reference/pubsub/troubleshooting' },
+            ],
+          },
+          {
+            text: 'Session',
+            collapsed: true,
+            items: [
+              { text: 'Overview', link: '/en/reference/session/' },
+              { text: 'Configuration', link: '/en/reference/session/configuration' },
+              { text: 'Store Adapters', link: '/en/reference/session/store-adapters' },
+              { text: 'Service API', link: '/en/reference/session/service-api' },
+              { text: 'Security Policies', link: '/en/reference/session/security-policies' },
+              { text: 'Monitoring', link: '/en/reference/session/monitoring' },
+              { text: 'Recipes', link: '/en/reference/session/recipes' },
+              { text: 'Testing', link: '/en/reference/session/testing' },
+              { text: 'Troubleshooting', link: '/en/reference/session/troubleshooting' },
             ],
           },
           {

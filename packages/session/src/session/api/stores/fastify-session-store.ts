@@ -13,12 +13,22 @@ export interface IFastifySessionStoreOptions {
 }
 
 /**
+ * Minimal structural shape of a `@fastify/session` session object.
+ * Matches `Fastify.Session` (whose only required field is
+ * `cookie.originalMaxAge`) so the store below is assignable to the
+ * `SessionStore` type without depending on the `@fastify/session` package.
+ */
+export interface IFastifySessionPayload {
+  cookie: { originalMaxAge: number | null };
+}
+
+/**
  * The callback store contract expected by `@fastify/session`.
  * Structural — no dependency on the `@fastify/session` package is needed.
  */
 export interface IFastifySessionStore {
-  get(sessionId: string, callback: (err?: unknown, session?: unknown) => void): void;
-  set(sessionId: string, session: unknown, callback: (err?: unknown) => void): void;
+  get(sessionId: string, callback: (err: unknown, session?: IFastifySessionPayload | null) => void): void;
+  set(sessionId: string, session: IFastifySessionPayload, callback: (err?: unknown) => void): void;
   destroy(sessionId: string, callback: (err?: unknown) => void): void;
 }
 
@@ -46,7 +56,7 @@ export function toFastifyStore(store: ISessionStore, options: IFastifySessionSto
     get(sessionId, callback): void {
       store
         .get(sessionId)
-        .then((session) => callback(null, session ?? null))
+        .then((session) => callback(null, (session as IFastifySessionPayload | null) ?? null))
         .catch((error: unknown) => callback(error));
     },
 

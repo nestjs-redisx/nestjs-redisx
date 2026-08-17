@@ -51,6 +51,7 @@
 | **Rate Limit** | Rate Limiting | Fixed window, sliding window, and token bucket algorithms |
 | **Circuit Breaker** | Distributed Circuit Breaker | Closed/open/half-open breaker with fail-fast rejection and fallbacks |
 | **Pub/Sub** | Typed Pub/Sub | Publish/subscribe with pattern subscriptions and `@Subscribe` auto-discovery |
+| **Session** | Session Management | express-session/@fastify/session store with device page, revoke-everywhere, seat limits |
 | **Idempotency** | Request Idempotency | Deduplication with fingerprinting and response replay |
 | **Streams** | Redis Streams | Consumer groups, dead-letter queues, and backpressure |
 | **Metrics** | Prometheus Metrics | Command latencies, cache hit rates, and custom metrics |
@@ -112,6 +113,7 @@ export class UserService {
 | [@nestjs-redisx/rate-limit](https://nestjs-redisx.dev/en/reference/rate-limit/) | Multi-algorithm rate limiting | [![npm](https://img.shields.io/npm/v/@nestjs-redisx/rate-limit)](https://www.npmjs.com/package/@nestjs-redisx/rate-limit) |
 | [@nestjs-redisx/circuit-breaker](https://nestjs-redisx.dev/en/reference/circuit-breaker/) | Distributed circuit breaker (closed/open/half-open) | [![npm](https://img.shields.io/npm/v/@nestjs-redisx/circuit-breaker)](https://www.npmjs.com/package/@nestjs-redisx/circuit-breaker) |
 | [@nestjs-redisx/pubsub](https://nestjs-redisx.dev/en/reference/pubsub/) | Typed Pub/Sub with @Subscribe auto-discovery | [![npm](https://img.shields.io/npm/v/@nestjs-redisx/pubsub)](https://www.npmjs.com/package/@nestjs-redisx/pubsub) |
+| [@nestjs-redisx/session](https://nestjs-redisx.dev/en/reference/session/) | Session store + device page, revocation, seat limits, lifetime cap | [![npm](https://img.shields.io/npm/v/@nestjs-redisx/session)](https://www.npmjs.com/package/@nestjs-redisx/session) |
 | [@nestjs-redisx/idempotency](https://nestjs-redisx.dev/en/reference/idempotency/) | Request deduplication and response replay | [![npm](https://img.shields.io/npm/v/@nestjs-redisx/idempotency)](https://www.npmjs.com/package/@nestjs-redisx/idempotency) |
 | [@nestjs-redisx/streams](https://nestjs-redisx.dev/en/reference/streams/) | Redis Streams with consumer groups and DLQ | [![npm](https://img.shields.io/npm/v/@nestjs-redisx/streams)](https://www.npmjs.com/package/@nestjs-redisx/streams) |
 | [@nestjs-redisx/metrics](https://nestjs-redisx.dev/en/reference/metrics/) | Prometheus metrics for Redis operations | [![npm](https://img.shields.io/npm/v/@nestjs-redisx/metrics)](https://www.npmjs.com/package/@nestjs-redisx/metrics) |
@@ -128,6 +130,7 @@ export class UserService {
 | Rate Limiting | **Yes** | - | - | - |
 | Circuit Breaker | **Yes** | - | - | - |
 | Pub/Sub | **Yes** | - | - | Manual |
+| Session Management | **Yes** | - | - | - |
 | Idempotency | **Yes** | - | - | - |
 | Prometheus + OTel | **Yes** | - | - | - |
 

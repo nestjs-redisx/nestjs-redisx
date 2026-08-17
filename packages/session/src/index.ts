@@ -10,7 +10,7 @@ export type { ISessionStore } from './session/application/ports/session-store.po
 
 // Middleware store adapters
 export { toExpressStore, type IExpressSessionStoreOptions } from './session/api/stores/express-session-store';
-export { toFastifyStore, type IFastifySessionStore, type IFastifySessionStoreOptions } from './session/api/stores/fastify-session-store';
+export { toFastifyStore, type IFastifySessionStore, type IFastifySessionPayload, type IFastifySessionStoreOptions } from './session/api/stores/fastify-session-store';
 
 // Domain
 export { parseSessionMetadata, isExpiredByCap, effectiveTtlMs, defaultUserIdExtractor } from './session/domain/session-metadata';

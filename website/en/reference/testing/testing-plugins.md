@@ -1,6 +1,6 @@
 ---
 title: 'Testing Plugins — Testing Utilities | NestJS RedisX'
-description: 'Patterns for unit-testing the cache, locks, rate-limit, circuit-breaker, pubsub, and idempotency plugins against the in-memory Redis driver, plus seeding and inspecting keyspace state.'
+description: 'Patterns for unit-testing the cache, locks, rate-limit, circuit-breaker, pubsub, session, and idempotency plugins against the in-memory Redis driver, plus seeding and inspecting keyspace state.'
 ---
 
 # Testing Plugins
@@ -120,6 +120,27 @@ await pubsub.subscribe('events', (msg) => got.push(msg.data));
 await pubsub.publish('events', { n: 1 });
 await new Promise((r) => setTimeout(r, 20));
 expect(got).toEqual([{ n: 1 }]);
+```
+
+## Session
+
+The session store's Lua scripts (metadata, per-user indexes, seat limits, the
+absolute lifetime cap) run on the in-memory interpreter, so login/revocation
+flows are testable with no Redis:
+
+```typescript
+const app = await Test.createTestingModule({
+  imports: [RedisTestingModule.forRoot({ plugins: [new SessionPlugin({ maxSessionsPerUser: 2 })] })],
+}).compile();
+await app.init();
+
+const store = app.get<ISessionStore>(SESSION_STORE);
+const sessions = app.get<ISessionService>(SESSION_SERVICE);
+
+await store.set('sid-laptop', { cookie: {}, passport: { user: 'user-1' } });
+await store.set('sid-phone', { cookie: {}, passport: { user: 'user-1' } });
+await sessions.revokeAllExcept('user-1', 'sid-phone');
+expect(await store.get('sid-laptop')).toBeNull();
 ```
 
 ## Idempotency

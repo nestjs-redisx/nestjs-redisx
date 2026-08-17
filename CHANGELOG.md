@@ -4,6 +4,18 @@ All notable changes to NestJS RedisX are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.0] - 2026-08-17
+
+### Added
+
+- **New package `@nestjs-redisx/session`** — Redis session management ("Spring Session for NestJS"). Closes #48.
+  - **Drop-in middleware store**: `toExpressStore()` / `toFastifyStore()` implement the `express-session` and `@fastify/session` store contracts over the RedisX driver (standalone/cluster/sentinel, named clients). Cookie crypto, session-fixation defense, and ID rotation stay with the middleware; Passport, `req.session`, and the connect ecosystem keep working untouched — migration from `connect-redis` is one line. Both middleware packages are **optional peer dependencies**; `toExpressStore` loads `express-session` lazily and explains what to install when it is missing (`SessionMiddlewareMissingError`).
+  - **`SESSION_SERVICE` (`ISessionService<T>`)** — the capabilities the Store contract cannot offer, over the same keys: `getSession`, `getSessionsByUser` (the GitHub-style device page with IP / user agent / `createdAt` / `lastSeenAt` metadata), `count`, `countByUser`, `revoke`, `revokeAll` (password change / compromise), `revokeAllExcept` ("log out everywhere else"), and `recordActivity` (opt-in request-metadata stamping). User attribution via `userIdExtractor` — defaults to the Passport convention (`session.passport.user`), configurable for custom auth; unattributed sessions are stored but not user-indexed.
+  - **Security policies**: `maxSessionsPerUser` seat limits with `'reject'` (atomic per-user Lua reservation, surfaces as `SessionLimitExceededError` through the middleware save / `req.logIn` callback) or `'evict-oldest'` (by `createdAt`); `absoluteLifetimeMs` lifetime cap (PCI DSS / OWASP forced re-login) — every TTL is clamped to the remaining window so sessions die on time even without traffic, and pre-cap sessions are destroyed on next access.
+  - **Observability**: fire-and-forget lifecycle events (`onCreated` / `onDestroyed` / `onRevoked` / `onExpiredByCap`) and, when `MetricsPlugin` is present, `redisx_session_created_total`, `redisx_session_destroyed_total{reason}`, `redisx_session_limit_rejections_total`.
+  - **Storage design**: middleware payload stored as-is (never re-serialized) hash-tagged with a metadata hash for cluster-atomic Lua; per-user and global ZSET indexes (`sid -> expiresAt`) swept lazily by score — accurate counts with no SCAN. Corrupt payloads self-heal (destroyed and treated as a miss). Runs fully on the `@nestjs-redisx/testing` in-memory driver, Lua included; the e2e suite drives real `express-session` (passport-style login → device page → `revokeAllExcept` → old cookie rejected) and real `@fastify/session`.
+- `core`: `SESSION_*` error codes (`SESSION_STORE_ERROR`, `SESSION_CONFIG_INVALID`, `SESSION_LIMIT_EXCEEDED`, `SESSION_MIDDLEWARE_MISSING`, `SESSION_SERIALIZATION_FAILED`).
+
 ## [1.11.0] - 2026-08-16
 
 ### Added

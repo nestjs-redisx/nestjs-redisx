@@ -200,6 +200,36 @@ sum(rate(redisx_stream_messages_consumed_total{status="error"}[5m])) /
 sum(rate(redisx_stream_messages_consumed_total[5m])) * 100
 ```
 
+## Session Plugin Metrics
+
+### Session Lifecycle
+
+```yaml
+# HELP redisx_session_created_total Total sessions created
+# TYPE redisx_session_created_total counter
+redisx_session_created_total 48210
+
+# HELP redisx_session_destroyed_total Total sessions removed, by cause
+# TYPE redisx_session_destroyed_total counter
+redisx_session_destroyed_total{reason="destroyed"} 40510
+redisx_session_destroyed_total{reason="revoked"} 220
+redisx_session_destroyed_total{reason="expired-by-cap"} 95
+```
+
+**Query: Forced Logouts Per Hour**
+
+```yaml
+increase(redisx_session_destroyed_total{reason="revoked"}[1h])
+```
+
+### Seat-Limit Pressure
+
+```yaml
+# HELP redisx_session_limit_rejections_total Total logins refused by the per-user session seat limit
+# TYPE redisx_session_limit_rejections_total counter
+redisx_session_limit_rejections_total 12
+```
+
 ## Idempotency Plugin Metrics
 
 ### Idempotent Requests

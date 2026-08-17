@@ -139,6 +139,13 @@ export class MetricsService implements IMetricsService, OnModuleInit, OnModuleDe
       this.registerCounter(`${this.prefix}idempotency_requests_total`, 'Total idempotency requests', ['status']);
 
       this.registerHistogram(`${this.prefix}idempotency_duration_seconds`, 'Idempotency check duration in seconds', [], this.latencyBuckets);
+
+      // Session metrics
+      this.registerCounter(`${this.prefix}session_created_total`, 'Total sessions created');
+
+      this.registerCounter(`${this.prefix}session_destroyed_total`, 'Total sessions removed, by cause', ['reason']);
+
+      this.registerCounter(`${this.prefix}session_limit_rejections_total`, 'Total logins refused by the per-user session seat limit');
     }
   }
 

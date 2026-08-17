@@ -117,6 +117,9 @@ redisx_command_duration_seconds_bucket{command="GET",client="default",le="0.005"
 | Metric | Type | Labels | Description |
 |--------|------|--------|-------------|
 | `idempotency_requests_total` | Counter | status | Idempotency requests |
+| `session_created_total` | Counter | - | Sessions created |
+| `session_destroyed_total` | Counter | reason | Sessions removed (destroyed/revoked/expired-by-cap) |
+| `session_limit_rejections_total` | Counter | - | Logins refused by the seat limit |
 | `idempotency_duration_seconds` | Histogram | — | Check duration |
 
 ## Architecture
