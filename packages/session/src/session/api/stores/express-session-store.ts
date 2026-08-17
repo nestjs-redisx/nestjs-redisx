@@ -17,14 +17,35 @@ export interface IExpressSessionStoreOptions {
 
 type ExpressSessionModule = typeof import('express-session');
 
+function normalizeModule(mod: ExpressSessionModule & { default?: ExpressSessionModule }): ExpressSessionModule {
+  return mod.default?.Store !== undefined ? mod.default : mod;
+}
+
+function isModuleNotFound(error: unknown): boolean {
+  const code = (error as { code?: string }).code;
+  return (code === 'MODULE_NOT_FOUND' || code === 'ERR_MODULE_NOT_FOUND') && String((error as Error).message).includes('express-session');
+}
+
 /**
  * Loads `express-session` lazily so the package stays an optional peer:
  * fastify-only applications never pay for it.
+ *
+ * `require` is tried first — it also covers Jest, whose CJS test VM cannot
+ * host a dynamic `import()` callback. Pure-ESM runtimes (where `require` is
+ * unavailable) fall back to dynamic `import()`.
  */
 async function loadExpressSession(): Promise<ExpressSessionModule> {
   try {
-    const mod = (await import('express-session')) as ExpressSessionModule & { default?: ExpressSessionModule };
-    return mod.default?.Store !== undefined ? mod.default : mod;
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return normalizeModule(require('express-session') as ExpressSessionModule);
+  } catch (error) {
+    if (isModuleNotFound(error)) {
+      throw new SessionMiddlewareMissingError('express-session', error as Error);
+    }
+    // `require` unavailable — fall through to dynamic import.
+  }
+  try {
+    return normalizeModule((await import('express-session')) as ExpressSessionModule & { default?: ExpressSessionModule });
   } catch (error) {
     throw new SessionMiddlewareMissingError('express-session', error as Error);
   }

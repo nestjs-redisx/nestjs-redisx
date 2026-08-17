@@ -16,6 +16,7 @@ import { CachePlugin } from '@nestjs-redisx/cache';
 import { LocksPlugin } from '@nestjs-redisx/locks';
 import { RateLimitPlugin } from '@nestjs-redisx/rate-limit';
 import { IdempotencyPlugin } from '@nestjs-redisx/idempotency';
+import { SessionPlugin } from '@nestjs-redisx/session';
 import { StreamsPlugin } from '@nestjs-redisx/streams';
 import { MetricsPlugin } from '@nestjs-redisx/metrics';
 import { TracingPlugin } from '@nestjs-redisx/tracing';
@@ -40,6 +41,7 @@ import { CacheDemoModule } from './demo/cache/cache-demo.module';
 import { LocksDemoModule } from './demo/locks/locks-demo.module';
 import { RateLimitDemoModule } from './demo/rate-limit/rate-limit-demo.module';
 import { IdempotencyDemoModule } from './demo/idempotency/idempotency-demo.module';
+import { SessionDemoModule } from './demo/session/session-demo.module';
 import { StreamsDemoModule } from './demo/streams/streams-demo.module';
 import { MetricsDemoModule } from './demo/metrics/metrics-demo.module';
 import { TracingDemoModule } from './demo/tracing/tracing-demo.module';
@@ -113,6 +115,19 @@ import { IntegrationDemoModule } from './demo/integration/integration-demo.modul
           defaultTtl: 3600000,
         }),
 
+        // SessionPlugin — express-session store + device page / revocation / seat limits
+        new SessionPlugin({
+          maxSessionsPerUser: parseInt(
+            process.env.SESSION_MAX_PER_USER || '5',
+            10,
+          ),
+          maxSessionsPolicy: 'evict-oldest',
+          absoluteLifetimeMs: parseInt(
+            process.env.SESSION_ABSOLUTE_LIFETIME_MS || String(12 * 3600 * 1000),
+            10,
+          ),
+        }),
+
         // StreamsPlugin — Redis Streams with consumer groups and DLQ
         // Uses dedicated 'streams' client to avoid blocking the shared connection
         new StreamsPlugin({
@@ -129,6 +144,7 @@ import { IntegrationDemoModule } from './demo/integration/integration-demo.modul
     LocksDemoModule,
     RateLimitDemoModule,
     IdempotencyDemoModule,
+    SessionDemoModule,
     StreamsDemoModule,
     MetricsDemoModule,
     TracingDemoModule,

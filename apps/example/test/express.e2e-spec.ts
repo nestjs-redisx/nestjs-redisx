@@ -113,4 +113,37 @@ describe('Rate limit + idempotency (Express)', () => {
     expect(res.status).toBe(200);
     expect(res.body).toBeDefined();
   });
+
+  // Session endpoints are Express-only (express-session middleware), so this
+  // block is deliberately NOT mirrored in fastify.e2e-spec.ts.
+  it('runs login -> device page -> logout-others -> old cookie rejected', async () => {
+    const laptop = request.agent(app.getHttpServer());
+    const phone = request.agent(app.getHttpServer());
+
+    const laptopLogin = await laptop.post('/demo/session/login/e2e-user').set('User-Agent', 'Laptop UA');
+    expect(laptopLogin.status).toBe(201);
+    await phone.post('/demo/session/login/e2e-user').set('User-Agent', 'Phone UA').expect(201);
+
+    const devices = await phone.get('/demo/session/devices').expect(200);
+    expect(devices.body.authenticated).toBe(true);
+    expect(devices.body.devices).toHaveLength(2);
+    expect(devices.body.devices.some((d: { current: boolean }) => d.current)).toBe(true);
+
+    const logoutOthers = await phone.post('/demo/session/logout-others').expect(201);
+    expect(logoutOthers.body.revoked).toBe(1);
+
+    const laptopMe = await laptop.get('/demo/session/me').expect(200);
+    expect(laptopMe.body.authenticated).toBe(false);
+    const phoneMe = await phone.get('/demo/session/me').expect(200);
+    expect(phoneMe.body.authenticated).toBe(true);
+  });
+
+  it('destroys the session on logout', async () => {
+    const browser = request.agent(app.getHttpServer());
+    await browser.post('/demo/session/login/e2e-user-2').expect(201);
+    await browser.post('/demo/session/logout').expect(201);
+
+    const me = await browser.get('/demo/session/me').expect(200);
+    expect(me.body.authenticated).toBe(false);
+  });
 });
