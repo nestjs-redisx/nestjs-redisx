@@ -8,6 +8,7 @@ import { IdempotencyPlugin, IDEMPOTENCY_SERVICE, type IIdempotencyService } from
 import { CircuitBreakerPlugin, CIRCUIT_BREAKER_SERVICE, CircuitBreakerOpenError, type ICircuitBreakerService } from '@nestjs-redisx/circuit-breaker';
 import { PubSubPlugin, PUBSUB_SERVICE, type IPubSubService, type IPubSubMessage } from '@nestjs-redisx/pubsub';
 import { StreamsPlugin, STREAM_PRODUCER, STREAM_CONSUMER, type IStreamProducer, type IStreamConsumer, type ConsumerHandle } from '@nestjs-redisx/streams';
+import { SessionPlugin, SESSION_SERVICE, SESSION_STORE, SessionLimitExceededError, type ISessionService, type ISessionStore } from '@nestjs-redisx/session';
 
 import { RedisTestingModule } from '../../src';
 import { MEMORY_DRIVER_TYPE } from '../../src';
@@ -585,6 +586,68 @@ describe('Plugins on the in-memory driver (no Redis)', () => {
       // Then — the in-memory bus spans the publisher and subscriber clients
       expect(receivers).toBeGreaterThanOrEqual(1);
       expect(got[0]).toMatchObject({ channel: 'events.tick', data: { n: 1 } });
+    });
+  });
+
+  describe('SessionPlugin', () => {
+    it('runs login -> device page -> revokeAllExcept over Lua', async () => {
+      // Given
+      app = await Test.createTestingModule({
+        imports: [
+          RedisModule.forRoot({
+            clients: { type: 'single', host: 'x', port: 1 },
+            global: { driver: MEMORY_DRIVER_TYPE },
+            plugins: [new SessionPlugin()],
+          }),
+        ],
+      }).compile();
+      await app.init();
+      const store = app.get<ISessionStore>(SESSION_STORE);
+      const sessions = app.get<ISessionService>(SESSION_SERVICE);
+
+      // When — three devices log in (passport-shaped payloads)
+      const login = (extra: object = {}): object => ({ cookie: { maxAge: 60000 }, passport: { user: 'user-1' }, ...extra });
+      await store.set('sid-laptop', login());
+      await store.set('sid-phone', login());
+      await store.set('sid-current', login());
+      await sessions.recordActivity('sid-laptop', { ip: '10.0.0.1', userAgent: 'Chrome on Mac' });
+
+      // Then — the device page lists all three with metadata
+      const devices = await sessions.getSessionsByUser('user-1');
+      expect(devices.map((d) => d.id).sort()).toEqual(['sid-current', 'sid-laptop', 'sid-phone']);
+      expect(devices.find((d) => d.id === 'sid-laptop')?.metadata?.userAgent).toBe('Chrome on Mac');
+
+      // When — "log out everywhere else"
+      const revoked = await sessions.revokeAllExcept('user-1', 'sid-current');
+
+      // Then — only the current device survives
+      expect(revoked).toBe(2);
+      expect(await store.get('sid-laptop')).toBeNull();
+      expect(await store.get('sid-current')).not.toBeNull();
+      expect(await sessions.countByUser('user-1')).toBe(1);
+    });
+
+    it('enforces the per-user seat limit with the reject policy', async () => {
+      // Given — a 1-seat limit
+      app = await Test.createTestingModule({
+        imports: [
+          RedisModule.forRoot({
+            clients: { type: 'single', host: 'x', port: 1 },
+            global: { driver: MEMORY_DRIVER_TYPE },
+            plugins: [new SessionPlugin({ maxSessionsPerUser: 1, maxSessionsPolicy: 'reject' })],
+          }),
+        ],
+      }).compile();
+      await app.init();
+      const store = app.get<ISessionStore>(SESSION_STORE);
+
+      // When — the first seat is taken
+      await store.set('sid-1', { cookie: {}, passport: { user: 'user-1' } });
+
+      // Then — a second seat is refused; the first stays intact
+      await expect(store.set('sid-2', { cookie: {}, passport: { user: 'user-1' } })).rejects.toBeInstanceOf(SessionLimitExceededError);
+      expect(await store.get('sid-2')).toBeNull();
+      expect(await store.get('sid-1')).not.toBeNull();
     });
   });
 

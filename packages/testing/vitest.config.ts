@@ -44,6 +44,7 @@ export default defineConfig({
       '@nestjs-redisx/rate-limit': path.resolve(__dirname, '../rate-limit/src'),
       '@nestjs-redisx/idempotency': path.resolve(__dirname, '../idempotency/src'),
       '@nestjs-redisx/streams': path.resolve(__dirname, '../streams/src'),
+      '@nestjs-redisx/session': path.resolve(__dirname, '../session/src'),
     },
   },
 });

@@ -41,6 +41,7 @@ export default defineConfig({
       '@nestjs-redisx/tracing': resolve(__dirname, './packages/tracing/src'),
       '@nestjs-redisx/pubsub': resolve(__dirname, './packages/pubsub/src'),
       '@nestjs-redisx/circuit-breaker': resolve(__dirname, './packages/circuit-breaker/src'),
+      '@nestjs-redisx/session': resolve(__dirname, './packages/session/src'),
       '@nestjs-redisx/testing': resolve(__dirname, './packages/testing/src'),
     },
   },

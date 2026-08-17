@@ -259,6 +259,21 @@ export enum ErrorCode {
   /** Pub/Sub subscribe failed */
   PUBSUB_SUBSCRIBE_FAILED = 'PUBSUB_SUBSCRIBE_FAILED',
 
+  /** Session store operation failed */
+  SESSION_STORE_ERROR = 'SESSION_STORE_ERROR',
+
+  /** Session configuration is invalid */
+  SESSION_CONFIG_INVALID = 'SESSION_CONFIG_INVALID',
+
+  /** Per-user session limit exceeded */
+  SESSION_LIMIT_EXCEEDED = 'SESSION_LIMIT_EXCEEDED',
+
+  /** Required session middleware package is not installed */
+  SESSION_MIDDLEWARE_MISSING = 'SESSION_MIDDLEWARE_MISSING',
+
+  /** Session payload serialization/deserialization failed */
+  SESSION_SERIALIZATION_FAILED = 'SESSION_SERIALIZATION_FAILED',
+
   /** Plugin is invalid */
   PLUGIN_INVALID = 'PLUGIN_INVALID',
 

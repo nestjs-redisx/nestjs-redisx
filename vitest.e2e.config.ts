@@ -26,6 +26,7 @@ export default defineConfig({
       '@nestjs-redisx/streams': resolve(__dirname, './packages/streams/src'),
       '@nestjs-redisx/metrics': resolve(__dirname, './packages/metrics/src'),
       '@nestjs-redisx/tracing': resolve(__dirname, './packages/tracing/src'),
+      '@nestjs-redisx/session': resolve(__dirname, './packages/session/src'),
     },
   },
 });

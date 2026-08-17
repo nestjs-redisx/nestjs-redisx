@@ -140,7 +140,7 @@ jobs:
           TARBALLS_DIR=$(mktemp -d)
           echo "TARBALLS_DIR=$TARBALLS_DIR" >> $GITHUB_ENV
 
-          for pkg in core cache locks rate-limit circuit-breaker pubsub idempotency streams metrics tracing testing; do
+          for pkg in core cache locks rate-limit circuit-breaker pubsub idempotency streams metrics tracing session testing; do
             echo "Packing @nestjs-redisx/$pkg..."
             cd packages/$pkg
             npm pack --pack-destination "$TARBALLS_DIR"
@@ -169,6 +169,7 @@ jobs:
             "$TARBALLS_DIR"/nestjs-redisx-streams-*.tgz \
             "$TARBALLS_DIR"/nestjs-redisx-metrics-*.tgz \
             "$TARBALLS_DIR"/nestjs-redisx-tracing-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-session-*.tgz \
             "$TARBALLS_DIR"/nestjs-redisx-testing-*.tgz \
             @nestjs/common@^10.3.0 \
             @nestjs/core@^10.3.0 \
@@ -240,6 +241,14 @@ jobs:
             it('should import tracing exports', async () => {
               const tracing = await import('@nestjs-redisx/tracing');
               expect(tracing.TracingPlugin).toBeDefined();
+            });
+
+            it('should import session exports', async () => {
+              const session = await import('@nestjs-redisx/session');
+              expect(session.SessionPlugin).toBeDefined();
+              expect(session.SessionService).toBeDefined();
+              expect(session.toExpressStore).toBeDefined();
+              expect(session.toFastifyStore).toBeDefined();
             });
 
             it('should import testing exports', async () => {
