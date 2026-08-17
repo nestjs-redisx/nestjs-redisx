@@ -27,15 +27,39 @@ export interface ITracingPluginOptions {
   sampleRate?: number;
 
   /**
+   * Tracer provider strategy.
+   *
+   * - `'auto'` — if the application already registered a global OpenTelemetry
+   *   tracer provider, use it (pure `trace.getTracer()` consumer); otherwise
+   *   set up an own provider when the SDK packages are importable, or run as
+   *   a silent no-op with one informational log line when they are not.
+   * - `'external'` — never create a provider: spans flow into whatever the
+   *   application registered (or become no-ops). Only `@opentelemetry/api`
+   *   is used in this mode.
+   * - `'standalone'` — always set up an own provider with the configured
+   *   exporter. If a global provider is already registered, the plugin warns
+   *   and uses it instead — it NEVER overrides an application provider.
+   *   Requires the OpenTelemetry SDK packages to be installed.
+   * @default 'auto'
+   */
+  provider?: 'auto' | 'external' | 'standalone';
+
+  /**
    * Trace every Redis command executed through RedisX drivers as a
    * `redis.<COMMAND>` CLIENT span — native, no external instrumentation
    * package required. Covers all named clients and runtime-created ones
    * (e.g. the Pub/Sub subscriber connection). Spans honor
    * `spans.excludeCommands`, `spans.includeArgs`, `spans.includeResult`,
    * and `spans.maxArgLength`, and parent onto the active trace context.
+   *
+   * When an external OpenTelemetry Redis instrumentation (e.g.
+   * `@opentelemetry/instrumentation-ioredis`) is detected as active, the
+   * hook pauses automatically to avoid duplicate spans — checked per
+   * command, so late-enabled or runtime-disabled instrumentation is
+   * handled. Set `'force'` to emit native spans regardless.
    * @default true
    */
-  traceRedisCommands?: boolean;
+  traceRedisCommands?: boolean | 'force';
 
   /**
    * Startup check for HTTP request tracing.

@@ -8,7 +8,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/@nestjs-redisx/tracing)](https://www.npmjs.com/package/@nestjs-redisx/tracing)
 [![license](https://img.shields.io/npm/l/@nestjs-redisx/tracing)](https://opensource.org/licenses/MIT)
 
-OpenTelemetry tracing plugin for NestJS RedisX. Automatic distributed tracing for all Redis operations with Jaeger, Zipkin, and OTLP exporter support. OpenTelemetry SDKs are bundled.
+OpenTelemetry tracing plugin for NestJS RedisX. Automatic distributed tracing for all Redis operations with Jaeger, Zipkin, and OTLP exporter support. Plays nicely with your existing OpenTelemetry setup: if the application already registered a tracer provider, spans flow into it automatically (the plugin never overrides it); without one, the bundled OpenTelemetry SDK sets up a standalone pipeline.
 
 ## Installation
 

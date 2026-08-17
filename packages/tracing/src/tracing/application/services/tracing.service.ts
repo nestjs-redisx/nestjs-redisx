@@ -5,11 +5,6 @@ import type { OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { Injectable, Inject, Logger, Optional } from '@nestjs/common';
 import type { Tracer } from '@opentelemetry/api';
 import { trace, context, SpanKind } from '@opentelemetry/api';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { Resource } from '@opentelemetry/resources';
-import { AlwaysOffSampler, AlwaysOnSampler, BatchSpanProcessor, ConsoleSpanExporter, ParentBasedSampler, SimpleSpanProcessor, TraceIdRatioBasedSampler } from '@opentelemetry/sdk-trace-base';
-import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
-import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
 import { CLIENT_MANAGER, RedisClientManager } from '@nestjs-redisx/core';
 
 import { TRACING_PLUGIN_OPTIONS } from '../../../shared/constants';
@@ -20,12 +15,41 @@ import { SpanWrapper } from '../../domain/value-objects/span-wrapper.vo';
 import type { ISpan } from '../ports/span.port';
 import type { ITracingService } from '../ports/tracing-service.port';
 
+// Type-only references to the SDK packages — erased at compile time, so the
+// only RUNTIME OpenTelemetry import of this file is `@opentelemetry/api`.
+// The SDK itself is loaded via dynamic import() exclusively on the
+// standalone-provider path (see loadSdk).
+type SdkTraceBase = typeof import('@opentelemetry/sdk-trace-base');
+type SdkTraceNode = typeof import('@opentelemetry/sdk-trace-node');
+type SdkResources = typeof import('@opentelemetry/resources');
+type SdkSemconv = typeof import('@opentelemetry/semantic-conventions');
+type SdkOtlpExporter = typeof import('@opentelemetry/exporter-trace-otlp-http');
+
+interface ILoadedSdk {
+  node: SdkTraceNode;
+  base: SdkTraceBase;
+  resources: SdkResources;
+  semconv: SdkSemconv;
+  /** Present unless the console exporter was configured. */
+  otlp: SdkOtlpExporter | null;
+}
+
+type OwnTracerProvider = InstanceType<SdkTraceNode['NodeTracerProvider']>;
+
+// Slot the OpenTelemetry API uses for global registrations
+// (trace/context/propagation/diag). Checking `.trace` on it is the reliable
+// way to know whether the application registered a tracer provider —
+// constructor-name checks break under minification.
+const OTEL_API_GLOBAL_KEY = Symbol.for('opentelemetry.js.api.1');
+
 @Injectable()
 export class TracingService implements ITracingService, OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(TracingService.name);
-  private provider: NodeTracerProvider | null = null;
+  private provider: OwnTracerProvider | null = null;
   private tracer: Tracer | null = null;
   private readonly enabled: boolean;
+  private instrumentationProbes: Array<() => boolean> = [];
+  private externallyInstrumented = false;
 
   constructor(
     @Inject(TRACING_PLUGIN_OPTIONS)
@@ -37,32 +61,23 @@ export class TracingService implements ITracingService, OnModuleInit, OnModuleDe
     this.enabled = config.enabled !== false;
   }
 
-  onModuleInit(): void {
+  async onModuleInit(): Promise<void> {
     if (!this.enabled) return;
 
     this.warnExternalDependencies();
 
-    try {
-      const resourceAttrs: Record<string, string | number | boolean> = {
-        [SemanticResourceAttributes.SERVICE_NAME]: this.config.serviceName ?? 'redisx',
-        ...this.config.resourceAttributes,
-      };
-
-      this.provider = new NodeTracerProvider({
-        resource: new Resource(resourceAttrs),
-        sampler: this.createSampler(),
-      });
-
-      const exporter = this.createExporter();
-      const processor = this.config.exporter?.type === 'console' ? new SimpleSpanProcessor(exporter) : new BatchSpanProcessor(exporter);
-
-      this.provider.addSpanProcessor(processor);
-      this.provider.register();
-
-      this.tracer = trace.getTracer(this.config.serviceName ?? 'redisx', this.config.pluginTracing !== false ? '0.1.0' : undefined);
-    } catch (error) {
-      throw new TracingInitializationError(error instanceof Error ? error : undefined);
+    const mode = this.config.provider ?? 'auto';
+    if (mode !== 'external') {
+      if (this.hasExternalGlobalProvider()) {
+        if (mode === 'standalone') {
+          this.logger.warn("provider: 'standalone' requested, but a global OpenTelemetry tracer provider is already registered — using it instead. The plugin never overrides an application provider.");
+        }
+      } else {
+        await this.setupOwnProvider(mode);
+      }
     }
+
+    this.tracer = trace.getTracer(this.config.serviceName ?? 'redisx', this.config.pluginTracing !== false ? '0.1.0' : undefined);
 
     if (this.config.traceRedisCommands !== false) {
       this.installCommandHook();
@@ -199,6 +214,60 @@ export class TracingService implements ITracingService, OnModuleInit, OnModuleDe
     }
   }
 
+  /** True when the application (or anything else) registered a global tracer provider. */
+  private hasExternalGlobalProvider(): boolean {
+    const slot = (globalThis as Record<symbol, unknown>)[OTEL_API_GLOBAL_KEY] as Record<string, unknown> | undefined;
+    return Boolean(slot?.['trace']);
+  }
+
+  /**
+   * Standalone-provider setup: loads the OTel SDK via dynamic import() and
+   * registers an own provider. Only ever called when NO global provider is
+   * registered. In 'auto' mode a missing SDK degrades to a no-op with one
+   * informational line; in explicit 'standalone' mode it is an error.
+   */
+  private async setupOwnProvider(mode: 'auto' | 'standalone'): Promise<void> {
+    let sdk: ILoadedSdk;
+    try {
+      sdk = await this.loadSdk();
+    } catch (error) {
+      if (mode === 'standalone') {
+        throw new TracingInitializationError(error instanceof Error ? error : undefined);
+      }
+      this.logger.log('OpenTelemetry SDK packages are not available — tracing runs in no-op mode. Register a tracer provider in your application (or install @opentelemetry/sdk-trace-node and related packages) to activate spans.');
+      return;
+    }
+
+    try {
+      const resourceAttrs: Record<string, string | number | boolean> = {
+        [sdk.semconv.SemanticResourceAttributes.SERVICE_NAME]: this.config.serviceName ?? 'redisx',
+        ...this.config.resourceAttributes,
+      };
+
+      const provider = new sdk.node.NodeTracerProvider({
+        resource: new sdk.resources.Resource(resourceAttrs),
+        sampler: this.createSampler(sdk.base),
+      });
+
+      const exporter = this.createExporter(sdk);
+      const processor = this.config.exporter?.type === 'console' ? new sdk.base.SimpleSpanProcessor(exporter) : new sdk.base.BatchSpanProcessor(exporter);
+
+      provider.addSpanProcessor(processor);
+      provider.register();
+      this.provider = provider;
+    } catch (error) {
+      throw new TracingInitializationError(error instanceof Error ? error : undefined);
+    }
+  }
+
+  private async loadSdk(): Promise<ILoadedSdk> {
+    const [node, base, resources, semconv] = await Promise.all([import('@opentelemetry/sdk-trace-node'), import('@opentelemetry/sdk-trace-base'), import('@opentelemetry/resources'), import('@opentelemetry/semantic-conventions')]);
+
+    const otlp = this.config.exporter?.type === 'console' ? null : await import('@opentelemetry/exporter-trace-otlp-http');
+
+    return { node, base, resources, semconv, otlp };
+  }
+
   /**
    * Wraps every Redis command executed through RedisX drivers in a CLIENT
    * span (`redis.<COMMAND>`). Native — no external instrumentation package
@@ -210,11 +279,78 @@ export class TracingService implements ITracingService, OnModuleInit, OnModuleDe
       return; // standalone usage without the RedisX client manager
     }
 
+    if (this.config.traceRedisCommands !== 'force') {
+      this.setupInstrumentationProbes();
+    }
+
     this.clientManager.setCommandHook((command, args, exec, { clientName }) => this.traceCommand(command, args, exec, clientName));
+  }
+
+  /**
+   * Builds cheap per-command probes that report whether an external
+   * OpenTelemetry Redis instrumentation is currently active. OTel
+   * instrumentations patch driver methods via shimmer, which marks the
+   * wrapper function with `__wrapped = true` — and unmarks it on disable().
+   */
+  private setupInstrumentationProbes(): void {
+    const probes: Array<() => boolean> = [];
+    const appRequire = createRequire(join(process.cwd(), 'index.js'));
+
+    // ioredis: @opentelemetry/instrumentation-ioredis wraps Redis.prototype.sendCommand
+    try {
+      const mod = appRequire('ioredis') as { prototype?: Record<string, unknown>; default?: { prototype?: Record<string, unknown> } };
+      const proto = mod?.prototype ?? mod?.default?.prototype;
+      if (proto) {
+        probes.push(() => (proto['sendCommand'] as { __wrapped?: boolean } | undefined)?.__wrapped === true);
+      }
+    } catch {
+      // driver not installed — nothing to probe
+    }
+
+    // node-redis: @opentelemetry/instrumentation-redis-4 patches the client
+    // class inside @redis/client (internal path — the same file it patches)
+    try {
+      const mod = appRequire('@redis/client/dist/lib/client/index.js') as { default?: { prototype?: Record<string, unknown> } };
+      const proto = mod?.default?.prototype;
+      if (proto) {
+        probes.push(() => ['sendCommand', 'commandsExecutor'].some((method) => (proto[method] as { __wrapped?: boolean } | undefined)?.__wrapped === true));
+      }
+    } catch {
+      // driver not installed — nothing to probe
+    }
+
+    this.instrumentationProbes = probes;
+  }
+
+  /**
+   * Evaluated per command so late-enabled or runtime-disabled external
+   * instrumentation is always respected. Logs once per state transition.
+   */
+  private isExternallyInstrumented(): boolean {
+    if (this.config.traceRedisCommands === 'force' || this.instrumentationProbes.length === 0) {
+      return false;
+    }
+
+    const active = this.instrumentationProbes.some((probe) => probe());
+    if (active !== this.externallyInstrumented) {
+      this.externallyInstrumented = active;
+      if (active) {
+        this.logger.log("External OpenTelemetry Redis instrumentation detected — pausing the native command hook to avoid duplicate spans. Set traceRedisCommands: 'force' to emit both.");
+      } else {
+        this.logger.log('External OpenTelemetry Redis instrumentation is no longer active — the native command hook resumed emitting redis.* spans.');
+      }
+    }
+    return active;
   }
 
   private async traceCommand(command: string, args: readonly unknown[], exec: () => Promise<unknown>, clientName: string): Promise<unknown> {
     if (!this.enabled || !this.tracer) {
+      return exec();
+    }
+
+    // An active external instrumentation already emits a span for this
+    // command — run it untouched instead of duplicating.
+    if (this.isExternallyInstrumented()) {
       return exec();
     }
 
@@ -298,26 +434,26 @@ export class TracingService implements ITracingService, OnModuleInit, OnModuleDe
     return false;
   }
 
-  private createExporter(): ConsoleSpanExporter | OTLPTraceExporter {
+  private createExporter(sdk: ILoadedSdk): InstanceType<SdkTraceBase['ConsoleSpanExporter']> | InstanceType<SdkOtlpExporter['OTLPTraceExporter']> {
     const type = this.config.exporter?.type ?? 'otlp';
     const endpoint = this.config.exporter?.endpoint;
     const headers = this.config.exporter?.headers;
 
     switch (type) {
       case 'console':
-        return new ConsoleSpanExporter();
+        return new sdk.base.ConsoleSpanExporter();
       case 'otlp':
       case 'jaeger':
       case 'zipkin':
       default:
-        return new OTLPTraceExporter({
+        return new sdk.otlp!.OTLPTraceExporter({
           url: endpoint,
           headers,
         });
     }
   }
 
-  private createSampler(): AlwaysOnSampler | AlwaysOffSampler | TraceIdRatioBasedSampler | ParentBasedSampler {
+  private createSampler(base: SdkTraceBase): InstanceType<SdkTraceBase['AlwaysOnSampler']> | InstanceType<SdkTraceBase['AlwaysOffSampler']> | InstanceType<SdkTraceBase['TraceIdRatioBasedSampler']> | InstanceType<SdkTraceBase['ParentBasedSampler']> {
     // Default is parent-based (OTel SDK convention, parentbased_always_on):
     // with 'always', an app that head-samples its request traces would still
     // get RedisX spans for UNsampled requests — orphaned spans whose parents
@@ -327,15 +463,15 @@ export class TracingService implements ITracingService, OnModuleInit, OnModuleDe
 
     switch (strategy) {
       case 'always':
-        return new AlwaysOnSampler();
+        return new base.AlwaysOnSampler();
       case 'never':
-        return new AlwaysOffSampler();
+        return new base.AlwaysOffSampler();
       case 'ratio':
-        return new TraceIdRatioBasedSampler(ratio);
+        return new base.TraceIdRatioBasedSampler(ratio);
       case 'parent':
       default:
-        return new ParentBasedSampler({
-          root: new TraceIdRatioBasedSampler(ratio),
+        return new base.ParentBasedSampler({
+          root: new base.TraceIdRatioBasedSampler(ratio),
         });
     }
   }

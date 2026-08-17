@@ -14,6 +14,7 @@ const DEFAULT_TRACING_CONFIG: Required<Omit<ITracingPluginOptions, 'isGlobal' | 
   enabled: true,
   serviceName: 'nestjs-redisx',
   sampleRate: 1.0,
+  provider: 'auto',
   traceRedisCommands: true,
   traceHttpRequests: true,
   sampling: {
@@ -84,6 +85,7 @@ export class TracingPlugin implements IRedisXPlugin {
       enabled: options.enabled ?? DEFAULT_TRACING_CONFIG.enabled,
       serviceName: options.serviceName ?? DEFAULT_TRACING_CONFIG.serviceName,
       sampleRate: options.sampleRate ?? DEFAULT_TRACING_CONFIG.sampleRate,
+      provider: options.provider ?? DEFAULT_TRACING_CONFIG.provider,
       traceRedisCommands: options.traceRedisCommands ?? DEFAULT_TRACING_CONFIG.traceRedisCommands,
       traceHttpRequests: options.traceHttpRequests ?? DEFAULT_TRACING_CONFIG.traceHttpRequests,
       sampling: {

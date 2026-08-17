@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TracingService } from '../../src/tracing/application/services/tracing.service';
 import type { ITracingPluginOptions } from '../../src/shared/types';
 import { TracingInitializationError } from '../../src/shared/errors';
@@ -52,7 +52,17 @@ describe('TracingService', () => {
   let service: TracingService;
   let config: ITracingPluginOptions;
 
-  beforeEach(() => {
+  // The standalone path registers into the REAL OTel global slot (the SDK is
+  // not mocked, only @opentelemetry/api is) — clear it around every test so
+  // 'auto' mode keeps choosing the standalone path and tests stay isolated.
+  const clearOtelGlobalSlot = (): void => {
+    delete (globalThis as Record<symbol, unknown>)[Symbol.for('opentelemetry.js.api.1')];
+  };
+
+  afterEach(clearOtelGlobalSlot);
+
+  beforeEach(async () => {
+    clearOtelGlobalSlot();
     config = {
       enabled: true,
       serviceName: 'test-service',
@@ -65,20 +75,20 @@ describe('TracingService', () => {
   });
 
   describe('onModuleInit', () => {
-    it('should initialize tracing when enabled', () => {
+    it('should initialize tracing when enabled', async () => {
       // When/Then - should not throw
-      expect(() => service.onModuleInit()).not.toThrow();
+      await expect(service.onModuleInit()).resolves.toBeUndefined();
     });
 
-    it('should not initialize when disabled', () => {
+    it('should not initialize when disabled', async () => {
       // Given
       const disabledService = new TracingService({ enabled: false });
 
       // When/Then - should not throw
-      expect(() => disabledService.onModuleInit()).not.toThrow();
+      await expect(disabledService.onModuleInit()).resolves.toBeUndefined();
     });
 
-    it('should use console exporter', () => {
+    it('should use console exporter', async () => {
       // Given
       const consoleConfig = {
         ...config,
@@ -87,10 +97,10 @@ describe('TracingService', () => {
       const consoleService = new TracingService(consoleConfig);
 
       // When/Then - should not throw
-      expect(() => consoleService.onModuleInit()).not.toThrow();
+      await expect(consoleService.onModuleInit()).resolves.toBeUndefined();
     });
 
-    it('should use OTLP exporter with endpoint', () => {
+    it('should use OTLP exporter with endpoint', async () => {
       // Given
       const otlpConfig = {
         ...config,
@@ -103,10 +113,10 @@ describe('TracingService', () => {
       const otlpService = new TracingService(otlpConfig);
 
       // When/Then - should not throw
-      expect(() => otlpService.onModuleInit()).not.toThrow();
+      await expect(otlpService.onModuleInit()).resolves.toBeUndefined();
     });
 
-    it('should merge resourceAttributes into Resource', () => {
+    it('should merge resourceAttributes into Resource', async () => {
       // Given
       const resConfig = {
         ...config,
@@ -118,34 +128,34 @@ describe('TracingService', () => {
       const resService = new TracingService(resConfig);
 
       // When/Then - should not throw (Resource is built with merged attrs)
-      expect(() => resService.onModuleInit()).not.toThrow();
+      await expect(resService.onModuleInit()).resolves.toBeUndefined();
     });
 
-    it('should warn about traceRedisCommands external dependency', () => {
+    it('should warn about traceRedisCommands external dependency', async () => {
       // Given
       const warnConfig = { ...config, traceRedisCommands: true };
       const warnService = new TracingService(warnConfig);
 
       // When/Then - should not throw and should log warning
-      expect(() => warnService.onModuleInit()).not.toThrow();
+      await expect(warnService.onModuleInit()).resolves.toBeUndefined();
     });
 
-    it('should warn about traceHttpRequests external dependency', () => {
+    it('should warn about traceHttpRequests external dependency', async () => {
       // Given
       const warnConfig = { ...config, traceHttpRequests: true };
       const warnService = new TracingService(warnConfig);
 
       // When/Then - should not throw
-      expect(() => warnService.onModuleInit()).not.toThrow();
+      await expect(warnService.onModuleInit()).resolves.toBeUndefined();
     });
   });
 
   describe('startSpan', () => {
-    beforeEach(() => {
-      service.onModuleInit();
+    beforeEach(async () => {
+      await service.onModuleInit();
     });
 
-    it('should start a span', () => {
+    it('should start a span', async () => {
       // Given
       const spanName = 'test-operation';
 
@@ -158,7 +168,7 @@ describe('TracingService', () => {
       expect(span.end).toBeInstanceOf(Function);
     });
 
-    it('should start span with options', () => {
+    it('should start span with options', async () => {
       // Given
       const spanName = 'test-operation';
       const options = {
@@ -173,7 +183,7 @@ describe('TracingService', () => {
       expect(span).toBeDefined();
     });
 
-    it('should return noop span when disabled', () => {
+    it('should return noop span when disabled', async () => {
       // Given
       const disabledService = new TracingService({ enabled: false });
 
@@ -192,13 +202,13 @@ describe('TracingService', () => {
       span.end(); // Should not throw
     });
 
-    it('should add service.name attribute to spans', () => {
+    it('should add service.name attribute to spans', async () => {
       // Given
       const customService = new TracingService({
         ...config,
         serviceName: 'my-app',
       });
-      customService.onModuleInit();
+      await customService.onModuleInit();
 
       // When
       customService.startSpan('test');
@@ -207,13 +217,13 @@ describe('TracingService', () => {
       expect(true).toBe(true);
     });
 
-    it('should skip span for excluded commands', () => {
+    it('should skip span for excluded commands', async () => {
       // Given
       const exclService = new TracingService({
         ...config,
         spans: { excludeCommands: ['PING', 'INFO'] },
       });
-      exclService.onModuleInit();
+      await exclService.onModuleInit();
 
       // When
       const span = exclService.startSpan('redis.command', {
@@ -224,13 +234,13 @@ describe('TracingService', () => {
       expect(span.spanId).toBe('');
     });
 
-    it('should not skip span for non-excluded commands', () => {
+    it('should not skip span for non-excluded commands', async () => {
       // Given
       const exclService = new TracingService({
         ...config,
         spans: { excludeCommands: ['PING'] },
       });
-      exclService.onModuleInit();
+      await exclService.onModuleInit();
 
       // When
       const span = exclService.startSpan('redis.command', {
@@ -241,13 +251,13 @@ describe('TracingService', () => {
       expect(span.spanId).toBe('123');
     });
 
-    it('should strip db.statement.args when includeArgs is false', () => {
+    it('should strip db.statement.args when includeArgs is false', async () => {
       // Given — default: includeArgs is false
       const argsService = new TracingService({
         ...config,
         spans: { includeArgs: false },
       });
-      argsService.onModuleInit();
+      await argsService.onModuleInit();
 
       // When
       const span = argsService.startSpan('redis.GET', {
@@ -258,13 +268,13 @@ describe('TracingService', () => {
       expect(span).toBeDefined();
     });
 
-    it('should keep db.statement.args when includeArgs is true', () => {
+    it('should keep db.statement.args when includeArgs is true', async () => {
       // Given
       const argsService = new TracingService({
         ...config,
         spans: { includeArgs: true },
       });
-      argsService.onModuleInit();
+      await argsService.onModuleInit();
 
       // When
       const span = argsService.startSpan('redis.GET', {
@@ -275,13 +285,13 @@ describe('TracingService', () => {
       expect(span).toBeDefined();
     });
 
-    it('should strip db.statement.result when includeResult is false', () => {
+    it('should strip db.statement.result when includeResult is false', async () => {
       // Given
       const resultService = new TracingService({
         ...config,
         spans: { includeResult: false },
       });
-      resultService.onModuleInit();
+      await resultService.onModuleInit();
 
       // When
       const span = resultService.startSpan('redis.GET', {
@@ -292,13 +302,13 @@ describe('TracingService', () => {
       expect(span).toBeDefined();
     });
 
-    it('should truncate args exceeding maxArgLength', () => {
+    it('should truncate args exceeding maxArgLength', async () => {
       // Given
       const truncService = new TracingService({
         ...config,
         spans: { includeArgs: true, maxArgLength: 10 },
       });
-      truncService.onModuleInit();
+      await truncService.onModuleInit();
 
       // When
       const span = truncService.startSpan('redis.SET', {
@@ -309,13 +319,13 @@ describe('TracingService', () => {
       expect(span).toBeDefined();
     });
 
-    it('should return noop span when sampleRate is 0', () => {
+    it('should return noop span when sampleRate is 0', async () => {
       // Given
       const zeroSample = new TracingService({
         ...config,
         sampleRate: 0,
       });
-      zeroSample.onModuleInit();
+      await zeroSample.onModuleInit();
 
       // When
       const span = zeroSample.startSpan('test');
@@ -326,8 +336,8 @@ describe('TracingService', () => {
   });
 
   describe('withSpan', () => {
-    beforeEach(() => {
-      service.onModuleInit();
+    beforeEach(async () => {
+      await service.onModuleInit();
     });
 
     it('should execute function with span', async () => {
@@ -365,11 +375,11 @@ describe('TracingService', () => {
   });
 
   describe('getCurrentSpan', () => {
-    beforeEach(() => {
-      service.onModuleInit();
+    beforeEach(async () => {
+      await service.onModuleInit();
     });
 
-    it('should return undefined when no active span', () => {
+    it('should return undefined when no active span', async () => {
       // When
       const span = service.getCurrentSpan();
 
@@ -377,7 +387,7 @@ describe('TracingService', () => {
       expect(span).toBeUndefined();
     });
 
-    it('should return undefined when disabled', () => {
+    it('should return undefined when disabled', async () => {
       // Given
       const disabledService = new TracingService({ enabled: false });
 
@@ -390,11 +400,11 @@ describe('TracingService', () => {
   });
 
   describe('addEvent', () => {
-    beforeEach(() => {
-      service.onModuleInit();
+    beforeEach(async () => {
+      await service.onModuleInit();
     });
 
-    it('should add event to current span when no active span', () => {
+    it('should add event to current span when no active span', async () => {
       // When/Then - should not throw even with no active span
       service.addEvent('test-event');
       service.addEvent('test-event-with-attrs', { key: 'value' });
@@ -413,11 +423,11 @@ describe('TracingService', () => {
   });
 
   describe('setAttribute', () => {
-    beforeEach(() => {
-      service.onModuleInit();
+    beforeEach(async () => {
+      await service.onModuleInit();
     });
 
-    it('should set attribute when no active span', () => {
+    it('should set attribute when no active span', async () => {
       // When/Then - should not throw even with no active span
       service.setAttribute('test.key', 'value');
     });
@@ -435,11 +445,11 @@ describe('TracingService', () => {
   });
 
   describe('recordException', () => {
-    beforeEach(() => {
-      service.onModuleInit();
+    beforeEach(async () => {
+      await service.onModuleInit();
     });
 
-    it('should record exception when no active span', () => {
+    it('should record exception when no active span', async () => {
       // Given
       const error = new Error('Test error');
 
@@ -464,7 +474,7 @@ describe('TracingService', () => {
   describe('onModuleDestroy', () => {
     it('should shutdown provider', async () => {
       // Given
-      service.onModuleInit();
+      await service.onModuleInit();
 
       // When/Then - should not throw
       await expect(service.onModuleDestroy()).resolves.not.toThrow();
@@ -490,7 +500,7 @@ describe('TracingService', () => {
 
     it('should swallow errors thrown by provider.shutdown()', async () => {
       // Given
-      service.onModuleInit();
+      await service.onModuleInit();
       const provider = (service as any).provider;
       provider.shutdown = vi.fn().mockRejectedValue(new Error('collector unreachable'));
       const warnSpy = vi.spyOn((service as any).logger, 'warn').mockImplementation(() => {});
@@ -502,7 +512,7 @@ describe('TracingService', () => {
 
     it('should return within the bounded timeout when provider.shutdown() hangs', async () => {
       // Given — provider whose shutdown never resolves
-      service.onModuleInit();
+      await service.onModuleInit();
       const provider = (service as any).provider;
       provider.shutdown = vi.fn().mockReturnValue(new Promise<void>(() => {}));
 
@@ -522,7 +532,7 @@ describe('TracingService', () => {
   });
 
   describe('sampling strategies', () => {
-    it('should use always sampling', () => {
+    it('should use always sampling', async () => {
       // Given
       const alwaysConfig = {
         ...config,
@@ -531,10 +541,10 @@ describe('TracingService', () => {
       const alwaysService = new TracingService(alwaysConfig);
 
       // When/Then - should not throw
-      expect(() => alwaysService.onModuleInit()).not.toThrow();
+      await expect(alwaysService.onModuleInit()).resolves.toBeUndefined();
     });
 
-    it('should use never sampling', () => {
+    it('should use never sampling', async () => {
       // Given
       const neverConfig = {
         ...config,
@@ -543,10 +553,10 @@ describe('TracingService', () => {
       const neverService = new TracingService(neverConfig);
 
       // When/Then - should not throw
-      expect(() => neverService.onModuleInit()).not.toThrow();
+      await expect(neverService.onModuleInit()).resolves.toBeUndefined();
     });
 
-    it('should use ratio sampling', () => {
+    it('should use ratio sampling', async () => {
       // Given
       const ratioConfig = {
         ...config,
@@ -555,10 +565,10 @@ describe('TracingService', () => {
       const ratioService = new TracingService(ratioConfig);
 
       // When/Then - should not throw
-      expect(() => ratioService.onModuleInit()).not.toThrow();
+      await expect(ratioService.onModuleInit()).resolves.toBeUndefined();
     });
 
-    it('should use parent sampling', () => {
+    it('should use parent sampling', async () => {
       // Given
       const parentConfig = {
         ...config,
@@ -567,10 +577,10 @@ describe('TracingService', () => {
       const parentService = new TracingService(parentConfig);
 
       // When/Then - should not throw
-      expect(() => parentService.onModuleInit()).not.toThrow();
+      await expect(parentService.onModuleInit()).resolves.toBeUndefined();
     });
 
-    it('should fallback to always sampling for unknown strategy', () => {
+    it('should fallback to always sampling for unknown strategy', async () => {
       // Given
       const unknownConfig = {
         ...config,
@@ -579,43 +589,43 @@ describe('TracingService', () => {
       const unknownService = new TracingService(unknownConfig);
 
       // When/Then - should not throw and use default sampler
-      expect(() => unknownService.onModuleInit()).not.toThrow();
+      await expect(unknownService.onModuleInit()).resolves.toBeUndefined();
     });
   });
 
   describe('span kinds', () => {
-    beforeEach(() => {
-      service.onModuleInit();
+    beforeEach(async () => {
+      await service.onModuleInit();
     });
 
-    it('should handle CLIENT span kind', () => {
+    it('should handle CLIENT span kind', async () => {
       // When/Then - should not throw
       service.startSpan('test', { kind: 'CLIENT' });
     });
 
-    it('should handle SERVER span kind', () => {
+    it('should handle SERVER span kind', async () => {
       // When/Then - should not throw
       service.startSpan('test', { kind: 'SERVER' });
     });
 
-    it('should handle PRODUCER span kind', () => {
+    it('should handle PRODUCER span kind', async () => {
       // When/Then - should not throw
       service.startSpan('test', { kind: 'PRODUCER' });
     });
 
-    it('should handle CONSUMER span kind', () => {
+    it('should handle CONSUMER span kind', async () => {
       // When/Then - should not throw
       service.startSpan('test', { kind: 'CONSUMER' });
     });
 
-    it('should handle INTERNAL span kind', () => {
+    it('should handle INTERNAL span kind', async () => {
       // When/Then - should not throw
       service.startSpan('test', { kind: 'INTERNAL' });
     });
   });
 
   describe('exporter types', () => {
-    it('should handle jaeger exporter', () => {
+    it('should handle jaeger exporter', async () => {
       // Given
       const jaegerConfig = {
         ...config,
@@ -624,10 +634,10 @@ describe('TracingService', () => {
       const jaegerService = new TracingService(jaegerConfig);
 
       // When/Then - should not throw
-      expect(() => jaegerService.onModuleInit()).not.toThrow();
+      await expect(jaegerService.onModuleInit()).resolves.toBeUndefined();
     });
 
-    it('should handle zipkin exporter', () => {
+    it('should handle zipkin exporter', async () => {
       // Given
       const zipkinConfig = {
         ...config,
@@ -636,34 +646,34 @@ describe('TracingService', () => {
       const zipkinService = new TracingService(zipkinConfig);
 
       // When/Then - should not throw
-      expect(() => zipkinService.onModuleInit()).not.toThrow();
+      await expect(zipkinService.onModuleInit()).resolves.toBeUndefined();
     });
   });
 
   describe('pluginTracing', () => {
-    it('should register tracer with version when pluginTracing is true', () => {
+    it('should register tracer with version when pluginTracing is true', async () => {
       // Given
       const ptConfig = { ...config, pluginTracing: true };
       const ptService = new TracingService(ptConfig);
 
       // When/Then - should not throw
-      expect(() => ptService.onModuleInit()).not.toThrow();
+      await expect(ptService.onModuleInit()).resolves.toBeUndefined();
     });
 
-    it('should register tracer without version when pluginTracing is false', () => {
+    it('should register tracer without version when pluginTracing is false', async () => {
       // Given
       const ptConfig = { ...config, pluginTracing: false };
       const ptService = new TracingService(ptConfig);
 
       // When/Then - should not throw
-      expect(() => ptService.onModuleInit()).not.toThrow();
+      await expect(ptService.onModuleInit()).resolves.toBeUndefined();
     });
   });
 
   describe('native Redis command tracing (traceRedisCommands)', () => {
     type ManagerHook = (command: string, args: readonly unknown[], exec: () => Promise<unknown>, context: { clientName: string }) => Promise<unknown>;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       // mockSpan is shared across the file — reset call history so
       // "not.toHaveBeenCalled" assertions see only this test's activity
       vi.clearAllMocks();
@@ -683,35 +693,35 @@ describe('TracingService', () => {
       return manager.setCommandHook.mock.calls[0][0] as ManagerHook;
     }
 
-    it('should install the command hook on the client manager at init', () => {
+    it('should install the command hook on the client manager at init', async () => {
       // Given
       const { svc, manager } = buildWithManager();
 
       // When
-      svc.onModuleInit();
+      await svc.onModuleInit();
 
       // Then
       expect(manager.setCommandHook).toHaveBeenCalledTimes(1);
       expect(manager.setCommandHook).toHaveBeenCalledWith(expect.any(Function));
     });
 
-    it('should NOT install the hook when traceRedisCommands is false', () => {
+    it('should NOT install the hook when traceRedisCommands is false', async () => {
       // Given
       const { svc, manager } = buildWithManager({ traceRedisCommands: false });
 
       // When
-      svc.onModuleInit();
+      await svc.onModuleInit();
 
       // Then
       expect(manager.setCommandHook).not.toHaveBeenCalled();
     });
 
-    it('should NOT install the hook when tracing is disabled', () => {
+    it('should NOT install the hook when tracing is disabled', async () => {
       // Given
       const { svc, manager } = buildWithManager({ enabled: false });
 
       // When
-      svc.onModuleInit();
+      await svc.onModuleInit();
 
       // Then
       expect(manager.setCommandHook).not.toHaveBeenCalled();
@@ -720,7 +730,7 @@ describe('TracingService', () => {
     it('should remove the hook on module destroy', async () => {
       // Given
       const { svc, manager } = buildWithManager();
-      svc.onModuleInit();
+      await svc.onModuleInit();
 
       // When
       await svc.onModuleDestroy();
@@ -732,7 +742,7 @@ describe('TracingService', () => {
     it('should wrap a command in a CLIENT span and return the result', async () => {
       // Given
       const { svc, manager } = buildWithManager();
-      svc.onModuleInit();
+      await svc.onModuleInit();
       const hook = installedHook(manager);
       const exec = vi.fn().mockResolvedValue('value');
 
@@ -750,7 +760,7 @@ describe('TracingService', () => {
     it('should record the exception and rethrow when the command fails', async () => {
       // Given
       const { svc, manager } = buildWithManager();
-      svc.onModuleInit();
+      await svc.onModuleInit();
       const hook = installedHook(manager);
       const failure = new Error('READONLY');
       const exec = vi.fn().mockRejectedValue(failure);
@@ -765,7 +775,7 @@ describe('TracingService', () => {
     it('should honor spans.excludeCommands (command runs, no span emitted)', async () => {
       // Given
       const { svc, manager } = buildWithManager({ spans: { excludeCommands: ['PING'] } });
-      svc.onModuleInit();
+      await svc.onModuleInit();
       const hook = installedHook(manager);
       const exec = vi.fn().mockResolvedValue('PONG');
 
@@ -783,12 +793,117 @@ describe('TracingService', () => {
       // disabled path by calling the hook of a service built disabled
       const manager = createManagerStub();
       const svc = new TracingService({ ...config, enabled: false, traceRedisCommands: true }, manager as never);
-      svc.onModuleInit();
+      await svc.onModuleInit();
       expect(manager.setCommandHook).not.toHaveBeenCalled();
 
       // When the manager is absent entirely, init must not throw either
       const noManagerSvc = new TracingService({ ...config, traceRedisCommands: true });
-      expect(() => noManagerSvc.onModuleInit()).not.toThrow();
+      await expect(noManagerSvc.onModuleInit()).resolves.toBeUndefined();
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should wrap own-provider construction failures in TracingInitializationError', async () => {
+      // Given — SDK "loads" but its constructors are unusable
+      const svc = new TracingService({ ...config });
+      (svc as any).loadSdk = async () => ({
+        node: {},
+        base: {},
+        resources: {},
+        semconv: { SemanticResourceAttributes: { SERVICE_NAME: 'service.name' } },
+        otlp: null,
+      });
+
+      // When / Then
+      await expect(svc.onModuleInit()).rejects.toThrow(TracingInitializationError);
+    });
+
+    it('should end up with no probes when no known driver package can be resolved', async () => {
+      // Given — resolution rooted in a directory where no driver exists
+      const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue('/nonexistent-redisx-test-dir');
+      try {
+        const manager = { setCommandHook: vi.fn() };
+        const svc = new TracingService({ ...config, traceRedisCommands: true }, manager as never);
+
+        // When
+        await svc.onModuleInit();
+
+        // Then — hook installed, but nothing to probe
+        expect(manager.setCommandHook).toHaveBeenCalledTimes(1);
+        expect((svc as any).instrumentationProbes).toEqual([]);
+      } finally {
+        cwdSpy.mockRestore();
+      }
+    });
+
+    it('should run commands untraced when the tracer is not initialized', async () => {
+      // Given — hook invoked before/without init
+      const svc = new TracingService({ ...config, traceRedisCommands: true }, { setCommandHook: vi.fn() } as never);
+      const exec = vi.fn().mockResolvedValue('v');
+
+      // When
+      const result = await (svc as any).traceCommand('get', [], exec, 'default');
+
+      // Then
+      expect(result).toBe('v');
+      expect(exec).toHaveBeenCalledTimes(1);
+    });
+
+    it('should run the function directly when withSpan gets a noop span', async () => {
+      // Given — sampleRate 0 makes startSpan return the noop span
+      const zero = new TracingService({ ...config, sampleRate: 0 });
+      await zero.onModuleInit();
+      const fn = vi.fn().mockResolvedValue('done');
+
+      // When
+      const result = await zero.withSpan('op', fn);
+
+      // Then
+      expect(result).toBe('done');
+      expect(fn).toHaveBeenCalledOnce();
+    });
+
+    it('should not exclude spans that carry no db.statement attribute', async () => {
+      // Given
+      const exclService = new TracingService({ ...config, spans: { excludeCommands: ['PING'] } });
+      await exclService.onModuleInit();
+
+      // When
+      const span = exclService.startSpan('custom-op');
+
+      // Then — real span
+      expect(span.spanId).toBe('123');
+    });
+
+    it('should apply the default maxArgLength when spans config omits it', async () => {
+      // Given
+      const svc = new TracingService({ ...config, spans: { includeArgs: true } });
+      await svc.onModuleInit();
+
+      // When / Then — long args truncated with the default 100 limit, no throw
+      svc.startSpan('redis.SET', { attributes: { 'db.statement.args': 'a'.repeat(150) } });
+    });
+
+    it('should fall back to the default service name when none is configured', async () => {
+      // Given
+      const svc = new TracingService({ traceRedisCommands: false, traceHttpRequests: false });
+
+      // When / Then
+      await expect(svc.onModuleInit()).resolves.toBeUndefined();
+      expect(svc.startSpan('op')).toBeDefined();
+      await svc.onModuleDestroy();
+    });
+
+    it('should log non-Error shutdown rejections without crashing', async () => {
+      // Given
+      await service.onModuleInit();
+      const provider = (service as any).provider;
+      provider.shutdown = vi.fn().mockRejectedValue('collector string failure');
+      const warnSpy = vi.spyOn((service as any).logger, 'warn').mockImplementation(() => {});
+
+      // When / Then
+      await expect(service.onModuleDestroy()).resolves.toBeUndefined();
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('collector string failure'));
     });
   });
 });

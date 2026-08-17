@@ -299,4 +299,34 @@ describe('TracingPlugin', () => {
       pluginTracing: false,
     });
   });
+
+  describe('provider mode option', () => {
+    function resolvedOptions(plugin: TracingPlugin): Record<string, unknown> {
+      const providers = plugin.getProviders();
+      const config = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === TRACING_PLUGIN_OPTIONS);
+      return (config as any).useValue;
+    }
+
+    it("should default provider mode to 'auto'", () => {
+      // Given/When
+      const options = resolvedOptions(new TracingPlugin());
+
+      // Then
+      expect(options.provider).toBe('auto');
+    });
+
+    it('should pass through an explicit provider mode', () => {
+      // Given/When/Then
+      expect(resolvedOptions(new TracingPlugin({ provider: 'external' })).provider).toBe('external');
+      expect(resolvedOptions(new TracingPlugin({ provider: 'standalone' })).provider).toBe('standalone');
+    });
+
+    it("should pass through traceRedisCommands: 'force'", () => {
+      // Given/When
+      const options = resolvedOptions(new TracingPlugin({ traceRedisCommands: 'force' }));
+
+      // Then
+      expect(options.traceRedisCommands).toBe('force');
+    });
+  });
 });
