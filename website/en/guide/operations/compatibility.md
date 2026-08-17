@@ -58,8 +58,8 @@ Plugin packages additionally require `@nestjs-redisx/core` as a peer dependency.
 
 | Plugin | Extra Dependencies |
 |--------|--------------------|
-| metrics | depends on `prom-client` |
-| tracing | depends on `@opentelemetry/api` (+ optional SDK packages depending on exporter) |
+| metrics | `prom-client` as a peer dependency (auto-installed by npm 7+ / pnpm 8+; yarn classic users add it manually) |
+| tracing | `@opentelemetry/api` + bundled OTel SDK packages, loaded only when the plugin sets up its own provider (i.e. when the application has no registered tracer provider) |
 
 All other plugins (cache, locks, rate-limit, idempotency, streams) have no additional production dependencies beyond core and NestJS.
 

@@ -1,6 +1,6 @@
 # NestJS RedisX
 
-> Modular Redis toolkit for NestJS with plugin architecture. Provides two-tier caching (L1 memory + L2 Redis), distributed locks, rate limiting, a distributed circuit breaker, typed Pub/Sub, idempotency, Redis Streams, Prometheus metrics, and OpenTelemetry tracing. Supports both ioredis and node-redis drivers. TypeScript-first, zero external dependencies per plugin.
+> Modular Redis toolkit for NestJS with plugin architecture. Provides two-tier caching (L1 memory + L2 Redis), distributed locks, rate limiting, a distributed circuit breaker, typed Pub/Sub, idempotency, Redis Streams, Prometheus metrics, and OpenTelemetry tracing. Supports both ioredis and node-redis drivers. TypeScript-first, zero external dependencies per plugin (observability plugins integrate with your existing prom-client and OpenTelemetry setups).
 
 NestJS RedisX is designed for production NestJS applications that need Redis beyond simple key-value storage. Instead of installing separate libraries for caching, locking, rate limiting, etc., RedisX provides a unified plugin system where you import only what you need. Each plugin is a self-contained NestJS module with its own providers, decorators, and configuration.
 
@@ -90,7 +90,7 @@ NestJS RedisX is designed for production NestJS applications that need Redis bey
 ## Metrics Plugin
 
 - [Metrics Overview](https://nestjs-redisx.dev/en/reference/metrics/): Prometheus-compatible metrics for Redis operations, cache hit rates, and lock contention.
-- [Configuration](https://nestjs-redisx.dev/en/reference/metrics/configuration): MetricsPlugin configuration for endpoint, prefix, and custom labels.
+- [Configuration](https://nestjs-redisx.dev/en/reference/metrics/configuration): MetricsPlugin configuration for endpoint, prefix, custom labels, and registry selection (own, global prom-client register, or a provided Registry).
 - [Prometheus](https://nestjs-redisx.dev/en/reference/metrics/prometheus): HTTP /metrics endpoint for Prometheus scraping.
 - [Grafana Dashboards](https://nestjs-redisx.dev/en/reference/metrics/grafana): Example dashboard configurations for visualizing Redis metrics.
 - [Custom Metrics](https://nestjs-redisx.dev/en/reference/metrics/custom-metrics): API for adding application-specific metrics to the registry.
@@ -98,7 +98,7 @@ NestJS RedisX is designed for production NestJS applications that need Redis bey
 ## Tracing Plugin
 
 - [Tracing Overview](https://nestjs-redisx.dev/en/reference/tracing/): OpenTelemetry distributed tracing for Redis operations across services.
-- [Configuration](https://nestjs-redisx.dev/en/reference/tracing/configuration): TracingPlugin configuration for exporters, sampling, and span attributes.
+- [Configuration](https://nestjs-redisx.dev/en/reference/tracing/configuration): TracingPlugin configuration for provider modes (auto/external/standalone), exporters, sampling, and span attributes.
 - [Spans](https://nestjs-redisx.dev/en/reference/tracing/spans): Redis command spans with db.system, db.operation, and plugin-specific attributes.
 - [Exporters](https://nestjs-redisx.dev/en/reference/tracing/exporters): OTLP, Jaeger, Zipkin, and Console exporter configuration.
 

@@ -48,8 +48,10 @@ npm install @opentelemetry/sdk-node \
             @opentelemetry/exporter-trace-otlp-http
 ```
 
-::: warning One global provider wins
-`TracingPlugin` registers its own `NodeTracerProvider` on startup, and OpenTelemetry honors only ONE global tracer provider — the first one registered. If you bootstrap your own SDK (like the `NodeSDK` setups on this page), initialize it **before** the application loads (the standard `node -r ./tracing.js` / top-of-main import pattern): your SDK then owns the pipeline, the plugin's `exporter`/`sampling` options are inert, and all RedisX spans flow through your SDK's exporter and sampler on the same traces. Configure sampling and exporting in ONE place — whichever side registered first.
+::: tip The plugin adapts to your SDK automatically
+With the default `provider: 'auto'`, `TracingPlugin` first checks whether a global OpenTelemetry tracer provider is already registered. If it is (like the `NodeSDK` setups on this page), the plugin becomes a pure `@opentelemetry/api` consumer: your SDK owns the pipeline, the plugin's `exporter`/`sampling` options are unused, and all RedisX spans flow through your SDK's exporter and sampler on the same traces. The plugin only sets up an own `NodeTracerProvider` when NO global provider exists — it never overrides yours. Initialize your SDK **before** the application loads (the standard `node -r ./tracing.js` / top-of-main import pattern) so it is registered by the time the plugin initializes; see [Provider Modes](/en/reference/tracing/configuration#provider-modes).
+
+One caveat with `getNodeAutoInstrumentations()`: it enables `@opentelemetry/instrumentation-ioredis`, which would duplicate the plugin's native `redis.<COMMAND>` spans. The plugin detects the active instrumentation and pauses its own hook automatically — or disable one side explicitly, see [Trace Redis Commands](/en/reference/tracing/configuration#trace-redis-commands).
 :::
 
 ## Basic Setup

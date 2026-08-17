@@ -35,6 +35,13 @@ new MetricsPlugin({
     env: 'production',
   },
 
+  /**
+   * prom-client registry to register metrics into —
+   * see "Registry Selection" below
+   * @default 'own'
+   */
+  registry: 'own',  // 'own' | 'default' | Registry instance
+
   // ─────────────────────────────────────────
   // Histogram Configuration
   // ─────────────────────────────────────────
@@ -94,6 +101,31 @@ new MetricsPlugin({
 
 ::: info Endpoint Path
 The `endpoint` option is reserved for future use. The metrics endpoint is currently always served at `/metrics`.
+:::
+
+## Registry Selection
+
+By default the plugin uses an isolated prom-client registry (`registry: 'own'`), exposed via its own `/metrics` endpoint and `getMetrics()`. If your application already serves metrics from the global `promClient.register`, RedisX metrics will NOT appear there — point the plugin at your registry instead:
+
+```typescript
+// Global prom-client registry — RedisX metrics show up on the
+// application's existing /metrics endpoint
+new MetricsPlugin({ registry: 'default', exposeEndpoint: false })
+
+// Or any specific Registry instance
+new MetricsPlugin({ registry: myRegistry, exposeEndpoint: false })
+```
+
+With an external registry (`'default'` or an instance) the plugin plays a guest, not an owner:
+
+- On shutdown it removes only its OWN metrics — it never clears the application's.
+- `defaultLabels` are applied only when explicitly configured — it never overwrites the registry's existing default labels.
+- `collectDefaultMetrics` becomes **opt-in** (default `false`): the application almost certainly collects process metrics there already, and the plugin's prefixed copies would only duplicate them.
+
+Recommended for apps with an existing Prometheus setup: `registry: 'default'` plus `exposeEndpoint: false`, so all metrics are scraped from the single endpoint you already have.
+
+::: info prom-client is a peer dependency
+The plugin uses your application's `prom-client` instance (npm 7+ and pnpm 8+ install it automatically). This is what makes passing a `Registry` instance safe — plugin and application always share one prom-client. With yarn classic, add `prom-client` to your dependencies explicitly.
 :::
 
 ## Configuration by Use Case

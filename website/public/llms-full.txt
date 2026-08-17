@@ -1,6 +1,6 @@
 # NestJS RedisX
 
-> Modular Redis toolkit for NestJS with plugin architecture. Provides two-tier caching (L1 memory + L2 Redis), distributed locks, rate limiting, a distributed circuit breaker, typed Pub/Sub, idempotency, Redis Streams, Prometheus metrics, and OpenTelemetry tracing. Supports both ioredis and node-redis drivers. TypeScript-first, zero external dependencies per plugin.
+> Modular Redis toolkit for NestJS with plugin architecture. Provides two-tier caching (L1 memory + L2 Redis), distributed locks, rate limiting, a distributed circuit breaker, typed Pub/Sub, idempotency, Redis Streams, Prometheus metrics, and OpenTelemetry tracing. Supports both ioredis and node-redis drivers. TypeScript-first, zero external dependencies per plugin (observability plugins integrate with your existing prom-client and OpenTelemetry setups).
 
 ## Installation
 
@@ -682,8 +682,11 @@ new MetricsPlugin({
   endpoint: '/metrics',        // HTTP endpoint path
   prefix: 'redisx_',          // metric name prefix
   defaultLabels: { app: 'my-service' },
+  registry: 'own',            // 'own' (isolated, default) | 'default' (global promClient.register) | Registry instance
 })
 ```
+
+With `registry: 'default'` (or a provided `Registry` instance) RedisX metrics register into the application's existing prom-client registry, so they appear on the app's own `/metrics` endpoint (combine with `exposeEndpoint: false`). With an external registry the plugin removes only its own metrics on shutdown, applies `defaultLabels` only when explicitly set, and `collectDefaultMetrics` becomes opt-in (default `false`). `prom-client` is a peer dependency — plugin and application share one instance.
 
 ### Available Metrics
 
@@ -703,6 +706,7 @@ OpenTelemetry distributed tracing for Redis operations.
 ```typescript
 new TracingPlugin({
   serviceName: 'my-service',
+  provider: 'auto',            // 'auto' (default) | 'external' | 'standalone'
   exporter: {
     type: 'otlp',              // 'otlp' | 'jaeger' | 'zipkin' | 'console'
     endpoint: 'http://collector:4318/v1/traces',
@@ -720,7 +724,9 @@ Sampling defaults to parent-based (OTel SDK convention): Redis spans follow the 
 
 ### Automatic Redis Command Spans
 
-Every command executed through RedisX drivers is wrapped natively in a `redis.<COMMAND>` CLIENT span (no external instrumentation package) covering all named clients and runtime-created connections. Spans parent onto the active OpenTelemetry context, so with standard HTTP instrumentation a cache lookup appears inside the HTTP request's trace. `spans.excludeCommands` skips commands; `includeArgs`/`includeResult` gate payload attributes (truncated to `maxArgLength`). Note: the plugin registers a NodeTracerProvider; if you bootstrap your own OTel SDK first, your SDK owns the pipeline and the plugin's exporter/sampling options are inert.
+Every command executed through RedisX drivers is wrapped natively in a `redis.<COMMAND>` CLIENT span (no external instrumentation package) covering all named clients and runtime-created connections. Spans parent onto the active OpenTelemetry context, so with standard HTTP instrumentation a cache lookup appears inside the HTTP request's trace. `spans.excludeCommands` skips commands; `includeArgs`/`includeResult` gate payload attributes (truncated to `maxArgLength`).
+
+Provider modes: with `provider: 'auto'` (default) the plugin uses an already-registered global tracer provider (your SDK owns the pipeline; the plugin's `exporter`/`sampling` options are unused), sets up its own NodeTracerProvider only when NO global provider exists and the OTel SDK packages are importable, and otherwise runs as a silent no-op. `'external'` never creates a provider (pure @opentelemetry/api consumer); `'standalone'` always creates one but still never overrides an existing global registration. If an OTel Redis instrumentation (`instrumentation-ioredis` / `instrumentation-redis-4`) is active, the native command hook pauses automatically (checked per command) to avoid duplicate spans; `traceRedisCommands: 'force'` emits both.
 
 ### Span Attributes
 
@@ -997,7 +1003,7 @@ export class JobWorker {
 - **Plugin isolation**: Each plugin is a self-contained NestJS module. Import only what you need.
 - **Driver abstraction**: Both ioredis and node-redis supported through adapter pattern. Switch without code changes.
 - **Atomic operations**: Rate limiting, locks, idempotency, and the circuit breaker use Lua scripts for atomicity.
-- **No external dependencies**: Each plugin has zero npm dependencies beyond NestJS and the Redis driver.
+- **No external dependencies**: Each plugin has zero npm dependencies beyond NestJS and the Redis driver. The two observability plugins are the deliberate exceptions: metrics uses `prom-client` (peer dependency, shared with the application), tracing uses `@opentelemetry/api` plus the OTel SDK loaded lazily only for the standalone provider mode.
 - **Global module**: RedisModule is global — import once in AppModule, inject anywhere.
 - **Composition over inheritance**: No base classes required. Decorators and services compose freely.
 
