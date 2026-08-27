@@ -172,7 +172,7 @@ export default withMermaid(
         { text: 'Home', link: '/en/' },
         { text: 'Guide', link: '/en/guide/' },
         { text: 'Reference', link: '/en/reference/' },
-        { text: 'v1.11.0', link: 'https://github.com/nestjs-redisx/nestjs-redisx/releases' },
+        { text: 'v1.12.0', link: 'https://github.com/nestjs-redisx/nestjs-redisx/releases' },
       ],
 
       sidebar: {
