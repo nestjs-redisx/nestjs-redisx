@@ -83,4 +83,30 @@ export class RateLimitDemoService {
       timestamp: Date.now(),
     };
   }
+
+  /**
+   * Endpoint limited by the in-memory (per-instance) store.
+   *
+   * @returns Request information
+   */
+  async memoryStore() {
+    return {
+      store: 'memory',
+      message: 'Counted in process memory: zero Redis round-trip, per-instance limit',
+      timestamp: Date.now(),
+    };
+  }
+
+  /**
+   * Endpoint explicitly pinned to the Redis store.
+   *
+   * @returns Request information
+   */
+  async strictStore() {
+    return {
+      store: 'redis',
+      message: 'Counted in Redis: exact limit shared by all instances',
+      timestamp: Date.now(),
+    };
+  }
 }

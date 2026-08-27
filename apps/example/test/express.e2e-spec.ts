@@ -68,6 +68,40 @@ describe('Rate limit + idempotency (Express)', () => {
     );
   });
 
+  it('limits the memory-store route in process without writing Redis keys', async () => {
+    // The route allows 5 requests per minute counted in process memory.
+    for (let i = 0; i < 5; i++) {
+      const res = await request(app.getHttpServer()).get('/demo/rate-limit/memory');
+      expect(res.status).toBe(200);
+      expect(res.headers['x-ratelimit-limit']).toBe('5');
+      expect(res.headers['x-ratelimit-remaining']).toBe(String(5 - 1 - i));
+    }
+
+    const rejected = await request(app.getHttpServer()).get('/demo/rate-limit/memory');
+    expect(rejected.status).toBe(429);
+    expect(rejected.headers['retry-after']).toBeDefined();
+
+    // The counter never touches Redis: no rate-limit keys for this route.
+    const client = new Redis({ host: redisHost, port: redisPort, lazyConnect: true });
+    await client.connect();
+    const keys = await client.keys('rl:*memory-demo*');
+    await client.quit();
+    expect(keys).toEqual([]);
+  });
+
+  it('keeps the store:redis route exact with its counter in Redis', async () => {
+    for (let i = 0; i < 3; i++) {
+      await request(app.getHttpServer()).get('/demo/rate-limit/strict').expect(200);
+    }
+    await request(app.getHttpServer()).get('/demo/rate-limit/strict').expect(429);
+
+    const client = new Redis({ host: redisHost, port: redisPort, lazyConnect: true });
+    await client.connect();
+    const keys = await client.keys('rl:*strict-demo*');
+    await client.quit();
+    expect(keys.length).toBeGreaterThan(0);
+  });
+
   it('replays identical idempotent response for repeated requests', async () => {
     const key = `e2e-express-${Date.now()}-replay`;
     const body = { amount: 100, currency: 'USD', customerId: 'cust_replay' };

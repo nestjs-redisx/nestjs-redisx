@@ -40,6 +40,8 @@ See the Postman collection: `NestJS-RedisX.postman_collection.json`
 ### Rate Limit
 - `GET /demo/rate-limit/test` — rate limiting test
 - `GET /demo/rate-limit/fixed` — fixed window algorithm
+- `GET /demo/rate-limit/memory` — in-memory (per-instance) store, zero Redis round-trip
+- `GET /demo/rate-limit/strict` — pinned to the Redis store (exact, shared by all instances)
 
 ### Idempotency
 - `POST /demo/idempotency/order` — idempotent order creation (use `Idempotency-Key` header)

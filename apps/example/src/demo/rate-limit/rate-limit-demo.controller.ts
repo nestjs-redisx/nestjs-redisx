@@ -7,6 +7,8 @@
  * - GET /demo/rate-limit/sliding - Sliding window
  * - GET /demo/rate-limit/fixed - Fixed window
  * - GET /demo/rate-limit/token-bucket - Token bucket
+ * - GET /demo/rate-limit/memory - In-memory (per-instance) store
+ * - GET /demo/rate-limit/strict - Explicitly pinned to the Redis store
  */
 
 import { Controller, Get, Query, Req } from '@nestjs/common';
@@ -133,5 +135,50 @@ export class RateLimitDemoController {
   })
   async tokenBucket() {
     return this.rateLimitDemo.tokenBucket();
+  }
+
+  /**
+   * In-memory (per-instance) store: the counter lives in process memory, so
+   * the check adds zero Redis round-trip to the request. Each instance
+   * enforces its own limit — ideal for cheap anti-abuse limiting on hot
+   * routes when exact global counts are not required.
+   *
+   * @example
+   * ```bash
+   * # 6th request within a minute gets 429; no rl:* keys appear in Redis
+   * for i in {1..6}; do curl http://localhost:3000/demo/rate-limit/memory; echo ""; done
+   * ```
+   */
+  @Get('memory')
+  @RateLimit({
+    store: 'memory',
+    key: 'memory-demo',
+    points: 5,
+    duration: 60,
+  })
+  async memory() {
+    return this.rateLimitDemo.memoryStore();
+  }
+
+  /**
+   * Explicitly pinned to the Redis store: the counter is exact and shared by
+   * ALL application instances. Use this for auth-sensitive routes (login,
+   * OTP, password reset) even when the plugin default is `store: 'memory'`.
+   *
+   * @example
+   * ```bash
+   * # 4th request within a minute gets 429, no matter which instance serves it
+   * for i in {1..4}; do curl http://localhost:3000/demo/rate-limit/strict; echo ""; done
+   * ```
+   */
+  @Get('strict')
+  @RateLimit({
+    store: 'redis',
+    key: 'strict-demo',
+    points: 3,
+    duration: 60,
+  })
+  async strict() {
+    return this.rateLimitDemo.strictStore();
   }
 }
