@@ -11,9 +11,11 @@ import { version } from '../package.json';
 import { RateLimitExceptionFilter } from './rate-limit/api/filters/rate-limit-exception.filter';
 import { RateLimitGuard } from './rate-limit/api/guards/rate-limit.guard';
 import { RateLimitService } from './rate-limit/application/services/rate-limit.service';
+import { InMemoryRateLimitStoreAdapter } from './rate-limit/infrastructure/adapters/in-memory-rate-limit-store.adapter';
 import { RedisRateLimitStoreAdapter } from './rate-limit/infrastructure/adapters/redis-rate-limit-store.adapter';
-import { RATE_LIMIT_PLUGIN_OPTIONS, RATE_LIMIT_REDIS_DRIVER, RATE_LIMIT_SERVICE, RATE_LIMIT_STORE } from './shared/constants';
+import { RATE_LIMIT_MEMORY_STORE, RATE_LIMIT_PLUGIN_OPTIONS, RATE_LIMIT_REDIS_DRIVER, RATE_LIMIT_SERVICE, RATE_LIMIT_STORE } from './shared/constants';
 import { IRateLimitPluginOptions } from './shared/types';
+import { validateMemoryOptions, validateStoreType } from './shared/utils/validate-store-options';
 
 const DEFAULT_RATE_LIMIT_CONFIG: Required<Omit<IRateLimitPluginOptions, 'isGlobal' | 'client' | 'skip' | 'errorFactory'>> = {
   defaultAlgorithm: 'sliding-window',
@@ -31,6 +33,11 @@ const DEFAULT_RATE_LIMIT_CONFIG: Required<Omit<IRateLimitPluginOptions, 'isGloba
   errorPolicy: 'fail-closed',
   trustProxy: false,
   registerExceptionFilter: true,
+  store: 'redis',
+  memory: {
+    maxKeys: 100_000,
+    sweepIntervalMs: 30_000,
+  },
 };
 
 /**
@@ -77,6 +84,10 @@ export class RateLimitPlugin implements IRedisXPlugin {
   }
 
   private static mergeDefaults(options: IRateLimitPluginOptions): IRateLimitPluginOptions {
+    // Fail-fast validation of the new store surface (sync AND async paths).
+    validateStoreType(options.store, 'RateLimitPlugin options');
+    validateMemoryOptions(options.memory, 'RateLimitPlugin options');
+
     return {
       client: options.client,
       defaultAlgorithm: options.defaultAlgorithm ?? DEFAULT_RATE_LIMIT_CONFIG.defaultAlgorithm,
@@ -89,6 +100,8 @@ export class RateLimitPlugin implements IRedisXPlugin {
       errorPolicy: options.errorPolicy ?? DEFAULT_RATE_LIMIT_CONFIG.errorPolicy,
       trustProxy: options.trustProxy ?? DEFAULT_RATE_LIMIT_CONFIG.trustProxy,
       registerExceptionFilter: options.registerExceptionFilter ?? DEFAULT_RATE_LIMIT_CONFIG.registerExceptionFilter,
+      store: options.store ?? DEFAULT_RATE_LIMIT_CONFIG.store,
+      memory: { ...DEFAULT_RATE_LIMIT_CONFIG.memory, ...options.memory },
       skip: options.skip,
       errorFactory: options.errorFactory,
     };
@@ -129,6 +142,9 @@ export class RateLimitPlugin implements IRedisXPlugin {
         inject: [CLIENT_MANAGER, REDIS_CLIENTS_INITIALIZATION, RATE_LIMIT_PLUGIN_OPTIONS],
       },
       { provide: RATE_LIMIT_STORE, useClass: RedisRateLimitStoreAdapter },
+      // Both stores are always registered; the service picks per check based
+      // on the plugin-level `store` default and per-call overrides.
+      { provide: RATE_LIMIT_MEMORY_STORE, useClass: InMemoryRateLimitStoreAdapter },
       { provide: RATE_LIMIT_SERVICE, useClass: RateLimitService },
       // Reflector is needed for @RateLimit decorator metadata
       Reflector,

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi, type MockedObject } from 'vitest'
 import { RateLimitService } from '../../src/rate-limit/application/services/rate-limit.service';
 import type { IRateLimitStore } from '../../src/rate-limit/application/ports/rate-limit-store.port';
 import type { IRateLimitPluginOptions, RateLimitConfig, RateLimitResult } from '../../src/shared/types';
-import { RateLimitScriptError } from '../../src/shared/errors';
+import { InvalidRateLimitConfigError, RateLimitScriptError } from '../../src/shared/errors';
 
 describe('RateLimitService', () => {
   let service: RateLimitService;
@@ -473,6 +473,175 @@ describe('RateLimitService', () => {
       // Then
       // Key includes algorithm prefix
       expect(mockStore.slidingWindow).toHaveBeenCalledWith('rl:sliding-window:test', 100, 60);
+    });
+  });
+
+  describe('store selection (redis vs memory)', () => {
+    let memoryStore: MockedObject<IRateLimitStore>;
+
+    beforeEach(() => {
+      memoryStore = {
+        fixedWindow: vi.fn().mockResolvedValue(defaultResult),
+        slidingWindow: vi.fn().mockResolvedValue(defaultResult),
+        tokenBucket: vi.fn().mockResolvedValue(defaultResult),
+        peek: vi.fn().mockResolvedValue(defaultResult),
+        reset: vi.fn().mockResolvedValue(undefined),
+      } as unknown as MockedObject<IRateLimitStore>;
+    });
+
+    it('should route to the redis store by default (backward compatible)', async () => {
+      // Given
+      const svc = new RateLimitService(config, mockStore, memoryStore);
+
+      // When
+      await svc.check('user:1');
+
+      // Then
+      expect(mockStore.slidingWindow).toHaveBeenCalled();
+      expect(memoryStore.slidingWindow).not.toHaveBeenCalled();
+    });
+
+    it('should route to the memory store when plugin default is memory', async () => {
+      // Given
+      const svc = new RateLimitService({ ...config, store: 'memory' }, mockStore, memoryStore);
+
+      // When
+      await svc.check('user:1');
+
+      // Then
+      expect(memoryStore.slidingWindow).toHaveBeenCalledWith('rl:sliding-window:user:1', 100, 60);
+      expect(mockStore.slidingWindow).not.toHaveBeenCalled();
+    });
+
+    it('should let per-call store override a redis plugin default', async () => {
+      // Given
+      const svc = new RateLimitService(config, mockStore, memoryStore);
+
+      // When
+      await svc.check('user:1', { store: 'memory' });
+
+      // Then
+      expect(memoryStore.slidingWindow).toHaveBeenCalled();
+      expect(mockStore.slidingWindow).not.toHaveBeenCalled();
+    });
+
+    it('should let per-call store override a memory plugin default (symmetric)', async () => {
+      // Given
+      const svc = new RateLimitService({ ...config, store: 'memory' }, mockStore, memoryStore);
+
+      // When
+      await svc.check('login', { store: 'redis', algorithm: 'fixed-window', points: 5, duration: 300 });
+
+      // Then
+      expect(mockStore.fixedWindow).toHaveBeenCalledWith('rl:fixed-window:login', 5, 300);
+      expect(memoryStore.fixedWindow).not.toHaveBeenCalled();
+    });
+
+    it('should route peek and getState through the selected store', async () => {
+      // Given
+      const svc = new RateLimitService(config, mockStore, memoryStore);
+
+      // When
+      await svc.peek('user:1', { store: 'memory' });
+      await svc.getState('user:2', { store: 'memory' });
+
+      // Then
+      expect(memoryStore.peek).toHaveBeenCalledTimes(2);
+      expect(mockStore.peek).not.toHaveBeenCalled();
+    });
+
+    it('should throw InvalidRateLimitConfigError when memory store is requested but not available', async () => {
+      // Given — manual construction without a memory store
+      const svc = new RateLimitService(config, mockStore);
+
+      // When/Then
+      await expect(svc.check('user:1', { store: 'memory' })).rejects.toThrow(InvalidRateLimitConfigError);
+    });
+
+    it('should throw InvalidRateLimitConfigError for an unknown store value even with fail-open', async () => {
+      // Given — validation is never subject to errorPolicy
+      const svc = new RateLimitService({ ...config, errorPolicy: 'fail-open' }, mockStore, memoryStore);
+
+      // When/Then
+      await expect(svc.check('user:1', { store: 'l1' as never })).rejects.toThrow(InvalidRateLimitConfigError);
+    });
+
+    it('should not mask the missing-memory-store error with fail-open', async () => {
+      // Given
+      const svc = new RateLimitService({ ...config, errorPolicy: 'fail-open' }, mockStore);
+
+      // When/Then
+      await expect(svc.check('user:1', { store: 'memory' })).rejects.toThrow(InvalidRateLimitConfigError);
+    });
+  });
+
+  describe('reset targeting', () => {
+    let memoryStore: MockedObject<IRateLimitStore>;
+
+    beforeEach(() => {
+      memoryStore = {
+        fixedWindow: vi.fn(),
+        slidingWindow: vi.fn(),
+        tokenBucket: vi.fn(),
+        peek: vi.fn(),
+        reset: vi.fn().mockResolvedValue(undefined),
+      } as unknown as MockedObject<IRateLimitStore>;
+    });
+
+    it('should sweep BOTH stores across all algorithm variants by default', async () => {
+      // Given
+      const svc = new RateLimitService(config, mockStore, memoryStore);
+
+      // When
+      await svc.reset('user:1');
+
+      // Then — 3 algorithm variants per store
+      expect(mockStore.reset).toHaveBeenCalledTimes(3);
+      expect(memoryStore.reset).toHaveBeenCalledTimes(3);
+      expect(memoryStore.reset).toHaveBeenCalledWith('rl:sliding-window:user:1');
+    });
+
+    it('should reset only the redis store when targeted', async () => {
+      // Given
+      const svc = new RateLimitService(config, mockStore, memoryStore);
+
+      // When
+      await svc.reset('user:1', { store: 'redis' });
+
+      // Then
+      expect(mockStore.reset).toHaveBeenCalledTimes(3);
+      expect(memoryStore.reset).not.toHaveBeenCalled();
+    });
+
+    it('should reset only the memory store when targeted', async () => {
+      // Given
+      const svc = new RateLimitService(config, mockStore, memoryStore);
+
+      // When
+      await svc.reset('user:1', { store: 'memory' });
+
+      // Then
+      expect(memoryStore.reset).toHaveBeenCalledTimes(3);
+      expect(mockStore.reset).not.toHaveBeenCalled();
+    });
+
+    it('should reset only the redis store when no memory store is available', async () => {
+      // Given — manual construction without a memory store
+      const svc = new RateLimitService(config, mockStore);
+
+      // When
+      await svc.reset('user:1');
+
+      // Then
+      expect(mockStore.reset).toHaveBeenCalledTimes(3);
+    });
+
+    it('should throw InvalidRateLimitConfigError when targeting a missing memory store', async () => {
+      // Given
+      const svc = new RateLimitService(config, mockStore);
+
+      // When/Then
+      await expect(svc.reset('user:1', { store: 'memory' })).rejects.toThrow(InvalidRateLimitConfigError);
     });
   });
 });

@@ -282,6 +282,28 @@ describe('RateLimitGuard', () => {
     });
   });
 
+  describe('store passthrough', () => {
+    it('should forward the decorator store option to the service', async () => {
+      // Given — @RateLimit({ store: 'memory' }) on the handler
+      mockReflector.get.mockReturnValue({ store: 'memory', points: 10 });
+
+      // When
+      await guard.canActivate(mockContext);
+
+      // Then
+      expect(mockService.check).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ store: 'memory', points: 10 }));
+    });
+
+    it('should not set a store when the decorator does not specify one (plugin default applies)', async () => {
+      // When
+      await guard.canActivate(mockContext);
+
+      // Then
+      const configArg = mockService.check.mock.calls[0]![1] as { store?: string };
+      expect(configArg.store).toBeUndefined();
+    });
+  });
+
   describe('skip condition', () => {
     it('should skip rate limiting when decorator skip returns true', async () => {
       // Given

@@ -31,7 +31,8 @@ describe('RedisRateLimitStoreAdapter', () => {
 
       // Then
       expect(mockDriver.scriptLoad).toHaveBeenCalledTimes(3);
-      expect(mockDriver.scriptLoad).toHaveBeenCalledWith(expect.stringContaining('INCR'));
+      // Fixed window keeps its state in a hash at the BARE key so reset()'s DEL works
+      expect(mockDriver.scriptLoad).toHaveBeenCalledWith(expect.stringContaining('HINCRBY'));
       expect(mockDriver.scriptLoad).toHaveBeenCalledWith(expect.stringContaining('ZREMRANGEBYSCORE'));
       expect(mockDriver.scriptLoad).toHaveBeenCalledWith(expect.stringContaining('HMGET'));
     });
@@ -233,9 +234,11 @@ describe('RedisRateLimitStoreAdapter', () => {
   });
 
   describe('peek', () => {
-    it('should peek fixed-window state', async () => {
-      // Given
-      mockDriver.get.mockResolvedValue('50');
+    it('should peek fixed-window state from the current-window hash', async () => {
+      // Given — state stored as {window, count} at the bare key
+      const now = Math.floor(Date.now() / 1000);
+      const window = Math.floor(now / 60) * 60;
+      mockDriver.hmget.mockResolvedValue([String(window), '50']);
 
       // When
       const result = await adapter.peek('test-key', 'fixed-window', {
@@ -244,9 +247,43 @@ describe('RedisRateLimitStoreAdapter', () => {
       });
 
       // Then
+      expect(mockDriver.hmget).toHaveBeenCalledWith('test-key', 'window', 'count');
       expect(result.current).toBe(50);
       expect(result.limit).toBe(100);
       expect(result.remaining).toBe(50);
+      expect(result.allowed).toBe(true);
+    });
+
+    it('should peek fixed-window as empty when the stored window is stale', async () => {
+      // Given — counter from a previous window must not count against the current one
+      const now = Math.floor(Date.now() / 1000);
+      const staleWindow = Math.floor(now / 60) * 60 - 120;
+      mockDriver.hmget.mockResolvedValue([String(staleWindow), '99']);
+
+      // When
+      const result = await adapter.peek('test-key', 'fixed-window', {
+        points: 100,
+        duration: 60,
+      });
+
+      // Then
+      expect(result.current).toBe(0);
+      expect(result.remaining).toBe(100);
+      expect(result.allowed).toBe(true);
+    });
+
+    it('should peek fixed-window as empty when no state exists', async () => {
+      // Given
+      mockDriver.hmget.mockResolvedValue([null, null]);
+
+      // When
+      const result = await adapter.peek('test-key', 'fixed-window', {
+        points: 100,
+        duration: 60,
+      });
+
+      // Then
+      expect(result.current).toBe(0);
       expect(result.allowed).toBe(true);
     });
 
@@ -317,7 +354,7 @@ describe('RedisRateLimitStoreAdapter', () => {
 
     it('should throw RateLimitScriptError on peek error', async () => {
       // Given
-      mockDriver.get.mockRejectedValue(new Error('Connection lost'));
+      mockDriver.hmget.mockRejectedValue(new Error('Connection lost'));
 
       // When/Then
       try {

@@ -25,6 +25,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // Source aliases so the memory-driver integration spec shares ONE
+      // driver-registry instance between core and testing (see plugin playbook).
+      '@nestjs-redisx/core': path.resolve(__dirname, '../core/src'),
+      '@nestjs-redisx/testing': path.resolve(__dirname, '../testing/src'),
     },
   },
 });

@@ -1,6 +1,6 @@
 import { SetMetadata, UseGuards, applyDecorators, ExecutionContext } from '@nestjs/common';
 
-import { IRateLimitResult } from '../../../shared/types';
+import { IRateLimitResult, RateLimitStoreType } from '../../../shared/types';
 import { RateLimitGuard } from '../guards/rate-limit.guard';
 
 /**
@@ -53,6 +53,25 @@ export interface IRateLimitOptions {
    * Tokens per second (token bucket only).
    */
   refillRate?: number;
+
+  /**
+   * Store backend for this route. Overrides the plugin-level `store` default
+   * in either direction.
+   *
+   * `'memory'` counts per instance with zero Redis round-trip (approximate
+   * global limit); `'redis'` keeps the limit exact and shared across all
+   * instances. Keep auth-sensitive routes (login, OTP, password reset) on
+   * `'redis'`.
+   *
+   * @example
+   * ```typescript
+   * // Plugin default store: 'memory' — cheap per-node limiting everywhere
+   * @Post('login')
+   * @RateLimit({ store: 'redis', points: 5, duration: 300 })
+   * login() {}
+   * ```
+   */
+  store?: RateLimitStoreType;
 
   /**
    * Skip condition function.

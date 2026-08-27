@@ -169,6 +169,35 @@ describe('Plugins on the in-memory driver (no Redis)', () => {
       const after = await rl.peek('ip:2');
       expect(before.remaining).toBe(after.remaining);
     });
+
+    it('counts per store: memory default, per-call redis override, reset sweeps both', async () => {
+      // Given — plugin default store is 'memory'; redis here is the memory driver
+      app = await Test.createTestingModule({
+        imports: [
+          RedisModule.forRoot({
+            clients: { type: 'single', host: 'x', port: 1 },
+            global: { driver: MEMORY_DRIVER_TYPE },
+            plugins: [new RateLimitPlugin({ store: 'memory', defaultAlgorithm: 'sliding-window', defaultPoints: 5, defaultDuration: 60 })],
+          }),
+        ],
+      }).compile();
+      await app.init();
+      const rl = app.get<IRateLimitService>(RATE_LIMIT_SERVICE);
+
+      // When — 2 hits on the (default) memory store, 1 on the redis store
+      await rl.check('ip:3');
+      await rl.check('ip:3');
+      await rl.check('ip:3', { store: 'redis' });
+
+      // Then — independent counters per store
+      expect((await rl.peek('ip:3')).current).toBe(2);
+      expect((await rl.peek('ip:3', { store: 'redis' })).current).toBe(1);
+
+      // And — a bare reset clears both stores
+      await rl.reset('ip:3');
+      expect((await rl.peek('ip:3')).current).toBe(0);
+      expect((await rl.peek('ip:3', { store: 'redis' })).current).toBe(0);
+    });
   });
 
   describe('IdempotencyPlugin', () => {

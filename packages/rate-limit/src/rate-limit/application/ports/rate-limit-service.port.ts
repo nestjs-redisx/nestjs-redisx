@@ -1,4 +1,4 @@
-import { IRateLimitResult, IRateLimitConfig, IRateLimitState } from '../../../shared/types';
+import { IRateLimitResult, IRateLimitConfig, IRateLimitResetOptions, IRateLimitState } from '../../../shared/types';
 
 /**
  * Rate limit service port.
@@ -47,16 +47,24 @@ export interface IRateLimitService {
 
   /**
    * Reset rate limit for key.
-   * Removes all tracking data for the specified key.
+   * Removes all tracking data for the specified key across every algorithm
+   * variant. By default BOTH stores are swept (redis and, when available,
+   * memory); pass `options.store` to target one.
+   *
+   * Per-node semantics: resetting the memory store only clears the counter on
+   * the instance that executes the call — other instances keep their local
+   * counters until the window expires. Redis-backed keys are cleared globally.
    *
    * @param key - Rate limit key to reset
+   * @param options - Optional store targeting
    *
    * @example
    * ```typescript
    * await rateLimitService.reset('user:123');
+   * await rateLimitService.reset('user:123', { store: 'redis' });
    * ```
    */
-  reset(key: string): Promise<void>;
+  reset(key: string, options?: IRateLimitResetOptions): Promise<void>;
 
   /**
    * Get current state.

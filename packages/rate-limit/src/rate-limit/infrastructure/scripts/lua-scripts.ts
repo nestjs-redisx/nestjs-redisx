@@ -8,6 +8,12 @@
 /**
  * Fixed Window Lua script.
  *
+ * State lives in a hash at the BARE key ({window, count}) instead of a
+ * per-window subkey, so `reset()`'s DEL on the key actually clears the
+ * counter (and stays single-key, i.e. cluster-safe without hash tags).
+ * A stale window field means the window rolled over: the hash is dropped
+ * and recreated for the current window.
+ *
  * KEYS[1] = rate limit key
  * ARGV[1] = max points
  * ARGV[2] = window duration (seconds)
@@ -22,12 +28,25 @@ local duration = tonumber(ARGV[2])
 local now = tonumber(ARGV[3])
 
 local window = math.floor(now / duration) * duration
-local window_key = '{' .. key .. '}:' .. window
 
-local current = redis.call('INCR', window_key)
+local reset_needed = false
+local stored_window = redis.call('HGET', key, 'window')
+if not stored_window then
+  reset_needed = true
+else
+  if tonumber(stored_window) ~= window then
+    reset_needed = true
+  end
+end
+if reset_needed then
+  redis.call('DEL', key)
+end
+
+local current = redis.call('HINCRBY', key, 'count', 1)
 
 if current == 1 then
-  redis.call('EXPIRE', window_key, duration)
+  redis.call('HSET', key, 'window', window)
+  redis.call('EXPIRE', key, duration)
 end
 
 local allowed = current <= max_points

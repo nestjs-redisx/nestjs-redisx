@@ -7,6 +7,36 @@ import { ExecutionContext } from '@nestjs/common';
 export type KeyExtractor = (context: ExecutionContext) => string | Promise<string>;
 
 /**
+ * Rate limit store backend.
+ * - `redis`: distributed counters shared by all application instances (exact).
+ * - `memory`: per-instance in-process counters (zero Redis round-trip; each
+ *   node enforces its own limit, so the effective global limit is roughly
+ *   per-node limit x number of nodes).
+ */
+export type RateLimitStoreType = 'redis' | 'memory';
+
+/**
+ * Sizing options for the in-memory store.
+ * The memory store has no Redis EXPIRE to bound it, so it caps the number of
+ * tracked keys and periodically sweeps expired entries.
+ */
+export interface IRateLimitMemoryOptions {
+  /**
+   * Maximum number of tracked keys. When exceeded, the oldest entries are
+   * evicted (approximate FIFO). Protects against unbounded key spray
+   * (e.g. random IPs).
+   * @default 100000
+   */
+  maxKeys?: number;
+
+  /**
+   * Interval in milliseconds between sweeps of expired entries.
+   * @default 30000
+   */
+  sweepIntervalMs?: number;
+}
+
+/**
  * Rate limit plugin options.
  */
 export interface IRateLimitPluginOptions {
@@ -27,6 +57,27 @@ export interface IRateLimitPluginOptions {
    * @default 'sliding-window'
    */
   defaultAlgorithm?: 'fixed-window' | 'sliding-window' | 'token-bucket';
+
+  /**
+   * Default store backend for all routes.
+   *
+   * `'redis'` (default) keeps limits distributed and exact across all
+   * application instances. `'memory'` counts per instance in process memory —
+   * no Redis round-trip on the request path, at the cost of approximate
+   * global limits (each node enforces its own counter). Routes can override
+   * per check via `@RateLimit({ store })` / `check(key, { store })`.
+   *
+   * Keep auth-sensitive routes (login, OTP, password reset) on `'redis'`:
+   * a distributed brute force divides across nodes, so a per-node threshold
+   * is effectively multiplied by the node count.
+   * @default 'redis'
+   */
+  store?: RateLimitStoreType;
+
+  /**
+   * Sizing options for the in-memory store (used by `store: 'memory'`).
+   */
+  memory?: IRateLimitMemoryOptions;
 
   /**
    * Default number of requests allowed.
@@ -129,6 +180,12 @@ export interface IRateLimitConfig {
   algorithm?: 'fixed-window' | 'sliding-window' | 'token-bucket';
 
   /**
+   * Store backend for this check. Overrides the plugin-level `store` default
+   * in either direction (`redis` <-> `memory`).
+   */
+  store?: RateLimitStoreType;
+
+  /**
    * Max requests (fixed/sliding window) or capacity (token bucket).
    */
   points?: number;
@@ -182,6 +239,18 @@ export interface IRateLimitResult {
    * Current count or tokens.
    */
   current: number;
+}
+
+/**
+ * Options for {@link IRateLimitService.reset}.
+ */
+export interface IRateLimitResetOptions {
+  /**
+   * Store to reset. When omitted, BOTH stores are swept (the service does not
+   * know which store a key was counted in). Note: resetting the memory store
+   * only affects the instance that handles the call.
+   */
+  store?: RateLimitStoreType;
 }
 
 /**

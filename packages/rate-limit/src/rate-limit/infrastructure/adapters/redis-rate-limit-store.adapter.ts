@@ -109,9 +109,11 @@ export class RedisRateLimitStoreAdapter implements IRateLimitStore, OnModuleInit
         const now = Math.floor(Date.now() / 1000);
         const duration = config.duration || 60;
         const window = Math.floor(now / duration) * duration;
-        const windowKey = `${key}:${window}`;
-        const currentStr = await this.driver.get(windowKey);
-        const current = currentStr ? parseInt(currentStr, 10) : 0;
+        // State lives in a hash {window, count} at the bare key; a stale
+        // window field means the counter belongs to a previous window.
+        const stored = await this.driver.hmget(key, 'window', 'count');
+        const storedWindow = stored[0] !== null && stored[0] !== undefined ? parseInt(stored[0], 10) : null;
+        const current = storedWindow === window && stored[1] ? parseInt(stored[1], 10) : 0;
         const points = config.points || 100;
 
         return {

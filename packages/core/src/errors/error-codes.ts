@@ -226,6 +226,9 @@ export enum ErrorCode {
   /** Rate limit script error */
   RATE_LIMIT_SCRIPT_ERROR = 'RATE_LIMIT_SCRIPT_ERROR',
 
+  /** Rate limit configuration is invalid */
+  RATE_LIMIT_CONFIG_INVALID = 'RATE_LIMIT_CONFIG_INVALID',
+
   /** Idempotency key is invalid */
   IDEMPOTENCY_KEY_INVALID = 'IDEMPOTENCY_KEY_INVALID',
 

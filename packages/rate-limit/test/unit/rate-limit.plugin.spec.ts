@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { RateLimitPlugin } from '../../src/rate-limit.plugin';
 import { version } from '../../package.json';
-import { RATE_LIMIT_PLUGIN_OPTIONS, RATE_LIMIT_SERVICE, RATE_LIMIT_STORE, RATE_LIMIT_REDIS_DRIVER } from '../../src/shared/constants';
+import { RATE_LIMIT_PLUGIN_OPTIONS, RATE_LIMIT_SERVICE, RATE_LIMIT_STORE, RATE_LIMIT_MEMORY_STORE, RATE_LIMIT_REDIS_DRIVER } from '../../src/shared/constants';
 import { RateLimitService } from '../../src/rate-limit/application/services/rate-limit.service';
 import { RedisRateLimitStoreAdapter } from '../../src/rate-limit/infrastructure/adapters/redis-rate-limit-store.adapter';
+import { InMemoryRateLimitStoreAdapter } from '../../src/rate-limit/infrastructure/adapters/in-memory-rate-limit-store.adapter';
+import { InvalidRateLimitConfigError } from '../../src/shared/errors';
 import { CLIENT_MANAGER, REDIS_CLIENTS_INITIALIZATION } from '@nestjs-redisx/core';
 import { APP_FILTER } from '@nestjs/core';
 import { RateLimitExceptionFilter } from '../../src/rate-limit/api/filters/rate-limit-exception.filter';
@@ -174,7 +176,7 @@ describe('RateLimitPlugin', () => {
       expect((serviceProvider as any).useClass).toBe(RateLimitService);
     });
 
-    it('should return exactly 5 providers', () => {
+    it('should return the full provider set', () => {
       // Given
       const plugin = new RateLimitPlugin();
 
@@ -182,8 +184,8 @@ describe('RateLimitPlugin', () => {
       const providers = plugin.getProviders();
 
       // Then
-      // Options, Driver, Store, Service, Reflector, RateLimitGuard, ExceptionFilter
-      expect(providers).toHaveLength(7);
+      // Options, Driver, Store, MemoryStore, Service, Reflector, RateLimitGuard, ExceptionFilter
+      expect(providers).toHaveLength(8);
     });
 
     it('should register the global exception filter (APP_FILTER) by default', () => {
@@ -203,7 +205,113 @@ describe('RateLimitPlugin', () => {
       // Then — opt-out leaves rate-limit errors to the host app's own filters
       const filter = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === APP_FILTER);
       expect(filter).toBeUndefined();
-      expect(providers).toHaveLength(6);
+      expect(providers).toHaveLength(7);
+    });
+  });
+
+  describe('memory store wiring', () => {
+    it('should always register the in-memory store alongside the redis store', () => {
+      // Given
+      const plugin = new RateLimitPlugin();
+
+      // When
+      const providers = plugin.getProviders();
+
+      // Then — both stores registered; service picks per check
+      const memoryProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === RATE_LIMIT_MEMORY_STORE);
+      const redisProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === RATE_LIMIT_STORE);
+      expect((memoryProvider as any).useClass).toBe(InMemoryRateLimitStoreAdapter);
+      expect((redisProvider as any).useClass).toBe(RedisRateLimitStoreAdapter);
+    });
+
+    it('should default store to redis (backward compatible)', () => {
+      // Given
+      const plugin = new RateLimitPlugin();
+
+      // When
+      const providers = plugin.getProviders();
+      const configProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === RATE_LIMIT_PLUGIN_OPTIONS);
+
+      // Then
+      expect((configProvider as any).useValue.store).toBe('redis');
+    });
+
+    it('should apply memory sizing defaults', () => {
+      // Given
+      const plugin = new RateLimitPlugin();
+
+      // When
+      const providers = plugin.getProviders();
+      const configProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === RATE_LIMIT_PLUGIN_OPTIONS);
+
+      // Then
+      expect((configProvider as any).useValue.memory).toEqual({ maxKeys: 100_000, sweepIntervalMs: 30_000 });
+    });
+
+    it('should accept store memory as the plugin default', () => {
+      // Given
+      const plugin = new RateLimitPlugin({ store: 'memory', memory: { maxKeys: 500 } });
+
+      // When
+      const providers = plugin.getProviders();
+      const configProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === RATE_LIMIT_PLUGIN_OPTIONS);
+
+      // Then
+      const config = (configProvider as any).useValue;
+      expect(config.store).toBe('memory');
+      expect(config.memory).toEqual({ maxKeys: 500, sweepIntervalMs: 30_000 });
+    });
+
+    it('should preserve store through registerAsync factories', async () => {
+      // Given
+      const plugin = RateLimitPlugin.registerAsync({
+        useFactory: () => ({ store: 'memory' }),
+      });
+
+      // When
+      const providers = plugin.getProviders();
+      const configProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === RATE_LIMIT_PLUGIN_OPTIONS);
+      const config = await (configProvider as any).useFactory();
+
+      // Then
+      expect(config.store).toBe('memory');
+      expect(config.memory).toEqual({ maxKeys: 100_000, sweepIntervalMs: 30_000 });
+    });
+  });
+
+  describe('options validation (fail-fast)', () => {
+    it('should throw InvalidRateLimitConfigError for an unknown store value', () => {
+      // When/Then
+      expect(() => new RateLimitPlugin({ store: 'l1' as never }).getProviders()).toThrow(InvalidRateLimitConfigError);
+    });
+
+    it('should throw InvalidRateLimitConfigError for a non-positive maxKeys', () => {
+      // When/Then
+      expect(() => new RateLimitPlugin({ memory: { maxKeys: 0 } }).getProviders()).toThrow(InvalidRateLimitConfigError);
+      expect(() => new RateLimitPlugin({ memory: { maxKeys: -5 } }).getProviders()).toThrow(InvalidRateLimitConfigError);
+    });
+
+    it('should throw InvalidRateLimitConfigError for a fractional or unsafe maxKeys', () => {
+      // When/Then
+      expect(() => new RateLimitPlugin({ memory: { maxKeys: 1.5 } }).getProviders()).toThrow(InvalidRateLimitConfigError);
+      expect(() => new RateLimitPlugin({ memory: { maxKeys: Number.NaN } }).getProviders()).toThrow(InvalidRateLimitConfigError);
+    });
+
+    it('should throw InvalidRateLimitConfigError for a non-positive sweepIntervalMs', () => {
+      // When/Then
+      expect(() => new RateLimitPlugin({ memory: { sweepIntervalMs: 0 } }).getProviders()).toThrow(InvalidRateLimitConfigError);
+    });
+
+    it('should validate options produced by registerAsync factories too', async () => {
+      // Given
+      const plugin = RateLimitPlugin.registerAsync({
+        useFactory: () => ({ store: 'nope' as never }),
+      });
+      const providers = plugin.getProviders();
+      const configProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === RATE_LIMIT_PLUGIN_OPTIONS);
+
+      // When/Then
+      await expect((configProvider as any).useFactory()).rejects.toThrow(InvalidRateLimitConfigError);
     });
   });
 

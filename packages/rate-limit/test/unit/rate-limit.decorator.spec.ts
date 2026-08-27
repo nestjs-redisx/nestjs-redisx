@@ -53,6 +53,27 @@ describe('@RateLimit Decorator', () => {
       expect(metadata.refillRate).toBe(10);
     });
 
+    it('should set options with a store override', () => {
+      // Given
+      const options: IRateLimitOptions = {
+        store: 'memory',
+        points: 100,
+      };
+
+      class TestClass {
+        @RateLimit(options)
+        testMethod() {
+          return 'test';
+        }
+      }
+
+      // When
+      const metadata = reflector.get<IRateLimitOptions>(RATE_LIMIT_OPTIONS, TestClass.prototype.testMethod);
+
+      // Then
+      expect(metadata.store).toBe('memory');
+    });
+
     it('should set options with custom key', () => {
       // Given
       const options: IRateLimitOptions = {

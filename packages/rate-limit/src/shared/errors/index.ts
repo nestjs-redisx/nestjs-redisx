@@ -40,3 +40,13 @@ export class RateLimitScriptError extends RateLimitError {
     super(message, ErrorCode.RATE_LIMIT_SCRIPT_ERROR, undefined, cause);
   }
 }
+
+/**
+ * Error thrown when plugin or per-call configuration is invalid.
+ * Always fail-fast: never subject to the errorPolicy.
+ */
+export class InvalidRateLimitConfigError extends RateLimitError {
+  constructor(message: string) {
+    super(message, ErrorCode.RATE_LIMIT_CONFIG_INVALID);
+  }
+}

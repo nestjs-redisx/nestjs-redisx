@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ErrorCode } from '@nestjs-redisx/core';
-import { RateLimitError, RateLimitExceededError, RateLimitScriptError } from '../../src/shared/errors';
+import { InvalidRateLimitConfigError, RateLimitError, RateLimitExceededError, RateLimitScriptError } from '../../src/shared/errors';
 import type { RateLimitResult } from '../../src/shared/types';
 
 describe('Rate Limit Errors', () => {
@@ -154,6 +154,37 @@ describe('Rate Limit Errors', () => {
 
       // Then
       expect(error.result).toBeUndefined();
+    });
+  });
+
+  describe('InvalidRateLimitConfigError', () => {
+    it('should create config error with the dedicated code', () => {
+      // Given
+      const message = "\"store\" must be one of 'redis' | 'memory'";
+
+      // When
+      const error = new InvalidRateLimitConfigError(message);
+
+      // Then
+      expect(error).toBeInstanceOf(InvalidRateLimitConfigError);
+      expect(error).toBeInstanceOf(RateLimitError);
+      expect(error.message).toBe(message);
+      expect(error.code).toBe(ErrorCode.RATE_LIMIT_CONFIG_INVALID);
+    });
+
+    it('should serialize via toJSON like every RedisXError', () => {
+      // Given
+      const error = new InvalidRateLimitConfigError('bad config');
+
+      // When
+      const json = error.toJSON();
+
+      // Then
+      expect(json).toMatchObject({
+        name: 'InvalidRateLimitConfigError',
+        code: ErrorCode.RATE_LIMIT_CONFIG_INVALID,
+        message: 'bad config',
+      });
     });
   });
 });

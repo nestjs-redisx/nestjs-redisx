@@ -13,9 +13,17 @@ export const RATE_LIMIT_PLUGIN_OPTIONS = Symbol.for('RATE_LIMIT_PLUGIN_OPTIONS')
 export const RATE_LIMIT_SERVICE = Symbol.for('RATE_LIMIT_SERVICE');
 
 /**
- * Injection token for rate limit store.
+ * Injection token for the Redis-backed rate limit store.
+ * Kept as the primary store token for backward compatibility.
  */
 export const RATE_LIMIT_STORE = Symbol.for('RATE_LIMIT_STORE');
+
+/**
+ * Injection token for the in-memory (per-instance) rate limit store.
+ * Registered alongside the Redis store; the service picks per check based on
+ * the `store` option.
+ */
+export const RATE_LIMIT_MEMORY_STORE = Symbol.for('RATE_LIMIT_MEMORY_STORE');
 
 /**
  * Plugin-specific Redis driver token.
