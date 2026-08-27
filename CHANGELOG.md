@@ -32,7 +32,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   - `keyPrefix` rejects `{`/`}` — a prefix with an empty hash tag split payload and metadata across cluster slots for every session (`CROSSSLOT`) while booting happily;
   - the express `touch` path destroys an already-expired session instead of throwing an invalid-TTL error inside express-session's response-end path (`cookie.maxAge: 0` produced a 500);
   - fixed the repo `typecheck` gate (`reserve()` was called with numeric flags; the express store's `touch` needed an `override` modifier).
+- `rate-limit`: **in-memory (per-instance) store with per-route selection** — a second store backend for deployments where the Redis round-trip on the request path is the bottleneck (e.g. a far cluster node adding latency to every request: a key hashes deterministically to one shard, so some users always pay the slow path).
+  - New plugin option `store: 'redis' | 'memory'` (default `'redis'`, fully backward compatible) sets the default for all routes; `@RateLimit({ store })` and `check/peek/getState(key, { store })` override it per route/call **in either direction**. Both adapters are always registered (`RATE_LIMIT_MEMORY_STORE` token), so a `'memory'` default with `'redis'` pinned on auth-sensitive routes (login, OTP, password reset — where a distributed brute force would otherwise multiply a per-node threshold by the node count) works out of the box.
+  - The memory store counts in process memory with **exact result parity** with the Lua scripts (same numbers, rounding, and `retryAfter` semantics for all three algorithms; verified by a parity suite that runs the same scenarios against both stores). Node's event loop makes each check atomic.
+  - Memory safety under key spray: `memory.maxKeys` cap (default `100000`, approximate-FIFO eviction) plus a lazy-started, `unref`'d sweep of expired entries (`memory.sweepIntervalMs`, default `30000`).
+  - `reset(key)` now sweeps **both** stores across all algorithm variants; `reset(key, { store })` targets one. Redis-backed keys clear globally; memory-backed keys clear on the executing instance only (short windows self-heal elsewhere — routes that need global reset belong on `store: 'redis'`).
+  - Fail-fast validation of the new options on both the plugin and per-call paths via `InvalidRateLimitConfigError` (new core `ErrorCode.RATE_LIMIT_CONFIG_INVALID`); configuration errors are never masked by `errorPolicy: 'fail-open'`.
 - `testing`: the memory Lua interpreter now converts nil Redis replies into Lua `false` (real Redis semantics) — `if x == false` / missing-reply branches previously diverged from production behavior on the in-memory driver.
+
+### Fixed
+
+- `rate-limit`: **`reset()` now actually clears fixed-window counters.** The fixed-window script kept its counter in a per-window subkey (`{key}:<window>`) while `reset()` deleted only the bare key, so resetting a fixed-window limit was silently a no-op. Fixed-window state now lives in a `{window, count}` hash at the bare key (still one key and cluster-safe, no hash tags needed); `peek()` reads the same hash and ignores stale windows. During a rolling deploy old and new instances briefly count in separate keys for fixed-window routes (limits stay enforced, momentarily per-fleet-half); old subkeys expire on their own.
+- `rate-limit`: the package `test:integration` script ran a single hardcoded spec file; it now runs the whole `test/integration` directory sequentially (the token-bucket peek spec was previously never executed by it).
 
 ## [1.11.0] - 2026-08-16
 
