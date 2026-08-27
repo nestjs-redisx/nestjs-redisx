@@ -23,6 +23,7 @@ The Rate Limit Plugin provides distributed rate limiting backed by Redis, ensuri
 - **Flexible Key Extraction** — Rate limit by IP, user ID, API key, or custom identifiers
 - **Standard Headers** — `X-RateLimit-*` and `Retry-After` headers
 - **Distributed State** — Consistent limits across all application instances via Redis
+- **Per-Route Store Selection** — Zero-latency in-memory counters on bulk routes, exact Redis counters where it matters
 - **Configurable Responses** — Custom error messages and status codes
 - **Skip Conditions** — Bypass rate limits for specific requests or users
 
@@ -131,6 +132,7 @@ stateDiagram-v2
 |-------|-------------|
 | [Core Concepts](./concepts) | Understanding rate limiting |
 | [Configuration](./configuration) | Configuration reference |
+| [Stores](./stores) | Redis vs in-memory store selection |
 | [@RateLimit Decorator](./decorator) | Route-level rate limiting |
 | [RateLimitGuard](./guard) | Controller-level protection |
 | [Service API](./service-api) | Programmatic rate checking |

@@ -45,6 +45,7 @@ NestJS RedisX is designed for production NestJS applications that need Redis bey
 
 - [Rate Limit Overview](https://nestjs-redisx.dev/en/reference/rate-limit/): Multiple algorithms for API protection with decorator and guard support.
 - [Configuration](https://nestjs-redisx.dev/en/reference/rate-limit/configuration): RateLimitPlugin configuration for algorithms, points, windows, and key strategies.
+- [Stores](https://nestjs-redisx.dev/en/reference/rate-limit/stores): Redis (exact, distributed) vs in-memory (per-instance, zero round-trip) store with per-route selection.
 - [@RateLimit Decorator](https://nestjs-redisx.dev/en/reference/rate-limit/decorator): Route-level rate limiting with per-endpoint configuration.
 - [Guard](https://nestjs-redisx.dev/en/reference/rate-limit/guard): RateLimitGuard usage, global registration, and skip behavior.
 - [Service API](https://nestjs-redisx.dev/en/reference/rate-limit/service-api): Programmatic check/peek/reset/getState with IRateLimitService.

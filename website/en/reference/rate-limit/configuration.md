@@ -37,6 +37,19 @@ new RateLimitPlugin({
   defaultPoints: 100,
   defaultDuration: 60,
 
+  // Store Backend. 'redis' (default) keeps limits exact and shared by all
+  // instances. 'memory' counts per instance in process memory — zero Redis
+  // round-trip on the request path, approximate global limit. Routes can
+  // override per check via @RateLimit({ store }) — see the Stores page.
+  store: 'redis', // 'redis' | 'memory'
+
+  // Sizing for the in-memory store: cap on tracked keys (oldest evicted)
+  // and the expired-entry sweep interval.
+  memory: {
+    maxKeys: 100_000,
+    sweepIntervalMs: 30_000,
+  },
+
   // Key Settings
   keyPrefix: 'rl:',
   defaultKeyExtractor: 'ip', // 'ip' | 'user' | 'apiKey' | function

@@ -345,6 +345,7 @@ export default withMermaid(
               { text: 'Overview', link: '/en/reference/rate-limit/' },
               { text: 'Core Concepts', link: '/en/reference/rate-limit/concepts' },
               { text: 'Configuration', link: '/en/reference/rate-limit/configuration' },
+              { text: 'Stores (Redis / Memory)', link: '/en/reference/rate-limit/stores' },
               { text: '@RateLimit Decorator', link: '/en/reference/rate-limit/decorator' },
               { text: 'RateLimitGuard', link: '/en/reference/rate-limit/guard' },
               { text: 'Service API', link: '/en/reference/rate-limit/service-api' },

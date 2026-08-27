@@ -32,11 +32,19 @@ interface IRateLimitOptions {
   points?: number;
   duration?: number;
   refillRate?: number;
+  store?: 'redis' | 'memory'; // overrides the plugin-level store default
   skip?: (context: ExecutionContext) => boolean | Promise<boolean>;
   message?: string;
   errorFactory?: (result: RateLimitResult) => Error;
 }
 ```
+
+The `store` option selects the counter backend for this route — `'redis'`
+(exact, shared by all instances) or `'memory'` (per-instance, zero Redis
+round-trip) — overriding the plugin default in either direction. See
+[Stores](./stores):
+
+<<< @/apps/demo/src/plugins/rate-limit/store-per-route.usage.ts{typescript}
 
 ## Method Decorator
 

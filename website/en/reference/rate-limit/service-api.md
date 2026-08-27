@@ -21,6 +21,7 @@ async checkRateLimit(userId: string): Promise<boolean> {
     points: 100,
     duration: 60,
     algorithm: 'sliding-window',
+    store: 'memory', // optional: 'redis' | 'memory', overrides the plugin default
   });
 
   return result.allowed;
@@ -80,6 +81,13 @@ async upgradeToPremium(userId: string): Promise<void> {
   await this.rateLimitService.reset(`user:${userId}`);
 }
 ```
+
+With no options, `reset()` sweeps every algorithm variant in **both** stores
+(redis and memory). Pass `{ store }` to target one. Redis-backed keys are
+cleared globally for all instances; memory-backed keys only on the instance
+that executes the call — see [Stores](./stores) for the semantics:
+
+<<< @/apps/demo/src/plugins/rate-limit/store-reset.usage.ts{typescript}
 
 ## peek() Method
 

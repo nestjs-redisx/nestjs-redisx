@@ -208,9 +208,10 @@ if (response.status === 429) {
 }
 ```
 
-## Distributed Rate Limiting
+## Distributed vs Per-Instance Limiting
 
-Single Redis instance ensures consistency across all app instances:
+The plugin ships two interchangeable stores. The default `redis` store keeps
+one shared counter per key, so the limit is exact across all app instances:
 
 ```mermaid
 graph TB
@@ -231,7 +232,26 @@ graph TB
     Note[All instances share<br/>the same limit counters]
 ```
 
+The `memory` store counts in process memory instead: zero Redis round-trip on
+the request path, at the cost of an approximate global limit (each instance
+enforces its own counter, so the effective limit is roughly per-node limit
+multiplied by the node count). Choose per plugin default and override per
+route in either direction:
+
+```typescript
+new RateLimitPlugin({ store: 'memory' }) // plugin default
+
+@RateLimit({ store: 'redis', points: 5, duration: 300 }) // per-route override
+```
+
+Per-instance limiting is standard practice for anti-abuse (nginx `limit_req`,
+Envoy's local rate limit filter work exactly this way) — but keep
+auth-sensitive routes (login, OTP, password reset) and billing quotas on the
+`redis` store, where exact shared counts matter. See
+[Stores](./stores) for the full trade-off guide.
+
 ## Next Steps
 
+- [Stores](./stores) — Redis vs in-memory store selection
 - [Algorithms](./algorithms) — Deep dive into each algorithm
 - [Configuration](./configuration) — Full configuration reference

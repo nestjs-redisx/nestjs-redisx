@@ -375,7 +375,7 @@ export class MyService {
 
 ## Rate Limit Plugin
 
-Multiple algorithms for API protection: fixed window, sliding window, token bucket. All run as atomic Lua scripts in Redis.
+Multiple algorithms for API protection: fixed window, sliding window, token bucket. Two interchangeable stores: `redis` (atomic Lua scripts, exact and shared by all instances — the default) and `memory` (per-instance counters in process memory, zero Redis round-trip on the request path).
 
 ### RateLimitPlugin Configuration
 
@@ -385,10 +385,25 @@ new RateLimitPlugin({
   defaultPoints: 100,                   // max requests
   defaultDuration: 60,                  // time window in seconds
   keyPrefix: 'rl:',
+  store: 'redis',                       // 'redis' (exact, distributed) | 'memory' (per-instance, zero round-trip)
+  memory: { maxKeys: 100_000, sweepIntervalMs: 30_000 }, // in-memory store sizing (key cap + expiry sweep)
   errorPolicy: 'fail-closed',           // store down -> reject as 503 (or 'fail-open' to allow)
   trustProxy: false,                    // default: use request.ip (un-spoofable); true reads X-Forwarded-For
   registerExceptionFilter: true,        // false -> handle RateLimitError with your own filter
 })
+```
+
+### Store Selection (redis vs memory)
+
+Both store adapters are always registered; the plugin-level `store` sets the default and every route/call can override it in either direction via `@RateLimit({ store })` or `check(key, { store })`. The `memory` store counts per instance: no Redis on the request path, but the effective global limit is approximately per-node limit x node count, counters reset on restart, and `reset()`/`getState()` see only the executing instance. This is standard anti-abuse practice (nginx limit_req, Envoy local rate limit) — but keep auth-sensitive routes (login, OTP, password reset) and billing quotas on `store: 'redis'`: a distributed brute force divides across nodes, so a per-node threshold is effectively multiplied by the node count. The memory store bounds itself via `memory.maxKeys` (approximate-FIFO eviction, protects against key spray) and a periodic expired-entry sweep. Counters for the same key in the two stores are independent and never synchronize.
+
+```typescript
+// Plugin default 'memory' + exact store pinned on the sensitive route
+new RateLimitPlugin({ store: 'memory' })
+
+@Post('login')
+@RateLimit({ store: 'redis', points: 5, duration: 300 })
+login() {}
 ```
 
 IP keying is secure by default: with `trustProxy: false` the client IP is taken from the framework (`request.ip`, honoring the app's own trust-proxy config), NOT from client-supplied `X-Forwarded-For` / `X-Real-IP` — so a client cannot spoof the header to mint a fresh bucket and bypass the limit. Enable `trustProxy: true` only behind a trusted proxy that overwrites those headers. On a store (Redis) failure under `fail-closed`, the built-in filter returns `503 Service Unavailable` (not an uncaught 500); `RateLimitScriptError` is mapped by catching the base `RateLimitError`. Set `registerExceptionFilter: false` to use your own filter/response envelope.
@@ -877,10 +892,10 @@ Standalone helpers: `hashKey(value)` hashes any JSON-serializable value into a s
 
 ### Rate Limit — `RATE_LIMIT_SERVICE` (`IRateLimitService`)
 
-- `check(key: string, config?: IRateLimitConfig): Promise<IRateLimitResult>` — consume one point; result has allowed/limit/remaining/reset/retryAfter.
-- `peek(key: string, config?: IRateLimitConfig): Promise<IRateLimitResult>` — read current state WITHOUT consuming (accurate for fixed-window, sliding-window, and token-bucket).
-- `getState(key: string, config?: IRateLimitConfig): Promise<IRateLimitState>` — human-readable state (current/limit/remaining/resetAt).
-- `reset(key: string): Promise<void>` — clear the limit for a key (all algorithm variants).
+- `check(key: string, config?: IRateLimitConfig): Promise<IRateLimitResult>` — consume one point; result has allowed/limit/remaining/reset/retryAfter. `config.store: 'redis' | 'memory'` selects the counter backend per call.
+- `peek(key: string, config?: IRateLimitConfig): Promise<IRateLimitResult>` — read current state WITHOUT consuming (accurate for fixed-window, sliding-window, and token-bucket); honors `config.store`.
+- `getState(key: string, config?: IRateLimitConfig): Promise<IRateLimitState>` — human-readable state (current/limit/remaining/resetAt); honors `config.store`.
+- `reset(key: string, options?: { store?: 'redis' | 'memory' }): Promise<void>` — clear the limit for a key (all algorithm variants). Without `options.store` BOTH stores are swept; redis keys clear globally, memory keys only on the executing instance.
 
 The `@RateLimit` decorator binds `RateLimitGuard`; the guard consumes at most one point per request even if bound more than once.
 
@@ -1061,7 +1076,8 @@ export class JobWorker {
 | "Log out everywhere" / device page / session seat limits | Session |
 | PCI DSS forced re-login window | Session |
 | API abuse protection | Rate Limit |
-| Login brute force | Rate Limit |
+| Login brute force | Rate Limit (`store: 'redis'` — exact, distributed) |
+| Zero-latency limiting on hot routes | Rate Limit (`store: 'memory'` — per-instance) |
 | Flaky third-party API | Circuit Breaker |
 | Payment gateway outages | Circuit Breaker + fallback |
 | Background job processing | Streams |
@@ -1075,6 +1091,7 @@ export class JobWorker {
 - **Plugin isolation**: Each plugin is a self-contained NestJS module. Import only what you need.
 - **Driver abstraction**: Both ioredis and node-redis supported through adapter pattern. Switch without code changes.
 - **Atomic operations**: Rate limiting, locks, idempotency, sessions, and the circuit breaker use Lua scripts for atomicity.
+- **Per-route rate-limit stores**: the rate limit plugin registers a distributed (redis) and a per-instance (memory) store side by side; the plugin sets the default and every route/call can pick the other one — zero-latency anti-abuse limiting on bulk traffic, exact shared counters on sensitive routes.
 - **No external dependencies**: Each plugin has zero npm dependencies beyond NestJS and the Redis driver. The session plugin's middleware adapters treat `express-session`/`@fastify/session` as optional peers (loaded lazily). The two observability plugins are the deliberate exceptions: metrics uses `prom-client` (peer dependency, shared with the application), tracing uses `@opentelemetry/api` plus the OTel SDK loaded lazily only for the standalone provider mode.
 - **Global module**: RedisModule is global — import once in AppModule, inject anywhere.
 - **Composition over inheritance**: No base classes required. Decorators and services compose freely.
