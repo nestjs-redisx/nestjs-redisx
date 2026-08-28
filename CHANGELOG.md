@@ -4,6 +4,19 @@ All notable changes to NestJS RedisX are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.0] - 2026-08-28
+
+### Added
+
+- **New package `@nestjs-redisx/leader`** — leader election for multi-instance deployments: run cron jobs, migrations, and cleanup on exactly one instance. Closes roadmap #51/#19.
+  - **`@LeaderOnly()` decorator** — proxy-based, works on any `@Injectable` method and composes with `@nestjs/schedule`: `@Cron` fires on every instance, the body runs only where the lease is held. Groups referenced by decorators register at decoration time and their elections start at bootstrap; the first election round is awaited during `onModuleInit`, so leadership is resolved before the first cron tick. Fail-safe skip: without the plugin the method runs NOWHERE (with a one-time warning) — for singleton work "nobody runs" is recoverable, "everybody runs" is not.
+  - **Lease-based election per group** over a single Redis key: `SET NX PX` acquire, CAS Lua heartbeat renewal, CAS release — single-key and cluster-safe without hash tags, and fully supported by the in-memory testing driver.
+  - **Fail-safe local view**: `isLeader()` is true only while the last CONFIRMED lease is unexpired. A rejected or errored renewal demotes immediately, a stalled event loop cannot sustain a stale claim, and Redis being down means nobody leads (work pauses rather than duplicates). Background store errors never crash the app.
+  - **Failover**: instant on graceful shutdown and `stepDown()` (lease released; takeover within `retryIntervalMs`), bounded by `ttlMs + retryIntervalMs` after a crash. `stepDown()` adds a one-`ttlMs` candidacy cooldown so another instance wins the freed seat.
+  - **`LEADER_SERVICE` (`ILeaderService`)**: `instanceId`, `isLeader`, `getLeaderId`, `runIfLeader`, `stepDown`, `getGroups`; `onElected`/`onLost(reason)` lifecycle callbacks (fire-and-forget) and, with `MetricsPlugin`, `redisx_leader_elected_total`/`redisx_leader_lost_total` counters.
+  - Fail-fast validation (`InvalidLeaderConfigError`, new core codes `LEADER_CONFIG_INVALID`/`LEADER_STORE_ERROR`): positive safe-integer timings, `renewIntervalMs` strictly below `ttlMs`, sane group names — on both sync and `registerAsync` paths.
+- `core`: **plugin cleanups can now talk to Redis during shutdown.** `RedisService` and `RedisClientManager` close clients in `onApplicationShutdown` (phase 3) instead of `onModuleDestroy` (phase 1). Within one module Nest runs provider hooks in registration order, so closing connections in phase 1 silently killed every plugin cleanup that needs Redis on shutdown — the leader lease release (found by the live failover test: the lease survived a graceful stop and failover degraded from instant to TTL-bound), lock releases, and stream consumer teardown. Clients still close on application shutdown, just after dependents clean up.
+
 ## [1.12.0] - 2026-08-26
 
 ### Added
