@@ -74,6 +74,7 @@ export default withMermaid(
         idempotency: 'Idempotency', streams: 'Streams', metrics: 'Metrics',
         tracing: 'Tracing', testing: 'Testing', plugins: 'Plugins',
         'circuit-breaker': 'Circuit Breaker', pubsub: 'Pub/Sub', session: 'Session',
+        leader: 'Leader Election',
       };
       const parts = slug.split('/').filter(Boolean);
       if (parts.length >= 2) {
@@ -400,6 +401,22 @@ export default withMermaid(
               { text: 'Recipes', link: '/en/reference/session/recipes' },
               { text: 'Testing', link: '/en/reference/session/testing' },
               { text: 'Troubleshooting', link: '/en/reference/session/troubleshooting' },
+            ],
+          },
+          {
+            text: 'Leader Election',
+            collapsed: true,
+            items: [
+              { text: 'Overview', link: '/en/reference/leader/' },
+              { text: 'Core Concepts', link: '/en/reference/leader/concepts' },
+              { text: 'Configuration', link: '/en/reference/leader/configuration' },
+              { text: '@LeaderOnly Decorator', link: '/en/reference/leader/decorator' },
+              { text: 'Service API', link: '/en/reference/leader/service-api' },
+              { text: 'Failover', link: '/en/reference/leader/failover' },
+              { text: 'Monitoring', link: '/en/reference/leader/monitoring' },
+              { text: 'Testing', link: '/en/reference/leader/testing' },
+              { text: 'Recipes', link: '/en/reference/leader/recipes' },
+              { text: 'Troubleshooting', link: '/en/reference/leader/troubleshooting' },
             ],
           },
           {

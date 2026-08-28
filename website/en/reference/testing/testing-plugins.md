@@ -1,6 +1,6 @@
 ---
 title: 'Testing Plugins — Testing Utilities | NestJS RedisX'
-description: 'Patterns for unit-testing the cache, locks, rate-limit, circuit-breaker, pubsub, session, and idempotency plugins against the in-memory Redis driver, plus seeding and inspecting keyspace state.'
+description: 'Patterns for unit-testing the cache, locks, rate-limit, circuit-breaker, pubsub, session, leader, and idempotency plugins against the in-memory Redis driver, plus seeding and inspecting keyspace state.'
 ---
 
 # Testing Plugins
@@ -142,6 +142,28 @@ await store.set('sid-phone', { cookie: {}, passport: { user: 'user-1' } });
 await sessions.revokeAllExcept('user-1', 'sid-phone');
 expect(await store.get('sid-laptop')).toBeNull();
 ```
+
+## Leader Election
+
+Elections run for real on the memory driver — CAS Lua renewal and release
+included. A single instance leads right after `app.init()`:
+
+```typescript
+import { LeaderPlugin, LEADER_SERVICE, type ILeaderService } from '@nestjs-redisx/leader';
+
+const app = await Test.createTestingModule({
+  imports: [RedisTestingModule.forRoot({ plugins: [new LeaderPlugin({ ttlMs: 500, renewIntervalMs: 100, retryIntervalMs: 100 })] })],
+}).compile();
+await app.init();
+
+const leader = app.get<ILeaderService>(LEADER_SERVICE);
+expect(leader.isLeader()).toBe(true);
+await leader.stepDown();
+expect(await leader.getLeaderId()).toBeNull();
+```
+
+Simulate a second instance by constructing another `LeaderService` over the
+same `LEADER_STORE` — see the [leader testing guide](../leader/testing).
 
 ## Idempotency
 

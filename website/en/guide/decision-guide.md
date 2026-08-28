@@ -1,6 +1,6 @@
 ---
 title: 'Choosing the Right Plugins in NestJS RedisX | NestJS RedisX'
-description: 'Compare Cache, Locks, Rate Limit, Circuit Breaker, Pub/Sub, Session, Idempotency, Streams, Metrics, and Tracing plugins to pick the right NestJS RedisX tool for your Redis use case.'
+description: 'Compare Cache, Locks, Rate Limit, Circuit Breaker, Pub/Sub, Session, Leader Election, Idempotency, Streams, Metrics, and Tracing plugins to pick the right NestJS RedisX tool for your Redis use case.'
 ---
 
 # Decision Guide
@@ -45,6 +45,7 @@ flowchart TD
 | Flaky third-party API | Circuit Breaker | Fail fast, probe recovery |
 | Payment gateway outages | Circuit Breaker | Fallback while OPEN |
 | User login sessions ("log out everywhere", device page, seat limits) | Session | Store for express-session/@fastify/session + per-user index |
+| Cron/migrations/cleanup on a multi-instance fleet | Leader | @LeaderOnly: exactly one instance runs the work, automatic failover |
 | Real-time cross-instance events | Pub/Sub | Instant fan-out, fire-and-forget |
 | WebSocket broadcast on a cluster | Pub/Sub | Every instance receives and relays |
 | Background job processing | Streams | Reliable async with retries |
@@ -118,6 +119,7 @@ graph LR
     Core --> CircuitBreaker[Circuit Breaker]
     Core --> PubSub[Pub/Sub]
     Core --> Session[Session]
+    Core --> Leader[Leader Election]
     Core --> Idempotency
     Core --> Streams
     Core --> Metrics
