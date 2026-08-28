@@ -102,6 +102,25 @@ describe('Rate limit + idempotency (Express)', () => {
     expect(keys.length).toBeGreaterThan(0);
   });
 
+  it('elects this single instance as leader and exposes status', async () => {
+    const res = await request(app.getHttpServer()).get('/demo/leader/status').expect(200);
+
+    expect(res.body.isLeader).toBe(true);
+    expect(res.body.instanceId).toBeTruthy();
+    expect(res.body.leaderId).toBe(res.body.instanceId);
+    expect(res.body.groups).toContain('default');
+  });
+
+  it('hands leadership over on step-down and abstains during the cooldown', async () => {
+    const stepDown = await request(app.getHttpServer()).post('/demo/leader/step-down').expect(201);
+    expect(stepDown.body.steppedDown).toBe(true);
+    expect(stepDown.body.isLeader).toBe(false);
+
+    const status = await request(app.getHttpServer()).get('/demo/leader/status').expect(200);
+    expect(status.body.isLeader).toBe(false);
+    expect(status.body.leaderId).toBeNull();
+  });
+
   it('replays identical idempotent response for repeated requests', async () => {
     const key = `e2e-express-${Date.now()}-replay`;
     const body = { amount: 100, currency: 'USD', customerId: 'cust_replay' };

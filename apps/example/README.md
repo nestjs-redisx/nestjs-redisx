@@ -43,6 +43,10 @@ See the Postman collection: `NestJS-RedisX.postman_collection.json`
 - `GET /demo/rate-limit/memory` — in-memory (per-instance) store, zero Redis round-trip
 - `GET /demo/rate-limit/strict` — pinned to the Redis store (exact, shared by all instances)
 
+### Leader Election
+- `GET /demo/leader/status` — who leads, is this instance the leader, cron run count
+- `POST /demo/leader/step-down` — hand leadership over to another instance
+
 ### Idempotency
 - `POST /demo/idempotency/order` — idempotent order creation (use `Idempotency-Key` header)
 

@@ -7,6 +7,7 @@
 
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 
 // @nestjs-redisx core
 import { RedisModule } from '@nestjs-redisx/core';
@@ -17,6 +18,7 @@ import { LocksPlugin } from '@nestjs-redisx/locks';
 import { RateLimitPlugin } from '@nestjs-redisx/rate-limit';
 import { IdempotencyPlugin } from '@nestjs-redisx/idempotency';
 import { SessionPlugin } from '@nestjs-redisx/session';
+import { LeaderPlugin } from '@nestjs-redisx/leader';
 import { StreamsPlugin } from '@nestjs-redisx/streams';
 import { MetricsPlugin } from '@nestjs-redisx/metrics';
 import { TracingPlugin } from '@nestjs-redisx/tracing';
@@ -42,6 +44,7 @@ import { LocksDemoModule } from './demo/locks/locks-demo.module';
 import { RateLimitDemoModule } from './demo/rate-limit/rate-limit-demo.module';
 import { IdempotencyDemoModule } from './demo/idempotency/idempotency-demo.module';
 import { SessionDemoModule } from './demo/session/session-demo.module';
+import { LeaderDemoModule } from './demo/leader/leader-demo.module';
 import { StreamsDemoModule } from './demo/streams/streams-demo.module';
 import { MetricsDemoModule } from './demo/metrics/metrics-demo.module';
 import { TracingDemoModule } from './demo/tracing/tracing-demo.module';
@@ -54,6 +57,9 @@ import { IntegrationDemoModule } from './demo/integration/integration-demo.modul
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
     }),
+
+    // ScheduleModule — @Cron fires on every instance; @LeaderOnly gates the body
+    ScheduleModule.forRoot(),
 
     // All plugins are registered via RedisModule.forRootAsync()
     // Plugins are passed OUTSIDE useFactory (standard NestJS pattern)
@@ -128,6 +134,14 @@ import { IntegrationDemoModule } from './demo/integration/integration-demo.modul
           ),
         }),
 
+        // LeaderPlugin — run cron/singleton work on exactly one instance
+        new LeaderPlugin({
+          ttlMs: parseInt(process.env.LEADER_TTL_MS || '15000', 10),
+          onElected: (group) => console.log(`[leader] elected for "${group}"`),
+          onLost: (group, reason) =>
+            console.log(`[leader] lost "${group}" (${reason})`),
+        }),
+
         // StreamsPlugin — Redis Streams with consumer groups and DLQ
         // Uses dedicated 'streams' client to avoid blocking the shared connection
         new StreamsPlugin({
@@ -145,6 +159,7 @@ import { IntegrationDemoModule } from './demo/integration/integration-demo.modul
     RateLimitDemoModule,
     IdempotencyDemoModule,
     SessionDemoModule,
+    LeaderDemoModule,
     StreamsDemoModule,
     MetricsDemoModule,
     TracingDemoModule,
