@@ -229,6 +229,12 @@ export enum ErrorCode {
   /** Rate limit configuration is invalid */
   RATE_LIMIT_CONFIG_INVALID = 'RATE_LIMIT_CONFIG_INVALID',
 
+  /** Leader election configuration is invalid */
+  LEADER_CONFIG_INVALID = 'LEADER_CONFIG_INVALID',
+
+  /** Leader election store operation failed */
+  LEADER_STORE_ERROR = 'LEADER_STORE_ERROR',
+
   /** Idempotency key is invalid */
   IDEMPOTENCY_KEY_INVALID = 'IDEMPOTENCY_KEY_INVALID',
 

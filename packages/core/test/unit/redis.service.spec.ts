@@ -1224,12 +1224,12 @@ describe('RedisService', () => {
   // ========================================
 
   describe('Lifecycle', () => {
-    it('should close all clients on module destroy', async () => {
+    it('should close all clients on application shutdown (phase 3, AFTER plugin onModuleDestroy cleanups)', async () => {
       // Given
       vi.spyOn(clientManager, 'closeAll').mockResolvedValue(undefined);
 
       // When
-      await service.onModuleDestroy();
+      await service.onApplicationShutdown();
 
       // Then
       expect(clientManager.closeAll).toHaveBeenCalled();

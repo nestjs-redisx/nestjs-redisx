@@ -1,4 +1,4 @@
-import { Injectable, Inject, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Inject, OnApplicationShutdown } from '@nestjs/common';
 
 import { RedisClientManager } from '../client';
 import { IRedisDriver, ISetOptions, IScanOptions, IPipeline, IMulti } from '../interfaces';
@@ -32,7 +32,7 @@ import { CLIENT_MANAGER, DEFAULT_CLIENT_NAME } from '../shared/constants';
  * ```
  */
 @Injectable()
-export class RedisService implements OnModuleDestroy {
+export class RedisService implements OnApplicationShutdown {
   /**
    * Default Redis driver instance.
    */
@@ -727,9 +727,15 @@ export class RedisService implements OnModuleDestroy {
   }
 
   /**
-   * NestJS lifecycle hook - cleanup on module destroy.
+   * NestJS lifecycle hook — close clients during application shutdown.
+   *
+   * Deliberately `onApplicationShutdown` (phase 3), NOT `onModuleDestroy`
+   * (phase 1): plugin providers release distributed state (leader leases,
+   * locks, stream consumers) in their own `onModuleDestroy`, and within one
+   * module Nest runs provider hooks in registration order — closing the
+   * connections in phase 1 would kill every such cleanup.
    */
-  async onModuleDestroy(): Promise<void> {
+  async onApplicationShutdown(): Promise<void> {
     await this.clientManager.closeAll();
   }
 }

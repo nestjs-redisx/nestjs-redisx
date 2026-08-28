@@ -544,15 +544,15 @@ describe('RedisClientManager', () => {
     });
   });
 
-  describe('onModuleDestroy', () => {
-    it('should close all clients on module destroy', async () => {
+  describe('onApplicationShutdown', () => {
+    it('should close all clients on application shutdown (phase 3, AFTER plugin onModuleDestroy cleanups)', async () => {
       // Given
       const config = createMockConnectionConfig('ioredis');
       await manager.createClient('test1', config);
       await manager.createClient('test2', config);
 
       // When
-      await manager.onModuleDestroy();
+      await manager.onApplicationShutdown();
 
       // Then
       expect(manager.hasClient('test1')).toBe(false);

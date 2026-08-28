@@ -45,6 +45,7 @@ export default defineConfig({
       '@nestjs-redisx/idempotency': path.resolve(__dirname, '../idempotency/src'),
       '@nestjs-redisx/streams': path.resolve(__dirname, '../streams/src'),
       '@nestjs-redisx/session': path.resolve(__dirname, '../session/src'),
+      '@nestjs-redisx/leader': path.resolve(__dirname, '../leader/src'),
     },
   },
 });

@@ -146,6 +146,11 @@ export class MetricsService implements IMetricsService, OnModuleInit, OnModuleDe
       this.registerCounter(`${this.prefix}session_destroyed_total`, 'Total sessions removed, by cause', ['reason']);
 
       this.registerCounter(`${this.prefix}session_limit_rejections_total`, 'Total logins refused by the per-user session seat limit');
+
+      // Leader election metrics
+      this.registerCounter(`${this.prefix}leader_elected_total`, 'Times this instance became leader, by group', ['group']);
+
+      this.registerCounter(`${this.prefix}leader_lost_total`, 'Times this instance lost leadership, by group and reason', ['group', 'reason']);
     }
   }
 

@@ -1,6 +1,6 @@
 import EventEmitter from 'events';
 
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationShutdown } from '@nestjs/common';
 
 import { createDriver } from '../../driver';
 import { DriverType } from '../../types';
@@ -96,7 +96,7 @@ interface IManagedClient {
  * ```
  */
 @Injectable()
-export class RedisClientManager implements IRedisDriverManager, OnModuleDestroy {
+export class RedisClientManager implements IRedisDriverManager, OnApplicationShutdown {
   /** Manager-wide command hook, applied to all current and future clients. */
   private commandHook: ManagerCommandHook | null = null;
 
@@ -393,9 +393,11 @@ export class RedisClientManager implements IRedisDriverManager, OnModuleDestroy 
   }
 
   /**
-   * NestJS lifecycle hook - cleanup on module destroy.
+   * NestJS lifecycle hook — close clients during application shutdown.
+   * Phase 3 (`onApplicationShutdown`), so plugin providers can still talk to
+   * Redis from their `onModuleDestroy` cleanups (see RedisService note).
    */
-  async onModuleDestroy(): Promise<void> {
+  async onApplicationShutdown(): Promise<void> {
     await this.closeAll();
   }
 

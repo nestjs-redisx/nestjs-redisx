@@ -58,6 +58,7 @@
     "@nestjs-redisx/cache": "^1.12.0",
     "@nestjs-redisx/circuit-breaker": "^1.12.0",
     "@nestjs-redisx/idempotency": "^1.12.0",
+    "@nestjs-redisx/leader": "^1.12.0",
     "@nestjs-redisx/locks": "^1.12.0",
     "@nestjs-redisx/pubsub": "^1.12.0",
     "@nestjs-redisx/rate-limit": "^1.12.0",

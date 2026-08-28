@@ -9,6 +9,7 @@ import { CircuitBreakerPlugin, CIRCUIT_BREAKER_SERVICE, CircuitBreakerOpenError,
 import { PubSubPlugin, PUBSUB_SERVICE, type IPubSubService, type IPubSubMessage } from '@nestjs-redisx/pubsub';
 import { StreamsPlugin, STREAM_PRODUCER, STREAM_CONSUMER, type IStreamProducer, type IStreamConsumer, type ConsumerHandle } from '@nestjs-redisx/streams';
 import { SessionPlugin, SESSION_SERVICE, SESSION_STORE, SessionLimitExceededError, type ISessionService, type ISessionStore } from '@nestjs-redisx/session';
+import { LeaderPlugin, LEADER_SERVICE, type ILeaderService } from '@nestjs-redisx/leader';
 
 import { RedisTestingModule } from '../../src';
 import { MEMORY_DRIVER_TYPE } from '../../src';
@@ -682,5 +683,50 @@ describe('Plugins on the in-memory driver (no Redis)', () => {
 
   it('does not leak: LockAcquisitionError type is the real one', () => {
     expect(LockAcquisitionError).toBeTypeOf('function');
+  });
+
+  describe('LeaderPlugin', () => {
+    it('elects the single instance as leader and gates runIfLeader', async () => {
+      // Given
+      app = await Test.createTestingModule({
+        imports: [
+          RedisModule.forRoot({
+            clients: { type: 'single', host: 'x', port: 1 },
+            global: { driver: MEMORY_DRIVER_TYPE },
+            plugins: [new LeaderPlugin({ ttlMs: 500, renewIntervalMs: 100, retryIntervalMs: 100, instanceId: 'mem-node' })],
+          }),
+        ],
+      }).compile();
+      await app.init();
+      const leader = app.get<ILeaderService>(LEADER_SERVICE);
+
+      // Then — a single instance leads immediately after init
+      expect(leader.isLeader()).toBe(true);
+      expect(await leader.getLeaderId()).toBe('mem-node');
+      expect(await leader.runIfLeader(() => 'ran')).toBe('ran');
+    });
+
+    it('steps down and releases the lease (CAS Lua on the memory interpreter)', async () => {
+      // Given
+      app = await Test.createTestingModule({
+        imports: [
+          RedisModule.forRoot({
+            clients: { type: 'single', host: 'x', port: 1 },
+            global: { driver: MEMORY_DRIVER_TYPE },
+            plugins: [new LeaderPlugin({ ttlMs: 500, renewIntervalMs: 100, retryIntervalMs: 100, instanceId: 'mem-node' })],
+          }),
+        ],
+      }).compile();
+      await app.init();
+      const leader = app.get<ILeaderService>(LEADER_SERVICE);
+      expect(leader.isLeader()).toBe(true);
+
+      // When
+      await leader.stepDown();
+
+      // Then — the lease is gone and this instance abstains during cooldown
+      expect(leader.isLeader()).toBe(false);
+      expect(await leader.getLeaderId()).toBeNull();
+    });
   });
 });
