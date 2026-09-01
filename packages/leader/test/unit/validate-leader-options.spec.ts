@@ -66,6 +66,13 @@ describe('validateLeaderOptions', () => {
     expect(() => validateLeaderOptions({ instanceId: '   ' }, 'test')).toThrow(InvalidLeaderConfigError);
   });
 
+  it('should reject an empty or non-string keyPrefix', () => {
+    // When/Then — an empty prefix makes the election key a bare group name
+    expect(() => validateLeaderOptions({ keyPrefix: '' }, 'test')).toThrow(InvalidLeaderConfigError);
+    expect(() => validateLeaderOptions({ keyPrefix: 42 as never }, 'test')).toThrow(InvalidLeaderConfigError);
+    expect(() => validateLeaderOptions({ keyPrefix: 'leader:' }, 'test')).not.toThrow();
+  });
+
   it('should include the source in the error message', () => {
     // When/Then
     expect(() => validateLeaderOptions({ ttlMs: 0 }, 'LeaderPlugin options')).toThrow(/LeaderPlugin options/);

@@ -212,6 +212,32 @@ describe('PluginRegistryService', () => {
       await expect(service.onModuleDestroy()).resolves.toBeUndefined();
     });
 
+    it('should contain a throwing plugin hook so remaining cleanups run and close() reaches the shutdown phase', async () => {
+      // Given — a third-party plugin whose destroy hook throws. If the throw
+      // escaped, Nest would abort close() before onApplicationShutdown and
+      // every Redis connection would leak.
+      const callOrder: string[] = [];
+      const plugins = [
+        createMockPlugin({
+          name: 'plugin-a',
+          onModuleDestroy: vi.fn(() => {
+            callOrder.push('destroy-a');
+          }),
+        }),
+        createMockPlugin({
+          name: 'plugin-broken',
+          onModuleDestroy: vi.fn(() => {
+            throw new Error('third-party cleanup bug');
+          }),
+        }),
+      ];
+      const service = createService(plugins);
+
+      // When/Then — no throw escapes, and the other plugin still cleaned up
+      await expect(service.onModuleDestroy()).resolves.toBeUndefined();
+      expect(callOrder).toEqual(['destroy-a']);
+    });
+
     it('should skip plugins without onModuleDestroy', async () => {
       // Given
       const plugins = [

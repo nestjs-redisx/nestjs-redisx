@@ -47,4 +47,8 @@ export function validateLeaderOptions(options: ILeaderPluginOptions, source: str
   if (options.instanceId !== undefined && (typeof options.instanceId !== 'string' || options.instanceId.trim().length === 0)) {
     throw new InvalidLeaderConfigError(`${source}: "instanceId" must be a non-empty string when provided.`);
   }
+
+  if (options.keyPrefix !== undefined && (typeof options.keyPrefix !== 'string' || options.keyPrefix.length === 0)) {
+    throw new InvalidLeaderConfigError(`${source}: "keyPrefix" must be a non-empty string when provided (an empty prefix would make the election key a bare group name).`);
+  }
 }

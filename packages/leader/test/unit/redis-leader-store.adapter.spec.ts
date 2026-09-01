@@ -113,6 +113,15 @@ describe('RedisLeaderStoreAdapter', () => {
       expect(mockDriver.eval).toHaveBeenCalled();
     });
 
+    it('should wrap NOSCRIPT-fallback failures in LeaderStoreError too', async () => {
+      // Given — the fallback eval itself fails with a connection error
+      mockDriver.evalsha.mockRejectedValue(new Error('NOSCRIPT No matching script'));
+      mockDriver.eval.mockRejectedValue(new Error('connection reset'));
+
+      // When/Then
+      await expect(adapter.renew('leader:default', 'node-1', 15_000)).rejects.toThrow(LeaderStoreError);
+    });
+
     it('should throw LeaderStoreError on non-NOSCRIPT failure', async () => {
       // Given
       mockDriver.evalsha.mockRejectedValue(new Error('timeout'));

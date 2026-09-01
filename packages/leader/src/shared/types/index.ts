@@ -51,6 +51,8 @@ export interface ILeaderPluginOptions {
 
   /**
    * Stable identity of this instance, stored as the election key's value.
+   * Must be UNIQUE per replica (e.g. the pod name) — a fleet-wide static
+   * value makes `getLeaderId()` ambiguous.
    * @default `${hostname}-${pid}-${random}`
    */
   instanceId?: string;

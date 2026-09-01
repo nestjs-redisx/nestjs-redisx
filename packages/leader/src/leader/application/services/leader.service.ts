@@ -20,6 +20,13 @@ interface IElection {
   state: LeaderElectionState;
   timer: NodeJS.Timeout | null;
   stopped: boolean;
+  /**
+   * Incremented whenever the election's intent changes out-of-band
+   * (stepDown, shutdown). A tick captures the epoch before awaiting the
+   * store; a stale result — one that raced a supersession — must not mutate
+   * state, fire events, or claim a lease nobody local acknowledges.
+   */
+  epoch: number;
 }
 
 /**
@@ -69,7 +76,7 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
     const groups = new Set<string>([DEFAULT_LEADER_GROUP, ...(this.options.groups ?? []), ...getRegisteredLeaderGroups()]);
     for (const group of groups) {
       if (!this.elections.has(group)) {
-        this.elections.set(group, { state: new LeaderElectionState(group), timer: null, stopped: false });
+        this.elections.set(group, { state: new LeaderElectionState(group), timer: null, stopped: false, epoch: 0 });
         await this.tick(group);
       }
     }
@@ -81,6 +88,7 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
   async onModuleDestroy(): Promise<void> {
     for (const [group, election] of this.elections) {
       election.stopped = true;
+      election.epoch += 1;
       if (election.timer) {
         clearTimeout(election.timer);
         election.timer = null;
@@ -123,6 +131,9 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
 
     const now = Date.now();
     const wasLeader = election.state.isLeader(now);
+    // Supersede any in-flight tick: its result must not resurrect or grant
+    // leadership after this point.
+    election.epoch += 1;
     // Abstain from candidacy for one full ttl so another instance can win.
     election.state.startCooldown(now, this.ttlMs);
 
@@ -151,6 +162,7 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
 
     const key = this.buildKey(group);
     const now = Date.now();
+    const epoch = election.epoch;
 
     if (election.state.isLeader(now)) {
       let renewed = false;
@@ -159,6 +171,17 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
       } catch (error) {
         // Fail-safe: an unconfirmed lease is no lease.
         this.logger.warn(`Lease renewal for "${group}" failed: ${(error as Error).message}`);
+      }
+      if (this.isStale(election, epoch)) {
+        // A stepDown/shutdown superseded this round while the renewal was in
+        // flight. If it still extended the remote lease, drop the key —
+        // nobody local acknowledges it, and a held-but-unclaimed seat would
+        // block failover for a full ttl.
+        if (renewed) {
+          this.releaseQuietly(group, key);
+        }
+        this.schedule(group, election);
+        return;
       }
       if (renewed) {
         election.state.renewed(now, this.ttlMs);
@@ -173,6 +196,13 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
       } catch (error) {
         this.logger.warn(`Leadership acquisition for "${group}" failed: ${(error as Error).message}`);
       }
+      if (this.isStale(election, epoch)) {
+        if (acquired) {
+          this.releaseQuietly(group, key);
+        }
+        this.schedule(group, election);
+        return;
+      }
       if (acquired) {
         election.state.elected(now, this.ttlMs);
         this.emitElected(group);
@@ -180,6 +210,25 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
     }
 
     this.schedule(group, election);
+  }
+
+  /**
+   * True when the election was superseded (stepDown/shutdown) after the
+   * given epoch was captured — results of awaits started before the
+   * supersession must be discarded.
+   */
+  private isStale(election: IElection, epoch: number): boolean {
+    return election.stopped || election.epoch !== epoch;
+  }
+
+  /**
+   * Best-effort release of a lease this instance won or extended on the wire
+   * after locally abandoning it.
+   */
+  private releaseQuietly(group: string, key: string): void {
+    this.store.release(key, this.instanceId).catch((error: Error) => {
+      this.logger.warn(`Failed to release a stale lease of "${group}": ${error.message}`);
+    });
   }
 
   private schedule(group: string, election: IElection): void {
@@ -197,14 +246,26 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
 
   private emitElected(group: string): void {
     this.logger.log(`Instance "${this.instanceId}" became leader of "${group}"`);
-    this.metrics?.incrementCounter('redisx_leader_elected_total', { group });
+    this.incrementCounterSafely('redisx_leader_elected_total', { group });
     this.fireCallback(() => this.options.onElected?.(group), 'onElected');
   }
 
   private emitLost(group: string, reason: LeaderLostReason): void {
     this.logger.log(`Instance "${this.instanceId}" lost leadership of "${group}" (${reason})`);
-    this.metrics?.incrementCounter('redisx_leader_lost_total', { group, reason });
+    this.incrementCounterSafely('redisx_leader_lost_total', { group, reason });
     this.fireCallback(() => this.options.onLost?.(group, reason), 'onLost');
+  }
+
+  /**
+   * A user-supplied metrics implementation must never kill the election loop
+   * (an uncaught throw here would end the setTimeout chain for the group).
+   */
+  private incrementCounterSafely(name: string, labels: Record<string, string>): void {
+    try {
+      this.metrics?.incrementCounter(name, labels);
+    } catch (error) {
+      this.logger.warn(`Metrics increment for "${name}" failed: ${(error as Error).message}`);
+    }
   }
 
   /**

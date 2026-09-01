@@ -59,7 +59,15 @@ export class PluginRegistryService implements OnModuleInit, OnModuleDestroy {
     for (const plugin of sorted) {
       if (plugin.onModuleDestroy) {
         this.logger.debug(`Calling onModuleDestroy for plugin "${plugin.name}"`);
-        await plugin.onModuleDestroy(context);
+        try {
+          await plugin.onModuleDestroy(context);
+        } catch (error) {
+          // A throwing plugin hook must not abort the application's close():
+          // Nest would stop before onApplicationShutdown and the Redis
+          // clients (closed there) would leak. It must not block the
+          // remaining plugins' cleanups either.
+          this.logger.error(`Plugin "${plugin.name}" onModuleDestroy failed: ${(error as Error).message}`);
+        }
       }
     }
   }

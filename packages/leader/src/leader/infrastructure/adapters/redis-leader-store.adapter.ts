@@ -45,8 +45,12 @@ export class RedisLeaderStoreAdapter implements ILeaderStore, OnModuleInit {
       return result === 1;
     } catch (error) {
       if (this.isNoScriptError(error)) {
-        const result = await this.driver.eval(RENEW_LEADER_SCRIPT, [key], [instanceId, ttlMs]);
-        return result === 1;
+        try {
+          const result = await this.driver.eval(RENEW_LEADER_SCRIPT, [key], [instanceId, ttlMs]);
+          return result === 1;
+        } catch (fallbackError) {
+          throw new LeaderStoreError(`Leader renew failed: ${(fallbackError as Error).message}`, fallbackError as Error);
+        }
       }
       throw new LeaderStoreError(`Leader renew failed: ${(error as Error).message}`, error as Error);
     }
@@ -58,8 +62,12 @@ export class RedisLeaderStoreAdapter implements ILeaderStore, OnModuleInit {
       return result === 1;
     } catch (error) {
       if (this.isNoScriptError(error)) {
-        const result = await this.driver.eval(RELEASE_LEADER_SCRIPT, [key], [instanceId]);
-        return result === 1;
+        try {
+          const result = await this.driver.eval(RELEASE_LEADER_SCRIPT, [key], [instanceId]);
+          return result === 1;
+        } catch (fallbackError) {
+          throw new LeaderStoreError(`Leader release failed: ${(fallbackError as Error).message}`, fallbackError as Error);
+        }
       }
       throw new LeaderStoreError(`Leader release failed: ${(error as Error).message}`, error as Error);
     }
