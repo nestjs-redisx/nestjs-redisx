@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        nestjs: ['10', '11']
+        nestjs: ['10', '11', '12']
         node: ['18', '20', '22', '24']
         redis: ['6.2', '7.2']
 

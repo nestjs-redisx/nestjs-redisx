@@ -4,7 +4,7 @@ import { join } from 'path';
 
 export default defineConfig({
   entry: ['src/index.ts'],
-  format: ['cjs'],
+  format: ['cjs', 'esm'],
   dts: {
     resolve: true,
   },

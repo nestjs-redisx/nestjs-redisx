@@ -5,6 +5,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    setupFiles: [resolve(__dirname, './test/setup/reflect-metadata.ts')],
     poolOptions: {
       threads: {
         minThreads: 1,

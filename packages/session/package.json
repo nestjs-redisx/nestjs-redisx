@@ -1,6 +1,6 @@
 {
   "name": "@nestjs-redisx/session",
-  "version": "1.12.0",
+  "version": "1.13.0",
   "description": "Redis session management plugin for NestJS RedisX — express-session/@fastify/session store with per-user introspection, revocation, seat limits, and absolute lifetime caps",
   "author": "NestJS RedisX Team",
   "license": "MIT",
@@ -10,8 +10,8 @@
     ".": {
       "types": "./dist/index.d.ts",
       "require": "./dist/index.js",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.mjs"
     }
   },
   "files": [
@@ -58,8 +58,8 @@
   "peerDependencies": {
     "@fastify/session": ">=10.0.0",
     "@nestjs-redisx/core": "^1.0.0",
-    "@nestjs/common": "^10.0.0 || ^11.0.0",
-    "@nestjs/core": "^10.0.0 || ^11.0.0",
+    "@nestjs/common": "^10.0.0 || ^11.0.0 || ^12.0.0",
+    "@nestjs/core": "^10.0.0 || ^11.0.0 || ^12.0.0",
     "express-session": "^1.17.0",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.0"
@@ -75,7 +75,7 @@
   "devDependencies": {
     "@fastify/cookie": "^9.4.0",
     "@fastify/session": "^10.9.0",
-    "@nestjs-redisx/testing": "^1.12.0",
+    "@nestjs-redisx/testing": "^1.13.0",
     "@nestjs/testing": "^9.0.0 || ^10.0.0 || ^11.0.0",
     "@types/express-session": "^1.18.0",
     "@types/node": "^20.0.0",
