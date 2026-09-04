@@ -5,6 +5,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    setupFiles: [resolve(__dirname, './test/setup/reflect-metadata.ts')],
     include: ['packages/**/test/e2e/**/*.spec.ts'],
     exclude: ['**/node_modules/**', '**/dist/**'],
     testTimeout: 30000, // E2E tests may take longer

@@ -4,6 +4,21 @@ All notable changes to NestJS RedisX are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.0] - 2026-09-04
+
+### Added
+
+- all packages: **NestJS 12** peer dependency support (`@nestjs/common` / `@nestjs/core` `^12.0.0`).
+
+### Changed
+
+- all packages: ESM `import` / `default` exports now resolve to `dist/index.mjs` (CJS consumers keep using `require` → `dist/index.js`).
+- `core`: the build now emits both CJS and ESM bundles (`tsup` `format: ['cjs', 'esm']`).
+
+### Fixed
+
+- test: load `reflect-metadata` in the root Vitest setup files so `@nestjs/testing` suites bootstrap under NestJS 12.
+
 ## [1.12.0] - 2026-08-26
 
 ### Added

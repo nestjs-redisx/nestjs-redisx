@@ -1,4 +1,3 @@
-import 'reflect-metadata';
 import { describe, it, expect, afterEach } from 'vitest';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { REDIS_DRIVER } from '@nestjs-redisx/core';
