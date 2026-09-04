@@ -60,7 +60,7 @@ Pack-test validates that published packages work correctly when installed from t
 | Trigger | What runs |
 |---------|-----------|
 | Every push/PR | Lint, typecheck, full test suite (Node 18 + 20), coverage upload, pack-smoke |
-| Weekly (Monday) | Compatibility matrix: Node 18/20, NestJS 10/11, Redis 6.2/7.x |
+| Weekly (Monday) | Compatibility matrix: Node 18/20/22/24, NestJS 10/11/12, Redis 6.2/7.x |
 | Manual | pack-e2e with live Redis, NestJS 9 best-effort |
 
 CI workflows are defined in [`.github/workflows/`](https://github.com/nestjs-redisx/nestjs-redisx/tree/main/.github/workflows).
