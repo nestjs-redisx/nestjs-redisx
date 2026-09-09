@@ -15,6 +15,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    setupFiles: [path.resolve(__dirname, '../../test/setup/reflect-metadata.ts')],
     cache: false,
     include: ['src/**/test/**/*.spec.ts', 'src/**/*.spec.ts', 'test/**/*.spec.ts'],
     exclude: ['**/node_modules/**', '**/dist/**'],

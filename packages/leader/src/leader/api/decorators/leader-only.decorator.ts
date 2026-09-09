@@ -38,7 +38,31 @@ interface IDecoratorLeaderService {
 // removed the only getter, and the app still running skipped every
 // decorated method forever. Decorated methods consult the most recently
 // registered LIVE service; closing any app re-exposes the previous one.
-const leaderServiceGetters: Array<() => IDecoratorLeaderService> = [];
+//
+// Both decorator registries (getters + groups) live on `globalThis` under
+// `Symbol.for` keys, NOT in module scope: with the dual CJS + ESM build a
+// process can load BOTH copies of this module (e.g. an ESM application plus
+// a CJS dependency that requires the package). Module-scoped state would
+// split — decorators applied through one copy would register groups and
+// consult getters invisible to the service wired through the other, so every
+// decorated method would skip fail-safe with zero signal.
+const SERVICE_GETTERS_KEY = Symbol.for('nestjs-redisx.leader.service-getters');
+const DECORATOR_GROUPS_KEY = Symbol.for('nestjs-redisx.leader.decorator-groups');
+
+function globalSlot<T>(key: symbol, create: () => T): T {
+  const slot = globalThis as Record<symbol, unknown>;
+  let value = slot[key] as T | undefined;
+  if (value === undefined) {
+    value = create();
+    slot[key] = value;
+  }
+  return value;
+}
+
+function leaderServiceGetters(): Array<() => IDecoratorLeaderService> {
+  return globalSlot(SERVICE_GETTERS_KEY, () => []);
+}
+
 let warnedNoService = false;
 
 /**
@@ -47,19 +71,20 @@ let warnedNoService = false;
  * Passing null clears the whole registry (test aid / legacy reset).
  */
 export function registerLeaderServiceGetter(getter: (() => IDecoratorLeaderService) | null): void {
+  const getters = leaderServiceGetters();
   if (getter === null) {
-    leaderServiceGetters.length = 0;
+    getters.length = 0;
     return;
   }
-  if (!leaderServiceGetters.includes(getter)) {
-    leaderServiceGetters.push(getter);
+  if (!getters.includes(getter)) {
+    getters.push(getter);
   }
   warnedNoService = false;
-  if (leaderServiceGetters.length > 1) {
+  if (getters.length > 1) {
     // Which app SHOULD gate a decorated method is ambiguous in this
     // topology (the decorator is bound to a class, not an app) — make the
     // arbitration rule loud instead of silent.
-    logger.warn(`@LeaderOnly: ${leaderServiceGetters.length} leader services are registered in this process (multiple Nest apps?). ` + `Decorated methods consult the most recently initialized one; leadership is NOT evaluated per app.`);
+    logger.warn(`@LeaderOnly: ${getters.length} leader services are registered in this process (multiple Nest apps?). ` + `Decorated methods consult the most recently initialized one; leadership is NOT evaluated per app.`);
   }
 }
 
@@ -70,31 +95,35 @@ export function registerLeaderServiceGetter(getter: (() => IDecoratorLeaderServi
  * skip fail-safe instead of consulting a destroyed service.
  */
 export function unregisterLeaderServiceGetter(getter: () => IDecoratorLeaderService): void {
-  const index = leaderServiceGetters.lastIndexOf(getter);
+  const getters = leaderServiceGetters();
+  const index = getters.lastIndexOf(getter);
   if (index !== -1) {
-    leaderServiceGetters.splice(index, 1);
+    getters.splice(index, 1);
   }
 }
 
 // Groups referenced by decorators register here at decoration time (class
 // load — BEFORE bootstrap), so the service can start their elections in
 // onModuleInit and `isLeader` is meaningful by the first cron tick.
-const registeredGroups = new Set<string>();
+// On `globalThis` for the same dual-copy reason as the getters above.
+function registeredGroups(): Set<string> {
+  return globalSlot(DECORATOR_GROUPS_KEY, () => new Set<string>());
+}
 
 /** Register an election group (used by @LeaderOnly at decoration time). */
 export function registerLeaderGroup(group: string): void {
   validateLeaderGroup(group, '@LeaderOnly');
-  registeredGroups.add(group);
+  registeredGroups().add(group);
 }
 
 /** Groups registered by decorators (read by LeaderService at bootstrap). */
 export function getRegisteredLeaderGroups(): ReadonlySet<string> {
-  return registeredGroups;
+  return registeredGroups();
 }
 
 /** Test aid: reset the decoration-time group registry. */
 export function clearRegisteredLeaderGroups(): void {
-  registeredGroups.clear();
+  registeredGroups().clear();
 }
 
 /**
@@ -190,7 +219,8 @@ export function LeaderOnly(options: ILeaderOnlyOptions = {}): MethodDecorator {
     }
 
     descriptor.value = async function (...args: unknown[]): Promise<unknown> {
-      const activeGetter = leaderServiceGetters[leaderServiceGetters.length - 1];
+      const getters = leaderServiceGetters();
+      const activeGetter = getters[getters.length - 1];
       if (!activeGetter) {
         if (!warnedNoService) {
           warnedNoService = true;

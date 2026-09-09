@@ -320,3 +320,135 @@ jobs:
       - name: Run smoke tests
         run: cd "$SMOKE_DIR" && npx vitest run --reporter=verbose
 
+      # ---------------------------------------------------------------------
+      # ESM smoke: NestJS 12 is native ESM — consume every package through
+      # `import` from a "type": "module" project, exercising the dist/*.mjs
+      # entries end-to-end (in-memory driver, no Redis service needed).
+      # ---------------------------------------------------------------------
+      - name: Create ESM smoke project (NestJS 12)
+        run: |
+          ESM_DIR=$(mktemp -d)
+          echo "ESM_DIR=$ESM_DIR" >> $GITHUB_ENV
+          cd "$ESM_DIR"
+
+          npm init -y
+          npm pkg set type=module
+
+          npm install \
+            "$TARBALLS_DIR"/nestjs-redisx-core-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-cache-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-locks-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-rate-limit-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-circuit-breaker-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-pubsub-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-idempotency-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-streams-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-metrics-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-tracing-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-session-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-leader-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-testing-*.tgz \
+            @nestjs/common@^12.0.0 \
+            @nestjs/core@^12.0.0 \
+            @nestjs/testing@^12.0.0 \
+            reflect-metadata@^0.2.0 \
+            rxjs@^7.8.0 \
+            msgpackr
+
+      - name: Run ESM smoke (imports, plugin on memory driver, msgpackr)
+        run: |
+          cat > "$ESM_DIR"/smoke.mjs << 'ESMEOF'
+          import 'reflect-metadata';
+          let failures = 0;
+          const check = (name, ok) => { console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}`); if (!ok) failures++; };
+
+          // Every package must be importable through its ESM entry.
+          const mods = {
+            core: await import('@nestjs-redisx/core'),
+            cache: await import('@nestjs-redisx/cache'),
+            locks: await import('@nestjs-redisx/locks'),
+            'rate-limit': await import('@nestjs-redisx/rate-limit'),
+            'circuit-breaker': await import('@nestjs-redisx/circuit-breaker'),
+            pubsub: await import('@nestjs-redisx/pubsub'),
+            idempotency: await import('@nestjs-redisx/idempotency'),
+            streams: await import('@nestjs-redisx/streams'),
+            metrics: await import('@nestjs-redisx/metrics'),
+            tracing: await import('@nestjs-redisx/tracing'),
+            session: await import('@nestjs-redisx/session'),
+            leader: await import('@nestjs-redisx/leader'),
+            testing: await import('@nestjs-redisx/testing'),
+          };
+          check('all 13 packages import as ESM', Object.values(mods).every((m) => Object.keys(m).length > 0));
+          check('core exports RedisModule', typeof mods.core.RedisModule === 'function');
+
+          // The ESM bundle must not carry static driver imports: with NO
+          // driver installed, importing core works and createDriver fails
+          // with the clear "not installed" error (not ERR_MODULE_NOT_FOUND
+          // at import time).
+          try {
+            mods.core.createDriver({ type: 'single', host: 'x' });
+            check('missing ioredis -> clear error', false);
+          } catch (e) {
+            check('missing ioredis -> clear error', /"ioredis" package is required/.test(String(e.message)));
+          }
+
+          // msgpackr installed -> the serializer must construct under ESM.
+          const ser = new mods.cache.MsgpackSerializer();
+          const buf = ser.serialize({ a: 1 });
+          check('MsgpackSerializer works under ESM', ser.deserialize(buf).a === 1);
+
+          // A plugin on the in-memory driver — full Nest 12 DI boot, no Redis.
+          const { Test } = await import('@nestjs/testing');
+          const app = await Test.createTestingModule({
+            imports: [mods.testing.RedisTestingModule.forRoot({ plugins: [new mods.cache.CachePlugin()] })],
+          }).compile();
+          await app.init();
+          const cacheService = app.get(mods.cache.CACHE_SERVICE);
+          let calls = 0;
+          await cacheService.getOrSet('k', async () => ++calls, { ttl: 60 });
+          await cacheService.getOrSet('k', async () => ++calls, { ttl: 60 });
+          check('CachePlugin on memory driver under Nest 12 ESM', calls === 1);
+          await app.close();
+
+          console.log(failures === 0 ? 'ESM SMOKE: ALL PASS' : `ESM SMOKE: ${failures} FAILURES`);
+          process.exit(failures === 0 ? 0 : 1);
+          ESMEOF
+          cd "$ESM_DIR" && node smoke.mjs
+
+      # One-driver installs must keep working from ESM (the reason the driver
+      # libraries are loaded lazily, not statically imported).
+      - name: Run ESM one-driver smoke (node-redis only)
+        run: |
+          NR_DIR=$(mktemp -d)
+          cd "$NR_DIR"
+          npm init -y
+          npm pkg set type=module
+          npm install \
+            "$TARBALLS_DIR"/nestjs-redisx-core-*.tgz \
+            @nestjs/common@^12.0.0 \
+            @nestjs/core@^12.0.0 \
+            reflect-metadata@^0.2.0 \
+            rxjs@^7.8.0 \
+            redis@^5.0.0
+          cat > smoke.mjs << 'NREOF'
+          const core = await import('@nestjs-redisx/core');
+          const driver = core.createDriver({ type: 'single', host: 'localhost', port: 6379 }, { type: 'node-redis' });
+          if (driver.constructor.name !== 'NodeRedisAdapter') {
+            console.error('FAIL: expected NodeRedisAdapter, got', driver.constructor.name);
+            process.exit(1);
+          }
+          if (core.detectAvailableDriver() !== 'node-redis') {
+            console.error('FAIL: detectAvailableDriver should report node-redis');
+            process.exit(1);
+          }
+          console.log('ESM NODE-REDIS-ONLY SMOKE: ALL PASS');
+          NREOF
+          node smoke.mjs
+
+      - name: Check published types resolution (attw)
+        run: |
+          for pkg in core cache locks rate-limit circuit-breaker pubsub idempotency streams metrics tracing session leader testing; do
+            echo "attw @nestjs-redisx/$pkg"
+            npx --yes @arethetypeswrong/cli --pack packages/$pkg
+          done
+

@@ -19,8 +19,23 @@
  * ```
  */
 
+import { createRequire } from 'node:module';
+
 import { ISerializer } from './serializer.interface';
 import { SerializationError } from '../shared/errors';
+
+/**
+ * Loads the optional `msgpackr` dependency lazily AND synchronously in both
+ * bundles. A bare `require()` here compiles to a throwing stand-in in the ESM
+ * bundle ("Dynamic require of msgpackr is not supported"), which made the
+ * constructor report "msgpackr package is required" even with the package
+ * installed. `createRequire(__filename)` resolves exactly like a regular
+ * require next to this file — `__filename` is native in the CJS bundle and
+ * polyfilled from `import.meta.url` by the tsup `shims` option in ESM
+ * (`import.meta` itself is rejected by this codebase's CommonJS `module`
+ * setting at typecheck).
+ */
+const requireOptional = createRequire(__filename);
 
 /**
  * Msgpackr encoder interface.
@@ -43,8 +58,7 @@ export class MsgpackSerializer implements ISerializer {
   constructor() {
     try {
       // Lazy load msgpackr to make it optional
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const msgpackr = require('msgpackr');
+      const msgpackr = requireOptional('msgpackr');
       this.encoder = new msgpackr.Encoder({
         useRecords: false, // Don't use msgpack extension records
         structuredClone: true, // Deep clone objects

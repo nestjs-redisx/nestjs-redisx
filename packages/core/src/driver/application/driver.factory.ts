@@ -1,6 +1,7 @@
 import { IRedisDriver } from '../../interfaces';
 import { RedisXError, ErrorCode } from '../../errors';
 import { ConnectionConfig, DriverType } from '../../types';
+import { isDriverPackageInstalled } from '../infrastructure/driver-loader';
 import { IoRedisAdapter } from '../infrastructure/ioredis.adapter';
 import { NodeRedisAdapter } from '../infrastructure/node-redis.adapter';
 import { normalizeConnectionConfig } from './parse-redis-url';
@@ -31,8 +32,24 @@ export type DriverFactoryFn = (config: ConnectionConfig, options?: IDriverFactor
  * Registry of custom driver types beyond the built-in ioredis/node-redis.
  * Lets first-party packages (e.g. @nestjs-redisx/testing) plug in another
  * IRedisDriver implementation without modifying core.
+ *
+ * Lives on `globalThis` under a `Symbol.for` key (not in module scope): with
+ * the dual CJS + ESM build a process can end up with BOTH copies of this
+ * module loaded (e.g. an ESM application plus a CJS dependency that requires
+ * core). A module-scoped map would then split — `registerDriver` through one
+ * copy would be invisible to `createDriver` through the other.
  */
-const driverRegistry = new Map<string, DriverFactoryFn>();
+const DRIVER_REGISTRY_KEY = Symbol.for('nestjs-redisx.core.driver-registry');
+
+function driverRegistry(): Map<string, DriverFactoryFn> {
+  const slot = globalThis as Record<symbol, unknown>;
+  let registry = slot[DRIVER_REGISTRY_KEY] as Map<string, DriverFactoryFn> | undefined;
+  if (!registry) {
+    registry = new Map<string, DriverFactoryFn>();
+    slot[DRIVER_REGISTRY_KEY] = registry;
+  }
+  return registry;
+}
 
 /**
  * Registers a custom driver type so `createDriver({ type })` — and therefore
@@ -45,7 +62,7 @@ export function registerDriver(type: string, factory: DriverFactoryFn): void {
   if (type === 'ioredis' || type === 'node-redis') {
     throw new RedisXError(`Cannot override built-in driver type: ${type}`, ErrorCode.CFG_INVALID, undefined, { driverType: type });
   }
-  driverRegistry.set(type, factory);
+  driverRegistry().set(type, factory);
 }
 
 /**
@@ -86,11 +103,11 @@ export function createDriver(rawConfig: ConnectionConfig, options?: IDriverFacto
       return new NodeRedisAdapter(config, { enableLogging });
 
     default: {
-      const factory = driverRegistry.get(driverType);
+      const factory = driverRegistry().get(driverType);
       if (factory) {
         return factory(config, { enableLogging });
       }
-      const known = ['ioredis', 'node-redis', ...driverRegistry.keys()].join(', ');
+      const known = ['ioredis', 'node-redis', ...driverRegistry().keys()].join(', ');
       throw new RedisXError(`Unsupported driver type: ${driverType}. Supported types: ${known}`, ErrorCode.CFG_INVALID, undefined, { driverType });
     }
   }
@@ -166,19 +183,19 @@ export function createDrivers(configs: Record<string, ConnectionConfig>, options
 /**
  * Driver type detection helper.
  * Attempts to detect available driver library.
+ *
+ * Uses the loader's `createRequire`-based probe instead of a bare
+ * `require.resolve`, which does not exist in the ESM bundle (the esbuild
+ * stand-in throws, making this function always return null under ESM).
  */
 export function detectAvailableDriver(): DriverType | null {
-  try {
-    require.resolve('ioredis');
+  if (isDriverPackageInstalled('ioredis')) {
     return 'ioredis';
-  } catch {
-    try {
-      require.resolve('redis');
-      return 'node-redis';
-    } catch {
-      return null;
-    }
   }
+  if (isDriverPackageInstalled('redis')) {
+    return 'node-redis';
+  }
+  return null;
 }
 
 /**

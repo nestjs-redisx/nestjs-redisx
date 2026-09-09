@@ -1,6 +1,7 @@
-import { createClient, createCluster, createSentinel, RedisClientOptions, RedisClientType, RedisClusterType, RedisSentinelType } from 'redis';
+import type { RedisClientOptions, RedisClientType, RedisClusterType, RedisSentinelType } from 'redis';
 
 import { BaseRedisDriver } from './base.driver';
+import { loadNodeRedis, INodeRedisLib } from './driver-loader';
 import { IPipeline, IMulti, DriverEvent } from '../../interfaces';
 import { ConnectionError, CommandError } from '../../shared/errors';
 import { ConnectionConfig, isSingleConnection, isClusterConnection, isSentinelConnection } from '../../types';
@@ -74,6 +75,14 @@ export class NodeRedisAdapter extends BaseRedisDriver {
    */
   private everConnectedOnce = false;
 
+  /**
+   * The lazily loaded `redis` (node-redis) library. Loaded in the constructor
+   * (NOT via a static import) so the package stays a true optional dependency
+   * — see `driver-loader.ts`. Construction fails fast with a clear error when
+   * `redis` is not installed.
+   */
+  private readonly lib: INodeRedisLib;
+
   constructor(
     config: ConnectionConfig,
     options?: {
@@ -81,6 +90,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
     },
   ) {
     super(config, options);
+    this.lib = loadNodeRedis();
     this.keyPrefix = config.keyPrefix ?? '';
     this.commandTimeout = config.commandTimeout;
   }
@@ -483,7 +493,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
       };
     }
 
-    return createClient(options) as RedisClientType;
+    return this.lib.createClient(options) as RedisClientType;
   }
 
   private createClusterClient(config: ConnectionConfig): RedisClusterType {
@@ -520,7 +530,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return createCluster(options) as any;
+    return this.lib.createCluster(options) as any;
   }
 
   /**
@@ -617,7 +627,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
     options.sentinelClientOptions = sentinelClientOptions;
 
     // Create and connect sentinel
-    const sentinel = createSentinel(options);
+    const sentinel = this.lib.createSentinel(options);
 
     // Setup error handler before connecting
     sentinel.on('error', (error: Error) => {

@@ -4,8 +4,11 @@ import { ConnectionConfig } from '../../src/types';
 import { DriverEvent } from '../../src/interfaces';
 import { ConnectionError, CommandError } from '../../src/shared/errors';
 
-// Mock redis
-vi.mock('redis', () => {
+// Mock the driver loader (NOT the 'redis' module): the adapter loads the
+// library at runtime through createRequire in driver-loader.ts, which
+// bypasses Vitest's module graph — vi.mock('redis') would never intercept it.
+vi.mock('../../src/driver/infrastructure/driver-loader', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/driver/infrastructure/driver-loader')>();
   const EventEmitter = require('events');
 
   class MockRedisClient extends EventEmitter {
@@ -259,9 +262,12 @@ vi.mock('redis', () => {
   }
 
   return {
-    createClient: (options?: any) => new MockRedisClient(options),
-    createCluster: (options?: any) => new MockRedisCluster(options),
-    createSentinel: (options?: any) => new MockRedisSentinel(options),
+    ...actual,
+    loadNodeRedis: () => ({
+      createClient: (options?: any) => new MockRedisClient(options),
+      createCluster: (options?: any) => new MockRedisCluster(options),
+      createSentinel: (options?: any) => new MockRedisSentinel(options),
+    }),
   };
 });
 

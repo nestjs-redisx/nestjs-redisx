@@ -15,11 +15,18 @@ description: 'Reference for supported Node.js, NestJS, and Redis versions plus i
 
 | | Node 18 | Node 20 | Node 22 |
 |---|---------|---------|---------|
+| NestJS 12 | Not supported¹ | Supported | Supported |
 | NestJS 11 | Supported | Supported | Best effort |
 | NestJS 10 | Supported | Supported | Best effort |
 | NestJS 9 | Best effort | Best effort | Not supported |
 
+¹ NestJS 12 itself requires Node ≥ 20 (`engines`).
+
 NestJS 9 is EOL and not covered by CI. It may work but is best-effort only.
+
+### NestJS 12 and ESM
+
+NestJS 12 is published as native ESM. All RedisX packages ship a dual build: `import` resolves the ESM bundle (`dist/index.mjs`), `require` the CommonJS one (`dist/index.js`), each with matching type declarations. An ESM application (`"type": "module"`) works out of the box; a CommonJS application on Nest 12 relies on Node's `require(esm)` support (Node 20.19+ / 22.12+). Jest users on Nest 12 should run Jest in ESM mode — its CJS module registry cannot `require()` the ESM Nest internals.
 
 ## Redis Compatibility
 
@@ -45,8 +52,8 @@ ioredis is the recommended driver due to mature Cluster and Sentinel support and
 | Dependency | Minimum | Recommended |
 |------------|---------|-------------|
 | Node.js | 18.0.0 | 20.x LTS |
-| @nestjs/common | 10.0.0 | 11.x |
-| @nestjs/core | 10.0.0 | 11.x |
+| @nestjs/common | 10.0.0 | 11.x / 12.x |
+| @nestjs/core | 10.0.0 | 11.x / 12.x |
 | ioredis | 5.0.0 | 5.9+ |
 | redis (node-redis) | 4.6.0 | 4.7+ |
 | reflect-metadata | 0.2.0 | 0.2.x |

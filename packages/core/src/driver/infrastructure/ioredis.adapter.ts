@@ -1,6 +1,7 @@
-import Redis, { Cluster, RedisOptions, ClusterOptions, ClusterNode } from 'ioredis';
+import type { Redis, Cluster, RedisOptions, ClusterOptions, ClusterNode } from 'ioredis';
 
 import { BaseRedisDriver } from './base.driver';
+import { loadIoredis, IIoredisLib } from './driver-loader';
 import { IPipeline, IMulti, DriverEvent } from '../../interfaces';
 import { ConnectionError, CommandError } from '../../shared/errors';
 import { ConnectionConfig, isSingleConnection, isClusterConnection, isSentinelConnection } from '../../types';
@@ -23,6 +24,14 @@ import { ConnectionConfig, isSingleConnection, isClusterConnection, isSentinelCo
 export class IoRedisAdapter extends BaseRedisDriver {
   private client: Redis | Cluster | null = null;
 
+  /**
+   * The lazily loaded `ioredis` library. Loaded in the constructor (NOT via a
+   * static import) so the package stays a true optional dependency — see
+   * `driver-loader.ts`. Construction fails fast with a clear error when
+   * `ioredis` is not installed.
+   */
+  private readonly lib: IIoredisLib;
+
   constructor(
     config: ConnectionConfig,
     options?: {
@@ -30,6 +39,7 @@ export class IoRedisAdapter extends BaseRedisDriver {
     },
   ) {
     super(config, options);
+    this.lib = loadIoredis();
   }
 
   protected async doConnect(): Promise<void> {
@@ -68,9 +78,9 @@ export class IoRedisAdapter extends BaseRedisDriver {
 
         // Initiate connection (required when lazyConnect is true)
         if (this.client) {
-          if (this.client instanceof Redis) {
+          if (this.client instanceof this.lib.Redis) {
             this.client.connect().catch(reject);
-          } else if (this.client instanceof Cluster) {
+          } else if (this.client instanceof this.lib.Cluster) {
             this.client.connect().catch(reject);
           }
         }
@@ -179,7 +189,7 @@ export class IoRedisAdapter extends BaseRedisDriver {
       };
     }
 
-    return new Redis(options);
+    return new this.lib.Redis(options);
   }
 
   private createClusterClient(config: ConnectionConfig): Cluster {
@@ -201,7 +211,9 @@ export class IoRedisAdapter extends BaseRedisDriver {
         connectTimeout: config.connectTimeout ?? 10000,
         commandTimeout: config.commandTimeout === 0 ? undefined : (config.commandTimeout ?? 5000),
         maxRetriesPerRequest: config.maxRetriesPerRequest ?? 3,
-        enableOfflineQueue: config.enableOfflineQueue ?? true,
+        // NOTE: no per-node enableOfflineQueue here — the cluster client owns
+        // the offline queue (set at the cluster level below) and ioredis
+        // 5.9.3+ excludes the option from ClusterOptions['redisOptions'].
         keepAlive: config.keepAlive ?? 0,
         reconnectOnError: config.reconnectOnError,
       },
@@ -217,7 +229,7 @@ export class IoRedisAdapter extends BaseRedisDriver {
       ...config.clusterOptions,
     };
 
-    return new Cluster(nodes, options);
+    return new this.lib.Cluster(nodes, options);
   }
 
   private createSentinelClient(config: ConnectionConfig): Redis {
@@ -275,7 +287,7 @@ export class IoRedisAdapter extends BaseRedisDriver {
       }
     }
 
-    return new Redis(options);
+    return new this.lib.Redis(options);
   }
 
   private setupEventHandlers(): void {

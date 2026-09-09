@@ -4,7 +4,7 @@
 
 ## Installation
 
-Requirements: Node.js 18+, NestJS 10+, Redis 6+, TypeScript 5+.
+Requirements: Node.js 18+, NestJS 10–12, Redis 6+, TypeScript 5+. Every package ships a dual CommonJS + ESM build: native-ESM NestJS 12 apps use `import` out of the box, CommonJS apps keep resolving the unchanged `require` entry (NestJS 12 itself requires Node 20+).
 
 Install core and your preferred Redis driver:
 
