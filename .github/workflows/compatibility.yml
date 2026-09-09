@@ -53,7 +53,11 @@ jobs:
       - name: Override NestJS version to ${{ matrix.nestjs }}
         if: matrix.nestjs != '10'
         run: |
-          # NestJS 11 requires @nestjs/platform-fastify v11, which in turn needs fastify v5.
+          # NestJS 11+ requires @nestjs/platform-fastify v11+, which needs fastify v5.
+          # The root `overrides.fastify` pin (4.28.1, matching Nest 10's
+          # platform-fastify) makes that install fail with EOVERRIDE — retarget
+          # the override for this runner only (never committed).
+          npm pkg set overrides.fastify='^5.0.0'
           npm install --no-save --legacy-peer-deps \
             @nestjs/common@^${{ matrix.nestjs }}.0.0 \
             @nestjs/core@^${{ matrix.nestjs }}.0.0 \
