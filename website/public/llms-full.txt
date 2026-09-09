@@ -645,7 +645,7 @@ Keyspace: `sess:{<sid>}` (payload JSON, hash-tagged with `sess:{<sid>}:meta` met
 
 ## Leader Election Plugin
 
-Run cron jobs, migrations, and cleanup on exactly ONE instance of the fleet. Lease-based election over a single Redis key per group: `SET NX PX` acquire, CAS Lua heartbeat renewal, CAS release. Single-key operations — cluster-safe without hash tags. Runs fully on the in-memory testing driver.
+Run cron jobs, migrations, and cleanup on exactly ONE instance of the fleet. Lease-based election over a single Redis key per group: atomic acquire (re-claim of a lease already carrying this instance's own id first, else `SET NX PX`), CAS Lua heartbeat renewal, CAS release. Single-key operations — cluster-safe without hash tags. Runs fully on the in-memory testing driver.
 
 ### LeaderPlugin Configuration
 
@@ -657,7 +657,7 @@ new LeaderPlugin({
   renewIntervalMs: 5_000,   // heartbeat while leader; MUST be < ttlMs (fail-fast validation)
   retryIntervalMs: 2_000,   // acquire retry while follower
   groups: ['reports'],      // extra elections at bootstrap ('default' always runs)
-  instanceId: process.env.POD_NAME, // identity in the key; default `${hostname}-${pid}-${random}`
+  instanceId: process.env.POD_NAME, // MUST be unique per replica (shared id => every replica leads); default `${hostname}-${pid}-${random}`
   onElected: (group) => {},
   onLost: (group, reason) => {},    // reason: 'expired' | 'stepdown' | 'shutdown'
 })
@@ -681,12 +681,14 @@ export class ReportJobs {
 }
 ```
 
-Proxy-based (works on any @Injectable method). Groups referenced by decorators register at decoration time; their elections start at bootstrap, and the first election round is awaited during onModuleInit — leadership is resolved before the first cron tick. Fail-safe skip: without the plugin the method runs NOWHERE (one-time warning) — for singleton work "nobody runs" is recoverable, "everybody runs" is not.
+Proxy-based (works on any regular @Injectable method; generator/async-generator methods are rejected at class load — gate their caller with isLeader()/runIfLeader() instead). Groups referenced by decorators register at decoration time; their elections start at bootstrap, and the first election round is awaited during onModuleInit — leadership is resolved before the first cron tick. Fail-safe skip: without the plugin the method runs NOWHERE (one-time warning) — for singleton work "nobody runs" is recoverable, "everybody runs" is not.
 
 ### Semantics
 
-- `isLeader()` is a synchronous LOCAL lease view: true only while the last CONFIRMED lease is unexpired. A failed or errored renewal demotes immediately; a stalled event loop cannot sustain a stale claim; Redis down means nobody leads (work pauses rather than duplicates).
-- Failover: graceful shutdown and `stepDown()` RELEASE the lease (takeover ≤ retryIntervalMs); a crash is bounded by ttlMs + retryIntervalMs.
+- `isLeader()` is a synchronous LOCAL lease view: true only while the last CONFIRMED lease is unexpired. A failed or errored renewal demotes immediately; the still-held key is re-claimed on the next retry tick (a transient error costs ≤ retryIntervalMs of leadership); a stalled event loop cannot sustain a stale claim; Redis down means nobody leads (work pauses rather than duplicates).
+- Failover: graceful shutdown and `stepDown()` RELEASE the lease (takeover ≤ retryIntervalMs); a crash is bounded by ttlMs + retryIntervalMs; an unclean restart with a stable instanceId re-claims its own stale lease immediately at boot.
+- Shutdown and `stepDown()` also clear a lease this instance may STILL hold after a fail-safe demotion (renewal store error), so a dead process's residue never blocks the group for the remaining TTL; shutdown additionally rendezvouses (bounded by retryIntervalMs) with an election round already on the wire, so an acquire that WINS during a graceful stop is observed and released before the Redis clients close; a store call outliving the bound forfeits (ttl-bounded residue at worst), and every shutdown await is bounded so a hung connection cannot wedge app.close(). `onElected`/`onLost` strictly alternate per group; a lease that lapses without a tick observing it reports onLost(group, 'expired') before any re-election, and a lapse watchdog fires that event on time even while the heartbeat's store call dangles on a hung connection. `@LeaderOnly` carries over metadata stamped by decorators below it — both orders with @Cron are safe.
+- `isLeader(group)` for a group with no running election returns false and warns once — groups must be known at bootstrap (plugin `groups` or a @LeaderOnly decorator loaded before init); groups registered later (lazily loaded modules) never start an election.
 - `stepDown()` includes a one-ttlMs candidacy cooldown so another instance wins the freed seat.
 - Leadership is a lease, NOT a fence: brief overlap is possible while a demoted leader has work in flight — wrap critical sections with @WithLock for hard mutual exclusion.
 - With MetricsPlugin: `redisx_leader_elected_total{group}` and `redisx_leader_lost_total{group,reason}`.
@@ -816,7 +818,8 @@ Cache metrics: `cache_hits_total`, `cache_misses_total`, `cache_hit_ratio`, `cac
 Lock metrics: `lock_acquisitions_total`, `lock_wait_duration_seconds`, `lock_hold_duration_seconds`, `locks_active`.
 Rate limit metrics: `ratelimit_requests_total` (with status label: allowed/rejected).
 Stream metrics: `stream_messages_published_total`, `stream_messages_consumed_total`, `stream_processing_duration_seconds`.
-Idempotency metrics: `idempotency_requests_total` (with status: new/replay/conflict). Session metrics: `session_created_total`, `session_destroyed_total` (reason: destroyed/revoked/expired-by-cap), `session_limit_rejections_total`.
+Idempotency metrics: `idempotency_requests_total` (with status: new/replay/mismatch/takeover). Session metrics: `session_created_total`, `session_destroyed_total` (reason: destroyed/revoked/expired-by-cap), `session_limit_rejections_total`.
+Leader metrics: `leader_elected_total` (group), `leader_lost_total` (group, reason: expired/stepdown/shutdown).
 
 ## Tracing Plugin
 
@@ -1146,7 +1149,7 @@ export class JobWorker {
 
 ## Key Architecture Decisions
 
-- **Proxy-based decorators**: @Cached, @WithLock, @WithCircuitBreaker, @LeaderOnly work on any @Injectable() method, not just controllers. NestJS Interceptors only work on controller methods, so RedisX uses immediate method wrapping with lazy service injection.
+- **Proxy-based decorators**: @Cached, @WithLock, @WithCircuitBreaker, @LeaderOnly work on any regular @Injectable() method, not just controllers (@LeaderOnly rejects generator methods at class load). NestJS Interceptors only work on controller methods, so RedisX uses immediate method wrapping with lazy service injection.
 - **Plugin isolation**: Each plugin is a self-contained NestJS module. Import only what you need.
 - **Driver abstraction**: Both ioredis and node-redis supported through adapter pattern. Switch without code changes.
 - **Atomic operations**: Rate limiting, locks, idempotency, sessions, leader election, and the circuit breaker use Lua scripts for atomicity.

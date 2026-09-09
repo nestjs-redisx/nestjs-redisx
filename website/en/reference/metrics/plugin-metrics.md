@@ -1,11 +1,11 @@
 ---
 title: 'Built-in Plugin Metrics — Metrics Plugin | NestJS RedisX'
-description: 'Reference for metrics auto-emitted by Cache, Locks, Rate Limit, Streams, and Idempotency plugins — names, labels, and PromQL queries for NestJS Redis.'
+description: 'Reference for metrics auto-emitted by the Cache, Locks, Rate Limit, Streams, Idempotency, Session, and Leader plugins — names, labels, and PromQL queries for NestJS Redis.'
 ---
 
 # Plugin Metrics
 
-Metrics automatically collected from Cache, Locks, Rate Limit, Streams, and Idempotency plugins.
+Metrics automatically collected from the Cache, Locks, Rate Limit, Streams, Idempotency, Session, and Leader plugins.
 
 ## Cache Plugin Metrics
 
@@ -240,6 +240,7 @@ redisx_session_limit_rejections_total 12
 redisx_idempotency_requests_total{status="new"} 15234
 redisx_idempotency_requests_total{status="replay"} 812
 redisx_idempotency_requests_total{status="mismatch"} 80
+redisx_idempotency_requests_total{status="takeover"} 3
 ```
 
 **Query: Replay Rate**
@@ -259,6 +260,30 @@ redisx_idempotency_duration_seconds_bucket{le="0.01"} 15800
 redisx_idempotency_duration_seconds_sum 32.5
 redisx_idempotency_duration_seconds_count 16126
 ```
+
+## Leader Plugin Metrics
+
+### Elections and Losses
+
+```yaml
+# HELP redisx_leader_elected_total Times this instance became leader, by group
+# TYPE redisx_leader_elected_total counter
+redisx_leader_elected_total{group="default"} 3
+
+# HELP redisx_leader_lost_total Times this instance lost leadership, by group and reason
+# TYPE redisx_leader_lost_total counter
+redisx_leader_lost_total{group="default",reason="expired"} 1
+redisx_leader_lost_total{group="default",reason="stepdown"} 1
+redisx_leader_lost_total{group="default",reason="shutdown"} 1
+```
+
+**Query: Leadership Churn (should be ~0 outside deployments)**
+
+```yaml
+sum by (group) (rate(redisx_leader_lost_total{reason="expired"}[15m]))
+```
+
+Counters cannot answer "who leads right now" — use the leader status endpoint (`getLeaderId()`) from the [leader monitoring page](../leader/monitoring).
 
 ## Dashboards by Plugin
 

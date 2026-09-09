@@ -1,6 +1,6 @@
 ---
 title: '@LeaderOnly Decorator — Leader Election Plugin | NestJS RedisX'
-description: 'Gate any @Injectable method by leadership with @LeaderOnly: composition with @nestjs/schedule @Cron, election groups, and fail-safe skip semantics.'
+description: 'Gate any regular @Injectable method by leadership with @LeaderOnly: composition with @nestjs/schedule @Cron, election groups, and fail-safe skip semantics.'
 ---
 
 # @LeaderOnly Decorator
@@ -23,7 +23,7 @@ interface ILeaderOnlyOptions {
 
 `@LeaderOnly` is a **proxy-based method decorator** (like `@Cached` and `@WithLock`): it wraps the method at class-load time and resolves the leader service lazily on each call. That means:
 
-- It works on **any `@Injectable` method** — services, jobs, repositories — not just controllers.
+- It works on **any regular `@Injectable` method** — services, jobs, repositories — not just controllers. Generator and async-generator methods are the one exception: gating cannot preserve iterator semantics (a skipped follower would hand the caller `undefined` instead of an iterator), so they are rejected at class load with `InvalidLeaderConfigError` — gate the generator's *caller* with `isLeader()`/`runIfLeader()` instead. (Detection needs native generators, i.e. TypeScript target ES2018+; older targets downlevel them into plain functions the guard cannot see — do not decorate generators there either.)
 - It composes with `@nestjs/schedule`: `@Cron` fires on every instance; the wrapped body checks `isLeader(group)` and either runs or skips.
 - The group named in the decorator **registers itself at decoration time**, so its election starts at application bootstrap — leadership is already resolved by the first cron tick (the first election round is awaited during `onModuleInit`).
 
@@ -45,7 +45,7 @@ A gated method returns `Promise<T | undefined>` semantically — callers that us
 
 ## Decorator Order with @Cron
 
-Both orders work — `@Cron` registers the method with the scheduler, `@LeaderOnly` wraps its body:
+Both orders work — `@Cron` registers the method with the scheduler, `@LeaderOnly` wraps its body. The wrapper carries over metadata stamped by decorators written below it, so `@LeaderOnly` above `@Cron` cannot silently unregister the job:
 
 ```typescript
 @Cron(CronExpression.EVERY_HOUR)

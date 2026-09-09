@@ -40,7 +40,7 @@ sequenceDiagram
     R-->>B: OK (B is the new leader)
 ```
 
-- **Acquire**: `SET key instanceId NX PX ttlMs` — atomic, first instance wins.
+- **Acquire**: an atomic script — when the key already carries **this instance's own id**, a CAS `PEXPIRE` re-claims it; otherwise `SET key instanceId NX PX ttlMs`. A stale own lease (left by an unconfirmed renewal, or by an unclean restart with a stable `instanceId`) is taken back instead of blocking the group for a full TTL; a seat held by anyone else can never be touched — a fresh seat still goes to the first `SET NX`. The re-claim check runs first so that a Redis under `maxmemory` pressure (which rejects the `SET` with OOM) can still re-seat an existing own lease — only *fresh* acquires fail during such an episode, loudly.
 - **Heartbeat**: while leader, a CAS Lua script extends the TTL only if the value still equals this instance's id.
 - **Release**: on graceful shutdown or `stepDown()`, a CAS delete removes the key — failover is instant, no TTL wait.
 
@@ -48,8 +48,8 @@ sequenceDiagram
 
 `isLeader()` never asks Redis — it checks the locally recorded lease: true only while `now < lastConfirmedLease + ttlMs`. The consequences are deliberate:
 
-- A **failed or errored renewal demotes immediately.** An unconfirmed lease is treated as no lease.
-- A **stalled event loop cannot sustain a false claim** — when the loop wakes up past the lease, `isLeader()` is already false.
+- A **failed or errored renewal demotes immediately.** An unconfirmed lease is treated as no lease. The key may still hold this instance's id, so the next retry tick re-claims it — a transient error costs at most one `retryIntervalMs` of leadership.
+- A **stalled event loop cannot sustain a false claim** — when the loop wakes up past the lease, `isLeader()` is already false. (The deadline is a wall-clock delta, so this holds under the documented clock assumptions below — a clock stepping *backward* extends the local view by the step size.)
 - Redis being down means **nobody** considers itself leader (work pauses rather than duplicates).
 
 ## Election Groups

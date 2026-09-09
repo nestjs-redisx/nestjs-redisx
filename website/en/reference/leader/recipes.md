@@ -13,7 +13,7 @@ The canonical use case — schedule everywhere, execute once:
 
 ## Run-Once Startup Work
 
-Warmups or maintenance tasks that should run on one instance per rollout:
+Warmups or maintenance tasks that should run on **at most one** instance when a group starts leaderless (fresh deploy, scale-from-zero, disaster recovery):
 
 ```typescript
 @Injectable()
@@ -32,8 +32,8 @@ export class StartupTasks implements OnApplicationBootstrap {
 }
 ```
 
-::: warning Migrations need idempotency or a lock
-"Leader runs the migration" is a scheduling convenience, not a safety proof — during rollouts old and new versions briefly coexist. Make the migration itself idempotent, or wrap it with [@WithLock](../locks/) / track applied versions.
+::: warning At most once — and usually ZERO times in a rolling update
+`onApplicationBootstrap` fires once per process, and during a rolling update the lease is normally still held by an old pod when each new pod boots — every new pod evaluates `runIfLeader` as a follower and skips, and when the old leader finally exits, the seat goes to an instance whose hook already ran. For work that must run **once per rollout/version**, don't gate it on leadership: make it idempotent and key it by version (e.g. `@WithLock` + a `done:{version}` marker), or run it in your deploy/migration step. "Leader runs the migration" is a scheduling convenience, not a safety proof — during rollouts old and new versions briefly coexist; make the migration itself idempotent, or wrap it with [@WithLock](../locks/) / track applied versions.
 :::
 
 ## Maintenance Drain

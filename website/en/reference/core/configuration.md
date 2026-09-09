@@ -62,13 +62,13 @@ interface IBaseConnectionConfig {
   db?: number;                    // Database number (0-15), default: 0
   keyPrefix?: string;             // Key prefix for all operations
   connectTimeout?: number;        // Connection timeout (ms), default: 10000
-  commandTimeout?: number;        // Command timeout (ms), default: 5000
-  keepAlive?: number;             // Keep-alive interval (ms), default: 0 (disabled)
+  commandTimeout?: number;        // Command timeout (ms); 0 disables. Default: 5000 on ioredis, NONE on node-redis (set explicitly)
+  keepAlive?: number;             // Keep-alive interval (ms), default: 0 (disabled; ioredis only)
   enableOfflineQueue?: boolean;   // Queue commands when disconnected, default: true
   enableAutoReconnect?: boolean;  // Auto reconnect, default: true
-  maxRetriesPerRequest?: number;  // Max retries, default: 3
+  maxRetriesPerRequest?: number;  // Max retries, default: 3 (ioredis driver only)
   retryStrategy?: (times: number) => number | null;      // Custom retry delay
-  reconnectOnError?: (error: Error) => boolean | 1 | 2;  // Reconnect condition
+  reconnectOnError?: (error: Error) => boolean | 1 | 2;  // Reconnect condition (ioredis only)
 }
 ```
 
@@ -111,9 +111,9 @@ interface ISentinelConnectionConfig extends IBaseConnectionConfig {
   name: string;                 // Master name
   tls?: ITlsConfig;             // TLS configuration
   sentinelOptions?: {
-    enableTLSForSentinelMode?: boolean;
+    enableTLSForSentinelMode?: boolean;  // TLS for the SENTINEL hops; default: false. Requires the `tls` block (it supplies the certificates). Data-node TLS follows `tls.enabled` regardless.
     sentinelPassword?: string;
-    sentinelRetryStrategy?: (times: number) => number | null;
+    sentinelRetryStrategy?: (times: number) => number | null;  // ioredis only (node-redis rotates sentinels instead of retrying one)
     // Driver-specific options — see examples below
   };
 }
@@ -129,10 +129,10 @@ RedisModule.forRoot({
     type: 'sentinel',
     sentinels: [{ host: 'sentinel-1', port: 26379 }],
     name: 'mymaster',
+    tls: { enabled: true },            // certificates for data nodes AND (below) the sentinel hops
     sentinelOptions: {
       sentinelPassword: 'secret',
-      enableTLSForSentinelMode: true,
-      preferredSlaves: false,          // ioredis only
+      enableTLSForSentinelMode: true,  // opt-in: sentinel hops TLS too (no-op without the tls block)
       natMap: {                        // ioredis only
         'redis-master:6379': { host: 'localhost', port: 6379 },
       },
@@ -147,9 +147,10 @@ RedisModule.forRoot({
     type: 'sentinel',
     sentinels: [{ host: 'sentinel-1', port: 26379 }],
     name: 'mymaster',
+    tls: { enabled: true },            // certificates for data nodes AND (below) the sentinel hops
     sentinelOptions: {
       sentinelPassword: 'secret',
-      enableTLSForSentinelMode: true,
+      enableTLSForSentinelMode: true,  // opt-in: sentinel hops TLS too (no-op without the tls block)
       masterPoolSize: 1,               // node-redis only
       replicaPoolSize: 0,              // node-redis only
       scanInterval: 10000,             // node-redis only
@@ -201,10 +202,10 @@ interface IGlobalConfig {
   debug?: boolean;                  // Enable debug logging
   defaultTtl?: number;              // Default TTL (seconds), default: 3600
   keyPrefix?: string;               // Global key prefix
-  gracefulShutdown?: boolean;       // Default: true
-  gracefulShutdownTimeout?: number; // Default: 5000 (ms)
-  enableHealthChecks?: boolean;     // Default: true
-  healthCheckInterval?: number;     // Default: 30000 (ms)
+  gracefulShutdown?: boolean;       // Reserved — not currently consumed by core
+  gracefulShutdownTimeout?: number; // Reserved — not currently consumed by core
+  enableHealthChecks?: boolean;     // Reserved — health checks are on-demand via healthCheck()
+  healthCheckInterval?: number;     // Reserved — no periodic health loop exists
 }
 ```
 
@@ -366,11 +367,7 @@ RedisModule.forRoot({
     tls: { enabled: true },
     connectTimeout: 5000,
     commandTimeout: 3000,
-    maxRetriesPerRequest: 3,
-  },
-  global: {
-    gracefulShutdown: true,
-    gracefulShutdownTimeout: 10000,
+    maxRetriesPerRequest: 3,   // ioredis only
   },
 })
 ```

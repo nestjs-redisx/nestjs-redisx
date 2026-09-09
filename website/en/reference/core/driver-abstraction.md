@@ -179,7 +179,7 @@ While the abstraction layer provides a unified API, some configuration options a
 | Sentinel | Native support | Via `createSentinel()` |
 | Cluster `natMap` | Native `natMap` | Mapped to `nodeAddressMap` |
 | Sentinel `natMap` | Supported | **Not supported** |
-| Sentinel `preferredSlaves` | Supported | Not available |
+| Sentinel replica-read preference | Not supported (option deprecated) | Not available |
 | Sentinel connection pooling | Not available | `masterPoolSize`, `replicaPoolSize` |
 | Sentinel topology scan | Not available | `scanInterval` |
 | Automatic pipelining | Supported | Not available |

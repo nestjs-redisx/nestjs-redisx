@@ -43,10 +43,10 @@ RedisModule.forRoot({
     keyPrefix: 'myapp:',
     connectTimeout: 10000,
     commandTimeout: 5000,
-    keepAlive: 30000,
+    keepAlive: 30000,          // ioredis only
     enableOfflineQueue: true,
     enableAutoReconnect: true,
-    maxRetriesPerRequest: 3,
+    maxRetriesPerRequest: 3,   // ioredis only
   },
 })
 ```
@@ -131,7 +131,7 @@ RedisModule.forRoot({
     keyPrefix: 'myapp:',
     connectTimeout: 10000,
     commandTimeout: 5000,
-    maxRetriesPerRequest: 3,
+    maxRetriesPerRequest: 3,   // ioredis only
     retryStrategy: (times) => Math.min(times * 50, 2000),
     clusterOptions: {
       maxRedirections: 16,
@@ -244,7 +244,7 @@ RedisModule.forRoot({
     keyPrefix: 'myapp:',
     connectTimeout: 10000,
     commandTimeout: 5000,
-    maxRetriesPerRequest: 3,
+    maxRetriesPerRequest: 3,   // ioredis only
     tls: {
       enabled: true,
       rejectUnauthorized: true,
@@ -253,7 +253,6 @@ RedisModule.forRoot({
       sentinelPassword: 'sentinel-password',
       enableTLSForSentinelMode: true,
       sentinelRetryStrategy: (times) => Math.min(times * 50, 2000),
-      preferredSlaves: false,          // ioredis only
       natMap: {                        // ioredis only
         'redis-master:6379': { host: 'localhost', port: 6379 },
       },
@@ -277,7 +276,6 @@ RedisModule.forRoot({
     keyPrefix: 'myapp:',
     connectTimeout: 10000,
     commandTimeout: 5000,
-    maxRetriesPerRequest: 3,
     tls: {
       enabled: true,
       rejectUnauthorized: true,
@@ -306,14 +304,13 @@ Options inside `sentinelOptions` vary by driver. Common options work with both:
 | Option | Default | Description |
 |--------|---------|-------------|
 | `sentinelPassword` | - | Password for Sentinel authentication |
-| `enableTLSForSentinelMode` | false | Use TLS for Sentinel connections |
-| `sentinelRetryStrategy` | - | Custom retry strategy for sentinel reconnection |
+| `enableTLSForSentinelMode` | false | Use TLS for the sentinel hops (requires the `tls` block — it supplies the certificates; data-node TLS follows `tls.enabled` regardless) |
+| `sentinelRetryStrategy` | - | Custom retry strategy for sentinel reconnection (ioredis only — node-redis rotates to the next sentinel instead) |
 
 #### ioredis-Specific Options
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `preferredSlaves` | false | Prefer slave nodes for reads |
 | `natMap` | - | NAT mapping for Docker/firewall scenarios |
 
 #### node-redis-Specific Options
@@ -332,7 +329,6 @@ Options inside `sentinelOptions` vary by driver. Common options work with both:
 ```typescript [ioredis]
 sentinelOptions: {
   sentinelPassword: 'secret',
-  preferredSlaves: false,
   natMap: {
     'redis-master:6379': { host: 'localhost', port: 6379 },
   },

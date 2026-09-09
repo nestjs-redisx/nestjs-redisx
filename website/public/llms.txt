@@ -83,11 +83,14 @@ NestJS RedisX is designed for production NestJS applications that need Redis bey
 ## Leader Election Plugin
 
 - [Leader Overview](https://nestjs-redisx.dev/en/reference/leader/): Run cron jobs, migrations, and cleanup on exactly one instance with @LeaderOnly and lease-based election.
-- [Core Concepts](https://nestjs-redisx.dev/en/reference/leader/concepts): The lease model (SET NX PX + CAS heartbeat), fail-safe local view, groups, guarantees and caveats.
+- [Core Concepts](https://nestjs-redisx.dev/en/reference/leader/concepts): The lease model (atomic acquire with own-lease re-claim + CAS heartbeat), fail-safe local view, groups, guarantees and caveats.
 - [Configuration](https://nestjs-redisx.dev/en/reference/leader/configuration): ttlMs, renewIntervalMs, retryIntervalMs, groups, instanceId, and lifecycle callbacks.
-- [@LeaderOnly Decorator](https://nestjs-redisx.dev/en/reference/leader/decorator): Gate any @Injectable method by leadership; composes with @nestjs/schedule @Cron.
+- [@LeaderOnly Decorator](https://nestjs-redisx.dev/en/reference/leader/decorator): Gate any regular @Injectable method by leadership (generators rejected at class load); composes with @nestjs/schedule @Cron.
 - [Service API](https://nestjs-redisx.dev/en/reference/leader/service-api): isLeader/getLeaderId/runIfLeader/stepDown/getGroups with ILeaderService.
 - [Failover](https://nestjs-redisx.dev/en/reference/leader/failover): Instant handover on graceful shutdown, TTL-bounded takeover on crash, stepDown cooldown.
+- [Monitoring](https://nestjs-redisx.dev/en/reference/leader/monitoring): redisx_leader_* Prometheus counters, onElected/onLost callbacks, log lines, and a leadership status endpoint.
+- [Recipes](https://nestjs-redisx.dev/en/reference/leader/recipes): Singleton crons, run-once startup work, maintenance drain, spreading workloads, fencing critical sections.
+- [Troubleshooting](https://nestjs-redisx.dev/en/reference/leader/troubleshooting): Never-running jobs, split leadership, flapping leases, shutdown hangs, and multi-app processes.
 - [Testing](https://nestjs-redisx.dev/en/reference/leader/testing): Run real elections on the in-memory driver; simulate a second instance over the same store.
 
 ## Idempotency Plugin
