@@ -40,6 +40,23 @@ function createService(plugins: IRedisXPlugin[], options?: Partial<IRedisModuleO
 
 describe('PluginRegistryService', () => {
   describe('onModuleInit', () => {
+    it('should run lifecycle hooks ONCE for a duplicated plugin name instead of reporting a bogus circular dependency', async () => {
+      // Given — RedisModule rejects duplicates, but this service is public
+      // API and can be handed a raw array with a repeated name
+      const onRegisterFirst = vi.fn();
+      const onRegisterSecond = vi.fn();
+      const plugins = [createMockPlugin({ name: 'leader', onRegister: onRegisterFirst }), createMockPlugin({ name: 'leader', onRegister: onRegisterSecond })];
+      const service = createService(plugins);
+
+      // When — must not throw "Circular dependency detected among plugins: "
+      // with an empty plugin list (the raw-length check did exactly that)
+      await service.onModuleInit();
+
+      // Then — exactly one surviving instance ran its hook, exactly once
+      expect(onRegisterSecond).toHaveBeenCalledTimes(1);
+      expect(onRegisterFirst).not.toHaveBeenCalled();
+    });
+
     it('should call onRegister on all plugins', async () => {
       // Given
       const onRegister1 = vi.fn();

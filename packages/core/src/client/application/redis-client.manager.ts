@@ -26,6 +26,14 @@ interface IManagedClient {
   driver: IRedisDriver;
 
   /**
+   * True while (and after) this client is being intentionally closed.
+   * Drivers emit CLOSE/END synchronously DURING disconnect(), which would
+   * otherwise re-arm a reconnect timer right after disconnectClient's
+   * one-time clear and resurrect the client as an unmanaged zombie.
+   */
+  closing?: boolean;
+
+  /**
    * Connection configuration.
    */
   config: ConnectionConfig;
@@ -168,6 +176,12 @@ export class RedisClientManager implements IRedisDriverManager, OnApplicationShu
       driverType?: DriverType;
     },
   ): Promise<IRedisDriver> {
+    if (this.isShuttingDown) {
+      // Same latch as getClient: closeAll is single-flight, so a client
+      // registered after it would never be swept — its socket would outlive
+      // every subsequent shutdown.
+      throw new RedisXError('Client manager is shutting down', ErrorCode.CONN_FAILED, undefined, { clientName: name });
+    }
     if (this.clients.has(name)) {
       throw new RedisXError(`Client "${name}" already exists`, ErrorCode.CFG_INVALID, undefined, { clientName: name });
     }
@@ -285,10 +299,24 @@ export class RedisClientManager implements IRedisDriverManager, OnApplicationShu
     });
   }
 
+  /** In-flight (or completed) closeAll — see the single-flight note below. */
+  private closeAllInFlight: Promise<void> | null = null;
+
   /**
-   * Closes all client connections.
+   * Closes all client connections. Single-flight: both RedisService and
+   * this manager hook `onApplicationShutdown`, and Nest runs a module's
+   * provider hooks CONCURRENTLY — without the guard every client got two
+   * racing disconnect()s (double quit, duplicate DISCONNECTED events).
    */
   async closeAll(): Promise<void> {
+    if (this.closeAllInFlight) {
+      return this.closeAllInFlight;
+    }
+    this.closeAllInFlight = this.doCloseAll();
+    return this.closeAllInFlight;
+  }
+
+  private async doCloseAll(): Promise<void> {
     this.isShuttingDown = true;
 
     const closePromises = Array.from(this.clients.values()).map((client) =>
@@ -410,6 +438,14 @@ export class RedisClientManager implements IRedisDriverManager, OnApplicationShu
 
       await managedClient.driver.connect();
 
+      if (this.isShuttingDown) {
+        // closeAll ran while this lazy connect was in flight: its sweep saw
+        // a not-yet-connected driver and skipped it, so a connection kept
+        // here would outlive the completed shutdown. Undo and report.
+        await managedClient.driver.disconnect().catch(() => undefined);
+        throw new RedisXError('Client manager is shutting down', ErrorCode.CONN_FAILED, undefined, { clientName: managedClient.name });
+      }
+
       managedClient.status = ConnectionStatus.CONNECTED;
       managedClient.everConnected = true;
       managedClient.stats.connectedAt = new Date();
@@ -440,6 +476,11 @@ export class RedisClientManager implements IRedisDriverManager, OnApplicationShu
    * Disconnects client gracefully.
    */
   private async disconnectClient(managedClient: IManagedClient): Promise<void> {
+    // Latch FIRST: the driver emits CLOSE/END synchronously inside
+    // disconnect(), and the event handlers must not schedule a reconnect
+    // for a client that is being closed on purpose.
+    managedClient.closing = true;
+
     // Clear reconnection timer
     if (managedClient.reconnection.timer) {
       clearTimeout(managedClient.reconnection.timer);
@@ -515,6 +556,14 @@ export class RedisClientManager implements IRedisDriverManager, OnApplicationShu
    * Schedules reconnection with exponential backoff.
    */
   private scheduleReconnection(managedClient: IManagedClient): void {
+    if (this.isShuttingDown || managedClient.closing) {
+      // No reconnects during/after shutdown OR an intentional close: an
+      // ERROR/CLOSE event racing the disconnect window would otherwise arm
+      // a fresh timer AFTER disconnectClient's one-time clear and
+      // resurrect the client past closeAll/closeClient — a zombie
+      // connection nothing can ever close.
+      return;
+    }
     const { reconnectionOptions, reconnection } = managedClient;
 
     // Check if we've exceeded max attempts
@@ -559,6 +608,12 @@ export class RedisClientManager implements IRedisDriverManager, OnApplicationShu
     // Schedule reconnection
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     reconnection.timer = setTimeout(async () => {
+      if (this.isShuttingDown || managedClient.closing || !this.clients.has(managedClient.name)) {
+        // Shutdown started, the client is being intentionally closed, or it
+        // was removed from the registry while this timer was pending — a
+        // reconnect here would create a connection nothing tracks.
+        return;
+      }
       try {
         await managedClient.driver.connect();
 

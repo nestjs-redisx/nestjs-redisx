@@ -15,7 +15,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { RedisModule } from '@nestjs-redisx/core';
 import Redis from 'ioredis';
 
-import { LeaderPlugin, LEADER_SERVICE, type ILeaderService } from '../../src';
+import { LeaderPlugin, LEADER_SERVICE, LEADER_STORE, type ILeaderService, type ILeaderStore } from '../../src';
 
 const skipIntegration = process.env.SKIP_INTEGRATION === 'true';
 const describeIntegration = skipIntegration ? describe.skip : describe;
@@ -131,6 +131,61 @@ describeIntegration('LeaderPlugin — live Redis, two competing instances', () =
     expect(b.isLeader()).toBe(true);
     expect(a.isLeader()).toBe(false);
     expect(await redis.get('leader:default')).toBe('live-b');
+  });
+
+  it('re-leads instantly after a restart with the same instanceId (stale own lease re-claimed)', async () => {
+    // Given — the previous run's lease is still unexpired (unclean restart:
+    // the process died without releasing, then came back with the same id)
+    await redis.set('leader:default', 'live-a', 'PX', TTL);
+
+    // When — the "restarted" process boots
+    const app = await bootInstance('live-a');
+    apps.push(app);
+    const service = app.get<ILeaderService>(LEADER_SERVICE);
+
+    // Then — leader immediately (no ttl wait, unlike a foreign crashed lease),
+    // and the lease TTL was refreshed by the re-claim
+    expect(service.isLeader()).toBe(true);
+    expect(await redis.get('leader:default')).toBe('live-a');
+    expect(await redis.pttl('leader:default')).toBeGreaterThan(TTL / 2);
+  });
+
+  it('acquire re-claims only an own lease — the script contract on live Redis', async () => {
+    // Given — the seat belongs to another (dead) node for the next 5 seconds
+    await redis.set('leader:default', 'other-node', 'PX', 5_000);
+    const app = await bootInstance('live-a'); // boots as follower
+    apps.push(app);
+    const store = app.get<ILeaderStore>(LEADER_STORE);
+
+    // When/Then — a competitor cannot take or extend the seat...
+    expect(await store.acquire('leader:default', 'live-a', TTL)).toBe(false);
+
+    // ...while the holder itself re-claims (extends) it
+    expect(await store.acquire('leader:default', 'other-node', 5_000)).toBe(true);
+    expect(await redis.get('leader:default')).toBe('other-node');
+  });
+
+  it('re-claims an own stale lease under maxmemory pressure — the OOM-denied SET must not shadow the re-claim branch', async () => {
+    // Given — an own stale lease on a side key while Redis rejects writes.
+    // Redis 7.x checks denyoom per redis.call: GET+PEXPIRE stay allowed, SET
+    // does not — so the re-claim check must run BEFORE the SET in the script.
+    const app = await bootInstance('live-a');
+    apps.push(app);
+    const store = app.get<ILeaderStore>(LEADER_STORE);
+    await redis.set('leader:oom-test', 'oom-node', 'PX', 5_000);
+    await redis.config('SET', 'maxmemory', '1');
+    try {
+      // When/Then — the own-id re-claim still lands (pre-fix: every acquire
+      // OOM-aborted at the leading SET and the lease died within one ttl)...
+      expect(await store.acquire('leader:oom-test', 'oom-node', 5_000)).toBe(true);
+      expect(await redis.get('leader:oom-test')).toBe('oom-node');
+
+      // ...while a FRESH acquire fails loudly with the real cause, never silently
+      await expect(store.acquire('leader:oom-fresh', 'new-node', 5_000)).rejects.toThrow(/OOM/);
+    } finally {
+      await redis.config('SET', 'maxmemory', '0');
+      await redis.del('leader:oom-test');
+    }
   });
 
   it('keeps renewing so the lease outlives many TTL windows', async () => {

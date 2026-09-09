@@ -142,6 +142,34 @@ describe('LeaderPlugin on the in-memory driver (no Redis)', () => {
     }
   });
 
+  it("re-claims an own lease but never someone else's via the acquire script (memory Lua path)", async () => {
+    // Given — node-a already holds the seat (booted first)
+    const store = app.get<ILeaderStore>(LEADER_STORE);
+
+    // When/Then — the same holder re-claims, a competitor is rejected
+    expect(await store.acquire('leader:default', 'node-a', TTL)).toBe(true);
+    expect(await store.acquire('leader:default', 'node-b', TTL)).toBe(false);
+    expect(await store.getHolder('leader:default')).toBe('node-a');
+  });
+
+  it('re-leads immediately when a stale own lease from a previous run is still present', async () => {
+    // Given — a "previous run" of node-r left an unexpired lease behind
+    const store = app.get<ILeaderStore>(LEADER_STORE);
+    await store.acquire('leader:restart', 'node-r', TTL);
+
+    // When — the process "restarts" with the same instanceId
+    const restarted = new LeaderService({ ttlMs: TTL, renewIntervalMs: RENEW, retryIntervalMs: RETRY, instanceId: 'node-r', groups: ['restart'] }, store);
+    await restarted.onModuleInit();
+
+    try {
+      // Then — leader right away, no dead ttl window
+      expect(restarted.isLeader('restart')).toBe(true);
+      expect(await store.getHolder('leader:restart')).toBe('node-r');
+    } finally {
+      await restarted.onModuleDestroy();
+    }
+  });
+
   it('reports runIfLeader semantics through the real election', async () => {
     // When
     const ranOnA = await serviceA.runIfLeader(() => 'a-work');

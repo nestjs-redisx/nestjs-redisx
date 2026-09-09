@@ -156,11 +156,15 @@ export class IoRedisAdapter extends BaseRedisDriver {
       db: config.db ?? 0,
       keyPrefix: config.keyPrefix,
       connectTimeout: config.connectTimeout ?? 10000,
-      commandTimeout: config.commandTimeout ?? 5000,
+      commandTimeout: config.commandTimeout === 0 ? undefined : (config.commandTimeout ?? 5000),
       keepAlive: config.keepAlive ?? 0,
-      enableReadyCheck: config.enableAutoReconnect ?? true,
+      enableReadyCheck: true,
+      enableOfflineQueue: config.enableOfflineQueue ?? true,
       maxRetriesPerRequest: config.maxRetriesPerRequest ?? 3,
-      retryStrategy: config.retryStrategy,
+      // `enableAutoReconnect: false` means "stay down after a drop" — in
+      // ioredis that is a null-returning retryStrategy (it is NOT the ready
+      // check, which this option was previously — wrongly — wired to).
+      retryStrategy: config.enableAutoReconnect === false ? () => null : config.retryStrategy,
       reconnectOnError: config.reconnectOnError,
       lazyConnect: true,
     };
@@ -195,10 +199,14 @@ export class IoRedisAdapter extends BaseRedisDriver {
         db: config.db ?? 0,
         keyPrefix: config.keyPrefix,
         connectTimeout: config.connectTimeout ?? 10000,
-        commandTimeout: config.commandTimeout ?? 5000,
+        commandTimeout: config.commandTimeout === 0 ? undefined : (config.commandTimeout ?? 5000),
         maxRetriesPerRequest: config.maxRetriesPerRequest ?? 3,
+        enableOfflineQueue: config.enableOfflineQueue ?? true,
+        keepAlive: config.keepAlive ?? 0,
+        reconnectOnError: config.reconnectOnError,
       },
-      clusterRetryStrategy: config.retryStrategy,
+      clusterRetryStrategy: config.enableAutoReconnect === false ? () => null : config.retryStrategy,
+      enableOfflineQueue: config.enableOfflineQueue ?? true,
       enableReadyCheck: config.clusterOptions?.enableReadyCheck ?? false,
       maxRedirections: config.clusterOptions?.maxRedirections ?? 16,
       retryDelayOnClusterDown: config.clusterOptions?.retryDelayOnClusterDown ?? 100,
@@ -225,17 +233,47 @@ export class IoRedisAdapter extends BaseRedisDriver {
       db: config.db ?? 0,
       keyPrefix: config.keyPrefix,
       connectTimeout: config.connectTimeout ?? 10000,
-      commandTimeout: config.commandTimeout ?? 5000,
+      commandTimeout: config.commandTimeout === 0 ? undefined : (config.commandTimeout ?? 5000),
       maxRetriesPerRequest: config.maxRetriesPerRequest ?? 3,
-      retryStrategy: config.retryStrategy,
+      enableOfflineQueue: config.enableOfflineQueue ?? true,
+      keepAlive: config.keepAlive ?? 0,
+      reconnectOnError: config.reconnectOnError,
+      retryStrategy: config.enableAutoReconnect === false ? () => null : config.retryStrategy,
       sentinelRetryStrategy: config.sentinelOptions?.sentinelRetryStrategy,
       sentinelPassword: config.sentinelOptions?.sentinelPassword,
-      enableTLSForSentinelMode: config.sentinelOptions?.enableTLSForSentinelMode,
+      // CAREFUL: in ioredis this option gates the DATA-NODE streams, not the
+      // sentinel hops — the opposite of what its name suggests and of this
+      // package's documented semantics ("TLS for sentinel connections").
+      // Data-node TLS follows `tls.enabled` here; the user-facing flag below
+      // governs `sentinelTLS`, matching the documented meaning and the
+      // node-redis driver.
+      enableTLSForSentinelMode: config.tls?.enabled ?? false,
       lazyConnect: true,
       // NAT mapping for Docker/firewall scenarios
       // Maps internal Redis addresses to external accessible addresses
       natMap: config.sentinelOptions?.natMap,
     };
+
+    // TLS configuration: `tls` covers the data-node streams (gated by the
+    // enableTLSForSentinelMode option set above), `sentinelTLS` covers the
+    // sentinel hops — strictly OPT-IN via the documented sentinelOptions
+    // flag (default false on both drivers: TLS data nodes with plaintext
+    // sentinels is a standard deployment shape, and wrapping the hops by
+    // default breaks it at the handshake). Without this mapping the
+    // configured `tls` block was silently dropped and every connection ran
+    // plaintext.
+    if (config.tls?.enabled) {
+      const tlsOptions = {
+        ca: config.tls.ca,
+        cert: config.tls.cert,
+        key: config.tls.key,
+        rejectUnauthorized: config.tls.rejectUnauthorized ?? true,
+      };
+      options.tls = tlsOptions;
+      if (config.sentinelOptions?.enableTLSForSentinelMode) {
+        options.sentinelTLS = tlsOptions;
+      }
+    }
 
     return new Redis(options);
   }

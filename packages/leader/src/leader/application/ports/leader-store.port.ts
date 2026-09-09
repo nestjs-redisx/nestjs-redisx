@@ -5,12 +5,15 @@
  */
 export interface ILeaderStore {
   /**
-   * Try to acquire the lease (SET NX PX semantics).
+   * Try to acquire the lease, atomically re-claiming it when this instance is
+   * already the holder (SET NX PX, else same-holder PEXPIRE). Re-claim covers
+   * a stale own lease — after an unconfirmed renewal or a restart with a
+   * stable instanceId — and can never take a seat held by another instance.
    *
    * @param key - Election key
    * @param instanceId - This instance's identity
    * @param ttlMs - Lease TTL in milliseconds
-   * @returns true when this instance became the leader
+   * @returns true when the lease is now held by this instance
    */
   acquire(key: string, instanceId: string, ttlMs: number): Promise<boolean>;
 

@@ -35,6 +35,105 @@ function createConnectedAdapter(config: ConnectionConfig = { type: 'single', hos
 }
 
 describe('IoRedisAdapter', () => {
+  describe('Connection option mapping', () => {
+    it('should map enableAutoReconnect:false to a null retryStrategy and keep the ready check ON', () => {
+      // Given — enableAutoReconnect used to be (wrongly) wired to
+      // enableReadyCheck: disabling reconnects silently disabled the READY
+      // check instead, while reconnects stayed on
+      const adapter = new IoRedisAdapter({ type: 'single', host: 'localhost', port: 6379, enableAutoReconnect: false });
+
+      // When — lazyConnect: true, so constructing the client performs no I/O
+      const client = (adapter as any).createSingleClient((adapter as any).config) as Redis;
+
+      // Then
+      expect(client.options.enableReadyCheck).toBe(true);
+      expect(client.options.retryStrategy?.(1)).toBeNull();
+      client.disconnect();
+    });
+
+    it('should treat commandTimeout: 0 as "no deadline" instead of a 0ms timeout that rejects every command', () => {
+      // Given — 0 is the only expressible "disable the 5s default" value;
+      // ioredis itself applies any numeric value, including 0ms
+      const adapter = new IoRedisAdapter({ type: 'single', host: 'localhost', port: 6379, commandTimeout: 0 });
+
+      // When
+      const client = (adapter as any).createSingleClient((adapter as any).config) as Redis;
+
+      // Then
+      expect(client.options.commandTimeout).toBeUndefined();
+      client.disconnect();
+    });
+
+    it('should keep the 5s commandTimeout default when unset', () => {
+      // Given
+      const adapter = new IoRedisAdapter({ type: 'single', host: 'localhost', port: 6379 });
+
+      // When
+      const client = (adapter as any).createSingleClient((adapter as any).config) as Redis;
+
+      // Then
+      expect(client.options.commandTimeout).toBe(5000);
+      client.disconnect();
+    });
+
+    it('should map the tls block into data-node TLS with plaintext sentinel hops by default (previously the tls block was silently dropped)', () => {
+      // Given — TLS data nodes + plaintext sentinels is the documented
+      // default deployment shape (enableTLSForSentinelMode defaults false)
+      const adapter = new IoRedisAdapter({
+        type: 'sentinel',
+        sentinels: [{ host: 's1', port: 26379 }],
+        name: 'mymaster',
+        tls: { enabled: true, rejectUnauthorized: false },
+      });
+
+      // When — lazyConnect: true, so no I/O happens
+      const client = (adapter as any).createSentinelClient((adapter as any).config) as Redis;
+
+      // Then — data streams TLS (ioredis gates them on its own
+      // enableTLSForSentinelMode option + tls), sentinel hops plaintext
+      expect(client.options.tls).toMatchObject({ rejectUnauthorized: false });
+      expect((client.options as any).enableTLSForSentinelMode).toBe(true);
+      expect((client.options as any).sentinelTLS).toBeUndefined();
+      client.disconnect();
+    });
+
+    it('should wrap the sentinel hops in TLS only when the documented flag opts in', () => {
+      // Given — the package documents enableTLSForSentinelMode as "TLS for
+      // sentinel connections" (default false, both drivers); in ioredis the
+      // identically-named option gates the DATA-node streams instead, so a
+      // naive passthrough silently downgraded data traffic to plaintext
+      const adapter = new IoRedisAdapter({
+        type: 'sentinel',
+        sentinels: [{ host: 's1', port: 26379 }],
+        name: 'mymaster',
+        tls: { enabled: true, rejectUnauthorized: false },
+        sentinelOptions: { enableTLSForSentinelMode: true },
+      });
+
+      // When
+      const client = (adapter as any).createSentinelClient((adapter as any).config) as Redis;
+
+      // Then — data nodes AND sentinel hops TLS
+      expect((client.options as any).enableTLSForSentinelMode).toBe(true);
+      expect(client.options.tls).toMatchObject({ rejectUnauthorized: false });
+      expect((client.options as any).sentinelTLS).toMatchObject({ rejectUnauthorized: false });
+      client.disconnect();
+    });
+
+    it('should forward enableOfflineQueue to ioredis', () => {
+      // Given
+      const adapter = new IoRedisAdapter({ type: 'single', host: 'localhost', port: 6379, enableOfflineQueue: false });
+
+      // When
+      const client = (adapter as any).createSingleClient((adapter as any).config) as Redis;
+
+      // Then — commands fail fast during an outage instead of queueing
+      expect(client.options.enableOfflineQueue).toBe(false);
+      expect(client.options.enableReadyCheck).toBe(true);
+      client.disconnect();
+    });
+  });
+
   describe('Constructor', () => {
     it('should create adapter with single connection config', () => {
       const config: ConnectionConfig = { type: 'single', host: 'localhost', port: 6379 };

@@ -21,10 +21,13 @@ export const LEADER_REDIS_DRIVER = Symbol.for('LEADER_REDIS_DRIVER');
 export const DEFAULT_LEADER_GROUP = 'default';
 
 /**
- * Upper bound for the lease TTL (10 years) — anything reaching PEXPIRE must
- * be a safe, sane integer.
+ * Upper bound for every configured duration (ttl, renew, retry): Node's
+ * setTimeout clamps any delay above 2^31 - 1 ms (~24.8 days) to 1 ms, which
+ * would turn the configured cadence into a hot loop hammering Redis — so
+ * the JS timer range, not PEXPIRE (which accepts far more), is the binding
+ * constraint.
  */
-export const MAX_LEADER_TTL_MS = 10 * 365 * 24 * 60 * 60 * 1000;
+export const MAX_LEADER_TTL_MS = 2 ** 31 - 1;
 
 /** Default configuration (single source of truth). */
 export const DEFAULT_LEADER_CONFIG = {

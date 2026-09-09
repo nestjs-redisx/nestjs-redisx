@@ -3,6 +3,8 @@ import { DiscoveryModule } from '@nestjs/core';
 
 import { createRedisProviders, createAsyncProviders } from '../application/redis.providers';
 import { RedisService } from '../application/redis.service';
+import { RedisXError, ErrorCode } from '../errors';
+import { IRedisXPlugin } from '../plugin/domain/interfaces';
 import { PluginRegistryService } from '../plugin/application/plugin-registry.service';
 import { CLIENT_MANAGER, REGISTERED_PLUGINS } from '../shared/constants';
 import { IRedisModuleOptions, IRedisModuleAsyncOptions } from '../types';
@@ -89,6 +91,22 @@ export class RedisModule {
    * })
    * ```
    */
+  /**
+   * Two plugins with the same name would silently collapse: their DI tokens
+   * (Symbol.for globals) collide, so Nest keeps only the LAST instance's
+   * providers — the first plugin's options, callbacks, and clients are
+   * discarded with zero signal. Fail fast instead.
+   */
+  private static assertUniquePluginNames(plugins: IRedisXPlugin[]): void {
+    const seen = new Set<string>();
+    for (const plugin of plugins) {
+      if (seen.has(plugin.name)) {
+        throw new RedisXError(`Duplicate plugin "${plugin.name}": registering the same plugin twice silently replaces the first instance (their injection tokens collide). ` + `Configure ONE instance per plugin — e.g. several election groups belong in one LeaderPlugin's "groups" option, not in two LeaderPlugins.`, ErrorCode.CFG_INVALID, undefined, { plugin: plugin.name });
+      }
+      seen.add(plugin.name);
+    }
+  }
+
   static forRoot(options: IRedisModuleOptions): DynamicModule {
     const providers = createRedisProviders(options);
     const pluginProviders: Provider[] = [];
@@ -99,6 +117,7 @@ export class RedisModule {
     const pluginImports: Array<Type<unknown> | DynamicModule | ForwardReference> = [];
 
     if (options.plugins && options.plugins.length > 0) {
+      RedisModule.assertUniquePluginNames(options.plugins);
       options.plugins.forEach((plugin) => {
         if (plugin.getProviders) {
           const providers = plugin.getProviders();
@@ -127,7 +146,10 @@ export class RedisModule {
       });
     }
 
-    const plugins = options.plugins || [];
+    // Copy: REGISTERED_PLUGINS must be a snapshot — a caller mutating its
+    // array after registration would bypass the duplicate check and change
+    // which plugins the registry runs lifecycle hooks on.
+    const plugins = [...(options.plugins || [])];
 
     return {
       module: RedisModule,
@@ -192,7 +214,8 @@ export class RedisModule {
 
     // Extract plugin providers from options (provided outside useFactory)
     // Plugins are statically available at module construction time.
-    const plugins = options.plugins || [];
+    // Copy: REGISTERED_PLUGINS must be a snapshot (see forRoot).
+    const plugins = [...(options.plugins || [])];
     const pluginProviders: Provider[] = [];
     const pluginExports: Array<string | symbol | Provider> = [];
     const pluginControllers: Type[] = [];
@@ -200,6 +223,7 @@ export class RedisModule {
 
     // Register plugin providers and collect exports, controllers, and imports
     if (plugins.length > 0) {
+      RedisModule.assertUniquePluginNames(plugins);
       plugins.forEach((plugin) => {
         if (plugin.getProviders) {
           const providers = plugin.getProviders();

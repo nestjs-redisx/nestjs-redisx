@@ -165,7 +165,11 @@ export class PluginRegistryService implements OnModuleInit, OnModuleDestroy {
     plugins.forEach((p, i) => originalIndex.set(p.name, i));
 
     const queue: string[] = [];
-    for (const plugin of plugins) {
+    // Iterate the (name-deduplicated) map, not the raw array: duplicate
+    // plugin names — rejected by RedisModule, but this service is usable
+    // directly — would enqueue the surviving instance once per duplicate
+    // and run its lifecycle hooks that many times.
+    for (const plugin of pluginMap.values()) {
       if (inDegree.get(plugin.name) === 0) {
         queue.push(plugin.name);
       }
@@ -193,8 +197,12 @@ export class PluginRegistryService implements OnModuleInit, OnModuleDestroy {
       queue.push(...newReady);
     }
 
-    if (sorted.length !== plugins.length) {
-      const remaining = plugins.filter((p) => !sorted.some((s) => s.name === p.name)).map((p) => p.name);
+    // Compare against the DEDUPLICATED map, not the raw array: with a
+    // duplicate name in the input, `sorted` is shorter than `plugins` by
+    // construction, and the raw-length check would report a "circular
+    // dependency" naming nobody.
+    if (sorted.length !== pluginMap.size) {
+      const remaining = [...pluginMap.values()].filter((p) => !sorted.some((s) => s.name === p.name)).map((p) => p.name);
       throw new RedisXError(`Circular dependency detected among plugins: ${remaining.join(', ')}`, ErrorCode.PLUGIN_CIRCULAR_DEPENDENCY, undefined, { circularPlugins: remaining });
     }
 

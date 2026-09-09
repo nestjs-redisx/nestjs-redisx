@@ -731,9 +731,10 @@ export class RedisService implements OnApplicationShutdown {
    *
    * Deliberately `onApplicationShutdown` (phase 3), NOT `onModuleDestroy`
    * (phase 1): plugin providers release distributed state (leader leases,
-   * locks, stream consumers) in their own `onModuleDestroy`, and within one
-   * module Nest runs provider hooks in registration order — closing the
-   * connections in phase 1 would kill every such cleanup.
+   * locks, stream consumers) in their own `onModuleDestroy` — closing the
+   * connections in phase 1 would kill every such cleanup. Nest runs a
+   * module's phase-3 hooks concurrently, so this call races the manager's
+   * own hook; closeAll is single-flight, which makes the duplicate a no-op.
    */
   async onApplicationShutdown(): Promise<void> {
     await this.clientManager.closeAll();

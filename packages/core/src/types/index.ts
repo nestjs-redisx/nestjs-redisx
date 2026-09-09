@@ -40,13 +40,19 @@ export interface IBaseConnectionConfig {
   connectTimeout?: number;
 
   /**
-   * Command timeout in milliseconds.
-   * @default 5000
+   * Command timeout in milliseconds; `0` disables the deadline entirely
+   * (the only way to turn the ioredis default off). On the node-redis
+   * driver there is no default — set it explicitly to bound commands hung
+   * on a dead connection (the deadline abandons the local wait; a command
+   * already sent may still execute server-side). Long BLOCKING commands
+   * must stay under it.
+   * @default 5000 (ioredis driver only)
    */
   commandTimeout?: number;
 
   /**
-   * Keep-alive interval in milliseconds.
+   * Keep-alive interval in milliseconds (ioredis driver only — the
+   * node-redis driver manages TCP keep-alive itself).
    * @default 0 (disabled)
    */
   keepAlive?: number;
@@ -64,7 +70,8 @@ export interface IBaseConnectionConfig {
   enableAutoReconnect?: boolean;
 
   /**
-   * Maximum retry attempts for commands.
+   * Maximum retry attempts for commands (ioredis driver only — the
+   * node-redis driver has no equivalent and ignores it).
    * @default 3
    */
   maxRetriesPerRequest?: number;
@@ -75,7 +82,8 @@ export interface IBaseConnectionConfig {
   retryStrategy?: (times: number) => number | null;
 
   /**
-   * Reconnect on error function.
+   * Reconnect on error function (ioredis driver only — node-redis has no
+   * equivalent hook and ignores it).
    */
   reconnectOnError?: (error: Error) => boolean | 1 | 2;
 }
@@ -217,7 +225,10 @@ export interface ISentinelConnectionConfig extends IBaseConnectionConfig {
    */
   sentinelOptions?: {
     /**
-     * Enable TLS for sentinel connections.
+     * Enable TLS for the sentinel hops. Requires the `tls` block (it
+     * supplies the certificates); data-node TLS follows `tls.enabled`
+     * regardless of this flag.
+     * @default false
      */
     enableTLSForSentinelMode?: boolean;
 
@@ -227,12 +238,17 @@ export interface ISentinelConnectionConfig extends IBaseConnectionConfig {
     sentinelPassword?: string;
 
     /**
-     * Retry strategy for sentinel.
+     * Retry strategy for sentinel connections (ioredis driver only —
+     * @redis/client hardcodes sentinel-client reconnects off and rotates
+     * to the next sentinel instead, overriding anything set here).
      */
     sentinelRetryStrategy?: (times: number) => number | null;
 
     /**
      * Prefer slave nodes for reads.
+     * @deprecated Non-functional: never forwarded to any driver (and real
+     * ioredis `preferredSlaves` needs an array/function plus `role: 'slave'`
+     * — a boolean could not drive it). Will be removed in 2.0.
      * @default false
      */
     preferredSlaves?: boolean;
@@ -375,24 +391,31 @@ export interface IGlobalConfig {
 
   /**
    * Enable graceful shutdown.
+   * @deprecated Reserved — not currently consumed by core (shutdown always
+   * runs the graceful path; the node-redis close deadline follows
+   * `commandTimeout`).
    * @default true
    */
   gracefulShutdown?: boolean;
 
   /**
    * Graceful shutdown timeout (milliseconds).
+   * @deprecated Reserved — not currently consumed by core.
    * @default 5000
    */
   gracefulShutdownTimeout?: number;
 
   /**
    * Enable health checks.
+   * @deprecated Reserved — not currently consumed by core (health checks
+   * are on-demand via `healthCheck()`; no periodic loop exists).
    * @default true
    */
   enableHealthChecks?: boolean;
 
   /**
    * Health check interval (milliseconds).
+   * @deprecated Reserved — not currently consumed by core.
    * @default 30000
    */
   healthCheckInterval?: number;

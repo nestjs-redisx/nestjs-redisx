@@ -6,6 +6,15 @@ import { MetricRegistrationError } from '../../../shared/errors';
 import { IMetricsPluginOptions, IMetricsJson } from '../../../shared/types';
 import { IMetricsService } from '../ports/metrics-service.port';
 
+/**
+ * Feature packages (cache, locks, session, leader, ...) emit metric names
+ * under this canonical prefix; a custom `prefix` option renames the series
+ * this registry REGISTERS. Lookups resolve canonical names against the
+ * configured prefix so a custom prefix renames the series instead of
+ * silently dropping every emit.
+ */
+const CANONICAL_METRICS_PREFIX = 'redisx_';
+
 @Injectable()
 export class MetricsService implements IMetricsService, OnModuleInit, OnModuleDestroy {
   private readonly registry: promClient.Registry;
@@ -25,7 +34,7 @@ export class MetricsService implements IMetricsService, OnModuleInit, OnModuleDe
     private readonly config: IMetricsPluginOptions,
   ) {
     this.enabled = config.enabled !== false;
-    this.prefix = config.prefix ?? 'redisx_';
+    this.prefix = config.prefix ?? CANONICAL_METRICS_PREFIX;
     this.defaultLabels = config.defaultLabels ?? {};
     this.latencyBuckets = config.histogramBuckets ?? [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10];
 
@@ -154,12 +163,26 @@ export class MetricsService implements IMetricsService, OnModuleInit, OnModuleDe
     }
   }
 
+  /**
+   * Look up a metric by the name the caller emits. Feature packages hardcode
+   * canonical `redisx_*` names; when this registry uses a custom prefix the
+   * series is registered under that prefix instead — resolve the canonical
+   * name against it rather than silently no-oping the emit.
+   */
+  private resolveMetric<T>(metrics: Map<string, T>, name: string): T | undefined {
+    const metric = metrics.get(name);
+    if (metric !== undefined || this.prefix === CANONICAL_METRICS_PREFIX || !name.startsWith(CANONICAL_METRICS_PREFIX)) {
+      return metric;
+    }
+    return metrics.get(this.prefix + name.slice(CANONICAL_METRICS_PREFIX.length));
+  }
+
   incrementCounter(name: string, labels?: Record<string, string>, value = 1): void {
     if (!this.enabled) {
       return;
     }
 
-    const counter = this.counters.get(name);
+    const counter = this.resolveMetric(this.counters, name);
     if (!counter) {
       return;
     }
@@ -176,7 +199,7 @@ export class MetricsService implements IMetricsService, OnModuleInit, OnModuleDe
       return;
     }
 
-    const histogram = this.histograms.get(name);
+    const histogram = this.resolveMetric(this.histograms, name);
     if (!histogram) {
       return;
     }
@@ -193,7 +216,7 @@ export class MetricsService implements IMetricsService, OnModuleInit, OnModuleDe
       return () => 0;
     }
 
-    const histogram = this.histograms.get(name);
+    const histogram = this.resolveMetric(this.histograms, name);
     if (!histogram) {
       return () => 0;
     }
@@ -212,7 +235,7 @@ export class MetricsService implements IMetricsService, OnModuleInit, OnModuleDe
       return;
     }
 
-    const gauge = this.gauges.get(name);
+    const gauge = this.resolveMetric(this.gauges, name);
     if (!gauge) {
       return;
     }
@@ -229,7 +252,7 @@ export class MetricsService implements IMetricsService, OnModuleInit, OnModuleDe
       return;
     }
 
-    const gauge = this.gauges.get(name);
+    const gauge = this.resolveMetric(this.gauges, name);
     if (!gauge) {
       return;
     }
@@ -246,7 +269,7 @@ export class MetricsService implements IMetricsService, OnModuleInit, OnModuleDe
       return;
     }
 
-    const gauge = this.gauges.get(name);
+    const gauge = this.resolveMetric(this.gauges, name);
     if (!gauge) {
       return;
     }

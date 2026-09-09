@@ -79,17 +79,27 @@ vi.mock('redis', () => {
 
   // Mock Sentinel client
   class MockRedisSentinel extends EventEmitter {
+    destroyed = false;
+
     constructor(public options?: any) {
       super();
       this.options = options;
+      (globalThis as any).__lastMockSentinel = this;
     }
 
     async connect() {
+      if (this.options?.name === 'fail-master') {
+        throw new Error('no reachable master');
+      }
       setImmediate(() => {
         this.emit('connect');
         this.emit('ready');
       });
       return Promise.resolve();
+    }
+
+    async destroy() {
+      this.destroyed = true;
     }
 
     async close() {
@@ -102,10 +112,22 @@ vi.mock('redis', () => {
       return Promise.resolve();
     }
 
-    // Sentinel uses .use() to get a client from the pool
+    // Sentinel uses .use() to get a client from the pool. The pooled
+    // client's sendCommand signature is (isReadonly, args, options) —
+    // mirror it, or the adapter's dispatch shape goes untested.
     async use<T>(fn: (client: MockRedisClient) => Promise<T>): Promise<T> {
       const mockClient = new MockRedisClient(this.options);
-      return fn(mockClient);
+      const pooled = Object.create(mockClient) as MockRedisClient & { sendCommand: (isReadonly: boolean | undefined, args: string[], options?: unknown) => Promise<unknown> };
+      pooled.sendCommand = (isReadonly: boolean | undefined, args: string[]) => {
+        if (typeof isReadonly !== 'boolean' && isReadonly !== undefined) {
+          return Promise.reject(new TypeError('sentinel sendCommand called with the single-client (args, options) shape'));
+        }
+        if (!Array.isArray(args)) {
+          return Promise.reject(new TypeError("Cannot read properties of undefined (reading 'length')"));
+        }
+        return mockClient.sendCommand(args);
+      };
+      return fn(pooled);
     }
 
     multi() {
@@ -125,8 +147,11 @@ vi.mock('redis', () => {
 
     constructor(private client: any) {}
 
-    // Add support for addCommand (used by node-redis v4 sendCommand approach)
-    addCommand(args: string[]) {
+    // Mirrors the three real @redis/client v5 shapes: single (args),
+    // cluster (firstKey, isReadonly, args), sentinel (isReadonly, args) —
+    // the command array is always the array parameter.
+    addCommand(...params: unknown[]) {
+      const args = params.find((p) => Array.isArray(p)) as string[];
       this.commands.push(args);
       return this;
     }
@@ -217,6 +242,14 @@ vi.mock('redis', () => {
     }
 
     async exec() {
+      // Simulate v5's MultiErrorReply: any command touching a 'boom' key
+      // makes exec throw an error carrying per-command replies.
+      if (this.commands.some((c) => c.includes('boom'))) {
+        const error: any = new Error('MultiErrorReply');
+        error.replies = this.commands.map((c) => (c.includes('boom') ? new Error('WRONGTYPE') : 'OK'));
+        error.errorIndexes = this.commands.map((c, i) => (c.includes('boom') ? i : -1)).filter((i) => i >= 0);
+        throw error;
+      }
       return this.commands.map(() => 'OK');
     }
 
@@ -1294,6 +1327,255 @@ describe('NodeRedisAdapter', () => {
 
       await adapter.disconnect();
     });
+
+    it('should apply keyPrefix to the declared keys of EVAL (parity with ioredis — scripts and plain commands must hit the SAME keys)', async () => {
+      // Given
+      const config: ConnectionConfig = {
+        type: 'single',
+        host: 'localhost',
+        port: 6379,
+        keyPrefix: 'myapp:',
+      };
+      const adapter = new NodeRedisAdapter(config);
+      await adapter.connect();
+
+      const client = adapter.getClient();
+      const sendCommandSpy = vi.spyOn(client as any, 'sendCommand');
+
+      // When — one declared key, two plain args
+      await adapter.eval('return 1', ['leader:default'], ['node-1', 15000]);
+
+      // Then — the key is prefixed, script/numkeys/args are untouched
+      expect(sendCommandSpy).toHaveBeenCalledWith(['EVAL', 'return 1', '1', 'myapp:leader:default', 'node-1', '15000']);
+
+      await adapter.disconnect();
+    });
+
+    it('should apply keyPrefix to every declared key of EVALSHA and leave args alone', async () => {
+      // Given
+      const config: ConnectionConfig = {
+        type: 'single',
+        host: 'localhost',
+        port: 6379,
+        keyPrefix: 'myapp:',
+      };
+      const adapter = new NodeRedisAdapter(config);
+      await adapter.connect();
+
+      const client = adapter.getClient();
+      const sendCommandSpy = vi.spyOn(client as any, 'sendCommand');
+
+      // When — two declared keys, one plain arg
+      await adapter.evalsha('abc123', ['k1', 'k2'], ['value']);
+
+      // Then
+      expect(sendCommandSpy).toHaveBeenCalledWith(['EVALSHA', 'abc123', '2', 'myapp:k1', 'myapp:k2', 'value']);
+
+      await adapter.disconnect();
+    });
+
+    it('should leave EVAL args untouched when the script declares no keys', async () => {
+      // Given
+      const config: ConnectionConfig = {
+        type: 'single',
+        host: 'localhost',
+        port: 6379,
+        keyPrefix: 'myapp:',
+      };
+      const adapter = new NodeRedisAdapter(config);
+      await adapter.connect();
+
+      const client = adapter.getClient();
+      const sendCommandSpy = vi.spyOn(client as any, 'sendCommand');
+
+      // When
+      await adapter.eval('return 1', [], ['only-an-arg']);
+
+      // Then — nothing to prefix
+      expect(sendCommandSpy).toHaveBeenCalledWith(['EVAL', 'return 1', '0', 'only-an-arg']);
+
+      await adapter.disconnect();
+    });
+  });
+
+  describe('Command Timeout (opt-in)', () => {
+    it('should reject a command that outlives the configured commandTimeout', async () => {
+      // Given — a hung connection: sendCommand never settles
+      const config: ConnectionConfig = { type: 'single', host: 'localhost', port: 6379, commandTimeout: 20 };
+      const adapter = new NodeRedisAdapter(config);
+      await adapter.connect();
+      const client = adapter.getClient();
+      vi.spyOn(client as any, 'sendCommand').mockImplementation(() => new Promise(() => undefined));
+
+      // When/Then — the wait is abandoned at the deadline instead of
+      // hanging until TCP retransmission death
+      await expect(adapter.get('key1')).rejects.toThrow(CommandError);
+      await expect(adapter.get('key1')).rejects.toThrow('timed out after 20ms');
+
+      await adapter.disconnect();
+    });
+
+    it('should not impose any deadline when commandTimeout is not configured', async () => {
+      // Given
+      const config: ConnectionConfig = { type: 'single', host: 'localhost', port: 6379 };
+      const adapter = new NodeRedisAdapter(config);
+      await adapter.connect();
+
+      // When/Then
+      await expect(adapter.get('key1')).resolves.toBe('value');
+
+      await adapter.disconnect();
+    });
+  });
+
+  describe('Offline Queue Option', () => {
+    it('should forward enableOfflineQueue:false as the real node-redis knob (disableOfflineQueue)', async () => {
+      // Given — commandsQueueMaxLength: 0 looked equivalent but the library
+      // treats 0 as "no limit", so the option was silently dead
+      const adapter = new NodeRedisAdapter({ type: 'single', host: 'localhost', port: 6379, enableOfflineQueue: false });
+      await adapter.connect();
+
+      // Then
+      expect((adapter.getClient() as any).options.disableOfflineQueue).toBe(true);
+
+      await adapter.disconnect();
+    });
+
+    it('should leave the offline queue enabled by default', async () => {
+      // Given
+      const adapter = new NodeRedisAdapter({ type: 'single', host: 'localhost', port: 6379 });
+      await adapter.connect();
+
+      // Then
+      expect((adapter.getClient() as any).options.disableOfflineQueue).toBe(false);
+
+      await adapter.disconnect();
+    });
+  });
+
+  describe('Bounded graceful close', () => {
+    it('should force-disconnect when quit() pends past the deadline instead of hanging shutdown forever', async () => {
+      // Given — a quit landing in a reconnect window pends forever in
+      // @redis/client (the queued QUIT has no timeout and the reconnect
+      // loop exits without flushing it); commandTimeout doubles as the
+      // close deadline
+      const adapter = new NodeRedisAdapter({ type: 'single', host: 'localhost', port: 6379, commandTimeout: 20 });
+      await adapter.connect();
+      const client = adapter.getClient() as any;
+      vi.spyOn(client, 'quit').mockImplementation(() => new Promise(() => undefined));
+      const disconnectSpy = vi.spyOn(client, 'disconnect');
+
+      // When — disconnect must SETTLE (previously: closeAll and the whole
+      // application shutdown hung until SIGKILL)
+      await adapter.disconnect();
+
+      // Then — the force path ran
+      expect(disconnectSpy).toHaveBeenCalled();
+      expect(adapter.isConnected()).toBe(false);
+    });
+
+    it('should keep a REAL close deadline when commandTimeout is 0 — "no per-command deadline" must not mean a 0ms close race', async () => {
+      // Given — commandTimeout: 0 disables the per-command deadline; the
+      // graceful close still needs its 5s bound (previously `0 ?? 5000`
+      // kept the 0 and every shutdown force-disconnected)
+      const adapter = new NodeRedisAdapter({ type: 'single', host: 'localhost', port: 6379, commandTimeout: 0 });
+      await adapter.connect();
+      const client = adapter.getClient() as any;
+      const disconnectSpy = vi.spyOn(client, 'disconnect');
+
+      // When — a quit that resolves promptly must WIN the race
+      await adapter.disconnect();
+
+      // Then — graceful path, no force disconnect
+      expect(disconnectSpy).not.toHaveBeenCalled();
+      expect(adapter.isConnected()).toBe(false);
+    });
+  });
+
+  describe('Pipeline batch errors', () => {
+    it('should map a MultiErrorReply back to per-slot [error|null, result] tuples instead of collapsing the batch', async () => {
+      // Given — three queued commands, the middle one errors server-side
+      const adapter = new NodeRedisAdapter({ type: 'single', host: 'localhost', port: 6379 });
+      await adapter.connect();
+      const pipeline = adapter.pipeline();
+      pipeline.get('a').get('boom').get('c');
+
+      // When
+      const results = await pipeline.exec();
+
+      // Then — positional contract preserved; successful replies kept
+      expect(results).toHaveLength(3);
+      expect(results[0]).toEqual([null, 'OK']);
+      expect(results[1]?.[0]).toBeInstanceOf(Error);
+      expect(results[1]?.[1]).toBeNull();
+      expect(results[2]).toEqual([null, 'OK']);
+
+      await adapter.disconnect();
+    });
+  });
+
+  describe('Reconnect Strategy', () => {
+    it('should bound the INITIAL connect but never give up after the first success', async () => {
+      // Given — @redis/client applies the strategy to the initial
+      // connection too: unbounded there, connect() would never settle and
+      // bootstrap would hang silently; bounded after the first success, an
+      // outage longer than the backoff sum (~2.5 min) closed the client
+      // PERMANENTLY (a false return is terminal) and the fleet stayed
+      // leaderless until every process restarted
+      const adapter = new NodeRedisAdapter({ type: 'single', host: 'localhost', port: 6379 });
+      const strategy = (adapter as any).buildReconnectStrategy((adapter as any).config) as (retries: number) => number | false;
+
+      // Then — before any successful connect, the strategy gives up so the
+      // initial connect() rejects instead of hanging bootstrap
+      expect(typeof strategy(1)).toBe('number');
+      expect(strategy(11)).toBe(false);
+
+      // When — the first connect succeeds
+      await adapter.connect();
+
+      // Then — the same strategy now retries forever with a capped backoff
+      expect(typeof strategy(11)).toBe('number');
+      expect(typeof strategy(1000)).toBe('number');
+
+      await adapter.disconnect();
+    });
+
+    it('should re-apply the initial-connect bound on every fresh connect (a reconnect cycle gets a brand-new client)', async () => {
+      // Given — a connected-then-disconnected adapter
+      const adapter = new NodeRedisAdapter({ type: 'single', host: 'localhost', port: 6379 });
+      await adapter.connect();
+      expect((adapter as any).everConnectedOnce).toBe(true);
+      await adapter.disconnect();
+
+      // When — the next connect creates a new client; capture the flag at
+      // client-creation time (after doConnect's reset, before success)
+      let flagDuringConnect: boolean | undefined;
+      const original = (adapter as any).createSingleClient.bind(adapter);
+      (adapter as any).createSingleClient = (cfg: unknown) => {
+        flagDuringConnect = (adapter as any).everConnectedOnce;
+        return original(cfg);
+      };
+      await adapter.connect();
+
+      // Then — the bound governed the new INITIAL connection (with Redis
+      // down it must settle instead of retrying forever), and the flag is
+      // back after success
+      expect(flagDuringConnect).toBe(false);
+      expect((adapter as any).everConnectedOnce).toBe(true);
+
+      await adapter.disconnect();
+    });
+
+    it('should disable reconnection entirely when enableAutoReconnect is false', async () => {
+      // Given
+      const adapter = new NodeRedisAdapter({ type: 'single', host: 'localhost', port: 6379, enableAutoReconnect: false });
+      await adapter.connect();
+
+      // Then — reconnectStrategy: false is node-redis's "stay down" knob
+      expect((adapter.getClient() as any).options.socket.reconnectStrategy).toBe(false);
+
+      await adapter.disconnect();
+    });
   });
 
   describe('Sentinel Mode', () => {
@@ -1344,6 +1626,38 @@ describe('NodeRedisAdapter', () => {
 
       // Then
       expect(result).toBeDefined();
+    });
+
+    it('should dispatch with the pooled-client signature (isReadonly, args, options?) — the single-client shape fails every command', async () => {
+      // Given — the mock's pooled client rejects the (args, options) shape
+      // the way the real one does (command array in the isReadonly slot)
+      await adapter.connect();
+
+      // When/Then
+      await expect(adapter.get('test-key')).resolves.toBe('value');
+      await expect(adapter.set('k', 'v')).resolves.toBe('OK');
+    });
+
+    it('should pass the native command timeout through the sentinel pooled client without corrupting the args slot', async () => {
+      // Given
+      const timeoutAdapter = new NodeRedisAdapter({ ...config, commandTimeout: 500 } as ConnectionConfig);
+      await timeoutAdapter.connect();
+
+      // When/Then
+      await expect(timeoutAdapter.get('test-key')).resolves.toBe('value');
+
+      await timeoutAdapter.disconnect();
+    });
+
+    it('should destroy the sentinel instance when the initial connect fails — a dropped instance leaks its scan interval', async () => {
+      // Given — sentinels reachable but no usable master
+      const failAdapter = new NodeRedisAdapter({ ...config, name: 'fail-master' } as ConnectionConfig);
+
+      // When/Then — connect rejects instead of hanging
+      await expect(failAdapter.connect()).rejects.toThrow();
+
+      // And — the partially-initialized sentinel was destroyed, not dropped
+      expect(((globalThis as any).__lastMockSentinel as { destroyed: boolean }).destroyed).toBe(true);
     });
 
     it('should disconnect from sentinel using close()', async () => {

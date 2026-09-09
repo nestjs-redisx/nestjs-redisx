@@ -24,6 +24,57 @@ describe('RedisClientManager', () => {
     vi.clearAllMocks();
   });
 
+  describe('closeAll', () => {
+    it('should be single-flight — concurrent shutdown hooks must not double-disconnect every client', async () => {
+      // Given — RedisService and the manager both hook
+      // onApplicationShutdown, and Nest runs a module's hooks concurrently
+      await manager.createClient('a', createMockConnectionConfig('ioredis'));
+      const disconnectSpy = vi.spyOn(manager as any, 'disconnectClient');
+
+      // When — both hooks race
+      await Promise.all([manager.closeAll(), manager.closeAll()]);
+
+      // Then — each client is disconnected exactly once
+      expect(disconnectSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should reject createClient after closeAll — a late client would never be swept by the single-flight shutdown', async () => {
+      // Given
+      await manager.closeAll();
+
+      // When/Then
+      await expect(manager.createClient('late', createMockConnectionConfig('ioredis'))).rejects.toThrow('shutting down');
+    });
+
+    it('should never arm a reconnect timer during or after shutdown — a late ERROR would resurrect a client past closeAll', async () => {
+      // Given — a client whose driver ERROR lands in the disconnect window
+      const client = await manager.createClient('a', createMockConnectionConfig('ioredis'));
+      void client;
+      await manager.closeAll();
+      const managed = { name: 'a', reconnectionOptions: { maxAttempts: Infinity, initialDelay: 100, maxDelay: 1000, backoffMultiplier: 2, enableJitter: false }, reconnection: { attempts: 0, nextDelay: 100, timer: undefined }, status: 'connected', stats: { reconnections: 0 }, driver: { connect: vi.fn() } };
+
+      // When — the reconnection machinery is poked post-shutdown
+      (manager as unknown as { scheduleReconnection(c: unknown): void }).scheduleReconnection(managed);
+
+      // Then — no timer armed, no status flip
+      expect(managed.reconnection.timer).toBeUndefined();
+      expect(managed.status).toBe('connected');
+    });
+
+    it('should never arm a reconnect timer for a client being intentionally closed — drivers emit CLOSE mid-disconnect', async () => {
+      // Given — a client whose disconnect is in flight (closing latched)
+      const managed = { name: 'a', closing: true, reconnectionOptions: { maxAttempts: Infinity, initialDelay: 100, maxDelay: 1000, backoffMultiplier: 2, enableJitter: false }, reconnection: { attempts: 0, nextDelay: 100, timer: undefined }, status: 'connected', stats: { reconnections: 0 }, driver: { connect: vi.fn() } };
+
+      // When — the synchronous CLOSE event lands during closeClient()
+      (manager as unknown as { scheduleReconnection(c: unknown): void }).scheduleReconnection(managed);
+
+      // Then — no resurrection: the deleted client would otherwise
+      // reconnect ~1s later as an unmanaged zombie
+      expect(managed.reconnection.timer).toBeUndefined();
+      expect(managed.status).toBe('connected');
+    });
+  });
+
   describe('createClient', () => {
     it('should create a new client', async () => {
       // Given

@@ -14,6 +14,7 @@
 import { Logger } from '@nestjs/common';
 import 'reflect-metadata';
 import { DEFAULT_LEADER_GROUP } from '../../../shared/constants';
+import { InvalidLeaderConfigError } from '../../../shared/errors';
 import { validateLeaderGroup } from '../../../shared/utils/validate-leader-options';
 
 const logger = new Logger('LeaderOnly');
@@ -30,19 +31,48 @@ interface IDecoratorLeaderService {
   isLeader(group?: string): boolean;
 }
 
-// Global service getter for lazy injection (registered by LeaderPlugin's
-// initializer once the DI container is up).
-let globalLeaderServiceGetter: (() => IDecoratorLeaderService) | null = null;
+// Service getters for lazy injection, in registration order (registered by
+// each LeaderPlugin's initializer once its DI container is up). A LIST, not
+// a single slot: with two Nest apps in one process (tests, modular
+// monoliths) the slot design wedged the survivor — whichever app closed
+// removed the only getter, and the app still running skipped every
+// decorated method forever. Decorated methods consult the most recently
+// registered LIVE service; closing any app re-exposes the previous one.
+const leaderServiceGetters: Array<() => IDecoratorLeaderService> = [];
 let warnedNoService = false;
 
 /**
  * Register the leader service getter for lazy injection.
  * Called by LeaderDecoratorInitializerService during initialization.
+ * Passing null clears the whole registry (test aid / legacy reset).
  */
 export function registerLeaderServiceGetter(getter: (() => IDecoratorLeaderService) | null): void {
-  globalLeaderServiceGetter = getter;
-  if (getter) {
-    warnedNoService = false;
+  if (getter === null) {
+    leaderServiceGetters.length = 0;
+    return;
+  }
+  if (!leaderServiceGetters.includes(getter)) {
+    leaderServiceGetters.push(getter);
+  }
+  warnedNoService = false;
+  if (leaderServiceGetters.length > 1) {
+    // Which app SHOULD gate a decorated method is ambiguous in this
+    // topology (the decorator is bound to a class, not an app) — make the
+    // arbitration rule loud instead of silent.
+    logger.warn(`@LeaderOnly: ${leaderServiceGetters.length} leader services are registered in this process (multiple Nest apps?). ` + `Decorated methods consult the most recently initialized one; leadership is NOT evaluated per app.`);
+  }
+}
+
+/**
+ * Unregister a previously registered getter — identity-based, so a closing
+ * application removes exactly its own entry and any remaining app's getter
+ * becomes active again. After the LAST unregistration, decorated methods
+ * skip fail-safe instead of consulting a destroyed service.
+ */
+export function unregisterLeaderServiceGetter(getter: () => IDecoratorLeaderService): void {
+  const index = leaderServiceGetters.lastIndexOf(getter);
+  if (index !== -1) {
+    leaderServiceGetters.splice(index, 1);
   }
 }
 
@@ -99,14 +129,69 @@ export interface ILeaderOnlyOptions {
  * ```
  */
 export function LeaderOnly(options: ILeaderOnlyOptions = {}): MethodDecorator {
+  if (arguments.length >= 3) {
+    // Bare `@LeaderOnly` (no parentheses) invokes the FACTORY as the
+    // decorator with (prototype, key, descriptor); the returned inner
+    // function would then be treated as an empty descriptor and the method
+    // would silently stay UNGATED — running on every instance, the one
+    // unrecoverable failure. Unreachable from TypeScript (TS1329); real in
+    // plain-JS/Babel apps.
+    throw new InvalidLeaderConfigError('@LeaderOnly must be CALLED: use @LeaderOnly() or @LeaderOnly({ group }), not bare @LeaderOnly.');
+  }
+  if (options === null || typeof options !== 'object' || Array.isArray(options)) {
+    // Fail fast at class load with a tagged error: `@LeaderOnly(null)`
+    // would otherwise crash with a bare TypeError, and a positional string
+    // or array — `@LeaderOnly('cleanup')` / `@LeaderOnly(['cleanup'])`,
+    // plausible since the sibling APIs take the group positionally — would
+    // be SILENTLY accepted and gate the 'default' group instead of the
+    // intended one.
+    throw new InvalidLeaderConfigError(`@LeaderOnly: options must be an object, got ${options === null ? 'null' : Array.isArray(options) ? 'array' : typeof options}. Did you mean @LeaderOnly({ group: ... })?`);
+  }
+  if (typeof (options as { then?: unknown }).then === 'function') {
+    // A native Promise (`@LeaderOnly(loadOptions())` with an async helper)
+    // has zero own enumerable keys: it slips past the unknown-keys net
+    // below and silently gates 'default' instead of the intended group —
+    // the same mis-gating class as the positional-string/array shapes.
+    // Plain-JS only; TypeScript rejects the shape at compile time.
+    throw new InvalidLeaderConfigError('@LeaderOnly: options must be a plain object, got a thenable (Promise). A decorator argument cannot be awaited — resolve the config before class definition and pass a literal { group }.');
+  }
+  if (options.group === undefined || options.group === null) {
+    // With no group NAMED (undefined or null — both coalesce to 'default'
+    // below), an unknown key is almost certainly a typo: { groups:
+    // 'cleanup' } would silently gate 'default'. Extra keys ALONGSIDE a
+    // valid group cannot change which group is gated, so a widened config
+    // object ({ group: 'reports', timeoutMs: 5000 }, legal under
+    // structural typing) stays accepted.
+    const unknownKeys = Object.keys(options).filter((key) => key !== 'group');
+    if (unknownKeys.length > 0) {
+      throw new InvalidLeaderConfigError(`@LeaderOnly: unknown option(s) ${unknownKeys.map((key) => `"${key}"`).join(', ')} and no "group" — the only supported option is "group".`);
+    }
+  }
   const group = options.group ?? DEFAULT_LEADER_GROUP;
   registerLeaderGroup(group);
 
   return (_target: object, _propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
+    if (typeof descriptor?.value !== 'function') {
+      // Fail fast at class load with a real error instead of a cryptic
+      // TypeError: on a getter/setter or property there is no method to gate,
+      // and silently skipping would run the body on EVERY instance.
+      throw new InvalidLeaderConfigError(`@LeaderOnly can only decorate methods; "${String(_propertyKey)}" is not a method (getters, setters, and properties are not supported).`);
+    }
     const originalMethod = descriptor.value as (...args: unknown[]) => Promise<unknown>;
 
+    const methodTag = Object.prototype.toString.call(originalMethod);
+    if (methodTag === '[object GeneratorFunction]' || methodTag === '[object AsyncGeneratorFunction]') {
+      // The async gate wrapper cannot preserve generator semantics: callers
+      // iterate the returned (async) iterator, but a gated follower would
+      // hand them `undefined` and a leader a Promise OF an iterator — a
+      // cryptic TypeError either way, on every path. Fail fast at class
+      // load, like the non-method guard above.
+      throw new InvalidLeaderConfigError(`@LeaderOnly cannot decorate generator methods; "${String(_propertyKey)}" is a ${methodTag.slice(8, -1)}. ` + `Gate the generator's CALLER with isLeader()/runIfLeader() instead.`);
+    }
+
     descriptor.value = async function (...args: unknown[]): Promise<unknown> {
-      if (!globalLeaderServiceGetter) {
+      const activeGetter = leaderServiceGetters[leaderServiceGetters.length - 1];
+      if (!activeGetter) {
         if (!warnedNoService) {
           warnedNoService = true;
           logger.warn('@LeaderOnly: LeaderService is not available (is LeaderPlugin registered?). Skipping the method on this instance — no instance will run it until the plugin initializes.');
@@ -114,7 +199,7 @@ export function LeaderOnly(options: ILeaderOnlyOptions = {}): MethodDecorator {
         return undefined;
       }
 
-      const leaderService = globalLeaderServiceGetter();
+      const leaderService = activeGetter();
       if (!leaderService?.isLeader(group)) {
         return undefined;
       }
@@ -127,6 +212,15 @@ export function LeaderOnly(options: ILeaderOnlyOptions = {}): MethodDecorator {
       value: originalMethod.name,
       writable: false,
     });
+
+    // Carry over metadata stamped by decorators applied BEFORE this one
+    // (written below @LeaderOnly in source order — e.g. @Cron). The scheduler
+    // discovers jobs by reading metadata off the prototype's method, which is
+    // now the wrapper; without the copy, `@LeaderOnly()` above `@Cron()`
+    // silently unregisters the job on every instance.
+    for (const metadataKey of Reflect.getOwnMetadataKeys(originalMethod)) {
+      Reflect.defineMetadata(metadataKey, Reflect.getOwnMetadata(metadataKey, originalMethod), descriptor.value);
+    }
 
     // Store metadata on the WRAPPER function for reflection
     Reflect.defineMetadata(LEADER_ONLY_OPTIONS, options, descriptor.value);

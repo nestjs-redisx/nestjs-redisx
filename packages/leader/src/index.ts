@@ -17,6 +17,11 @@ export { LeaderElectionState } from './leader/domain/entities/leader-election-st
 // Decorators
 export { LeaderOnly, LEADER_ONLY_OPTIONS, type ILeaderOnlyOptions } from './leader/api/decorators/leader-only.decorator';
 
+// Decorator test aids (documented in the testing/troubleshooting guides):
+// stub the leader service behind @LeaderOnly, and reset the process-global
+// getter/group registries between test suites.
+export { registerLeaderServiceGetter, unregisterLeaderServiceGetter, clearRegisteredLeaderGroups } from './leader/api/decorators/leader-only.decorator';
+
 // Types
 export type { ILeaderPluginOptions, LeaderLostReason } from './shared/types';
 

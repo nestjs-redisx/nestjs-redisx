@@ -52,6 +52,27 @@ export class NodeRedisAdapter extends BaseRedisDriver {
   private isSentinel = false;
   private isCluster = false;
   private readonly keyPrefix: string;
+  /**
+   * Command deadline honoring the documented `commandTimeout` config option.
+   * Applied twice: natively per command on every topology (v5's `timeout`
+   * option, which also CANCELS a command that was never sent) and as an
+   * outer race that bounds the whole dispatch (including the sentinel
+   * pool-lease wait). OPT-IN only (no default): a default would break long
+   * blocking commands for existing deployments. A deadline on a command
+   * already on the wire only abandons the local wait — it may still execute
+   * server-side.
+   */
+  private readonly commandTimeout: number | undefined;
+
+  /**
+   * True once an initial connect has succeeded. @redis/client applies the
+   * reconnect strategy to the INITIAL connection too, so an unconditional
+   * retry-forever default would make `connect()` never settle with Redis
+   * down at bootstrap — NestFactory.create() would hang with no error.
+   * The default strategy is bounded until the first success and retries
+   * forever afterwards.
+   */
+  private everConnectedOnce = false;
 
   constructor(
     config: ConnectionConfig,
@@ -61,9 +82,14 @@ export class NodeRedisAdapter extends BaseRedisDriver {
   ) {
     super(config, options);
     this.keyPrefix = config.keyPrefix ?? '';
+    this.commandTimeout = config.commandTimeout;
   }
 
   protected async doConnect(): Promise<void> {
+    // The initial-connect bound is per connect() attempt: a reconnect after
+    // a manual disconnect creates a brand-new client whose FIRST connection
+    // must also settle instead of retrying forever with Redis down.
+    this.everConnectedOnce = false;
     try {
       // Create client based on configuration type
       if (isSingleConnection(this.config)) {
@@ -87,6 +113,9 @@ export class NodeRedisAdapter extends BaseRedisDriver {
       if (!this.isSentinel) {
         await this.client.connect();
       }
+      // From here on the retry-forever default applies: a later outage must
+      // never permanently close the client (see getDefaultReconnectStrategy).
+      this.everConnectedOnce = true;
     } catch (error) {
       if (this.client) {
         await this.safeDisconnect();
@@ -102,13 +131,17 @@ export class NodeRedisAdapter extends BaseRedisDriver {
     }
 
     try {
-      if (this.isSentinel) {
-        // Sentinel uses close() instead of quit()
-        await (this.client as RedisSentinelType).close();
-      } else {
-        // Single and cluster clients have quit()
-        await (this.client as RedisClientType | RedisClusterType).quit();
-      }
+      // Bounded: a graceful QUIT/close landing in a reconnect window can
+      // PEND FOREVER in @redis/client (the queued QUIT has no timeout, and
+      // the reconnect loop exits without flushing the queue once quit
+      // flipped the open flag) — which would hang closeAll and the whole
+      // application shutdown. On timeout, fall through to a force close.
+      const graceful = this.isSentinel
+        ? // Sentinel uses close() instead of quit()
+          (this.client as RedisSentinelType).close()
+        : // Single and cluster clients have quit()
+          (this.client as RedisClientType | RedisClusterType).quit();
+      await this.boundGracefulClose(graceful);
     } catch {
       // Force disconnect on error
       await this.safeDisconnect();
@@ -116,6 +149,30 @@ export class NodeRedisAdapter extends BaseRedisDriver {
       this.client = null;
       this.isSentinel = false;
       this.isCluster = false;
+    }
+  }
+
+  /**
+   * Rejects when the graceful close outlives its deadline (commandTimeout,
+   * else 5s). `||`, not `??`: `commandTimeout: 0` means "no per-command
+   * deadline" — the CLOSE bound must never be zero (a 0 ms race turns
+   * every shutdown into a force disconnect) and never absent (an unbounded
+   * close is the shutdown-hang bug this exists to prevent).
+   */
+  private async boundGracefulClose(graceful: Promise<unknown>): Promise<void> {
+    graceful.catch(() => undefined);
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      await Promise.race([
+        graceful,
+        new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(() => reject(new Error('graceful close timed out')), this.commandTimeout || 5000);
+        }),
+      ]);
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
     }
   }
 
@@ -131,28 +188,72 @@ export class NodeRedisAdapter extends BaseRedisDriver {
       // Apply key prefix to first argument if it's a key-based command
       const prefixedArgs = this.applyKeyPrefix(command, commandArgs);
 
-      if (this.isSentinel) {
-        // Sentinel uses .use() to get a client from the pool
-        return await (this.client as RedisSentinelType).use(async (client) => {
+      // Native per-command deadline: @redis/client v5 cancels a timed-out
+      // command that was never sent (removes it from the write queue), so it
+      // cannot execute server-side arbitrarily late after the local wait was
+      // abandoned. The outer race below remains as the envelope bound (and
+      // covers the sentinel pool-lease wait, where options are not passed).
+      const nativeOptions = this.commandTimeout ? { timeout: this.commandTimeout } : undefined;
+      const dispatch = (): Promise<unknown> => {
+        if (this.isSentinel) {
+          // Sentinel uses .use() to get a client from the pool. The pooled
+          // client's signature is sendCommand(isReadonly, args, options) —
+          // NOT the single-client (args, options) shape; the wrong shape
+          // put the command array into the isReadonly slot and every
+          // command failed.
+          const isReadonly = this.isReadonlyCommand(command);
+          return (this.client as RedisSentinelType).use(async (client) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            return nativeOptions ? await (client as any).sendCommand(isReadonly, [command, ...prefixedArgs], nativeOptions) : await (client as any).sendCommand(isReadonly, [command, ...prefixedArgs]);
+          });
+        }
+
+        if (this.isCluster) {
+          // Cluster uses different sendCommand signature:
+          // sendCommand(firstKey, isReadonly, args, options?)
+          const firstKey = this.getFirstKey(command, prefixedArgs);
+          const isReadonly = this.isReadonlyCommand(command);
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          return await (client as any).sendCommand([command, ...prefixedArgs]);
-        });
-      }
+          return nativeOptions ? (this.client as any).sendCommand(firstKey, isReadonly, [command, ...prefixedArgs], nativeOptions) : (this.client as any).sendCommand(firstKey, isReadonly, [command, ...prefixedArgs]);
+        }
 
-      if (this.isCluster) {
-        // Cluster uses different sendCommand signature:
-        // sendCommand(firstKey, isReadonly, args, options?)
-        const firstKey = this.getFirstKey(command, prefixedArgs);
-        const isReadonly = this.isReadonlyCommand(command);
+        // Execute command directly for regular clients
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return await (this.client as any).sendCommand(firstKey, isReadonly, [command, ...prefixedArgs]);
-      }
+        return nativeOptions ? (this.client as any).sendCommand([command, ...prefixedArgs], nativeOptions) : (this.client as any).sendCommand([command, ...prefixedArgs]);
+      };
 
-      // Execute command directly for regular clients
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return await (this.client as any).sendCommand([command, ...prefixedArgs]);
+      return await this.withCommandTimeout(dispatch());
     } catch (error) {
       throw new CommandError(command, args, error as Error);
+    }
+  }
+
+  /**
+   * Race a dispatched command against the configured `commandTimeout`.
+   * The rejection is wrapped into CommandError (with the command name) by
+   * the caller; the deadline only abandons the local wait — the command may
+   * still execute server-side.
+   */
+  private async withCommandTimeout(execution: Promise<unknown>): Promise<unknown> {
+    if (!this.commandTimeout) {
+      return execution;
+    }
+    // A late settlement after the deadline won must not surface as an
+    // unhandled rejection.
+    execution.catch(() => undefined);
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      return await Promise.race([
+        execution,
+        new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(() => reject(new Error(`timed out after ${this.commandTimeout}ms`)), this.commandTimeout);
+          timer.unref?.();
+        }),
+      ]);
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
     }
   }
 
@@ -166,7 +267,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
       return new NodeRedisSentinelPipelineAdapter(this.client as RedisSentinelType, this.keyPrefix);
     }
 
-    return new NodeRedisPipelineAdapter(this.client as RedisClientType | RedisClusterType, this.keyPrefix);
+    return new NodeRedisPipelineAdapter(this.client as RedisClientType | RedisClusterType, this.keyPrefix, this.isCluster);
   }
 
   protected createMulti(): IMulti {
@@ -177,8 +278,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
     if (this.isSentinel) {
       return new NodeRedisSentinelMultiAdapter(this.client as RedisSentinelType, this.keyPrefix);
     }
-
-    return new NodeRedisMultiAdapter(this.client as RedisClientType | RedisClusterType, this.keyPrefix);
+    return new NodeRedisMultiAdapter(this.client as RedisClientType | RedisClusterType, this.keyPrefix, this.isCluster);
   }
 
   /**
@@ -361,12 +461,14 @@ export class NodeRedisAdapter extends BaseRedisDriver {
         host: config.host ?? 'localhost',
         port: config.port ?? 6379,
         connectTimeout: config.connectTimeout ?? 10000,
-        reconnectStrategy: config.retryStrategy ? (retries) => config.retryStrategy?.(retries) ?? false : this.getDefaultReconnectStrategy(),
+        reconnectStrategy: this.buildReconnectStrategy(config),
       },
       username: config.username,
       password: config.password,
       database: config.db ?? 0,
-      commandsQueueMaxLength: config.enableOfflineQueue === false ? 0 : undefined,
+      // node-redis's real knob; `commandsQueueMaxLength: 0` looked
+      // equivalent but the library treats 0 as "no limit" (falsy guard).
+      disableOfflineQueue: config.enableOfflineQueue === false,
     };
 
     // TLS configuration
@@ -401,9 +503,10 @@ export class NodeRedisAdapter extends BaseRedisDriver {
         username: config.username,
         password: config.password,
         database: config.db ?? 0,
+        disableOfflineQueue: config.enableOfflineQueue === false,
         socket: {
           connectTimeout: config.connectTimeout ?? 10000,
-          reconnectStrategy: config.retryStrategy ? (retries: number) => config.retryStrategy?.(retries) ?? false : this.getDefaultReconnectStrategy(),
+          reconnectStrategy: this.buildReconnectStrategy(config),
         },
       },
       maxCommandRedirections: config.clusterOptions?.maxRedirections ?? 16,
@@ -460,9 +563,10 @@ export class NodeRedisAdapter extends BaseRedisDriver {
       username: sentinelConfig.username,
       password: sentinelConfig.password,
       database: sentinelConfig.db ?? 0,
+      disableOfflineQueue: sentinelConfig.enableOfflineQueue === false,
       socket: {
         connectTimeout: sentinelConfig.connectTimeout ?? 10000,
-        reconnectStrategy: sentinelConfig.retryStrategy ? (retries) => sentinelConfig.retryStrategy?.(retries) ?? false : this.getDefaultReconnectStrategy(),
+        reconnectStrategy: this.buildReconnectStrategy(sentinelConfig),
       },
     };
 
@@ -486,6 +590,12 @@ export class NodeRedisAdapter extends BaseRedisDriver {
         connectTimeout: sentinelConfig.connectTimeout ?? 10000,
       },
     };
+
+    // NOTE: `sentinelOptions.sentinelRetryStrategy` is deliberately NOT
+    // mapped here — @redis/client hardcodes `reconnectStrategy: false` on
+    // every sentinel-monitor client it creates (a failed sentinel rotates
+    // to the next one instead of reconnecting), overriding anything set in
+    // these options. The option is ioredis-only; see the type's JSDoc.
 
     // Sentinel password (if different from node password)
     if (sentinelConfig.sentinelOptions?.sentinelPassword) {
@@ -514,7 +624,22 @@ export class NodeRedisAdapter extends BaseRedisDriver {
       this.emit(DriverEvent.ERROR, error);
     });
 
-    await sentinel.connect();
+    try {
+      await sentinel.connect();
+    } catch (error) {
+      // A failed connect still leaves the instance live: its finally-block
+      // installs the scan interval regardless, and partially-connected
+      // internal clients stay open. `this.client` is not assigned yet, so
+      // doConnect's catch cannot clean this up — destroy it here or every
+      // failed bootstrap attempt leaks an interval + client set.
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (sentinel as any).destroy?.();
+      } catch {
+        // Best effort — the original connect error is what matters.
+      }
+      throw error;
+    }
 
     return sentinel as RedisSentinelType;
   }
@@ -524,11 +649,22 @@ export class NodeRedisAdapter extends BaseRedisDriver {
    */
   private async safeDisconnect(): Promise<void> {
     try {
-      if (this.isSentinel) {
-        await (this.client as RedisSentinelType)?.close();
+      // The force path must SETTLE too: on sentinel, both close() and
+      // destroy() await the same internal connect/reconfigure promise, so a
+      // wedged reconfigure (unreachable announced master) would otherwise
+      // hang shutdown forever right after the graceful close timed out for
+      // the same reason. Bounded and best-effort — on timeout we proceed
+      // and accept a leaked handle over a wedged application shutdown.
+      let force: Promise<unknown> | undefined;
+      if (this.isSentinel && this.client) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        force = Promise.resolve(typeof (this.client as any).destroy === 'function' ? (this.client as any).destroy() : (this.client as RedisSentinelType).close());
       } else if (this.client) {
         // Single and cluster clients have disconnect()
-        await (this.client as RedisClientType | RedisClusterType).disconnect();
+        force = Promise.resolve((this.client as RedisClientType | RedisClusterType).disconnect());
+      }
+      if (force) {
+        await this.boundGracefulClose(force);
       }
     } catch {
       // Ignore disconnect errors
@@ -541,13 +677,35 @@ export class NodeRedisAdapter extends BaseRedisDriver {
    */
   private getDefaultReconnectStrategy(): (retries: number) => number | false {
     return (retries: number): number | false => {
-      // Max 10 retries
-      if (retries > 10) {
+      if (!this.everConnectedOnce && retries > 10) {
+        // Initial connect must SETTLE: the strategy also governs the very
+        // first connection, and retrying forever there would hang
+        // bootstrap silently instead of surfacing a ConnectionError.
         return false;
       }
-      // Exponential backoff: 100ms, 200ms, 400ms, 800ms, 1.6s, 3.2s, 6.4s, 12.8s, 25.6s, 30s
+      // After the first success, never give up: @redis/client treats a
+      // `false` return as PERMANENT — the client closes and no later
+      // connect() revives it, so a finite bound turned any outage longer
+      // than the backoff sum (~2.5 min) into a dead client until process
+      // restart. Parity with ioredis, whose default also retries forever.
+      // Exponential backoff: 100ms, 200ms, 400ms, ... capped at 30s.
       return Math.min(retries * RETRY_BASE_DELAY_MS * Math.pow(2, retries - 1), RETRY_MAX_DELAY_MS);
     };
+  }
+
+  /**
+   * `reconnectStrategy: false` disables reconnection entirely
+   * (enableAutoReconnect: false); a user strategy returning null maps to
+   * `false` for @redis/client.
+   */
+  private buildReconnectStrategy(config: { enableAutoReconnect?: boolean; retryStrategy?: (times: number) => number | null }): false | ((retries: number) => number | false) {
+    if (config.enableAutoReconnect === false) {
+      return false;
+    }
+    if (config.retryStrategy) {
+      return (retries: number) => config.retryStrategy?.(retries) ?? false;
+    }
+    return this.getDefaultReconnectStrategy();
   }
 
   /**
@@ -636,6 +794,24 @@ export class NodeRedisAdapter extends BaseRedisDriver {
     const destSourceCommands = new Set(['RENAME', 'RENAMENX', 'COPY', 'BITOP', 'SINTERSTORE', 'SUNIONSTORE', 'SDIFFSTORE', 'ZUNIONSTORE', 'ZINTERSTORE', 'PFMERGE', 'GEOSEARCHSTORE', 'LMOVE', 'BLMOVE']);
 
     const cmd = command.toUpperCase();
+
+    // EVAL/EVALSHA: args = [script/sha, numkeys, key1..keyN, arg1..argM] —
+    // prefix exactly the declared key positions. ioredis prefixes script
+    // keys through its native keyPrefix, so omitting them here would make
+    // Lua scripts and plain commands operate on DIFFERENT keys under
+    // node-redis (and diverge between the two drivers).
+    if (cmd === 'EVAL' || cmd === 'EVALSHA') {
+      const numkeys = Number.parseInt(args[1] ?? '0', 10);
+      if (Number.isInteger(numkeys) && numkeys > 0 && args.length > 2) {
+        const result = [...args];
+        const end = Math.min(2 + numkeys, result.length);
+        for (let i = 2; i < end; i++) {
+          result[i] = this.keyPrefix + result[i];
+        }
+        return result;
+      }
+      return args;
+    }
 
     if (multiKeyCommands.has(cmd)) {
       // All args are keys
@@ -728,6 +904,21 @@ export class NodeRedisAdapter extends BaseRedisDriver {
 }
 
 /**
+ * v5 throws MultiErrorReply — carrying every command's reply — when ANY
+ * command in the batch errored. Map it back to the ioredis-style per-slot
+ * [error|null, result] contract instead of collapsing the whole batch
+ * (successful replies included) into one error tuple.
+ */
+function mapBatchError(error: unknown): Array<[Error | null, unknown]> {
+  const batchError = error as { replies?: unknown[]; errorIndexes?: number[] };
+  if (Array.isArray(batchError.replies)) {
+    const errorIndexes = new Set(batchError.errorIndexes ?? []);
+    return batchError.replies.map((reply, index) => (errorIndexes.has(index) ? [reply as Error, null] : [null, reply]));
+  }
+  return [[error as Error, null]];
+}
+
+/**
  * Node-Redis pipeline adapter.
  *
  * Note: node-redis doesn't have separate pipeline,
@@ -739,21 +930,32 @@ class NodeRedisPipelineAdapter implements IPipeline {
   constructor(
     protected readonly client: RedisClientType | RedisClusterType,
     protected readonly keyPrefix: string = '',
+    protected readonly isCluster: boolean = false,
   ) {}
 
   async exec(): Promise<Array<[Error | null, unknown]>> {
     const multi = (this.client as RedisClientType).multi();
 
     for (const { command, args } of this.commands) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (multi as any).addCommand([command, ...args.map(String)]);
+      const commandArgs = [command, ...args.map(String)];
+      if (this.isCluster) {
+        // Cluster multi signature: addCommand(firstKey, isReadonly, args) —
+        // the single-client single-argument shape leaves args undefined and
+        // the whole batch rejects at exec. The first argument after the
+        // command name is the (already prefixed) key for slot routing.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (multi as any).addCommand(commandArgs[1], false, commandArgs);
+      } else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (multi as any).addCommand(commandArgs);
+      }
     }
 
     try {
       const results = await multi.exec();
       return (results as unknown[]).map((result) => [null, result]);
     } catch (error) {
-      return [[error as Error, null]];
+      return mapBatchError(error);
     }
   }
 
@@ -875,8 +1077,8 @@ class NodeRedisPipelineAdapter implements IPipeline {
  * Node-Redis multi/exec adapter.
  */
 class NodeRedisMultiAdapter extends NodeRedisPipelineAdapter implements IMulti {
-  constructor(client: RedisClientType | RedisClusterType, keyPrefix: string = '') {
-    super(client, keyPrefix);
+  constructor(client: RedisClientType | RedisClusterType, keyPrefix: string = '', isCluster: boolean = false) {
+    super(client, keyPrefix, isCluster);
   }
 
   discard(): void {
@@ -902,15 +1104,17 @@ class NodeRedisSentinelPipelineAdapter implements IPipeline {
       const multi = client.multi();
 
       for (const { command, args } of this.commands) {
+        // Sentinel multi signature: addCommand(isReadonly, args) — the
+        // single-argument shape leaves args undefined and exec rejects.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (multi as any).addCommand([command, ...args.map(String)]);
+        (multi as any).addCommand(false, [command, ...args.map(String)]);
       }
 
       try {
         const results = await multi.exec();
         return (results as unknown[]).map((result) => [null, result] as [Error | null, unknown]);
       } catch (error) {
-        return [[error as Error, null]] as Array<[Error | null, unknown]>;
+        return mapBatchError(error);
       }
     });
   }

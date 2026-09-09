@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi, type MockedObject } from 'vitest';
 import type { IRedisDriver } from '@nestjs-redisx/core';
 import { RedisLeaderStoreAdapter } from '../../src/leader/infrastructure/adapters/redis-leader-store.adapter';
+import { ACQUIRE_LEADER_SCRIPT, RENEW_LEADER_SCRIPT, RELEASE_LEADER_SCRIPT } from '../../src/leader/infrastructure/scripts/lua-scripts';
 import { LeaderStoreError } from '../../src/shared/errors';
 
 describe('RedisLeaderStoreAdapter', () => {
@@ -20,41 +21,53 @@ describe('RedisLeaderStoreAdapter', () => {
   });
 
   describe('onModuleInit', () => {
-    it('should pre-load the renew and release Lua scripts', async () => {
+    it('should pre-load the acquire, renew, and release Lua scripts', async () => {
       // When
       await adapter.onModuleInit();
 
       // Then
-      expect(mockDriver.scriptLoad).toHaveBeenCalledTimes(2);
-      expect(mockDriver.scriptLoad).toHaveBeenCalledWith(expect.stringContaining('pexpire'));
-      expect(mockDriver.scriptLoad).toHaveBeenCalledWith(expect.stringContaining('del'));
+      expect(mockDriver.scriptLoad).toHaveBeenCalledTimes(3);
+      expect(mockDriver.scriptLoad).toHaveBeenCalledWith(ACQUIRE_LEADER_SCRIPT);
+      expect(mockDriver.scriptLoad).toHaveBeenCalledWith(RENEW_LEADER_SCRIPT);
+      expect(mockDriver.scriptLoad).toHaveBeenCalledWith(RELEASE_LEADER_SCRIPT);
     });
 
-    it('should throw LeaderStoreError when script loading fails', async () => {
-      // Given
-      mockDriver.scriptLoad.mockRejectedValue(new Error('down'));
+    it('should NOT fail bootstrap when script loading fails — it degrades to plain EVAL', async () => {
+      // Given — Redis hiccups exactly during init (LOADING, brief failover)
+      mockDriver.scriptLoad.mockRejectedValue(new Error('LOADING Redis is loading the dataset in memory'));
 
-      // When/Then
-      await expect(adapter.onModuleInit()).rejects.toThrow(LeaderStoreError);
+      // When — init completes without throwing (a transient hiccup must not
+      // crash-loop the whole application; the loop contains store errors)
+      await expect(adapter.onModuleInit()).resolves.toBeUndefined();
+
+      // Then — operations still work through the sha-less EVAL path
+      mockDriver.eval.mockResolvedValue(1);
+      await expect(adapter.acquire('leader:default', 'node-1', 15000)).resolves.toBe(true);
+      expect(mockDriver.eval).toHaveBeenCalled();
+      expect(mockDriver.evalsha).not.toHaveBeenCalled();
     });
   });
 
   describe('acquire', () => {
-    it('should acquire via SET NX PX and report success on OK', async () => {
+    beforeEach(async () => {
+      await adapter.onModuleInit();
+    });
+
+    it('should acquire via the acquire-or-reclaim script and report success on 1', async () => {
       // Given
-      mockDriver.set.mockResolvedValue('OK');
+      mockDriver.evalsha.mockResolvedValue(1);
 
       // When
       const acquired = await adapter.acquire('leader:default', 'node-1', 15_000);
 
       // Then
       expect(acquired).toBe(true);
-      expect(mockDriver.set).toHaveBeenCalledWith('leader:default', 'node-1', { nx: true, px: 15_000 });
+      expect(mockDriver.evalsha).toHaveBeenCalledWith('sha1', ['leader:default'], ['node-1', 15_000]);
     });
 
-    it('should report failure when the key is already held', async () => {
+    it('should report failure when the key is held by someone else', async () => {
       // Given
-      mockDriver.set.mockResolvedValue(null);
+      mockDriver.evalsha.mockResolvedValue(0);
 
       // When
       const acquired = await adapter.acquire('leader:default', 'node-1', 15_000);
@@ -63,12 +76,48 @@ describe('RedisLeaderStoreAdapter', () => {
       expect(acquired).toBe(false);
     });
 
+    it('should fall back to eval on NOSCRIPT', async () => {
+      // Given
+      mockDriver.evalsha.mockRejectedValue(new Error('NOSCRIPT No matching script'));
+      mockDriver.eval.mockResolvedValue(1);
+
+      // When
+      const acquired = await adapter.acquire('leader:default', 'node-1', 15_000);
+
+      // Then
+      expect(acquired).toBe(true);
+      expect(mockDriver.eval).toHaveBeenCalledWith(ACQUIRE_LEADER_SCRIPT, ['leader:default'], ['node-1', 15_000]);
+    });
+
     it('should throw LeaderStoreError on driver failure', async () => {
       // Given
-      mockDriver.set.mockRejectedValue(new Error('connection refused'));
+      mockDriver.evalsha.mockRejectedValue(new Error('connection refused'));
 
       // When/Then
       await expect(adapter.acquire('leader:default', 'node-1', 15_000)).rejects.toThrow(LeaderStoreError);
+    });
+  });
+
+  describe('before onModuleInit (no cached sha)', () => {
+    it('should EVAL the acquire script directly instead of EVALSHA(null)', async () => {
+      // Given — adapter constructed but never initialized
+      mockDriver.eval.mockResolvedValue(1);
+
+      // When
+      const acquired = await adapter.acquire('leader:default', 'node-1', 15_000);
+
+      // Then
+      expect(acquired).toBe(true);
+      expect(mockDriver.evalsha).not.toHaveBeenCalled();
+      expect(mockDriver.eval).toHaveBeenCalledWith(ACQUIRE_LEADER_SCRIPT, ['leader:default'], ['node-1', 15_000]);
+    });
+
+    it('should wrap direct-EVAL failures in LeaderStoreError', async () => {
+      // Given
+      mockDriver.eval.mockRejectedValue(new Error('down'));
+
+      // When/Then
+      await expect(adapter.renew('leader:default', 'node-1', 15_000)).rejects.toThrow(LeaderStoreError);
     });
   });
 
