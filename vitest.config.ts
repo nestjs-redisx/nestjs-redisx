@@ -44,6 +44,7 @@ export default defineConfig({
       '@nestjs-redisx/circuit-breaker': resolve(__dirname, './packages/circuit-breaker/src'),
       '@nestjs-redisx/session': resolve(__dirname, './packages/session/src'),
       '@nestjs-redisx/leader': resolve(__dirname, './packages/leader/src'),
+      '@nestjs-redisx/semaphore': resolve(__dirname, './packages/semaphore/src'),
       '@nestjs-redisx/testing': resolve(__dirname, './packages/testing/src'),
     },
   },

@@ -10,6 +10,7 @@ import { PubSubPlugin, PUBSUB_SERVICE, type IPubSubService, type IPubSubMessage 
 import { StreamsPlugin, STREAM_PRODUCER, STREAM_CONSUMER, type IStreamProducer, type IStreamConsumer, type ConsumerHandle } from '@nestjs-redisx/streams';
 import { SessionPlugin, SESSION_SERVICE, SESSION_STORE, SessionLimitExceededError, type ISessionService, type ISessionStore } from '@nestjs-redisx/session';
 import { LeaderPlugin, LEADER_SERVICE, type ILeaderService } from '@nestjs-redisx/leader';
+import { SemaphorePlugin, SEMAPHORE_SERVICE, type ISemaphoreService } from '@nestjs-redisx/semaphore';
 
 import { RedisTestingModule } from '../../src';
 import { MEMORY_DRIVER_TYPE } from '../../src';
@@ -727,6 +728,66 @@ describe('Plugins on the in-memory driver (no Redis)', () => {
       // Then — the lease is gone and this instance abstains during cooldown
       expect(leader.isLeader()).toBe(false);
       expect(await leader.getLeaderId()).toBeNull();
+    });
+  });
+
+  describe('SemaphorePlugin', () => {
+    it('bounds concurrency across callers (atomic Lua on the memory interpreter)', async () => {
+      // Given
+      app = await Test.createTestingModule({
+        imports: [
+          RedisModule.forRoot({
+            clients: { type: 'single', host: 'x', port: 1 },
+            global: { driver: MEMORY_DRIVER_TYPE },
+            plugins: [new SemaphorePlugin({ retry: { maxRetries: 0, initialDelay: 5, maxDelay: 5, multiplier: 1 }, autoRenew: { enabled: false } })],
+          }),
+        ],
+      }).compile();
+      await app.init();
+      const semaphore = app.get<ISemaphoreService>(SEMAPHORE_SERVICE);
+
+      // When — capacity 2: two seats granted, the third refused
+      const p1 = await semaphore.acquire('mem:jobs', 2);
+      const p2 = await semaphore.acquire('mem:jobs', 2);
+      const third = await semaphore.tryAcquire('mem:jobs', 2);
+
+      // Then
+      expect(third).toBeNull();
+      expect(await semaphore.usedPermits('mem:jobs')).toBe(2);
+      expect(await semaphore.availablePermits('mem:jobs', 2)).toBe(0);
+
+      // And a released seat is immediately takeable again
+      await p1.release();
+      const fourth = await semaphore.tryAcquire('mem:jobs', 2);
+      expect(fourth).not.toBeNull();
+
+      await p2.release();
+      await fourth!.release();
+    });
+
+    it('sweeps an expired holder inside acquire (crash recovery, no background job)', async () => {
+      // Given
+      app = await Test.createTestingModule({
+        imports: [
+          RedisModule.forRoot({
+            clients: { type: 'single', host: 'x', port: 1 },
+            global: { driver: MEMORY_DRIVER_TYPE },
+            plugins: [new SemaphorePlugin({ retry: { maxRetries: 0, initialDelay: 5, maxDelay: 5, multiplier: 1 }, autoRenew: { enabled: false } })],
+          }),
+        ],
+      }).compile();
+      await app.init();
+      const semaphore = app.get<ISemaphoreService>(SEMAPHORE_SERVICE);
+
+      // When — a "crashed" holder with a short lease, never released
+      await semaphore.acquire('mem:crashy', 1, { ttl: 80 });
+      expect(await semaphore.tryAcquire('mem:crashy', 1)).toBeNull();
+      await new Promise((resolve) => setTimeout(resolve, 120));
+
+      // Then — the seat frees up by TTL
+      const takeover = await semaphore.tryAcquire('mem:crashy', 1);
+      expect(takeover).not.toBeNull();
+      await takeover!.release();
     });
   });
 });

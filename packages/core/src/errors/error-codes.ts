@@ -235,6 +235,30 @@ export enum ErrorCode {
   /** Leader election store operation failed */
   LEADER_STORE_ERROR = 'LEADER_STORE_ERROR',
 
+  /** Failed to acquire semaphore permit */
+  SEMAPHORE_ACQUISITION_FAILED = 'SEMAPHORE_ACQUISITION_FAILED',
+
+  /** Semaphore permit acquisition timed out */
+  SEMAPHORE_ACQUISITION_TIMEOUT = 'SEMAPHORE_ACQUISITION_TIMEOUT',
+
+  /** Attempting to release or extend a permit not held by the caller */
+  SEMAPHORE_PERMIT_NOT_HELD = 'SEMAPHORE_PERMIT_NOT_HELD',
+
+  /** Failed to extend semaphore permit TTL */
+  SEMAPHORE_EXTENSION_FAILED = 'SEMAPHORE_EXTENSION_FAILED',
+
+  /** Semaphore configuration is invalid */
+  SEMAPHORE_CONFIG_INVALID = 'SEMAPHORE_CONFIG_INVALID',
+
+  /** Deduplication configuration is invalid */
+  DEDUP_CONFIG_INVALID = 'DEDUP_CONFIG_INVALID',
+
+  /** Deduplication store operation failed */
+  DEDUP_STORE_ERROR = 'DEDUP_STORE_ERROR',
+
+  /** Counter configuration is invalid */
+  COUNTER_CONFIG_INVALID = 'COUNTER_CONFIG_INVALID',
+
   /** Idempotency key is invalid */
   IDEMPOTENCY_KEY_INVALID = 'IDEMPOTENCY_KEY_INVALID',
 

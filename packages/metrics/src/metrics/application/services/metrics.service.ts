@@ -160,6 +160,18 @@ export class MetricsService implements IMetricsService, OnModuleInit, OnModuleDe
       this.registerCounter(`${this.prefix}leader_elected_total`, 'Times this instance became leader, by group', ['group']);
 
       this.registerCounter(`${this.prefix}leader_lost_total`, 'Times this instance lost leadership, by group and reason', ['group', 'reason']);
+
+      // Semaphore metrics
+      this.registerCounter(`${this.prefix}semaphore_acquisitions_total`, 'Total semaphore permit acquisition attempts', ['status']);
+
+      this.registerHistogram(`${this.prefix}semaphore_wait_duration_seconds`, 'Semaphore permit wait time in seconds', [], this.latencyBuckets);
+
+      this.registerHistogram(`${this.prefix}semaphore_hold_duration_seconds`, 'Semaphore permit hold time in seconds', [], this.latencyBuckets);
+
+      this.registerGauge(`${this.prefix}semaphore_permits_active`, 'Number of currently held semaphore permits');
+
+      // Deduplication metrics
+      this.registerCounter(`${this.prefix}dedup_checks_total`, 'Total deduplication checks, by outcome', ['outcome']);
     }
   }
 

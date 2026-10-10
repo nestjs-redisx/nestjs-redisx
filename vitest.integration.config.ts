@@ -31,6 +31,7 @@ export default defineConfig({
       '@nestjs-redisx/circuit-breaker': resolve(__dirname, './packages/circuit-breaker/src'),
       '@nestjs-redisx/pubsub': resolve(__dirname, './packages/pubsub/src'),
       '@nestjs-redisx/session': resolve(__dirname, './packages/session/src'),
+      '@nestjs-redisx/semaphore': resolve(__dirname, './packages/semaphore/src'),
       // Must resolve to source too: the in-memory driver registers itself into
       // core's driver registry, and that registration must land in the SAME
       // core instance the tests use (aliased above) — otherwise memory-driver

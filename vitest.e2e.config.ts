@@ -28,6 +28,7 @@ export default defineConfig({
       '@nestjs-redisx/metrics': resolve(__dirname, './packages/metrics/src'),
       '@nestjs-redisx/tracing': resolve(__dirname, './packages/tracing/src'),
       '@nestjs-redisx/session': resolve(__dirname, './packages/session/src'),
+      '@nestjs-redisx/semaphore': resolve(__dirname, './packages/semaphore/src'),
     },
   },
 });
