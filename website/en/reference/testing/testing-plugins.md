@@ -1,6 +1,6 @@
 ---
 title: 'Testing Plugins — Testing Utilities | NestJS RedisX'
-description: 'Patterns for unit-testing the cache, locks, rate-limit, circuit-breaker, pubsub, session, leader, and idempotency plugins against the in-memory Redis driver, plus seeding and inspecting keyspace state.'
+description: 'Patterns for unit-testing the cache, locks, rate-limit, circuit-breaker, pubsub, session, leader, semaphore, dedup, counters, and idempotency plugins against the in-memory Redis driver, plus seeding and inspecting keyspace state.'
 ---
 
 # Testing Plugins
@@ -164,6 +164,55 @@ expect(await leader.getLeaderId()).toBeNull();
 
 Simulate a second instance by constructing another `LeaderService` over the
 same `LEADER_STORE` — see the [leader testing guide](../leader/testing).
+
+## Semaphore
+
+Permit leases run for real — the acquire/extend sweep Lua included:
+
+```typescript
+import { SemaphorePlugin, SEMAPHORE_SERVICE, type ISemaphoreService } from '@nestjs-redisx/semaphore';
+
+const app = await Test.createTestingModule({
+  imports: [RedisTestingModule.forRoot({ plugins: [new SemaphorePlugin()] })],
+}).compile();
+await app.init();
+
+const semaphore = app.get<ISemaphoreService>(SEMAPHORE_SERVICE);
+const permit = await semaphore.acquire('jobs', 1);
+expect(await semaphore.tryAcquire('jobs', 1)).toBeNull(); // capacity enforced
+await permit.release();
+```
+
+Crash recovery is testable with a short TTL and `autoRenew: false` — the seat
+frees itself. See the [semaphore testing guide](../semaphore/testing).
+
+## Dedup
+
+First-wins markers and the debounce claim run through the same production
+Lua paths:
+
+```typescript
+import { DedupPlugin, DEDUP_SERVICE, type IDedupService } from '@nestjs-redisx/dedup';
+
+const dedup = app.get<IDedupService>(DEDUP_SERVICE);
+expect(await dedup.isFirst('evt:1')).toBe(true);
+expect(await dedup.isFirst('evt:1')).toBe(false); // duplicate within the window
+```
+
+See the [dedup testing guide](../dedup/testing).
+
+## Counters
+
+```typescript
+import { CountersPlugin, COUNTER_SERVICE, type ICounterService } from '@nestjs-redisx/counters';
+
+const counters = app.get<ICounterService>(COUNTER_SERVICE);
+await Promise.all(Array.from({ length: 50 }, () => counters.increment('hits')));
+expect(await counters.get('hits')).toBe(50); // nothing lost
+expect(await counters.getAndReset('hits')).toBe(50); // atomic flush
+```
+
+See the [counters testing guide](../counters/testing).
 
 ## Idempotency
 

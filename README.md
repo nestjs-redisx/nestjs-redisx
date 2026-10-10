@@ -53,6 +53,9 @@
 | **Pub/Sub** | Typed Pub/Sub | Publish/subscribe with pattern subscriptions and `@Subscribe` auto-discovery |
 | **Session** | Session Management | express-session/@fastify/session store with device page, revoke-everywhere, seat limits |
 | **Leader** | Leader Election | Run cron/singleton work on exactly one instance — @LeaderOnly, lease heartbeats, automatic failover |
+| **Semaphore** | Bounded Concurrency | At most N concurrent executions fleet-wide — permit leases, auto-renewal, @WithSemaphore |
+| **Dedup** | Deduplication / Debounce | Run webhooks and events once per window across instances — @Dedupe, distributed trailing debounce |
+| **Counters** | Atomic Counters | Fleet-wide counters, window TTLs, atomic read-and-reset, monotonic sequences |
 | **Idempotency** | Request Idempotency | Deduplication with fingerprinting and response replay |
 | **Streams** | Redis Streams | Consumer groups, dead-letter queues, and backpressure |
 | **Metrics** | Prometheus Metrics | Command latencies, cache hit rates, and custom metrics |
@@ -116,6 +119,9 @@ export class UserService {
 | [@nestjs-redisx/pubsub](https://nestjs-redisx.dev/en/reference/pubsub/) | Typed Pub/Sub with @Subscribe auto-discovery | [![npm](https://img.shields.io/npm/v/@nestjs-redisx/pubsub)](https://www.npmjs.com/package/@nestjs-redisx/pubsub) |
 | [@nestjs-redisx/session](https://nestjs-redisx.dev/en/reference/session/) | Session store + device page, revocation, seat limits, lifetime cap | [![npm](https://img.shields.io/npm/v/@nestjs-redisx/session)](https://www.npmjs.com/package/@nestjs-redisx/session) |
 | [@nestjs-redisx/leader](https://nestjs-redisx.dev/en/reference/leader/) | Leader election: singleton crons, @LeaderOnly, automatic failover | [![npm](https://img.shields.io/npm/v/@nestjs-redisx/leader)](https://www.npmjs.com/package/@nestjs-redisx/leader) |
+| [@nestjs-redisx/semaphore](https://nestjs-redisx.dev/en/reference/semaphore/) | Distributed counting semaphore: N concurrent fleet-wide, permit leases | [![npm](https://img.shields.io/npm/v/@nestjs-redisx/semaphore)](https://www.npmjs.com/package/@nestjs-redisx/semaphore) |
+| [@nestjs-redisx/dedup](https://nestjs-redisx.dev/en/reference/dedup/) | Event deduplication and distributed debounce with TTL windows | [![npm](https://img.shields.io/npm/v/@nestjs-redisx/dedup)](https://www.npmjs.com/package/@nestjs-redisx/dedup) |
+| [@nestjs-redisx/counters](https://nestjs-redisx.dev/en/reference/counters/) | Atomic counters, window counters, and monotonic sequences | [![npm](https://img.shields.io/npm/v/@nestjs-redisx/counters)](https://www.npmjs.com/package/@nestjs-redisx/counters) |
 | [@nestjs-redisx/idempotency](https://nestjs-redisx.dev/en/reference/idempotency/) | Request deduplication and response replay | [![npm](https://img.shields.io/npm/v/@nestjs-redisx/idempotency)](https://www.npmjs.com/package/@nestjs-redisx/idempotency) |
 | [@nestjs-redisx/streams](https://nestjs-redisx.dev/en/reference/streams/) | Redis Streams with consumer groups and DLQ | [![npm](https://img.shields.io/npm/v/@nestjs-redisx/streams)](https://www.npmjs.com/package/@nestjs-redisx/streams) |
 | [@nestjs-redisx/metrics](https://nestjs-redisx.dev/en/reference/metrics/) | Prometheus metrics for Redis operations | [![npm](https://img.shields.io/npm/v/@nestjs-redisx/metrics)](https://www.npmjs.com/package/@nestjs-redisx/metrics) |

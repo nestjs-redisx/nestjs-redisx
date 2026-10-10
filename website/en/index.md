@@ -1,7 +1,7 @@
 ---
 layout: home
 title: 'NestJS RedisX — Modular Redis Toolkit for NestJS'
-description: 'Production Redis toolkit for NestJS: L1+L2 cache, distributed locks, rate limiting, circuit breaker, Pub/Sub, sessions, leader election, idempotency, streams, metrics, and OpenTelemetry tracing plugins.'
+description: 'Production Redis toolkit for NestJS: L1+L2 cache, distributed locks, rate limiting, circuit breaker, Pub/Sub, sessions, leader election, semaphores, deduplication, atomic counters, idempotency, streams, metrics, and OpenTelemetry tracing plugins.'
 
 hero:
   name: "NestJS RedisX"
@@ -65,6 +65,24 @@ features:
     link: /en/reference/leader/
 
   - icon:
+      src: /icons/layers.svg
+    title: Distributed Semaphore
+    details: At most N concurrent executions fleet-wide — permit leases, auto-renewal, and the @WithSemaphore decorator with key templates.
+    link: /en/reference/semaphore/
+
+  - icon:
+      src: /icons/blocks.svg
+    title: Deduplication & Debounce
+    details: Run webhooks and queue messages once per window across instances — first-wins markers, @Dedupe, and a distributed trailing debounce.
+    link: /en/reference/dedup/
+
+  - icon:
+      src: /icons/gauge.svg
+    title: Atomic Counters
+    details: Fleet-wide counters that never lose updates — window counters with first-write TTL, atomic read-and-reset, monotonic ID sequences.
+    link: /en/reference/counters/
+
+  - icon:
       src: /icons/radio.svg
     title: Redis Streams
     details: Full Redis Streams support with consumer groups, dead letter queues, batch processing, and automatic retry with exponential backoff.
@@ -118,6 +136,9 @@ The NestJS ecosystem offers several Redis integration options. This table helps 
 | Pub/Sub Messaging | ✓ | — | — | — | Manual |
 | Session Management | ✓ | — | — | — | — |
 | Leader Election (cron singletons) | ✓ | — | — | — | — |
+| Distributed Semaphore (N concurrent) | ✓ | — | — | — | — |
+| Event Deduplication / Debounce | ✓ | — | — | — | — |
+| Atomic Counters & Sequences | ✓ | — | — | — | — |
 | Request Idempotency | ✓ | — | — | — | — |
 | Streams + Consumer Groups | ✓ | — | — | — | Manual |
 | | | | | | |
@@ -190,6 +211,9 @@ The foundation of NestJS RedisX providing:
 | [Pub/Sub](/en/reference/pubsub/) | 1.7.0 | Typed publish/subscribe with @Subscribe auto-discovery |
 | [Session](/en/reference/session/) | 1.12.0 | Session store with device page, revocation, seat limits, and lifetime cap |
 | [Leader](/en/reference/leader/) | 1.13.0 | Leader election: singleton crons with @LeaderOnly and automatic failover |
+| [Semaphore](/en/reference/semaphore/) | 1.14.0 | Distributed counting semaphore with permit leases and @WithSemaphore |
+| [Dedup](/en/reference/dedup/) | 1.14.0 | Event deduplication and distributed debounce with TTL windows |
+| [Counters](/en/reference/counters/) | 1.14.0 | Atomic counters, window counters, and monotonic sequences |
 | [Idempotency](/en/reference/idempotency/) | 1.0.0 | Request deduplication with fingerprinting and response replay |
 | [Streams](/en/reference/streams/) | 1.0.0 | Redis Streams with consumer groups and dead letter queues |
 | [Metrics](/en/reference/metrics/) | 1.0.0 | Prometheus metrics export with Grafana dashboards |

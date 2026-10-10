@@ -26,6 +26,9 @@ npm install @nestjs-redisx/circuit-breaker # Distributed circuit breaker
 npm install @nestjs-redisx/pubsub       # Typed Pub/Sub messaging
 npm install @nestjs-redisx/session      # Session management (+ express-session or @fastify/session)
 npm install @nestjs-redisx/leader       # Leader election (singleton crons/jobs, + @nestjs/schedule for @Cron)
+npm install @nestjs-redisx/semaphore    # Distributed counting semaphore (N concurrent fleet-wide)
+npm install @nestjs-redisx/dedup        # Event deduplication / distributed debounce
+npm install @nestjs-redisx/counters     # Atomic counters, window counters, sequences
 npm install @nestjs-redisx/idempotency  # Request deduplication
 npm install @nestjs-redisx/streams      # Redis Streams
 npm install @nestjs-redisx/metrics      # Prometheus metrics
@@ -693,6 +696,106 @@ Proxy-based (works on any regular @Injectable method; generator/async-generator 
 - Leadership is a lease, NOT a fence: brief overlap is possible while a demoted leader has work in flight — wrap critical sections with @WithLock for hard mutual exclusion.
 - With MetricsPlugin: `redisx_leader_elected_total{group}` and `redisx_leader_lost_total{group,reason}`.
 
+## Semaphore Plugin
+
+Bound concurrency ACROSS instances: at most N concurrent executions fleet-wide. One sorted set per semaphore (member = permit id, score = expiry); acquire sweeps expired permits and grants a seat only under capacity — all in one atomic Lua script, so a crashed holder frees its seat after the TTL with no background job. The semaphore key carries a PEXPIRE at least as long as its longest permit (no residue). Single-key — cluster-safe without hash tags. Runs fully on the in-memory testing driver. A lock is the special case permits=1 — use @nestjs-redisx/locks for mutual exclusion.
+
+### SemaphorePlugin Configuration
+
+```typescript
+new SemaphorePlugin({
+  client: 'default',      // named Redis client
+  keyPrefix: '_sem:',     // semaphore key = `${keyPrefix}${key}`
+  defaultTtl: 30_000,     // permit lease; crash-recovery bound (capped by maxTtl)
+  maxTtl: 300_000,        // hard cap for defaultTtl and per-call ttl
+  retry: { maxRetries: 3, initialDelay: 100, maxDelay: 3_000, multiplier: 2 },
+  autoRenew: { enabled: true, intervalFraction: 0.5 }, // renew every ttl*fraction; fraction strictly in (0,1)
+})
+```
+
+Fail-fast validation on sync + registerAsync paths AND in the service constructor (hand-wired services included).
+
+### @WithSemaphore Decorator
+
+```typescript
+@Injectable()
+export class EncodingService {
+  // At most 2 encodes at a time across EVERY instance
+  @WithSemaphore({ key: 'video:encode', permits: 2, ttl: 600_000 })
+  async encode(videoId: string) {}
+
+  // Per-tenant bound; saturation skips instead of throwing
+  @WithSemaphore({ key: 'export:{0}', permits: 1, waitTimeout: 5_000, onUnavailable: 'skip' })
+  async exportTenant(tenantId: string) {}
+}
+```
+
+- `key`: string with `{n}` argument templates, or a `(...args) => string` builder.
+- `permits` travels with the call and MUST be the same for every caller of a key (the store enforces whatever the acquiring call provides).
+- `onUnavailable`: `'throw'` (default, SemaphoreAcquisitionError) | `'skip'` (resolve undefined) | `(key) => Error`. Applies ONLY to acquisition; method errors always propagate and the permit is always released.
+- Without the plugin the method executes WITHOUT a bound (warning) — fail-open.
+- Metadata stamped by decorators below it is carried onto the wrapper — both orders with @Cron are safe.
+
+Semantics: acquire retries with exponential backoff bounded by `waitTimeout`; permits auto-renew while held and renewal stops the moment a permit is lost; `permit.release()` throws `SemaphorePermitNotHeldError` when the seat expired before the work finished (the bound was NOT held — raise ttl or enable renewal); graceful shutdown releases every held permit so waiters take over immediately. Metrics (with MetricsPlugin): `redisx_semaphore_acquisitions_total{status}`, `redisx_semaphore_wait_duration_seconds`, `redisx_semaphore_hold_duration_seconds`, `redisx_semaphore_permits_active`. Tracing: a `semaphore.acquire` span per acquisition.
+
+## Dedup Plugin
+
+Run webhooks, queue messages, and user actions ONCE per window across the fleet. First-wins markers: `SET NX PX` with an owner token — exactly one winner per key per window. A THROWN first execution releases its own marker via CAS Lua (a newer marker is never erased), so retries are not locked out; a crash leaves the marker until the TTL. Distinct from idempotency: nothing is stored or replayed — for response replay with fingerprints use @nestjs-redisx/idempotency.
+
+### DedupPlugin Configuration
+
+```typescript
+new DedupPlugin({
+  client: 'default',
+  keyPrefix: '_dedup:',
+  defaultWindow: 60_000,      // repeats within this window are duplicates
+  errorPolicy: 'fail-open',   // gates on store outage: 'fail-open' run anyway (loud) | 'fail-closed' throw DedupStoreError
+})
+```
+
+### @Dedupe Decorator
+
+```typescript
+@Injectable()
+export class WebhookService {
+  // Each event id handled once per 5 minutes, fleet-wide; duplicates resolve undefined
+  @Dedupe({ key: 'stripe:{0}', window: 300_000 })
+  async handleStripeEvent(eventId: string, payload: unknown) {}
+}
+```
+
+Without the plugin the method executes WITHOUT deduplication (warning) — fail-open. Metadata carry-over keeps @Cron below it registered.
+
+### Distributed Debounce
+
+`debounce(key, fn, { window })` — every call stamps itself as the LAST caller; after the quiet window the still-last caller claims the slot atomically (CAS + delete) and executes; superseded calls resolve undefined. The returned promise settles AFTER the window. The pending timer is in-process and unref'd: if the last-calling instance dies before the window elapses the round does not execute (best-effort, like a local debounce — the next call starts a new round).
+
+Semantics: `isFirst`/`release` are STRICT (store failures always throw DedupStoreError); `dedupe`/`debounce`/@Dedupe are gates following errorPolicy. Metrics: `redisx_dedup_checks_total{outcome='first'|'duplicate'}`.
+
+## Counters Plugin
+
+Fleet-wide atomic counters that never lose updates, window counters that expire on their own, and monotonic sequences. Every mutation is a single atomic Redis operation. Strict inputs: amounts must be non-zero safe integers; a counter key holding a non-numeric value throws CounterValueError (code OP_TYPE_MISMATCH) instead of returning NaN.
+
+### CountersPlugin Configuration
+
+```typescript
+new CountersPlugin({
+  client: 'default',
+  keyPrefix: '_ctr:',
+})
+```
+
+### Usage
+
+```typescript
+await counters.increment(`views:${articleId}`);                                  // atomic, fleet-wide
+await counters.increment(`api:${userId}:${today}`, 1, { ttl: 86_400_000 });      // window: TTL only when the increment CREATES the key
+const sent = await counters.getAndReset('emails:batch');                         // atomic read-and-zero (flush aggregation)
+const invoiceNo = await counters.next('seq:invoices');                           // monotonic sequence: 1, 2, 3, ... (never a TTL)
+```
+
+Window semantics (atomic Lua: INCRBY + PTTL < 0 -> PEXPIRE): the window is anchored to the FIRST write — later increments never extend it. Sequences are monotonic and collision-free but NOT gapless (a crashed consumer abandons its value). Counters go negative freely. Not for request-rate enforcement (use rate-limit) or concurrency bounds (use semaphore).
+
 ## Idempotency Plugin
 
 Request deduplication for payments, order creation, and mutations. Ensures operations execute exactly once even when clients retry.
@@ -858,7 +961,7 @@ Each Redis command span includes: `db.system: "redis"`, `db.operation`, `db.stat
 
 ## Testing Utilities
 
-`@nestjs-redisx/testing` provides an in-memory Redis driver so you can unit-test code that uses the cache, locks, rate-limit, circuit-breaker, pubsub, session, leader, idempotency, and streams plugins **without a running Redis**. The plugins run their real production code — including their Lua scripts, stream consumer groups, and Pub/Sub subscriptions — against an in-memory keyspace. Install it as a devDependency: `npm install -D @nestjs-redisx/testing`.
+`@nestjs-redisx/testing` provides an in-memory Redis driver so you can unit-test code that uses the cache, locks, rate-limit, circuit-breaker, pubsub, session, leader, semaphore, dedup, counters, idempotency, and streams plugins **without a running Redis**. The plugins run their real production code — including their Lua scripts, stream consumer groups, and Pub/Sub subscriptions — against an in-memory keyspace. Install it as a devDependency: `npm install -D @nestjs-redisx/testing`.
 
 ### RedisTestingModule (recommended)
 
@@ -992,6 +1095,39 @@ The promise-based store behind the middleware adapters is exported as `SESSION_S
 - `runIfLeader<T>(fn: () => T | Promise<T>, group?: string): Promise<T | undefined>` — execute fn only when leading; undefined otherwise.
 - `stepDown(group?: string): Promise<void>` — release the lease + one-ttlMs candidacy cooldown; emits onLost(group, 'stepdown').
 - `getGroups(): string[]` — groups with running elections on this instance.
+
+### Semaphore — `SEMAPHORE_SERVICE` (`ISemaphoreService`)
+
+- `acquire(key: string, permits: number, options?: ISemaphoreOptions): Promise<ISemaphorePermit>` — acquire a permit with exponential-backoff retry; throws `SemaphoreAcquisitionError` when the retry budget or `waitTimeout` runs out.
+- `tryAcquire(key: string, permits: number, options?: ISemaphoreOptions): Promise<ISemaphorePermit | null>` — single attempt; null when the semaphore is full.
+- `withPermit<T>(key: string, permits: number, fn: () => Promise<T>, options?: ISemaphoreOptions): Promise<T>` — acquire, run, always release (method errors propagate).
+- `usedPermits(key: string): Promise<number>` — live (unexpired) holders.
+- `availablePermits(key: string, permits: number): Promise<number>` — `permits − used`, never below 0.
+- `forceReleaseAll(key: string): Promise<number>` — admin: free every seat; in-flight holders keep running, their release becomes a no-op.
+
+The permit (`ISemaphorePermit`): `release()` (idempotent; throws `SemaphorePermitNotHeldError` when the seat was already lost), `extend(ttl)` (throws `SemaphoreExtensionError` when expired), `isHeld()`, `stopAutoRenew()`, plus `key`/`permitId`/`ttl`/`acquiredAt`/`expiresAt`/`isAutoRenewing`. Errors: `SemaphoreError` base, `SemaphoreAcquisitionError`, `SemaphorePermitNotHeldError`, `SemaphoreExtensionError`, `InvalidSemaphoreConfigError`.
+
+### Dedup — `DEDUP_SERVICE` (`IDedupService`)
+
+- `isFirst(key: string, options?: IDedupOptions): Promise<boolean>` — atomically mark-and-check; true exactly once per window across all instances; STRICT (store failures throw `DedupStoreError`).
+- `dedupe<T>(key: string, fn: () => Promise<T>, options?: IDedupOptions): Promise<T | undefined>` — run fn for the first occurrence only; duplicates resolve undefined; a thrown fn releases this caller's marker (retry re-admitted); gate — follows errorPolicy.
+- `debounce<T>(key: string, fn: () => Promise<T>, options?: IDebounceOptions): Promise<T | undefined>` — distributed trailing debounce: executes on the LAST caller after the quiet window; superseded calls resolve undefined; gate — follows errorPolicy.
+- `release(key: string): Promise<boolean>` — remove a marker early (manual/admin); STRICT.
+
+Errors: `DedupError` base, `InvalidDedupConfigError`, `DedupStoreError`.
+
+### Counters — `COUNTER_SERVICE` (`ICounterService`)
+
+- `increment(key: string, by?: number, options?: ICounterOptions): Promise<number>` — atomic add (default 1); with `options.ttl` the TTL applies only when the increment CREATES the key (window counter); returns the new value.
+- `decrement(key: string, by?: number, options?: ICounterOptions): Promise<number>` — atomic subtract; counters go negative freely.
+- `get(key: string): Promise<number>` — current value; 0 when absent; throws `CounterValueError` on a non-numeric key.
+- `set(key: string, value: number, options?: ICounterOptions): Promise<void>` — absolute assignment (safe integer), optional TTL.
+- `reset(key: string): Promise<boolean>` — delete; true when a counter existed.
+- `getAndReset(key: string): Promise<number>` — atomic read-and-zero (Lua); 0 when absent.
+- `next(sequence: string): Promise<number>` — monotonic fleet-wide sequence value (INCR, never a TTL).
+- `current(sequence: string): Promise<number>` — last issued value; 0 before the first next().
+
+Errors: `CounterError` base, `InvalidCounterConfigError`, `CounterValueError` (OP_TYPE_MISMATCH).
 
 ### Idempotency — `IDEMPOTENCY_SERVICE` (`IIdempotencyService`)
 
@@ -1135,6 +1271,12 @@ export class JobWorker {
 | Payment processing | Idempotency + Locks |
 | Cron job on multiple instances | Leader (@LeaderOnly; use Locks to fence critical sections) |
 | Singleton jobs / migrations / cleanup across a fleet | Leader |
+| "At most N concurrent" (worker pools, fragile dependencies) | Semaphore |
+| One export/import per tenant at a time | Semaphore (permits: 1 per-tenant key) |
+| Webhook redelivery / at-least-once queue consumers | Dedup (use Idempotency when the caller needs the response replayed) |
+| Collapse a burst into one execution | Dedup (debounce) |
+| Page views / usage quotas / live stats | Counters |
+| Fleet-wide ID generation | Counters (sequences) |
 | "Log out everywhere" / device page / session seat limits | Session |
 | PCI DSS forced re-login window | Session |
 | API abuse protection | Rate Limit |
@@ -1149,10 +1291,10 @@ export class JobWorker {
 
 ## Key Architecture Decisions
 
-- **Proxy-based decorators**: @Cached, @WithLock, @WithCircuitBreaker, @LeaderOnly work on any regular @Injectable() method, not just controllers (@LeaderOnly rejects generator methods at class load). NestJS Interceptors only work on controller methods, so RedisX uses immediate method wrapping with lazy service injection.
+- **Proxy-based decorators**: @Cached, @WithLock, @WithCircuitBreaker, @LeaderOnly, @WithSemaphore, @Dedupe work on any regular @Injectable() method, not just controllers (@LeaderOnly rejects generator methods at class load). NestJS Interceptors only work on controller methods, so RedisX uses immediate method wrapping with lazy service injection. Every wrapper carries over metadata stamped by decorators below it, so writing one of them above @Cron never unregisters the job.
 - **Plugin isolation**: Each plugin is a self-contained NestJS module. Import only what you need.
 - **Driver abstraction**: Both ioredis and node-redis supported through adapter pattern. Switch without code changes.
-- **Atomic operations**: Rate limiting, locks, idempotency, sessions, leader election, and the circuit breaker use Lua scripts for atomicity.
+- **Atomic operations**: Rate limiting, locks, idempotency, sessions, leader election, semaphores, dedup, counters, and the circuit breaker use Lua scripts for atomicity.
 - **Per-route rate-limit stores**: the rate limit plugin registers a distributed (redis) and a per-instance (memory) store side by side; the plugin sets the default and every route/call can pick the other one — zero-latency anti-abuse limiting on bulk traffic, exact shared counters on sensitive routes.
 - **No external dependencies**: Each plugin has zero npm dependencies beyond NestJS and the Redis driver. The session plugin's middleware adapters treat `express-session`/`@fastify/session` as optional peers (loaded lazily). The two observability plugins are the deliberate exceptions: metrics uses `prom-client` (peer dependency, shared with the application), tracing uses `@opentelemetry/api` plus the OTel SDK loaded lazily only for the standalone provider mode.
 - **Global module**: RedisModule is global — import once in AppModule, inject anywhere.

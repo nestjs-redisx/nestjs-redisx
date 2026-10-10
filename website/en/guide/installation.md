@@ -125,6 +125,15 @@ npm install @fastify/cookie @fastify/session  # fastify
 
 ```bash
 npm install @nestjs-redisx/leader
+
+# Distributed semaphore
+npm install @nestjs-redisx/semaphore
+
+# Event deduplication / debounce
+npm install @nestjs-redisx/dedup
+
+# Atomic counters and sequences
+npm install @nestjs-redisx/counters
 # optional, for @Cron-based singletons:
 npm install @nestjs/schedule
 ```
@@ -155,37 +164,37 @@ For applications requiring all features:
 
 ```bash [npm (ioredis)]
 npm install @nestjs-redisx/core @nestjs-redisx/cache @nestjs-redisx/locks \
-  @nestjs-redisx/rate-limit @nestjs-redisx/circuit-breaker @nestjs-redisx/pubsub @nestjs-redisx/session @nestjs-redisx/leader @nestjs-redisx/idempotency @nestjs-redisx/streams \
+  @nestjs-redisx/rate-limit @nestjs-redisx/circuit-breaker @nestjs-redisx/pubsub @nestjs-redisx/session @nestjs-redisx/leader @nestjs-redisx/semaphore @nestjs-redisx/dedup @nestjs-redisx/counters @nestjs-redisx/idempotency @nestjs-redisx/streams \
   @nestjs-redisx/metrics @nestjs-redisx/tracing ioredis
 ```
 
 ```bash [npm (node-redis)]
 npm install @nestjs-redisx/core @nestjs-redisx/cache @nestjs-redisx/locks \
-  @nestjs-redisx/rate-limit @nestjs-redisx/circuit-breaker @nestjs-redisx/pubsub @nestjs-redisx/session @nestjs-redisx/leader @nestjs-redisx/idempotency @nestjs-redisx/streams \
+  @nestjs-redisx/rate-limit @nestjs-redisx/circuit-breaker @nestjs-redisx/pubsub @nestjs-redisx/session @nestjs-redisx/leader @nestjs-redisx/semaphore @nestjs-redisx/dedup @nestjs-redisx/counters @nestjs-redisx/idempotency @nestjs-redisx/streams \
   @nestjs-redisx/metrics @nestjs-redisx/tracing redis
 ```
 
 ```bash [yarn (ioredis)]
 yarn add @nestjs-redisx/core @nestjs-redisx/cache @nestjs-redisx/locks \
-  @nestjs-redisx/rate-limit @nestjs-redisx/circuit-breaker @nestjs-redisx/pubsub @nestjs-redisx/session @nestjs-redisx/leader @nestjs-redisx/idempotency @nestjs-redisx/streams \
+  @nestjs-redisx/rate-limit @nestjs-redisx/circuit-breaker @nestjs-redisx/pubsub @nestjs-redisx/session @nestjs-redisx/leader @nestjs-redisx/semaphore @nestjs-redisx/dedup @nestjs-redisx/counters @nestjs-redisx/idempotency @nestjs-redisx/streams \
   @nestjs-redisx/metrics @nestjs-redisx/tracing ioredis
 ```
 
 ```bash [yarn (node-redis)]
 yarn add @nestjs-redisx/core @nestjs-redisx/cache @nestjs-redisx/locks \
-  @nestjs-redisx/rate-limit @nestjs-redisx/circuit-breaker @nestjs-redisx/pubsub @nestjs-redisx/session @nestjs-redisx/leader @nestjs-redisx/idempotency @nestjs-redisx/streams \
+  @nestjs-redisx/rate-limit @nestjs-redisx/circuit-breaker @nestjs-redisx/pubsub @nestjs-redisx/session @nestjs-redisx/leader @nestjs-redisx/semaphore @nestjs-redisx/dedup @nestjs-redisx/counters @nestjs-redisx/idempotency @nestjs-redisx/streams \
   @nestjs-redisx/metrics @nestjs-redisx/tracing redis
 ```
 
 ```bash [pnpm (ioredis)]
 pnpm add @nestjs-redisx/core @nestjs-redisx/cache @nestjs-redisx/locks \
-  @nestjs-redisx/rate-limit @nestjs-redisx/circuit-breaker @nestjs-redisx/pubsub @nestjs-redisx/session @nestjs-redisx/leader @nestjs-redisx/idempotency @nestjs-redisx/streams \
+  @nestjs-redisx/rate-limit @nestjs-redisx/circuit-breaker @nestjs-redisx/pubsub @nestjs-redisx/session @nestjs-redisx/leader @nestjs-redisx/semaphore @nestjs-redisx/dedup @nestjs-redisx/counters @nestjs-redisx/idempotency @nestjs-redisx/streams \
   @nestjs-redisx/metrics @nestjs-redisx/tracing ioredis
 ```
 
 ```bash [pnpm (node-redis)]
 pnpm add @nestjs-redisx/core @nestjs-redisx/cache @nestjs-redisx/locks \
-  @nestjs-redisx/rate-limit @nestjs-redisx/circuit-breaker @nestjs-redisx/pubsub @nestjs-redisx/session @nestjs-redisx/leader @nestjs-redisx/idempotency @nestjs-redisx/streams \
+  @nestjs-redisx/rate-limit @nestjs-redisx/circuit-breaker @nestjs-redisx/pubsub @nestjs-redisx/session @nestjs-redisx/leader @nestjs-redisx/semaphore @nestjs-redisx/dedup @nestjs-redisx/counters @nestjs-redisx/idempotency @nestjs-redisx/streams \
   @nestjs-redisx/metrics @nestjs-redisx/tracing redis
 ```
 

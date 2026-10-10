@@ -140,7 +140,7 @@ jobs:
           TARBALLS_DIR=$(mktemp -d)
           echo "TARBALLS_DIR=$TARBALLS_DIR" >> $GITHUB_ENV
 
-          for pkg in core cache locks rate-limit circuit-breaker pubsub idempotency streams metrics tracing session leader testing; do
+          for pkg in core cache locks rate-limit circuit-breaker pubsub idempotency streams metrics tracing session leader semaphore dedup counters testing; do
             echo "Packing @nestjs-redisx/$pkg..."
             cd packages/$pkg
             npm pack --pack-destination "$TARBALLS_DIR"
@@ -171,6 +171,9 @@ jobs:
             "$TARBALLS_DIR"/nestjs-redisx-tracing-*.tgz \
             "$TARBALLS_DIR"/nestjs-redisx-session-*.tgz \
             "$TARBALLS_DIR"/nestjs-redisx-leader-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-semaphore-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-dedup-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-counters-*.tgz \
             "$TARBALLS_DIR"/nestjs-redisx-testing-*.tgz \
             @nestjs/common@^10.3.0 \
             @nestjs/core@^10.3.0 \
@@ -257,6 +260,26 @@ jobs:
               expect(leader.LeaderPlugin).toBeDefined();
               expect(leader.LeaderService).toBeDefined();
               expect(leader.LeaderOnly).toBeDefined();
+            });
+
+            it('should import semaphore exports', async () => {
+              const semaphore = await import('@nestjs-redisx/semaphore');
+              expect(semaphore.SemaphorePlugin).toBeDefined();
+              expect(semaphore.SemaphoreService).toBeDefined();
+              expect(semaphore.WithSemaphore).toBeDefined();
+            });
+
+            it('should import dedup exports', async () => {
+              const dedup = await import('@nestjs-redisx/dedup');
+              expect(dedup.DedupPlugin).toBeDefined();
+              expect(dedup.DedupService).toBeDefined();
+              expect(dedup.Dedupe).toBeDefined();
+            });
+
+            it('should import counters exports', async () => {
+              const counters = await import('@nestjs-redisx/counters');
+              expect(counters.CountersPlugin).toBeDefined();
+              expect(counters.CounterService).toBeDefined();
             });
 
             it('should import testing exports', async () => {
@@ -347,6 +370,9 @@ jobs:
             "$TARBALLS_DIR"/nestjs-redisx-tracing-*.tgz \
             "$TARBALLS_DIR"/nestjs-redisx-session-*.tgz \
             "$TARBALLS_DIR"/nestjs-redisx-leader-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-semaphore-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-dedup-*.tgz \
+            "$TARBALLS_DIR"/nestjs-redisx-counters-*.tgz \
             "$TARBALLS_DIR"/nestjs-redisx-testing-*.tgz \
             @nestjs/common@^12.0.0 \
             @nestjs/core@^12.0.0 \
@@ -376,9 +402,12 @@ jobs:
             tracing: await import('@nestjs-redisx/tracing'),
             session: await import('@nestjs-redisx/session'),
             leader: await import('@nestjs-redisx/leader'),
+            semaphore: await import('@nestjs-redisx/semaphore'),
+            dedup: await import('@nestjs-redisx/dedup'),
+            counters: await import('@nestjs-redisx/counters'),
             testing: await import('@nestjs-redisx/testing'),
           };
-          check('all 13 packages import as ESM', Object.values(mods).every((m) => Object.keys(m).length > 0));
+          check('all 16 packages import as ESM', Object.values(mods).every((m) => Object.keys(m).length > 0));
           check('core exports RedisModule', typeof mods.core.RedisModule === 'function');
 
           // The ESM bundle must not carry static driver imports: with NO
@@ -447,7 +476,7 @@ jobs:
 
       - name: Check published types resolution (attw)
         run: |
-          for pkg in core cache locks rate-limit circuit-breaker pubsub idempotency streams metrics tracing session leader testing; do
+          for pkg in core cache locks rate-limit circuit-breaker pubsub idempotency streams metrics tracing session leader semaphore dedup counters testing; do
             echo "attw @nestjs-redisx/$pkg"
             npx --yes @arethetypeswrong/cli --pack packages/$pkg
           done

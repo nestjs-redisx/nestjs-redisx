@@ -78,6 +78,9 @@ Self-contained feature modules for common Redis use cases.
 | [Pub/Sub](./pubsub/) | Typed publish/subscribe with @Subscribe auto-discovery |
 | [Session](./session/) | Session store for express/fastify with device page, revocation, seat limits |
 | [Leader](./leader/) | Leader election — run cron/singleton work on exactly one instance |
+| [Semaphore](./semaphore/) | Distributed counting semaphore — at most N concurrent executions fleet-wide |
+| [Dedup](./dedup/) | Event deduplication and distributed debounce — once per window across instances |
+| [Counters](./counters/) | Atomic counters, window counters, and monotonic sequences |
 | [Idempotency](./idempotency/) | Request deduplication with response replay |
 | [Streams](./streams/) | Redis Streams with consumer groups |
 | [Metrics](./metrics/) | Prometheus metrics export |

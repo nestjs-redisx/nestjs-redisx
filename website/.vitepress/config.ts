@@ -74,7 +74,7 @@ export default withMermaid(
         idempotency: 'Idempotency', streams: 'Streams', metrics: 'Metrics',
         tracing: 'Tracing', testing: 'Testing', plugins: 'Plugins',
         'circuit-breaker': 'Circuit Breaker', pubsub: 'Pub/Sub', session: 'Session',
-        leader: 'Leader Election',
+        leader: 'Leader Election', semaphore: 'Semaphore', dedup: 'Dedup', counters: 'Counters',
       };
       const parts = slug.split('/').filter(Boolean);
       if (parts.length >= 2) {
@@ -417,6 +417,44 @@ export default withMermaid(
               { text: 'Testing', link: '/en/reference/leader/testing' },
               { text: 'Recipes', link: '/en/reference/leader/recipes' },
               { text: 'Troubleshooting', link: '/en/reference/leader/troubleshooting' },
+            ],
+          },
+          {
+            text: 'Semaphore',
+            collapsed: true,
+            items: [
+              { text: 'Overview', link: '/en/reference/semaphore/' },
+              { text: 'Configuration', link: '/en/reference/semaphore/configuration' },
+              { text: 'Service API', link: '/en/reference/semaphore/service-api' },
+              { text: '@WithSemaphore Decorator', link: '/en/reference/semaphore/decorator' },
+              { text: 'Recipes', link: '/en/reference/semaphore/recipes' },
+              { text: 'Testing', link: '/en/reference/semaphore/testing' },
+              { text: 'Troubleshooting', link: '/en/reference/semaphore/troubleshooting' },
+            ],
+          },
+          {
+            text: 'Dedup',
+            collapsed: true,
+            items: [
+              { text: 'Overview', link: '/en/reference/dedup/' },
+              { text: 'Configuration', link: '/en/reference/dedup/configuration' },
+              { text: 'Service API', link: '/en/reference/dedup/service-api' },
+              { text: '@Dedupe Decorator', link: '/en/reference/dedup/decorator' },
+              { text: 'Recipes', link: '/en/reference/dedup/recipes' },
+              { text: 'Testing', link: '/en/reference/dedup/testing' },
+              { text: 'Troubleshooting', link: '/en/reference/dedup/troubleshooting' },
+            ],
+          },
+          {
+            text: 'Counters',
+            collapsed: true,
+            items: [
+              { text: 'Overview', link: '/en/reference/counters/' },
+              { text: 'Configuration', link: '/en/reference/counters/configuration' },
+              { text: 'Service API', link: '/en/reference/counters/service-api' },
+              { text: 'Recipes', link: '/en/reference/counters/recipes' },
+              { text: 'Testing', link: '/en/reference/counters/testing' },
+              { text: 'Troubleshooting', link: '/en/reference/counters/troubleshooting' },
             ],
           },
           {
