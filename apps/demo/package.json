@@ -41,9 +41,9 @@
     "fastify": "^4.28.0",
     "@nestjs-redisx/leader": "^1.0.0",
     "@nestjs/schedule": "^4.1.0",
-    "@nestjs-redisx/semaphore": "1.13.0",
-    "@nestjs-redisx/dedup": "1.13.0",
-    "@nestjs-redisx/counters": "1.13.0"
+    "@nestjs-redisx/semaphore": "^1.0.0",
+    "@nestjs-redisx/dedup": "^1.0.0",
+    "@nestjs-redisx/counters": "^1.0.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",

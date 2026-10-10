@@ -1,6 +1,6 @@
 {
   "name": "@nestjs-redisx/counters",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "description": "Atomic counters and sequences plugin for NestJS RedisX — fleet-wide increments, window counters with first-write TTL, and monotonic ID sequences",
   "author": "NestJS RedisX Team",
   "license": "MIT",
@@ -66,7 +66,7 @@
     "rxjs": "^7.8.0"
   },
   "devDependencies": {
-    "@nestjs-redisx/testing": "^1.13.0",
+    "@nestjs-redisx/testing": "^1.14.0",
     "@nestjs/testing": "^9.0.0 || ^10.0.0 || ^11.0.0",
     "@types/node": "^20.0.0",
     "@vitest/coverage-v8": "^1.6.0",
