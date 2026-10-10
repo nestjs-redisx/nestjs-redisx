@@ -12,6 +12,7 @@ import { SessionPlugin, SESSION_SERVICE, SESSION_STORE, SessionLimitExceededErro
 import { LeaderPlugin, LEADER_SERVICE, type ILeaderService } from '@nestjs-redisx/leader';
 import { SemaphorePlugin, SEMAPHORE_SERVICE, type ISemaphoreService } from '@nestjs-redisx/semaphore';
 import { DedupPlugin, DEDUP_SERVICE, type IDedupService } from '@nestjs-redisx/dedup';
+import { CountersPlugin, COUNTER_SERVICE, type ICounterService } from '@nestjs-redisx/counters';
 
 import { RedisTestingModule } from '../../src';
 import { MEMORY_DRIVER_TYPE } from '../../src';
@@ -821,6 +822,38 @@ describe('Plugins on the in-memory driver (no Redis)', () => {
         }),
       ).rejects.toThrow('transient');
       expect(await dedup.dedupe('mem:retry', async () => 'second-try')).toBe('second-try');
+    });
+  });
+
+  describe('CountersPlugin', () => {
+    it('counts atomically, applies the first-write window TTL, and flushes via getAndReset (Lua on the memory interpreter)', async () => {
+      // Given
+      app = await Test.createTestingModule({
+        imports: [
+          RedisModule.forRoot({
+            clients: { type: 'single', host: 'x', port: 1 },
+            global: { driver: MEMORY_DRIVER_TYPE },
+            plugins: [new CountersPlugin()],
+          }),
+        ],
+      }).compile();
+      await app.init();
+      const counters = app.get<ICounterService>(COUNTER_SERVICE);
+
+      // When — concurrent increments
+      await Promise.all(Array.from({ length: 20 }, () => counters.increment('mem:hits')));
+
+      // Then — nothing lost
+      expect(await counters.get('mem:hits')).toBe(20);
+
+      // And flush-style consumption zeroes atomically
+      expect(await counters.getAndReset('mem:hits')).toBe(20);
+      expect(await counters.get('mem:hits')).toBe(0);
+
+      // And sequences are monotonic
+      expect(await counters.next('mem:seq')).toBe(1);
+      expect(await counters.next('mem:seq')).toBe(2);
+      expect(await counters.current('mem:seq')).toBe(2);
     });
   });
 });
