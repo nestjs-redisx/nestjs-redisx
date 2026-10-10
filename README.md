@@ -32,7 +32,7 @@
 
 ## Quality
 
-- 2k+ tests across unit, integration, and E2E
+- 3,700+ tests across unit, integration, and E2E
 - Coverage tracked via [Codecov](https://codecov.io/gh/nestjs-redisx/nestjs-redisx)
 - Pack-test validates every package installs and works from tarball
 - Compatibility tested across Node 18/20/22/24, NestJS 10/11/12, Redis 6.2/7.x — dual CJS + ESM build (native-ESM NestJS 12 works out of the box)
@@ -134,13 +134,20 @@ export class UserService {
 |--|:------:|:---------------------:|:------------------------:|:-------:|
 | L1+L2 Cache | **Yes** | - | - | - |
 | Stampede Protection | **Yes** | - | - | - |
+| SWR + Tag Invalidation | **Yes** | - | - | - |
 | Distributed Locks | **Yes** | - | - | Manual |
 | Rate Limiting | **Yes** | - | - | - |
 | Circuit Breaker | **Yes** | - | - | - |
 | Pub/Sub | **Yes** | - | - | Manual |
 | Session Management | **Yes** | - | - | - |
+| Leader Election | **Yes** | - | - | - |
+| Distributed Semaphore | **Yes** | - | - | - |
+| Deduplication / Debounce | **Yes** | - | - | Manual |
+| Atomic Counters & Sequences | **Yes** | - | - | Manual |
 | Idempotency | **Yes** | - | - | - |
+| Streams + Consumer Groups | **Yes** | - | - | Manual |
 | Prometheus + OTel | **Yes** | - | - | - |
+| In-memory Test Driver (no Redis) | **Yes** | - | - | - |
 
 [Full comparison](https://nestjs-redisx.dev/en/#ecosystem-comparison)
 
