@@ -11,6 +11,7 @@ import { StreamsPlugin, STREAM_PRODUCER, STREAM_CONSUMER, type IStreamProducer, 
 import { SessionPlugin, SESSION_SERVICE, SESSION_STORE, SessionLimitExceededError, type ISessionService, type ISessionStore } from '@nestjs-redisx/session';
 import { LeaderPlugin, LEADER_SERVICE, type ILeaderService } from '@nestjs-redisx/leader';
 import { SemaphorePlugin, SEMAPHORE_SERVICE, type ISemaphoreService } from '@nestjs-redisx/semaphore';
+import { DedupPlugin, DEDUP_SERVICE, type IDedupService } from '@nestjs-redisx/dedup';
 
 import { RedisTestingModule } from '../../src';
 import { MEMORY_DRIVER_TYPE } from '../../src';
@@ -788,6 +789,38 @@ describe('Plugins on the in-memory driver (no Redis)', () => {
       const takeover = await semaphore.tryAcquire('mem:crashy', 1);
       expect(takeover).not.toBeNull();
       await takeover!.release();
+    });
+  });
+
+  describe('DedupPlugin', () => {
+    it('admits exactly one first per window and re-opens after a failed first (CAS Lua on the memory interpreter)', async () => {
+      // Given
+      app = await Test.createTestingModule({
+        imports: [
+          RedisModule.forRoot({
+            clients: { type: 'single', host: 'x', port: 1 },
+            global: { driver: MEMORY_DRIVER_TYPE },
+            plugins: [new DedupPlugin({ defaultWindow: 2_000 })],
+          }),
+        ],
+      }).compile();
+      await app.init();
+      const dedup = app.get<IDedupService>(DEDUP_SERVICE);
+
+      // When — concurrent duplicates of the same event
+      const results = await Promise.all(Array.from({ length: 4 }, () => dedup.dedupe('mem:evt', async () => 'ran')));
+
+      // Then — exactly one execution
+      expect(results.filter((r) => r === 'ran')).toHaveLength(1);
+      expect(results.filter((r) => r === undefined)).toHaveLength(3);
+
+      // And a failed first re-opens the window for a retry
+      await expect(
+        dedup.dedupe('mem:retry', async () => {
+          throw new Error('transient');
+        }),
+      ).rejects.toThrow('transient');
+      expect(await dedup.dedupe('mem:retry', async () => 'second-try')).toBe('second-try');
     });
   });
 });

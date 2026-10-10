@@ -45,6 +45,8 @@ export default defineConfig({
       '@nestjs-redisx/session': resolve(__dirname, './packages/session/src'),
       '@nestjs-redisx/leader': resolve(__dirname, './packages/leader/src'),
       '@nestjs-redisx/semaphore': resolve(__dirname, './packages/semaphore/src'),
+      '@nestjs-redisx/dedup': resolve(__dirname, './packages/dedup/src'),
+      '@nestjs-redisx/counters': resolve(__dirname, './packages/counters/src'),
       '@nestjs-redisx/testing': resolve(__dirname, './packages/testing/src'),
     },
   },

@@ -32,6 +32,8 @@ export default defineConfig({
       '@nestjs-redisx/pubsub': resolve(__dirname, './packages/pubsub/src'),
       '@nestjs-redisx/session': resolve(__dirname, './packages/session/src'),
       '@nestjs-redisx/semaphore': resolve(__dirname, './packages/semaphore/src'),
+      '@nestjs-redisx/dedup': resolve(__dirname, './packages/dedup/src'),
+      '@nestjs-redisx/counters': resolve(__dirname, './packages/counters/src'),
       // Must resolve to source too: the in-memory driver registers itself into
       // core's driver registry, and that registration must land in the SAME
       // core instance the tests use (aliased above) — otherwise memory-driver

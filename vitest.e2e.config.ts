@@ -29,6 +29,8 @@ export default defineConfig({
       '@nestjs-redisx/tracing': resolve(__dirname, './packages/tracing/src'),
       '@nestjs-redisx/session': resolve(__dirname, './packages/session/src'),
       '@nestjs-redisx/semaphore': resolve(__dirname, './packages/semaphore/src'),
+      '@nestjs-redisx/dedup': resolve(__dirname, './packages/dedup/src'),
+      '@nestjs-redisx/counters': resolve(__dirname, './packages/counters/src'),
     },
   },
 });
