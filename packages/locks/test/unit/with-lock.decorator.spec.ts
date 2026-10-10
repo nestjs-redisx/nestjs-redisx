@@ -481,5 +481,28 @@ describe('@WithLock Decorator', () => {
       expect(Reflect.getMetadata(CRON_METADATA, wrapper)).toBe('0 3 * * *');
       expect(Reflect.getMetadata(WITH_LOCK_OPTIONS, wrapper)).toEqual({ key: 'carry:lock' });
     });
+
+    it('should carry metadata through a STACK of proxy decorators (two wrappers above @Cron)', () => {
+      // Given — cron metadata on the original, then TWO proxy wrappers on top
+      const CRON_METADATA = 'test:schedule-expression';
+      class StackedHost {
+        async job(): Promise<string> {
+          return 'ran';
+        }
+      }
+      const descriptor = Object.getOwnPropertyDescriptor(StackedHost.prototype, 'job')!;
+      Reflect.defineMetadata(CRON_METADATA, '*/5 * * * *', descriptor.value);
+
+      // When — inner wrapper, then outer wrapper (source order: outer above inner above @Cron)
+      WithLock({ key: 'inner' })(StackedHost.prototype, 'job', descriptor);
+      WithLock({ key: 'outer' })(StackedHost.prototype, 'job', descriptor);
+      Object.defineProperty(StackedHost.prototype, 'job', descriptor);
+
+      // Then — the OUTERMOST wrapper still carries the cron metadata, and its
+      // own options won over the inner wrapper's copied ones
+      const wrapper = StackedHost.prototype.job;
+      expect(Reflect.getMetadata(CRON_METADATA, wrapper)).toBe('*/5 * * * *');
+      expect(Reflect.getMetadata(WITH_LOCK_OPTIONS, wrapper)).toEqual({ key: 'outer' });
+    });
   });
 });

@@ -63,6 +63,45 @@ describe('CountersPlugin on the in-memory driver (no Redis)', () => {
     expect(await serviceA.get('win')).toBe(0);
   });
 
+  it('should preserve the window TTL across a mid-window set() correction (real Lua)', async () => {
+    // Given — a window counter
+    await serviceA.increment('corrected', 5, { ttl: 150 });
+
+    // When — ops corrects the value mid-window WITHOUT a ttl
+    await serviceB.set('corrected', 2);
+    expect(await serviceA.get('corrected')).toBe(2);
+
+    // Then — the window still expires on schedule (a plain SET would have
+    // made the key permanent and silently double-counting from tomorrow on)
+    await wait(200);
+    expect(await serviceA.get('corrected')).toBe(0);
+  });
+
+  it('should preserve clearly-non-numeric evidence on getAndReset (loud error, key intact)', async () => {
+    // Given — a poisoned key written by something else (raw driver access)
+    const store = app.get<ICounterStore>(COUNTER_STORE);
+    await serviceA.set('victim', 1);
+    // poison it below the service (simulate a foreign writer)
+    await (store as unknown as { driver: { set: (k: string, v: string) => Promise<unknown> } }).driver.set('_ctr:victim', 'abc');
+
+    // When/Then — loud, with the raw value, and the evidence survives
+    await expect(serviceA.getAndReset('victim')).rejects.toMatchObject({ rawValue: 'abc' });
+    await expect(serviceA.get('victim')).rejects.toMatchObject({ rawValue: 'abc' });
+  });
+
+  it('should NOT retrofit a window TTL onto a pre-existing TTL-less key (first-write semantics, doc contract)', async () => {
+    // Given — a permanent counter created WITHOUT a window
+    await serviceA.set('permanent', 5);
+
+    // When — a windowed increment lands on it
+    await serviceB.increment('permanent', 1, { ttl: 100 });
+    await wait(140);
+
+    // Then — the key must survive: the TTL applies only when the mutation
+    // CREATES the key (the troubleshooting page promises exactly this)
+    expect(await serviceA.get('permanent')).toBe(6);
+  });
+
   it('should getAndReset atomically (flush consumption)', async () => {
     // Given
     await serviceA.increment('batch', 7);

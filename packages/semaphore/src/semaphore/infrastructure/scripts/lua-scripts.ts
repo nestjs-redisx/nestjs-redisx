@@ -41,14 +41,26 @@ return 0
 `.trim();
 
 /**
- * Release a permit (idempotent).
+ * Release a permit.
+ *
+ * Expiry-aware: a bare ZREM would return 1 for an EXPIRED-but-unswept
+ * member, silently hiding that the seat was unprotected (the loud
+ * not-held signal is the whole point of release). The member is removed in
+ * both branches (stale residue cleaned), but "was held" is reported only
+ * for a live score.
  *
  * KEYS[1] = semaphore key
  * ARGV[1] = permit id
- * Returns: 1 if the permit was held and removed, 0 otherwise
+ * ARGV[2] = now (ms epoch)
+ * Returns: 1 if the permit was LIVE and removed, 0 otherwise
  */
 export const RELEASE_PERMIT_SCRIPT = `
-return redis.call("zrem", KEYS[1], ARGV[1])
+local score = redis.call("zscore", KEYS[1], ARGV[1])
+redis.call("zrem", KEYS[1], ARGV[1])
+if score and tonumber(score) > tonumber(ARGV[2]) then
+  return 1
+end
+return 0
 `.trim();
 
 /**
@@ -76,23 +88,32 @@ return 0
 /**
  * Count currently held (unexpired) permits.
  *
+ * READ-ONLY by design (ZCOUNT over the live-score range, exclusive lower
+ * bound: a permit whose score == now is already expired, mirroring the
+ * acquire sweep). A write here (sweep + ZCARD) would make a pure read API
+ * fail under maxmemory/denyoom; expired members are swept by acquire.
+ *
  * KEYS[1] = semaphore key
  * ARGV[1] = now (ms epoch)
  * Returns: number of live permits
  */
 export const USED_PERMITS_SCRIPT = `
-redis.call("zremrangebyscore", KEYS[1], "-inf", ARGV[1])
-return redis.call("zcard", KEYS[1])
+return redis.call("zcount", KEYS[1], "(" .. ARGV[1], "+inf")
 `.trim();
 
 /**
  * Force-release every permit (admin operation).
  *
+ * Reports LIVE holders only (ZCOUNT over the unexpired range) — counting
+ * expired-but-unswept residue would tell an operator "4 permits
+ * force-released" when a single live holder was displaced.
+ *
  * KEYS[1] = semaphore key
- * Returns: number of permits that were held
+ * ARGV[1] = now (ms epoch)
+ * Returns: number of LIVE permits that were displaced
  */
 export const FORCE_RELEASE_ALL_SCRIPT = `
-local held = redis.call("zcard", KEYS[1])
+local live = redis.call("zcount", KEYS[1], "(" .. ARGV[1], "+inf")
 redis.call("del", KEYS[1])
-return held
+return live
 `.trim();

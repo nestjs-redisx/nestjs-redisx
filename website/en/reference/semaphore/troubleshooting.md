@@ -32,6 +32,10 @@ A warning like `@WithSemaphore: SemaphoreService not yet available` means the pl
 
 The store retries `EVALSHA` as plain `EVAL` on `NOSCRIPT` automatically and re-caches the script; a warning during bootstrap (`Lua pre-load failed`) is harmless — scripts load lazily per call.
 
+## Clock skew between instances
+
+Expiry decisions use the **Redis server clock** (the store keeps a cached `TIME` offset, re-synced every 30s), so NTP drift on an application node cannot sweep other instances' live permits. If permits seem to lapse early or late, compare the REDIS host's clock with reality — the fleet follows it.
+
 ## Cluster deployments
 
 One semaphore is one key — no hash tags, no cross-slot operations. Nothing special to configure.

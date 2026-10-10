@@ -298,6 +298,10 @@ export class LuaInterpreter {
       const v = args[0] ?? null;
       if (typeof v === 'number') return v;
       if (typeof v === 'string') {
+        // Real Lua: tonumber('') and tonumber('   ') are nil; JS Number('')
+        // is 0 — the divergence let blank-string guards pass on the memory
+        // driver while failing on real Redis.
+        if (v.trim() === '') return null;
         const n = Number(v);
         return Number.isNaN(n) ? null : n;
       }

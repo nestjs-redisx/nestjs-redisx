@@ -133,12 +133,25 @@ export function Dedupe(options: IDedupeOptions): MethodDecorator {
  * Builds the dedup key from a template or function.
  * `{n}` placeholders interpolate the n-th argument (stringified).
  */
+const warnedObjectTemplates = new WeakSet<object>();
+
 function buildDedupeKey(args: unknown[], options: IDedupeOptions): string {
   if (typeof options.key === 'function') {
     return options.key(...args);
   }
   return options.key.replace(/\{(\d+)\}/g, (_match, index: string) => {
     const value = args[Number(index)];
-    return value === undefined || value === null ? '' : String(value);
+    if (value === undefined || value === null) {
+      return '';
+    }
+    const rendered = String(value);
+    if (rendered === '[object Object]' && !warnedObjectTemplates.has(options)) {
+      // Every distinct event collapses onto ONE key — the first one in each
+      // window runs and ALL the others are silently skipped as "duplicates".
+      // Loud once per decorator site.
+      warnedObjectTemplates.add(options);
+      logger.warn(`@Dedupe: key template "${options.key as string}" interpolated an object as "[object Object]" — ALL calls share one dedup key and distinct events will be skipped. Interpolate a scalar id or use a key builder function.`);
+    }
+    return rendered;
   });
 }

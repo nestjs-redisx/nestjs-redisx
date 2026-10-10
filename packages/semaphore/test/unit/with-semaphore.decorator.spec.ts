@@ -214,6 +214,75 @@ describe('@WithSemaphore decorator', () => {
     });
   });
 
+  describe('adversarial: policy totality and cross-copy errors', () => {
+    it('should fall back to the ORIGINAL error when a custom policy returns a non-Error (never `throw undefined`)', async () => {
+      // Given — a policy written as a logger, returning nothing
+      registerSemaphoreServiceGetter(() => ({ acquire: vi.fn().mockRejectedValue(new SemaphoreAcquisitionError('renders', 'exhausted')) }) as never);
+      class Worker {
+        @WithSemaphore({ key: 'renders', permits: 1, onUnavailable: (() => undefined) as never })
+        async work(): Promise<string> {
+          return 'never';
+        }
+      }
+
+      // When/Then — the acquisition error surfaces, not `undefined`
+      await expect(new Worker().work()).rejects.toThrow(SemaphoreAcquisitionError);
+    });
+
+    it('should apply the policy to a CROSS-COPY acquisition error (code match, not instanceof)', async () => {
+      // Given — the service was loaded from the OTHER module copy: same
+      // shape and code, different class identity
+      const foreignError = Object.assign(new Error('Failed to acquire semaphore permit for "renders": exhausted'), { code: 'SEMAPHORE_ACQUISITION_FAILED' });
+      registerSemaphoreServiceGetter(() => ({ acquire: vi.fn().mockRejectedValue(foreignError) }) as never);
+      const body = vi.fn();
+      class Worker {
+        @WithSemaphore({ key: 'renders', permits: 1, onUnavailable: 'skip' })
+        async work(): Promise<string> {
+          body();
+          return 'never';
+        }
+      }
+
+      // When/Then — skip engages instead of a raw rethrow through a 'skip' cron
+      expect(await new Worker().work()).toBeUndefined();
+      expect(body).not.toHaveBeenCalled();
+    });
+
+    it('should engage the policy on a store OUTAGE too (typed error with reason error)', async () => {
+      // Given
+      registerSemaphoreServiceGetter(() => ({ acquire: vi.fn().mockRejectedValue(new SemaphoreAcquisitionError('renders', 'error', new Error('READONLY'))) }) as never);
+      class Worker {
+        @WithSemaphore({ key: 'renders', permits: 1, onUnavailable: 'skip' })
+        async work(): Promise<string> {
+          return 'never';
+        }
+      }
+
+      // When/Then
+      expect(await new Worker().work()).toBeUndefined();
+    });
+
+    it('should warn once when a {n} template interpolates an object (all calls share ONE key)', async () => {
+      // Given
+      const service = createFakeService();
+      registerSemaphoreServiceGetter(() => service as never);
+      class Worker {
+        @WithSemaphore({ key: 'export:{0}', permits: 1 })
+        async run(dto: unknown): Promise<unknown> {
+          return dto;
+        }
+      }
+
+      // When — object interpolation
+      await new Worker().run({ id: 1 });
+      await new Worker().run({ id: 2 });
+
+      // Then — both calls collapsed onto one key
+      expect(service.acquire).toHaveBeenNthCalledWith(1, 'export:[object Object]', 1, expect.any(Object));
+      expect(service.acquire).toHaveBeenNthCalledWith(2, 'export:[object Object]', 1, expect.any(Object));
+    });
+  });
+
   describe('metadata', () => {
     it('should preserve the method name and expose options metadata on the wrapper', () => {
       // Given

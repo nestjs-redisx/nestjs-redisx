@@ -20,6 +20,11 @@ export function validateDedupCall(key: unknown, window: number | undefined, sour
   if (typeof key !== 'string' || key.trim().length === 0) {
     throw new InvalidDedupConfigError(`${source}: key must be a non-empty string, got ${describe(key)}.`);
   }
+  if (key.includes('\u0000')) {
+    // U+0000 delimits the plugin's internal namespaces (the debounce slot) —
+    // a user key containing it could collide with internal keys.
+    throw new InvalidDedupConfigError(`${source}: key must not contain the NUL character (reserved for internal namespacing).`);
+  }
   if (window !== undefined && (typeof window !== 'number' || !Number.isSafeInteger(window) || window <= 0)) {
     throw new InvalidDedupConfigError(`${source}: window must be a positive integer (milliseconds), got ${describe(window)}.`);
   }

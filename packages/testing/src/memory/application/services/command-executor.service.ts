@@ -45,6 +45,11 @@ export class CommandExecutor implements ICommandExecutor {
     const cmd = command.toUpperCase();
     switch (cmd) {
       // --- connection / server ---
+      case 'TIME': {
+        // [seconds, microseconds] as strings — real Redis reply shape.
+        const nowMs = Date.now();
+        return [String(Math.floor(nowMs / 1000)), String((nowMs % 1000) * 1000)];
+      }
       case 'PING':
         return args.length ? this.str(args[0]) : 'PONG';
       case 'DBSIZE':

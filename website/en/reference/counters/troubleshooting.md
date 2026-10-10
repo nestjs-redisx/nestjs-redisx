@@ -7,7 +7,7 @@ description: 'Windows that never expire, CounterValueError on shared keys, seque
 
 ## The window counter never expires
 
-The TTL is applied only by the mutation that **creates** the key. If the key was first written by `set()` *without* a TTL (or by another system), later `increment(..., { ttl })` calls will not add one. Check `PTTL` on the raw key; recreate it through the windowed increment.
+The TTL is applied only by the mutation that **creates** the key. If the key was first written WITHOUT a window (by another system, or through an unwindowed increment), later `increment(..., { ttl })` calls will not add one. Check `PTTL` on the raw key; `reset()` it and let the next windowed increment recreate it. Note that `set()` without a `ttl` deliberately **preserves** an existing window — correcting a value mid-window never makes the key permanent.
 
 ## `CounterValueError: holds a non-numeric value`
 
@@ -23,4 +23,4 @@ Amounts must be non-zero safe integers — `Number(process.env.STEP)` with an un
 
 ## Overflow
 
-Redis counters saturate at ±2⁶³−1 and then error (surfaced as a `CommandError`). If a counter can realistically approach that, flush it periodically with `getAndReset`.
+Redis counters saturate at ±2⁶³−1 and then error (surfaced as a `CommandError`). Long before that, values past 2⁵³ stop being exactly representable in JavaScript — reads throw `CounterValueError` at that bound instead of silently rounding (a rounded sequence would mint duplicate ids). If a counter can realistically approach either bound, flush it periodically with `getAndReset`.

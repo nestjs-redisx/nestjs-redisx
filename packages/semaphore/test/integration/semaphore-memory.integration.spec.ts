@@ -160,17 +160,35 @@ describe('SemaphorePlugin on the in-memory driver (no Redis)', () => {
     expect(await serviceA.usedPermits('stuck')).toBe(0);
   });
 
-  it('should release held permits on shutdown (graceful handover, not TTL-bound)', async () => {
-    // Given
-    await serviceA.acquire('shutdown', 1, { ttl: 60_000 });
+  it('should NOT yank seats on shutdown — they lapse by TTL unless the owner releases first', async () => {
+    // Given — a held seat whose protected work may still be running
+    const permit = await serviceA.acquire('shutdown', 1, { ttl: 200 });
     expect(await serviceB.tryAcquire('shutdown', 1)).toBeNull();
 
-    // When — the service's shutdown hook runs (what app.close() invokes;
-    // called directly so the in-memory driver stays open for verification)
-    await (serviceA as SemaphoreService).onModuleDestroy();
+    // When — the shutdown hook runs (what app.close() invokes)
+    (serviceA as SemaphoreService).onModuleDestroy();
 
-    // Then — the seat is free immediately, not after the 60s TTL
+    // Then — the seat is STILL protected (no silent split bound) ...
+    expect(await serviceB.tryAcquire('shutdown', 1)).toBeNull();
+
+    // ... the owner's own finally still releases instantly ...
+    await permit.release();
     const takeover = await serviceB.tryAcquire('shutdown', 1);
+    expect(takeover).not.toBeNull();
+    await takeover!.release();
+  });
+
+  it('should let an abandoned seat lapse by TTL after shutdown (renewal stopped — crash bound)', async () => {
+    // Given — auto-renewed seat, then shutdown with the work never finishing
+    await serviceA.acquire('abandoned', 1, { ttl: 150 });
+    (serviceA as SemaphoreService).onModuleDestroy();
+    expect(await serviceB.tryAcquire('abandoned', 1)).toBeNull();
+
+    // When — past the remaining TTL (renewal no longer extends it)
+    await wait(200);
+
+    // Then — the seat freed itself, exactly like a crash
+    const takeover = await serviceB.tryAcquire('abandoned', 1);
     expect(takeover).not.toBeNull();
     await takeover!.release();
   });

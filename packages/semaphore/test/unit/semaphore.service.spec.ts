@@ -43,7 +43,7 @@ describe('SemaphoreService', () => {
 
       // Then — prefixed key, capacity and TTL forwarded, time injected
       expect(permit.key).toBe('_sem:renders');
-      expect(store.acquire).toHaveBeenCalledWith('_sem:renders', expect.any(String), 3, 30_000, expect.any(Number));
+      expect(store.acquire).toHaveBeenCalledWith('_sem:renders', expect.any(String), 3, 30_000);
       await permit.release();
     });
 
@@ -95,8 +95,22 @@ describe('SemaphoreService', () => {
       const permit = await capped.acquire('renders', 1, { ttl: 999_999 });
 
       // Then
-      expect(store.acquire).toHaveBeenCalledWith(expect.any(String), expect.any(String), 1, 5_000, expect.any(Number));
+      expect(store.acquire).toHaveBeenCalledWith(expect.any(String), expect.any(String), 1, 5_000);
       await permit.release();
+    });
+  });
+
+  describe('acquisition failure reasons', () => {
+    it("should report 'exhausted' when the retry cap runs out and 'timeout' when the wait budget does", async () => {
+      // Given
+      store.acquire.mockResolvedValue(false);
+
+      // When/Then — retry cap (no waitTimeout)
+      await expect(service.acquire('full', 1)).rejects.toMatchObject({ reason: 'exhausted' });
+
+      // And — wait budget
+      const generous = new SemaphoreService({ retry: { maxRetries: 50, initialDelay: 50, maxDelay: 50, multiplier: 1 }, autoRenew: { enabled: false } }, store);
+      await expect(generous.acquire('full', 1, { waitTimeout: 30 })).rejects.toMatchObject({ reason: 'timeout' });
     });
   });
 
@@ -230,7 +244,7 @@ describe('SemaphoreService', () => {
       const permit = await bare.acquire('k', 1);
 
       // Then — default prefix and default TTL
-      expect(store.acquire).toHaveBeenCalledWith('_sem:k', expect.any(String), 1, 30_000, expect.any(Number));
+      expect(store.acquire).toHaveBeenCalledWith('_sem:k', expect.any(String), 1, 30_000);
       await permit.release();
     });
 
@@ -243,7 +257,7 @@ describe('SemaphoreService', () => {
       const permit = await custom.acquire('k', 2, { retry: { maxRetries: 1, initialDelay: 1 } });
 
       // Then
-      expect(store.acquire).toHaveBeenCalledWith('sem!k', expect.any(String), 2, 7_000, expect.any(Number));
+      expect(store.acquire).toHaveBeenCalledWith('sem!k', expect.any(String), 2, 7_000);
       expect(store.acquire).toHaveBeenCalledTimes(2);
       await permit.release();
     });
@@ -306,39 +320,184 @@ describe('SemaphoreService', () => {
     });
   });
 
-  describe('onModuleDestroy', () => {
-    it('should release every still-held permit on shutdown', async () => {
-      // Given
-      await service.acquire('a', 1);
-      await service.acquire('b', 1);
+  describe('adversarial: hostile observability and per-call options', () => {
+    it('should NOT leak the granted seat when a user metrics implementation throws on the success path', async () => {
+      // Given — the seat IS granted by the store, then metrics detonate
+      const metrics = {
+        incrementCounter: vi.fn(() => {
+          throw new Error('metrics backend down');
+        }),
+        observeHistogram: vi.fn(() => {
+          throw new Error('metrics backend down');
+        }),
+        incrementGauge: vi.fn(() => {
+          throw new Error('metrics backend down');
+        }),
+        decrementGauge: vi.fn(() => {
+          throw new Error('metrics backend down');
+        }),
+      };
+      const hostile = new SemaphoreService(FAST_RETRY, store, metrics);
 
-      // When
-      await service.onModuleDestroy();
+      // When — acquire must still hand the permit to the caller (otherwise
+      // the seat is held in Redis with nobody able to release it)
+      const permit = await hostile.acquire('renders', 1);
 
       // Then
-      expect(store.release).toHaveBeenCalledTimes(2);
-    });
-
-    it('should survive a lost seat during shutdown (logs, never throws)', async () => {
-      // Given
-      await service.acquire('a', 1);
-      store.release.mockRejectedValueOnce(new SemaphorePermitNotHeldError('_sem:a', 'p'));
-
-      // When/Then — no throw
-      await expect(service.onModuleDestroy()).resolves.toBeUndefined();
-    });
-
-    it('should not re-release permits the caller already released', async () => {
-      // Given
-      const permit = await service.acquire('a', 1);
+      expect(permit).toBeDefined();
       await permit.release();
-      store.release.mockClear();
+      expect(store.release).toHaveBeenCalledTimes(1);
+    });
+
+    it('should survive a throwing tracing implementation on success and failure paths', async () => {
+      // Given — every span method throws
+      const span = new Proxy(
+        {},
+        {
+          get: () => () => {
+            throw new Error('span detonated');
+          },
+        },
+      );
+      const tracing = { startSpan: vi.fn().mockReturnValue(span) };
+      const hostile = new SemaphoreService(FAST_RETRY, store, undefined, tracing as never);
+
+      // When/Then — success path returns the permit
+      const permit = await hostile.acquire('ok', 1);
+      await permit.release();
+
+      // And the failure path still reports the REAL error, not the span's
+      store.acquire.mockResolvedValue(false);
+      await expect(hostile.acquire('full', 1)).rejects.toThrow(SemaphoreAcquisitionError);
+    });
+
+    it('should survive startSpan itself throwing', async () => {
+      // Given
+      const tracing = {
+        startSpan: vi.fn(() => {
+          throw new Error('no tracer');
+        }),
+      };
+      const hostile = new SemaphoreService(FAST_RETRY, store, undefined, tracing as never);
+
+      // When/Then
+      const permit = await hostile.acquire('ok', 1);
+      expect(permit).toBeDefined();
+      await permit.release();
+    });
+
+    it('should reject invalid per-call ttl fail-fast (a negative ttl mints an already-expired permit)', async () => {
+      await expect(service.acquire('k', 1, { ttl: -5 })).rejects.toThrow(InvalidSemaphoreConfigError);
+      await expect(service.acquire('k', 1, { ttl: 0 })).rejects.toThrow(InvalidSemaphoreConfigError);
+      await expect(service.acquire('k', 1, { ttl: 1.5 })).rejects.toThrow(InvalidSemaphoreConfigError);
+      await expect(service.tryAcquire('k', 1, { ttl: Number.NaN })).rejects.toThrow(InvalidSemaphoreConfigError);
+      expect(store.acquire).not.toHaveBeenCalled();
+    });
+
+    it('should reject invalid per-call waitTimeout and retry overrides fail-fast', async () => {
+      await expect(service.acquire('k', 1, { waitTimeout: -1 })).rejects.toThrow(InvalidSemaphoreConfigError);
+      await expect(service.acquire('k', 1, { waitTimeout: 0.5 })).rejects.toThrow(InvalidSemaphoreConfigError);
+      await expect(service.acquire('k', 1, { retry: { maxRetries: -1 } })).rejects.toThrow(InvalidSemaphoreConfigError);
+      await expect(service.acquire('k', 1, { retry: { initialDelay: 0 } })).rejects.toThrow(InvalidSemaphoreConfigError);
+      expect(store.acquire).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('onModuleDestroy (TTL-lapse shutdown semantics)', () => {
+    it('should NOT yank seats from under possibly-running work — only stop auto-renewal', async () => {
+      // Given — permits whose protected work may still be executing when the
+      // destroy hooks fire (Nest does not drain in-flight handlers first)
+      const renewing = new SemaphoreService({ retry: FAST_RETRY.retry }, store);
+      const a = await renewing.acquire('a', 1);
+      const b = await renewing.acquire('b', 1);
+      expect(a.isAutoRenewing).toBe(true);
 
       // When
-      await service.onModuleDestroy();
+      renewing.onModuleDestroy();
 
-      // Then — nothing left to release
+      // Then — no release (yanking a seat would let another instance start
+      // the same bounded work concurrently); renewal stopped so the seats
+      // lapse within their remaining TTL — the documented crash bound
       expect(store.release).not.toHaveBeenCalled();
+      expect(a.isAutoRenewing).toBe(false);
+      expect(b.isAutoRenewing).toBe(false);
+    });
+
+    it("should still release instantly when the OWNER's finally runs after destroy", async () => {
+      // Given
+      const permit = await service.acquire('a', 1);
+      service.onModuleDestroy();
+
+      // When — the in-flight work finishes and releases its own seat
+      await permit.release();
+
+      // Then
+      expect(store.release).toHaveBeenCalledTimes(1);
+    });
+
+    it("should abort an acquire that is still waiting when the service is destroyed (reason 'shutdown')", async () => {
+      // Given — saturated, so acquire sits in backoff
+      store.acquire.mockResolvedValue(false);
+      const pending = service.acquire('full', 1);
+      await Promise.resolve(); // let the first attempt land
+
+      // When
+      service.onModuleDestroy();
+
+      // Then
+      await expect(pending).rejects.toMatchObject({ reason: 'shutdown' });
+    });
+
+    it('should quietly give back a seat WON on the wire while destroy ran', async () => {
+      // Given — the store grants the seat, but shutdown happened mid-flight
+      store.acquire.mockImplementationOnce(async () => {
+        service.onModuleDestroy();
+        return true;
+      });
+
+      // When/Then — the caller gets 'shutdown', not a permit nobody releases
+      await expect(service.acquire('race', 1)).rejects.toMatchObject({ reason: 'shutdown' });
+      expect(store.release).toHaveBeenCalledTimes(1);
+    });
+
+    it('should reject new tryAcquire calls after destroy', async () => {
+      // Given
+      service.onModuleDestroy();
+
+      // When/Then
+      await expect(service.tryAcquire('k', 1)).rejects.toMatchObject({ reason: 'shutdown' });
+      expect(store.acquire).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('store outage wrapping', () => {
+    it("should wrap raw store failures into SemaphoreAcquisitionError('error') with the cause", async () => {
+      // Given
+      const outage = new Error('READONLY replica');
+      store.acquire.mockRejectedValue(outage);
+
+      // When/Then — typed for the decorator policy and withPermit callers
+      await expect(service.acquire('k', 1)).rejects.toMatchObject({ reason: 'error', cause: outage });
+      await expect(service.tryAcquire('k', 1)).rejects.toMatchObject({ reason: 'error' });
+    });
+  });
+
+  describe('concurrent release single-flight', () => {
+    it('should issue ONE store release for two concurrent release() calls and share the outcome', async () => {
+      // Given — a slow store release
+      let resolveRelease!: (v: boolean) => void;
+      store.release.mockImplementationOnce(() => new Promise<boolean>((resolve) => (resolveRelease = resolve)));
+      const permit = await service.acquire('a', 1);
+
+      // When — two racing releases (user finally + another path)
+      const first = permit.release();
+      const second = permit.release();
+      resolveRelease(true);
+      await Promise.all([first, second]);
+
+      // Then — exactly one ZREM; the loser did NOT see a false
+      // SemaphorePermitNotHeldError from a double-remove
+      expect(store.release).toHaveBeenCalledTimes(1);
     });
   });
 });

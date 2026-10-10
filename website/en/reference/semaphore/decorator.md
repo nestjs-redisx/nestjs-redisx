@@ -18,7 +18,7 @@ Proxy-based decorator (same mechanism as `@WithLock`): works on **any** `@Inject
 | `ttl` | `number?` | Permit TTL |
 | `waitTimeout` | `number?` | Total wait budget for a seat |
 | `autoRenew` | `boolean?` | Per-method renewal override |
-| `onUnavailable` | `'throw' \| 'skip' \| (key) => Error` | What to do when no seat frees up (default `'throw'`) |
+| `onUnavailable` | `'throw' \| 'skip' \| (key) => Error` | What to do when no permit could be acquired — saturation, store outage, or shutdown alike (default `'throw'`; a policy function returning a non-Error falls back to the original error) |
 
 ## `onUnavailable` Policies
 
@@ -26,7 +26,7 @@ Proxy-based decorator (same mechanism as `@WithLock`): works on **any** `@Inject
 - **`'skip'`** — the method resolves `undefined` without running; right for periodic work that will come back on the next tick.
 - **function** — map saturation to your own domain error.
 
-The policy applies **only to acquisition**. An error thrown by the method body always propagates, and the permit is always released.
+The policy applies **only to acquisition** — and to every acquisition failure: saturation (`exhausted`/`timeout`), a store outage (`error`), and shutdown. An error thrown by the method body always propagates, and the permit is always released. Detection is cross-copy-safe (by error code), so a mixed CJS+ESM process keeps the policy working.
 
 ## Composing with `@Cron`
 

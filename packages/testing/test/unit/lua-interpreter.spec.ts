@@ -144,4 +144,18 @@ describe('LuaInterpreter', () => {
   it('throws on arithmetic with a non-numeric string', () => {
     expect(() => run('return 1 + "abc"')).toThrow(LuaExecutionError);
   });
+
+  describe('tonumber fidelity', () => {
+    it('should treat blank strings as nil, like real Lua (not JS Number coercion)', () => {
+      // Given/When — a script guarding on tonumber of a GET result
+      const check = (value: string) => run('if tonumber(ARGV[1]) then return 1 else return 0 end', [], [value]);
+
+      // Then
+      expect(check('')).toBe(0);
+      expect(check('   ')).toBe(0);
+      expect(check('abc')).toBe(0);
+      expect(check('42')).toBe(1);
+      expect(check(' 5 ')).toBe(1);
+    });
+  });
 });

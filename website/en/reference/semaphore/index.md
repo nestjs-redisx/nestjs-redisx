@@ -18,7 +18,7 @@ A lock is the special case `permits: 1` — if you need mutual exclusion with re
 - **Permit leases** — one sorted set per semaphore (member = permit id, score = expiry); expired permits are swept atomically inside acquire, so a crashed holder frees its seat after the TTL with no background job
 - **Auto-renewal** — long-running work keeps its seat; renewal stops the moment the permit is lost
 - **`@WithSemaphore`** — proxy-based decorator for any `@Injectable` method with `{n}` key templates and an `onUnavailable` policy (`throw` | `skip` | custom error)
-- **Graceful shutdown** — held permits are released on `app.close()`, so waiters take over immediately instead of after the TTL
+- **Honest shutdown** — `app.close()` never yanks a seat from under still-running work: renewal stops and seats lapse within their remaining TTL (the crash bound); work that finishes in time still releases instantly
 - **Cluster-safe** — one key per semaphore, no hash tags needed
 - **Testable without Redis** — the Lua scripts run byte-for-byte on the [in-memory testing driver](/en/reference/testing/)
 
@@ -52,6 +52,7 @@ Bound a method:
 2. While held, auto-renewal extends the score every `ttl × intervalFraction` (CAS: only an unexpired own permit can be extended).
 3. `release()` removes the permit; a crash leaves it to expire — the next acquire sweeps it.
 4. The semaphore key itself carries a `PEXPIRE` at least as long as its longest permit, so abandoned semaphores vanish on their own.
+5. Every expiry decision uses the **Redis server clock** (a cached `TIME` offset, re-synced every 30s) — an instance with a skewed local clock cannot sweep other instances' live permits.
 
 The **capacity travels with the call** (like rate-limit limits): every caller of a key must pass the same `permits` value — the store enforces whatever the acquiring call provides.
 

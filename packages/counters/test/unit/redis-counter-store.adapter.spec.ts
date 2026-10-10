@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RedisCounterStoreAdapter } from '../../src/counter/infrastructure/adapters/redis-counter-store.adapter';
-import { INCRBY_WITH_WINDOW_SCRIPT, GET_AND_RESET_SCRIPT } from '../../src/counter/infrastructure/scripts/lua-scripts';
+import { INCRBY_WITH_WINDOW_SCRIPT, GET_AND_RESET_SCRIPT, SET_KEEP_TTL_SCRIPT } from '../../src/counter/infrastructure/scripts/lua-scripts';
+import { CounterValueError } from '../../src/shared/errors';
 
 interface MockDriver {
   scriptLoad: ReturnType<typeof vi.fn>;
@@ -75,6 +76,37 @@ describe('RedisCounterStoreAdapter', () => {
     });
   });
 
+  describe('adversarial: non-canonical numeric values', () => {
+    it('should throw CounterValueError (carrying the ACTUAL raw value) for empty/whitespace/float/garbage strings', async () => {
+      // Number('') === 0 and Number(' ') === 0 — a poisoned key must NOT
+      // read as a legitimate zero, and the error must carry the evidence.
+      for (const raw of ['', '  ', '3.14', '1e3', 'abc']) {
+        driver.get.mockResolvedValue(raw);
+        await expect(adapter.get('_ctr:k'), `raw=${JSON.stringify(raw)}`).rejects.toMatchObject({ rawValue: raw });
+      }
+      // Canonical integers (negative included) still parse
+      driver.get.mockResolvedValue('-42');
+      expect(await adapter.get('_ctr:k')).toBe(-42);
+    });
+
+    it('should reject integers past 2^53 instead of silently losing precision (duplicate sequence ids)', async () => {
+      driver.get.mockResolvedValue('9007199254740993'); // MAX_SAFE_INTEGER + 2
+      await expect(adapter.get('_ctr:k')).rejects.toThrow(CounterValueError);
+    });
+
+    it('should apply the same strict throwing parse to getAndReset', async () => {
+      driver.evalsha.mockResolvedValue('');
+      await expect(adapter.getAndReset('_ctr:k')).rejects.toMatchObject({ rawValue: '' });
+      driver.evalsha.mockResolvedValue('7');
+      expect(await adapter.getAndReset('_ctr:k')).toBe(7);
+    });
+
+    it('getAndReset Lua must preserve clearly-non-numeric evidence (no del before the check)', () => {
+      // The script deletes only after tonumber() accepts the value.
+      expect(GET_AND_RESET_SCRIPT.indexOf('tonumber')).toBeLessThan(GET_AND_RESET_SCRIPT.indexOf('del'));
+    });
+  });
+
   describe('get / set / reset / getAndReset', () => {
     it('should parse get results and keep null for missing keys', async () => {
       expect(await adapter.get('_ctr:k')).toBeNull();
@@ -82,9 +114,12 @@ describe('RedisCounterStoreAdapter', () => {
       expect(await adapter.get('_ctr:k')).toBe(42);
     });
 
-    it('should set with and without PX', async () => {
+    it('should set preserving an existing TTL (Lua) and with an explicit PX', async () => {
+      // Without ttl: through the keep-ttl script — a plain SET would drop a
+      // window counter's TTL and make the key permanent forever
       await adapter.set('_ctr:k', 5);
-      expect(driver.set).toHaveBeenCalledWith('_ctr:k', '5');
+      expect(driver.evalsha).toHaveBeenCalledWith(expect.any(String), ['_ctr:k'], [5]);
+
       await adapter.set('_ctr:k', 5, 2_000);
       expect(driver.set).toHaveBeenCalledWith('_ctr:k', '5', { px: 2_000 });
     });

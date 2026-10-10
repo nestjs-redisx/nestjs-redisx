@@ -62,9 +62,13 @@ describe('RedisDedupStoreAdapter', () => {
       expect(driver.evalsha).toHaveBeenCalledWith(expect.any(String), ['_dedup:k'], ['tok']);
     });
 
-    it('should map a refused claim (0) to false', async () => {
+    it('should map claim replies to the tri-state (1/0/-1)', async () => {
+      driver.evalsha.mockResolvedValue(1);
+      expect(await adapter.claimLastCall('_dedup:d', 'call-1')).toBe('claimed');
       driver.evalsha.mockResolvedValue(0);
-      expect(await adapter.claimLastCall('_dedup:d', 'call-1')).toBe(false);
+      expect(await adapter.claimLastCall('_dedup:d', 'call-1')).toBe('superseded');
+      driver.evalsha.mockResolvedValue(-1);
+      expect(await adapter.claimLastCall('_dedup:d', 'call-1')).toBe('expired');
     });
 
     it('should fall back to EVAL on NOSCRIPT (message or cause)', async () => {
@@ -74,7 +78,7 @@ describe('RedisDedupStoreAdapter', () => {
       driver.evalsha.mockRejectedValueOnce(wrapped);
 
       // When/Then
-      expect(await adapter.claimLastCall('_dedup:d', 'call-1')).toBe(true);
+      expect(await adapter.claimLastCall('_dedup:d', 'call-1')).toBe('claimed');
       expect(driver.eval).toHaveBeenCalledWith(CLAIM_LAST_CALL_SCRIPT, ['_dedup:d'], ['call-1']);
     });
 

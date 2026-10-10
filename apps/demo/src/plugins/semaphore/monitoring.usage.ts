@@ -16,7 +16,8 @@ export class SemaphoreAdminService {
   }
 
   // Operator recovery: free every seat on a wedged semaphore. In-flight
-  // holders keep running; their release becomes a no-op.
+  // holders keep running; their eventual release() throws
+  // SemaphorePermitNotHeldError (the honest taken-away signal).
   async unblock(key: string): Promise<number> {
     return this.semaphore.forceReleaseAll(key);
   }

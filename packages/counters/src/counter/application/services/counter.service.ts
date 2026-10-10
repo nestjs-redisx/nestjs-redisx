@@ -59,8 +59,10 @@ export class CounterService implements ICounterService {
   async getAndReset(key: string): Promise<number> {
     validateCounterKey(key, 'getAndReset');
     const value = await this.store.getAndReset(this.buildKey(key));
-    if (Number.isNaN(value)) {
-      throw new CounterValueError(key, 'non-numeric');
+    if (!Number.isSafeInteger(value)) {
+      // Backstop for custom stores — the Redis adapter already throws with
+      // the actual raw value.
+      throw new CounterValueError(key, String(value));
     }
     return value;
   }
@@ -85,8 +87,10 @@ export class CounterService implements ICounterService {
     if (value === null) {
       return 0;
     }
-    if (Number.isNaN(value)) {
-      throw new CounterValueError(key, 'non-numeric');
+    if (!Number.isSafeInteger(value)) {
+      // Backstop for custom stores — the Redis adapter already throws with
+      // the actual raw value.
+      throw new CounterValueError(key, String(value));
     }
     return value;
   }

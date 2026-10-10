@@ -33,6 +33,26 @@ export function validateSemaphoreCall(key: unknown, permits: unknown, source: st
 }
 
 /**
+ * Validates per-call acquisition options (fail-fast): a negative or
+ * fractional ttl mints an already-expired permit, a bad waitTimeout or
+ * retry override corrupts the backoff loop.
+ */
+export function validateSemaphoreCallOptions(options: { ttl?: number; waitTimeout?: number; retry?: { maxRetries?: number; initialDelay?: number } }, source: string): void {
+  if (options.ttl !== undefined) {
+    assertPositiveInteger(options.ttl, 'ttl', source);
+  }
+  if (options.waitTimeout !== undefined) {
+    assertPositiveInteger(options.waitTimeout, 'waitTimeout', source);
+  }
+  if (options.retry?.maxRetries !== undefined && (typeof options.retry.maxRetries !== 'number' || !Number.isSafeInteger(options.retry.maxRetries) || options.retry.maxRetries < 0)) {
+    throw new InvalidSemaphoreConfigError(`${source}: retry.maxRetries must be a non-negative integer, got ${describe(options.retry.maxRetries)}.`);
+  }
+  if (options.retry?.initialDelay !== undefined) {
+    assertPositiveInteger(options.retry.initialDelay, 'retry.initialDelay', source);
+  }
+}
+
+/**
  * Validates merged plugin options (fail-fast at registration time, on both
  * the sync and registerAsync paths).
  */

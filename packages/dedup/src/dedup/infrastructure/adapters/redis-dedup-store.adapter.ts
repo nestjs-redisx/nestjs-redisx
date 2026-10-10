@@ -27,7 +27,10 @@ export class RedisDedupStoreAdapter implements IDedupStore, OnModuleInit {
     try {
       await Promise.all([this.loadScript(RELEASE_IF_OWNER_SCRIPT), this.loadScript(CLAIM_LAST_CALL_SCRIPT)]);
     } catch (error) {
-      this.logger.warn(`Dedup Lua pre-load failed (will retry lazily per call): ${(error as Error).message}`);
+      // Total containment: a nullish rejection must not crash bootstrap
+      // from inside the very catch that exists to prevent crashes.
+      const description = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Dedup Lua pre-load failed (will retry lazily per call): ${description}`);
     }
   }
 
@@ -50,9 +53,12 @@ export class RedisDedupStoreAdapter implements IDedupStore, OnModuleInit {
     await this.driver.set(key, callId, { px: ttlMs });
   }
 
-  async claimLastCall(key: string, callId: string): Promise<boolean> {
+  async claimLastCall(key: string, callId: string): Promise<'claimed' | 'superseded' | 'expired'> {
     const result = await this.runScript(CLAIM_LAST_CALL_SCRIPT, [key], [callId]);
-    return result === 1;
+    if (result === 1) {
+      return 'claimed';
+    }
+    return result === -1 ? 'expired' : 'superseded';
   }
 
   /**

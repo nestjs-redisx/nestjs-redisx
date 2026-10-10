@@ -93,6 +93,27 @@ describe('@Dedupe decorator', () => {
       expect(service.dedupe).toHaveBeenCalledWith('a:x:', expect.any(Function), expect.any(Object));
     });
 
+    it('should collapse object template args onto ONE key (and warn once) — the over-dedup footgun made loud', async () => {
+      // Given
+      const service = createFakeService();
+      registerDedupServiceGetter(() => service as never);
+
+      class Handler {
+        @Dedupe({ key: 'evt:{0}' })
+        async handle(event: unknown): Promise<unknown> {
+          return event;
+        }
+      }
+
+      // When — the DTO (not its id) lands in the template
+      await new Handler().handle({ id: 1 });
+      await new Handler().handle({ id: 2 });
+
+      // Then — both distinct events share one key (duplicates skipped!)
+      expect(service.dedupe).toHaveBeenNthCalledWith(1, 'evt:[object Object]', expect.any(Function), expect.any(Object));
+      expect(service.dedupe).toHaveBeenNthCalledWith(2, 'evt:[object Object]', expect.any(Function), expect.any(Object));
+    });
+
     it('should execute WITHOUT deduplication (and warn) when no service is registered', async () => {
       // Given — no plugin
       class Handler {

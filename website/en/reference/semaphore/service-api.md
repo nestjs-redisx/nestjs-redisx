@@ -13,12 +13,12 @@ Inject with the `SEMAPHORE_SERVICE` token:
 
 | Method | Description |
 |--------|-------------|
-| `acquire(key, permits, options?)` | Acquire a permit with exponential-backoff retry; throws `SemaphoreAcquisitionError` when the retry budget (or `waitTimeout`) runs out |
+| `acquire(key, permits, options?)` | Acquire a permit with exponential-backoff retry; throws `SemaphoreAcquisitionError` — `reason: 'exhausted'` (retry cap), `'timeout'` (waitTimeout budget), `'error'` (store outage, `cause` carries the driver error), `'shutdown'` (service destroyed mid-wait) |
 | `tryAcquire(key, permits, options?)` | One attempt; `null` when the semaphore is full |
 | `withPermit(key, permits, fn, options?)` | Acquire → run → always release (even when `fn` throws) |
 | `usedPermits(key)` | Live (unexpired) holders right now |
 | `availablePermits(key, permits)` | `permits − used`, never below 0 |
-| `forceReleaseAll(key)` | Admin: free every seat; returns how many were held |
+| `forceReleaseAll(key)` | Admin: free every seat; returns how many LIVE holders were displaced. Their eventual `release()` throws (taken-away signal) |
 
 ## The Permit (`ISemaphorePermit`)
 
@@ -38,7 +38,11 @@ A release that returns quietly after the seat already expired would hide a real 
 
 ## Shutdown Semantics
 
-On `app.close()` the service releases every permit this instance still holds, so waiting instances take over **immediately** instead of after the TTL. Permits released by your own `finally` blocks first are skipped (release is idempotent).
+On `app.close()` the service deliberately does **not** release still-held permits: a permit guards work that may still be running when the destroy hooks fire (Nest does not drain in-flight handlers first), and yanking the seat would let another instance start the same bounded work concurrently. Instead:
+
+- **auto-renewal stops** — every seat of this instance lapses within its remaining TTL (exactly the documented crash bound);
+- **work that finishes in time still releases instantly** through its own `finally`;
+- **an `acquire` still waiting in backoff is aborted** with `SemaphoreAcquisitionError` (`reason: 'shutdown'`), and a seat won on the wire during shutdown is quietly given back.
 
 ## Monitoring
 

@@ -9,7 +9,7 @@ A local `p-limit` bounds one process. In a 10-replica deployment "at most 3 conc
 - **Permit leases** — a crashed holder frees its seat after the TTL; no background sweeper (expired permits are swept atomically inside acquire).
 - **Auto-renewal** — long-running work keeps its seat; renewal stops the moment the permit is lost.
 - **`@WithSemaphore`** — proxy-based decorator for any `@Injectable` method, with `{n}` key templates and an `onUnavailable` policy (`throw` | `skip` | custom error).
-- **Graceful shutdown** — held permits are released on `app.close()`, so waiters take over immediately instead of after the TTL.
+- **Honest shutdown** — `app.close()` never yanks a seat from under still-running work: renewal stops and seats lapse within their remaining TTL (the crash bound); work that finishes in time still releases instantly.
 - **Cluster-safe** — one key per semaphore, no hash tags needed; works on the in-memory testing driver (real Lua, no Redis in unit CI).
 
 ## Install

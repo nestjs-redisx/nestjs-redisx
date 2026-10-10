@@ -20,7 +20,12 @@ export class SemaphoreError extends RedisXError {
 export class SemaphoreAcquisitionError extends SemaphoreError {
   constructor(
     key: string,
-    public readonly reason: 'timeout' | 'exhausted' | 'error',
+    /**
+     * 'timeout' = the waitTimeout budget ran out; 'exhausted' = the retry
+     * cap ran out; 'error' = the store failed (outage — the cause carries
+     * the driver error); 'shutdown' = the service was destroyed mid-wait.
+     */
+    public readonly reason: 'timeout' | 'exhausted' | 'error' | 'shutdown',
     cause?: Error,
   ) {
     super(`Failed to acquire semaphore permit for "${key}": ${reason}`, reason === 'timeout' ? ErrorCode.SEMAPHORE_ACQUISITION_TIMEOUT : ErrorCode.SEMAPHORE_ACQUISITION_FAILED, key, cause);

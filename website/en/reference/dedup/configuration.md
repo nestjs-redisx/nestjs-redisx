@@ -44,6 +44,10 @@ Applies **only to the gates** (`dedupe`, `debounce`, `@Dedupe`) when the store i
 
 Every fail-open execution logs a warning, so outages are visible either way.
 
+Two debounce-specific nuances: a **stamp** failure under `fail-open` still waits the quiet window before running (immediate execution would duplicate a healthy instance's round), and a **claim** failure never runs-anyway — `fail-open` skips the round loudly, because running a possibly-superseded round would duplicate the winner's execution.
+
+Keys must not contain `U+0000` (reserved for the internal debounce-slot namespace) — validation rejects it.
+
 ## Choosing the Window
 
 The window answers "for how long is a repeat a *duplicate* rather than a *new occurrence*?" — webhook redelivery horizons (minutes), queue redrive policies (your visibility timeout × max receives), or UX double-click guards (seconds). Markers vanish on their own; there is nothing to clean up.

@@ -50,7 +50,9 @@ export interface IDedupStore {
    *
    * @param key - Full debounce slot key in Redis
    * @param callId - This caller's id
-   * @returns True if the claim succeeded — the caller must execute
+   * @returns 'claimed' — the caller must execute; 'superseded' — a newer
+   *   caller owns the round; 'expired' — the slot is gone (the round was
+   *   lost to expiry: the claimer stalled past the grace period)
    */
-  claimLastCall(key: string, callId: string): Promise<boolean>;
+  claimLastCall(key: string, callId: string): Promise<'claimed' | 'superseded' | 'expired'>;
 }

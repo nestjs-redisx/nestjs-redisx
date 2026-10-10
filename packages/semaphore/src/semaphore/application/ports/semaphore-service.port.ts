@@ -20,8 +20,10 @@ export interface ISemaphoreService {
    * @param permits - Semaphore capacity (max concurrent holders)
    * @param options - Permit options (TTL, waitTimeout, retry, auto-renewal)
    * @returns A permit that must be released
-   * @throws {SemaphoreAcquisitionError} When no permit frees up in time
-   * @throws {InvalidSemaphoreConfigError} On an invalid key or capacity
+   * @throws {SemaphoreAcquisitionError} reason 'exhausted' (retry cap ran
+   *   out), 'timeout' (waitTimeout budget ran out), 'error' (store outage —
+   *   cause carries the driver error), or 'shutdown' (service destroyed)
+   * @throws {InvalidSemaphoreConfigError} On invalid key/capacity/options
    *
    * @example
    * ```typescript
@@ -89,11 +91,14 @@ export interface ISemaphoreService {
   /**
    * Force-releases every permit on a key (admin operation).
    *
-   * Frees all seats regardless of ownership — in-flight holders keep
-   * running but their release becomes a no-op. Use for operator recovery.
+   * Frees all seats regardless of ownership. In-flight holders keep
+   * running; their eventual release() throws SemaphorePermitNotHeldError —
+   * the honest signal that the seat was taken away from under their work
+   * (withPermit and @WithSemaphore absorb it into an error log). Use for
+   * operator recovery.
    *
    * @param key - Semaphore key
-   * @returns Number of permits that were held
+   * @returns Number of LIVE permits that were displaced
    */
   forceReleaseAll(key: string): Promise<number>;
 }

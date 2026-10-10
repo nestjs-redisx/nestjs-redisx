@@ -732,11 +732,11 @@ export class EncodingService {
 
 - `key`: string with `{n}` argument templates, or a `(...args) => string` builder.
 - `permits` travels with the call and MUST be the same for every caller of a key (the store enforces whatever the acquiring call provides).
-- `onUnavailable`: `'throw'` (default, SemaphoreAcquisitionError) | `'skip'` (resolve undefined) | `(key) => Error`. Applies ONLY to acquisition; method errors always propagate and the permit is always released.
+- `onUnavailable`: `'throw'` (default, SemaphoreAcquisitionError) | `'skip'` (resolve undefined) | `(key) => Error` (a non-Error return falls back to the original error). Applies ONLY to acquisition — saturation, store outage, and shutdown alike (cross-copy-safe detection by error code); method errors always propagate and the permit is always released.
 - Without the plugin the method executes WITHOUT a bound (warning) — fail-open.
 - Metadata stamped by decorators below it is carried onto the wrapper — both orders with @Cron are safe.
 
-Semantics: acquire retries with exponential backoff bounded by `waitTimeout`; permits auto-renew while held and renewal stops the moment a permit is lost; `permit.release()` throws `SemaphorePermitNotHeldError` when the seat expired before the work finished (the bound was NOT held — raise ttl or enable renewal); graceful shutdown releases every held permit so waiters take over immediately. Metrics (with MetricsPlugin): `redisx_semaphore_acquisitions_total{status}`, `redisx_semaphore_wait_duration_seconds`, `redisx_semaphore_hold_duration_seconds`, `redisx_semaphore_permits_active`. Tracing: a `semaphore.acquire` span per acquisition.
+Semantics: acquire retries with exponential backoff bounded by `waitTimeout` (SemaphoreAcquisitionError reasons: 'exhausted' retry cap | 'timeout' wait budget | 'error' store outage with cause | 'shutdown'); permits auto-renew while held — renewal RETRIES through transient store errors while the lease is alive and stops only on a confirmed loss or lapse; `permit.release()` throws `SemaphorePermitNotHeldError` when the seat expired or was force-released before the work finished (the bound was NOT held — raise ttl or enable renewal); shutdown never yanks seats from under running work — renewal stops and seats lapse within the remaining TTL (crash bound), while an owner's own release still lands instantly and a waiting acquire aborts with 'shutdown'. All expiry decisions use the REDIS SERVER clock (cached TIME offset, 30s re-sync) — local clock skew cannot sweep live permits. Metrics (with MetricsPlugin): `redisx_semaphore_acquisitions_total{status}`, `redisx_semaphore_wait_duration_seconds`, `redisx_semaphore_hold_duration_seconds`, `redisx_semaphore_permits_active`. Tracing: a `semaphore.acquire` span per acquisition.
 
 ## Dedup Plugin
 
@@ -770,7 +770,7 @@ Without the plugin the method executes WITHOUT deduplication (warning) — fail-
 
 `debounce(key, fn, { window })` — every call stamps itself as the LAST caller; after the quiet window the still-last caller claims the slot atomically (CAS + delete) and executes; superseded calls resolve undefined. The returned promise settles AFTER the window. The pending timer is in-process and unref'd: if the last-calling instance dies before the window elapses the round does not execute (best-effort, like a local debounce — the next call starts a new round).
 
-Semantics: `isFirst`/`release` are STRICT (store failures always throw DedupStoreError); `dedupe`/`debounce`/@Dedupe are gates following errorPolicy. Metrics: `redisx_dedup_checks_total{outcome='first'|'duplicate'}`.
+Semantics: `isFirst`/`release` are STRICT (store failures always throw DedupStoreError); `dedupe`/@Dedupe are gates following errorPolicy. Debounce nuances: a stamp failure under fail-open still WAITS the window before running (zero-delay execution would duplicate a healthy instance's round); a CLAIM failure never runs-anyway — fail-open skips the round loudly (running a possibly-superseded round would duplicate the winner); a slot that expired before the claim (process stalled >5s past the window) is reported as a LOST round in the logs, distinctly from supersession. User keys must not contain U+0000 (reserved for the internal debounce-slot namespace). Metrics: `redisx_dedup_checks_total{outcome='first'|'duplicate'}`.
 
 ## Counters Plugin
 
@@ -790,11 +790,11 @@ new CountersPlugin({
 ```typescript
 await counters.increment(`views:${articleId}`);                                  // atomic, fleet-wide
 await counters.increment(`api:${userId}:${today}`, 1, { ttl: 86_400_000 });      // window: TTL only when the increment CREATES the key
-const sent = await counters.getAndReset('emails:batch');                         // atomic read-and-zero (flush aggregation)
+const sent = await counters.getAndReset('emails:batch');                         // atomic read-and-zero (flush aggregation; a clearly-non-numeric value is returned as an error WITHOUT deleting the key — evidence preserved)
 const invoiceNo = await counters.next('seq:invoices');                           // monotonic sequence: 1, 2, 3, ... (never a TTL)
 ```
 
-Window semantics (atomic Lua: INCRBY + PTTL < 0 -> PEXPIRE): the window is anchored to the FIRST write — later increments never extend it. Sequences are monotonic and collision-free but NOT gapless (a crashed consumer abandons its value). Counters go negative freely. Not for request-rate enforcement (use rate-limit) or concurrency bounds (use semaphore).
+Window semantics (atomic Lua: EXISTS check before INCRBY, PEXPIRE only on creation — a pre-existing permanent counter is never retrofitted with a window): the window is anchored to the FIRST write — later increments never extend it, and `set()` WITHOUT a ttl preserves an existing window (Lua PTTL carry-over; a plain SET would make the key permanent). Sequences are monotonic and collision-free but NOT gapless (a crashed consumer abandons its value). Counters go negative freely. Not for request-rate enforcement (use rate-limit) or concurrency bounds (use semaphore).
 
 ## Idempotency Plugin
 
@@ -1103,7 +1103,7 @@ The promise-based store behind the middleware adapters is exported as `SESSION_S
 - `withPermit<T>(key: string, permits: number, fn: () => Promise<T>, options?: ISemaphoreOptions): Promise<T>` — acquire, run, always release (method errors propagate).
 - `usedPermits(key: string): Promise<number>` — live (unexpired) holders.
 - `availablePermits(key: string, permits: number): Promise<number>` — `permits − used`, never below 0.
-- `forceReleaseAll(key: string): Promise<number>` — admin: free every seat; in-flight holders keep running, their release becomes a no-op.
+- `forceReleaseAll(key: string): Promise<number>` — admin: free every seat (returns LIVE holders displaced); in-flight holders keep running, their eventual release() throws SemaphorePermitNotHeldError (absorbed to a log by withPermit/@WithSemaphore).
 
 The permit (`ISemaphorePermit`): `release()` (idempotent; throws `SemaphorePermitNotHeldError` when the seat was already lost), `extend(ttl)` (throws `SemaphoreExtensionError` when expired), `isHeld()`, `stopAutoRenew()`, plus `key`/`permitId`/`ttl`/`acquiredAt`/`expiresAt`/`isAutoRenewing`. Errors: `SemaphoreError` base, `SemaphoreAcquisitionError`, `SemaphorePermitNotHeldError`, `SemaphoreExtensionError`, `InvalidSemaphoreConfigError`.
 
@@ -1111,7 +1111,7 @@ The permit (`ISemaphorePermit`): `release()` (idempotent; throws `SemaphorePermi
 
 - `isFirst(key: string, options?: IDedupOptions): Promise<boolean>` — atomically mark-and-check; true exactly once per window across all instances; STRICT (store failures throw `DedupStoreError`).
 - `dedupe<T>(key: string, fn: () => Promise<T>, options?: IDedupOptions): Promise<T | undefined>` — run fn for the first occurrence only; duplicates resolve undefined; a thrown fn releases this caller's marker (retry re-admitted); gate — follows errorPolicy.
-- `debounce<T>(key: string, fn: () => Promise<T>, options?: IDebounceOptions): Promise<T | undefined>` — distributed trailing debounce: executes on the LAST caller after the quiet window; superseded calls resolve undefined; gate — follows errorPolicy.
+- `debounce<T>(key: string, fn: () => Promise<T>, options?: IDebounceOptions): Promise<T | undefined>` — distributed trailing debounce: executes on the LAST caller after the quiet window; superseded calls resolve undefined; stamp failures follow errorPolicy (fail-open waits the window first), claim failures and expired slots SKIP loudly instead of running.
 - `release(key: string): Promise<boolean>` — remove a marker early (manual/admin); STRICT.
 
 Errors: `DedupError` base, `InvalidDedupConfigError`, `DedupStoreError`.
@@ -1120,8 +1120,8 @@ Errors: `DedupError` base, `InvalidDedupConfigError`, `DedupStoreError`.
 
 - `increment(key: string, by?: number, options?: ICounterOptions): Promise<number>` — atomic add (default 1); with `options.ttl` the TTL applies only when the increment CREATES the key (window counter); returns the new value.
 - `decrement(key: string, by?: number, options?: ICounterOptions): Promise<number>` — atomic subtract; counters go negative freely.
-- `get(key: string): Promise<number>` — current value; 0 when absent; throws `CounterValueError` on a non-numeric key.
-- `set(key: string, value: number, options?: ICounterOptions): Promise<void>` — absolute assignment (safe integer), optional TTL.
+- `get(key: string): Promise<number>` — current value; 0 when absent; throws `CounterValueError` (carrying the raw value) on a non-numeric key or an integer past 2^53 (precision loss would mint duplicate sequence ids).
+- `set(key: string, value: number, options?: ICounterOptions): Promise<void>` — absolute assignment (safe integer); without a ttl an EXISTING window TTL is preserved; with a ttl it is replaced.
 - `reset(key: string): Promise<boolean>` — delete; true when a counter existed.
 - `getAndReset(key: string): Promise<number>` — atomic read-and-zero (Lua); 0 when absent.
 - `next(sequence: string): Promise<number>` — monotonic fleet-wide sequence value (INCR, never a TTL).

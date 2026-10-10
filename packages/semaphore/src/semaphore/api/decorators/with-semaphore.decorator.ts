@@ -162,7 +162,7 @@ export function WithSemaphore(options: IWithSemaphoreOptions): MethodDecorator {
 
         return await originalMethod.apply(this, args);
       } catch (error) {
-        if (error instanceof SemaphoreAcquisitionError && !permit) {
+        if (isAcquisitionFailure(error) && !permit) {
           return handleUnavailable(key, options, error);
         }
         throw error;
@@ -202,29 +202,64 @@ export function WithSemaphore(options: IWithSemaphoreOptions): MethodDecorator {
  * Builds the semaphore key from a template or function.
  * `{n}` placeholders interpolate the n-th argument (stringified).
  */
+const warnedObjectTemplates = new WeakSet<object>();
+
 function buildSemaphoreKey(args: unknown[], options: IWithSemaphoreOptions): string {
   if (typeof options.key === 'function') {
     return options.key(...args);
   }
   return options.key.replace(/\{(\d+)\}/g, (_match, index: string) => {
     const value = args[Number(index)];
-    return value === undefined || value === null ? '' : String(value);
+    if (value === undefined || value === null) {
+      return '';
+    }
+    const rendered = String(value);
+    if (rendered === '[object Object]' && !warnedObjectTemplates.has(options)) {
+      // Every call collapses onto ONE key — all tenants silently share one
+      // semaphore. Loud once per decorator site.
+      warnedObjectTemplates.add(options);
+      logger.warn(`@WithSemaphore: key template "${options.key as string}" interpolated an object as "[object Object]" — every call shares ONE semaphore key. Interpolate a scalar id or use a key builder function.`);
+    }
+    return rendered;
   });
 }
 
 /**
- * Applies the configured onUnavailable policy.
+ * Cross-copy-safe acquisition-failure detection: with the dual CJS + ESM
+ * build the SERVICE may have been loaded from the other module copy, so its
+ * SemaphoreAcquisitionError is a DIFFERENT class and `instanceof` alone
+ * fails — the onUnavailable policy would silently die. The error code is
+ * copy-independent.
  */
-function handleUnavailable(key: string, options: IWithSemaphoreOptions, error: SemaphoreAcquisitionError): undefined {
+function isAcquisitionFailure(error: unknown): error is SemaphoreAcquisitionError {
+  if (error instanceof SemaphoreAcquisitionError) {
+    return true;
+  }
+  const code = (error as { code?: string } | null)?.code;
+  return code === 'SEMAPHORE_ACQUISITION_TIMEOUT' || code === 'SEMAPHORE_ACQUISITION_FAILED';
+}
+
+/**
+ * Applies the configured onUnavailable policy. Total: a user policy
+ * function returning a non-Error (or nothing) must not surface as
+ * `throw undefined` — the original acquisition error is thrown instead.
+ */
+function handleUnavailable(key: string, options: IWithSemaphoreOptions, error: unknown): undefined {
   const policy = options.onUnavailable ?? 'throw';
 
   if (policy === 'skip') {
-    logger.debug(`@WithSemaphore: semaphore "${key}" is at capacity, skipping method`);
+    logger.debug(`@WithSemaphore: no permit available on "${key}", skipping method`);
     return undefined;
   }
 
   if (typeof policy === 'function') {
-    throw policy(key);
+    let custom: unknown;
+    try {
+      custom = policy(key);
+    } catch (policyError) {
+      custom = policyError;
+    }
+    throw custom instanceof Error ? custom : error;
   }
 
   throw error;

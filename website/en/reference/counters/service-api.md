@@ -16,7 +16,7 @@ Inject with the `COUNTER_SERVICE` token:
 | `increment(key, by = 1, { ttl }?)` | Atomic add; returns the new value. With `ttl`: first-write window semantics |
 | `decrement(key, by = 1, { ttl }?)` | Atomic subtract; counters go negative freely |
 | `get(key)` | Current value; `0` when absent |
-| `set(key, value, { ttl }?)` | Absolute assignment |
+| `set(key, value, { ttl }?)` | Absolute assignment; **without** `ttl` an existing window TTL is preserved (a mid-window correction never makes the key permanent) |
 | `reset(key)` | Delete; `true` when a counter existed |
 | `getAndReset(key)` | Atomic read-and-zero (Lua); `0` when absent |
 | `next(sequence)` | Monotonic sequence value (INCR, never a TTL) |
@@ -24,7 +24,7 @@ Inject with the `COUNTER_SERVICE` token:
 
 ## Window Semantics (`ttl`)
 
-The TTL is applied **only when the mutation creates the key** (atomic Lua: `INCRBY` + `PTTL < 0 → PEXPIRE`):
+The TTL is applied **only when the mutation creates the key** (atomic Lua: `EXISTS` check before `INCRBY`, `PEXPIRE` only on creation — a pre-existing permanent counter is never retrofitted with a window):
 
 <<< @/apps/demo/src/plugins/counters/window.usage.ts{typescript}
 

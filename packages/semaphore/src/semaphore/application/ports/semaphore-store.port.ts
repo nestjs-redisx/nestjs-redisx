@@ -6,8 +6,10 @@
  * inside the acquire path, so crashed holders free their seats after their
  * TTL without any background process.
  *
- * Time is injected (`nowMs`) — the store never reads a clock, keeping the
- * scripts deterministic and the domain testable.
+ * TIME IS OWNED BY THE STORE: every expiry decision uses the Redis server
+ * clock (fetched via TIME and cached as a local offset), never the calling
+ * instance's clock — a replica with a skewed clock must not be able to
+ * sweep other instances' live permits or misjudge its own.
  */
 export interface ISemaphoreStore {
   /**
@@ -20,17 +22,18 @@ export interface ISemaphoreStore {
    * @param permitId - Unique permit id
    * @param capacity - Maximum number of concurrent permits
    * @param ttlMs - Permit TTL in milliseconds
-   * @param nowMs - Current time (ms epoch)
    * @returns True if the permit was acquired, false if the semaphore is full
    */
-  acquire(key: string, permitId: string, capacity: number, ttlMs: number, nowMs: number): Promise<boolean>;
+  acquire(key: string, permitId: string, capacity: number, ttlMs: number): Promise<boolean>;
 
   /**
-   * Releases a permit (idempotent).
+   * Releases a permit. The member is removed either way; "was held" is
+   * reported only when the permit was still LIVE (an expired seat was not
+   * protected — the caller must hear about it).
    *
    * @param key - Full semaphore key in Redis
    * @param permitId - Permit id to remove
-   * @returns True if the permit was held and removed
+   * @returns True if the permit was live and removed
    */
   release(key: string, permitId: string): Promise<boolean>;
 
@@ -40,29 +43,26 @@ export interface ISemaphoreStore {
    * @param key - Full semaphore key in Redis
    * @param permitId - Permit id to extend
    * @param ttlMs - New TTL in milliseconds (from now)
-   * @param nowMs - Current time (ms epoch)
    * @returns True if extended, false if the permit expired or was released
    */
-  extend(key: string, permitId: string, ttlMs: number, nowMs: number): Promise<boolean>;
+  extend(key: string, permitId: string, ttlMs: number): Promise<boolean>;
 
   /**
    * Checks whether a permit is currently held (present and unexpired).
    *
    * @param key - Full semaphore key in Redis
    * @param permitId - Permit id to check
-   * @param nowMs - Current time (ms epoch)
    * @returns True if the permit is live
    */
-  isHeld(key: string, permitId: string, nowMs: number): Promise<boolean>;
+  isHeld(key: string, permitId: string): Promise<boolean>;
 
   /**
    * Counts currently held (unexpired) permits.
    *
    * @param key - Full semaphore key in Redis
-   * @param nowMs - Current time (ms epoch)
    * @returns Number of live permits
    */
-  usedPermits(key: string, nowMs: number): Promise<number>;
+  usedPermits(key: string): Promise<number>;
 
   /**
    * Force-releases every permit on the semaphore (admin operation).

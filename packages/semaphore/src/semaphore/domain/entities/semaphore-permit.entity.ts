@@ -79,6 +79,8 @@ export class SemaphorePermit implements ISemaphorePermit {
   private _expiresAt: Date;
   private autoRenewTimer: NodeJS.Timeout | null = null;
   private released = false;
+  /** Single-flight gate: concurrent release() calls share ONE store round-trip. */
+  private releasing: Promise<void> | null = null;
 
   /**
    * @param key - Full semaphore key in Redis
@@ -125,12 +127,23 @@ export class SemaphorePermit implements ISemaphorePermit {
     if (this.released) {
       return;
     }
+    // Single-flight: a second concurrent release() (user finally racing
+    // another path) must share the SAME outcome instead of issuing a second
+    // ZREM — the loser of a double-ZREM would see 0 and throw a FALSE
+    // SemaphorePermitNotHeldError for a perfectly clean release.
+    if (this.releasing) {
+      return this.releasing;
+    }
+    this.releasing = this.doRelease();
+    return this.releasing;
+  }
 
+  private async doRelease(): Promise<void> {
     this.stopAutoRenew();
 
     const success = await this.store.release(this.key, this.permitId);
     // Mark released BEFORE the ownership check: whatever the outcome, this
-    // permit has nothing left to free, and a second release() must be a
+    // permit has nothing left to free, and a later release() must be a
     // no-op instead of a second error.
     this.released = true;
 
@@ -147,7 +160,7 @@ export class SemaphorePermit implements ISemaphorePermit {
       throw new SemaphorePermitNotHeldError(this.key, this.permitId);
     }
 
-    const success = await this.store.extend(this.key, this.permitId, ttl, Date.now());
+    const success = await this.store.extend(this.key, this.permitId, ttl);
     if (!success) {
       throw new SemaphoreExtensionError(this.key, this.permitId);
     }
@@ -162,7 +175,7 @@ export class SemaphorePermit implements ISemaphorePermit {
     if (this.released) {
       return false;
     }
-    return this.store.isHeld(this.key, this.permitId, Date.now());
+    return this.store.isHeld(this.key, this.permitId);
   }
 
   /**
@@ -183,11 +196,33 @@ export class SemaphorePermit implements ISemaphorePermit {
       try {
         await this.extend(this.ttl);
       } catch (error) {
-        // Extension failed — the permit may already be lost. Surface it and
-        // stop renewing; callers can detect this via `isAutoRenewing`
-        // flipping to false.
-        this.logger.warn(`Auto-renewal failed for semaphore permit "${this.permitId}" on "${this.key}"; the permit may have expired and renewal has stopped: ${(error as Error).message}`);
-        this.stopAutoRenew();
+        // Two distinct failures, two distinct policies:
+        // - the PERMIT is gone (store confirmed: extension refused /
+        //   already released) -> stop renewing, the seat is lost;
+        // - the STORE is unreachable (transient outage, OOM aborting the
+        //   re-score ZADD, failover blip) -> KEEP RETRYING while the lease
+        //   still has life in it: a single blip must not strand a long job
+        //   whose seat was perfectly recoverable. Once the local expiry
+        //   passes, the seat is gone anyway (crash bound) — stop.
+        // Containment is TOTAL: a nullish rejection must not mint a
+        // TypeError inside this catch (an unhandled rejection in a timer
+        // callback crashes the process), and a throwing log line must not
+        // keep a dead permit's timer alive.
+        const permitLost = error instanceof SemaphorePermitNotHeldError || error instanceof SemaphoreExtensionError;
+        const leaseLapsed = Date.now() >= this._expiresAt.getTime();
+        if (permitLost || leaseLapsed) {
+          this.stopAutoRenew();
+        }
+        try {
+          const description = error instanceof Error ? error.message : String(error);
+          if (permitLost || leaseLapsed) {
+            this.logger.warn(`Auto-renewal stopped for semaphore permit "${this.permitId}" on "${this.key}" (${permitLost ? 'permit lost' : 'lease lapsed during a store outage'}): ${description}`);
+          } else {
+            this.logger.warn(`Auto-renewal attempt failed for semaphore permit "${this.permitId}" on "${this.key}" (transient store error, will retry): ${description}`);
+          }
+        } catch {
+          // logging must never break the containment
+        }
       }
     }, intervalMs);
 

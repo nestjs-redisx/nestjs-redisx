@@ -6,7 +6,7 @@ describe('semaphore errors', () => {
   it('should build the full hierarchy on RedisXError with semaphore codes', () => {
     // Given/When
     const acquisitionTimeout = new SemaphoreAcquisitionError('renders', 'timeout');
-    const acquisitionFailed = new SemaphoreAcquisitionError('renders', 'error', new Error('boom'));
+    const acquisitionFailed = new SemaphoreAcquisitionError('renders', 'exhausted', new Error('boom'));
     const notHeld = new SemaphorePermitNotHeldError('renders', 'permit-1');
     const extension = new SemaphoreExtensionError('renders', 'permit-1');
     const config = new InvalidSemaphoreConfigError('bad config');

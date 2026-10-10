@@ -46,4 +46,4 @@ Freeze a semaphore by watching it, then force-free seats stuck behind an inciden
 
 <<< @/apps/demo/src/plugins/semaphore/monitoring.usage.ts{typescript}
 
-`forceReleaseAll` never interrupts running work — in-flight holders complete, their release becomes a no-op, and the seats open immediately.
+`forceReleaseAll` never interrupts running work — in-flight holders complete, and the seats open immediately. Their eventual `release()` throws `SemaphorePermitNotHeldError` (the honest signal the seat was taken away); `withPermit` and `@WithSemaphore` absorb it into an error log.

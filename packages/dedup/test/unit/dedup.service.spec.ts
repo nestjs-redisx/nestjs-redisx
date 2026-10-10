@@ -9,7 +9,7 @@ function createMockStore(): MockedObject<IDedupStore> {
     releaseIfOwner: vi.fn().mockResolvedValue(true),
     release: vi.fn().mockResolvedValue(true),
     stampLastCall: vi.fn().mockResolvedValue(undefined),
-    claimLastCall: vi.fn().mockResolvedValue(true),
+    claimLastCall: vi.fn().mockResolvedValue('claimed'),
   } as MockedObject<IDedupStore>;
 }
 
@@ -158,14 +158,14 @@ describe('DedupService', () => {
 
       // Then — stamped, waited, claimed, ran
       expect(result).toBe('rebuilt');
-      expect(store.stampLastCall).toHaveBeenCalledWith('_dedup:debounce:reindex', expect.any(String), 20 + 1_000);
+      expect(store.stampLastCall).toHaveBeenCalledWith('_dedup:\u0000debounce\u0000reindex', expect.any(String), 20 + 5_000);
       const callId = store.stampLastCall.mock.calls[0]![1];
-      expect(store.claimLastCall).toHaveBeenCalledWith('_dedup:debounce:reindex', callId);
+      expect(store.claimLastCall).toHaveBeenCalledWith('_dedup:\u0000debounce\u0000reindex', callId);
     });
 
     it('should resolve undefined for a superseded call (claim refused)', async () => {
       // Given — a newer call overwrote the slot during the window
-      store.claimLastCall.mockResolvedValue(false);
+      store.claimLastCall.mockResolvedValue('superseded');
       const fn = vi.fn();
 
       // When
@@ -176,15 +176,18 @@ describe('DedupService', () => {
       expect(fn).not.toHaveBeenCalled();
     });
 
-    it('should apply the errorPolicy to stamp failures (fail-open runs immediately)', async () => {
+    it('should apply fail-open to stamp failures only AFTER the window (debounce delay preserved)', async () => {
       // Given
       store.stampLastCall.mockRejectedValue(new Error('down'));
 
       // When
-      const result = await service.debounce('reindex', async () => 'ran', { window: 5 });
+      const start = Date.now();
+      const result = await service.debounce('reindex', async () => 'ran', { window: 60 });
 
-      // Then — no wait, direct fail-open execution
+      // Then — ran, but not before the quiet window (zero-delay execution
+      // would duplicate with a healthy instance's full round)
       expect(result).toBe('ran');
+      expect(Date.now() - start).toBeGreaterThanOrEqual(55);
       expect(store.claimLastCall).not.toHaveBeenCalled();
     });
 
@@ -195,6 +198,81 @@ describe('DedupService', () => {
 
       // When/Then
       await expect(closed.debounce('reindex', async () => 'never', { window: 5 })).rejects.toThrow(DedupStoreError);
+    });
+
+    it('should SKIP (never run-anyway) on a claim store failure under fail-open — running a possibly-superseded round duplicates the winner', async () => {
+      // Given
+      store.claimLastCall.mockRejectedValue(new Error('down'));
+      const fn = vi.fn();
+
+      // When
+      const result = await service.debounce('reindex', fn, { window: 5 });
+
+      // Then
+      expect(result).toBeUndefined();
+      expect(fn).not.toHaveBeenCalled();
+    });
+
+    it('should warn loudly (and skip) when the slot expired before the claim — a LOST round, not supersession', async () => {
+      // Given — the process stalled past the grace: slot vanished
+      store.claimLastCall.mockResolvedValue('expired');
+      const fn = vi.fn();
+
+      // When
+      const result = await service.debounce('reindex', fn, { window: 5 });
+
+      // Then
+      expect(result).toBeUndefined();
+      expect(fn).not.toHaveBeenCalled();
+    });
+
+    it('should keep user dedupe keys and debounce slots in disjoint namespaces', async () => {
+      // Given — a user key that LOOKS like the old slot naming
+      await service.isFirst('debounce:123');
+      await service.debounce('123', async () => 'ran', { window: 5 });
+
+      // Then — different Redis keys (NUL-delimited internal segment)
+      const markerKey = store.markFirst.mock.calls[0]![0];
+      const slotKey = store.stampLastCall.mock.calls[0]![0];
+      expect(markerKey).toBe('_dedup:debounce:123');
+      expect(slotKey).not.toBe(markerKey);
+
+      // And NUL in user keys is rejected outright
+      await expect(service.isFirst('a\u0000b')).rejects.toThrow(InvalidDedupConfigError);
+    });
+  });
+
+  describe('adversarial: hostile metrics and debounce grace', () => {
+    it('should NOT lose the event when a user metrics implementation throws after marking first', async () => {
+      // Given — markFirst succeeded (the window is burned for everyone else),
+      // then the metrics emit detonates
+      const metrics = {
+        incrementCounter: vi.fn(() => {
+          throw new Error('metrics backend down');
+        }),
+      };
+      const hostile = new DedupService({}, store, metrics);
+
+      // When — dedupe must still run fn (otherwise the event is marked but
+      // never handled: lost for the whole window)
+      const result = await hostile.dedupe('evt', async () => 'handled');
+
+      // Then
+      expect(result).toBe('handled');
+
+      // And isFirst still reports the truth instead of throwing
+      store.markFirst.mockResolvedValue(false);
+      expect(await hostile.isFirst('evt')).toBe(false);
+    });
+
+    it('should stamp the debounce slot with a grace period that survives event-loop lag (>= 5s)', async () => {
+      // Given — the local timer can fire late (GC pause, event-loop lag); the
+      // slot must still be claimable well past the nominal window
+      await service.debounce('reindex', async () => 'ran', { window: 20 });
+
+      // Then
+      const ttl = store.stampLastCall.mock.calls[0]![2] as number;
+      expect(ttl).toBeGreaterThanOrEqual(20 + 5_000);
     });
   });
 

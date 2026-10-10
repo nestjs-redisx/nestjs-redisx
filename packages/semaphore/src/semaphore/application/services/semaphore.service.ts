@@ -3,7 +3,7 @@ import { Injectable, Inject, Logger, OnModuleDestroy, Optional } from '@nestjs/c
 import { SEMAPHORE_PLUGIN_OPTIONS, SEMAPHORE_STORE, DEFAULT_SEMAPHORE_CONFIG } from '../../../shared/constants';
 import { SemaphoreAcquisitionError } from '../../../shared/errors';
 import { ISemaphorePluginOptions, ISemaphoreOptions } from '../../../shared/types';
-import { validateSemaphoreCall, validateSemaphoreOptions } from '../../../shared/utils/validate-semaphore-options';
+import { validateSemaphoreCall, validateSemaphoreCallOptions, validateSemaphoreOptions } from '../../../shared/utils/validate-semaphore-options';
 import { SemaphorePermit, ISemaphorePermit } from '../../domain/entities/semaphore-permit.entity';
 import { ISemaphoreService } from '../ports/semaphore-service.port';
 import { ISemaphoreStore } from '../ports/semaphore-store.port';
@@ -44,6 +44,13 @@ interface ITracingService {
 export class SemaphoreService implements ISemaphoreService, OnModuleDestroy {
   private readonly logger = new Logger(SemaphoreService.name);
   private readonly activePermits = new Set<SemaphorePermit>();
+  /**
+   * Terminal flag: an acquire sleeping in backoff when the service is
+   * destroyed must not win a seat afterwards (nothing would ever release it
+   * — on a still-alive process its unref'd auto-renew would keep the seat
+   * forever).
+   */
+  private destroyed = false;
 
   constructor(
     @Inject(SEMAPHORE_PLUGIN_OPTIONS) private readonly config: ISemaphorePluginOptions,
@@ -58,19 +65,25 @@ export class SemaphoreService implements ISemaphoreService, OnModuleDestroy {
   }
 
   /**
-   * Lifecycle hook: releases all held permits on shutdown so waiting
-   * instances take over immediately instead of after the TTL.
+   * Lifecycle hook. Deliberately does NOT release still-held permits: a
+   * permit guards work that may STILL BE RUNNING when Nest fires the destroy
+   * hooks (in-flight handlers are not drained first), and yanking the seat
+   * would let another instance start the same bounded work concurrently — a
+   * silent violation of the one invariant this package sells. Instead:
+   * auto-renewal stops, so every seat of this instance lapses within its
+   * remaining TTL — exactly the documented crash bound. Work that finishes
+   * before the process exits still releases instantly through its own
+   * finally; an acquire still sleeping in backoff is aborted by the
+   * `destroyed` flag.
    */
-  async onModuleDestroy(): Promise<void> {
-    const releases = Array.from(this.activePermits).map((permit) =>
-      permit.release().catch((error) => {
-        // Log but don't throw — we're shutting down, and an expired permit
-        // (SemaphorePermitNotHeldError) already freed its seat anyway.
-        this.logger.error(`Failed to release semaphore permit ${permit.permitId} on ${permit.key} during shutdown:`, error);
-      }),
-    );
-
-    await Promise.all(releases);
+  onModuleDestroy(): void {
+    this.destroyed = true;
+    for (const permit of this.activePermits) {
+      permit.stopAutoRenew();
+    }
+    if (this.activePermits.size > 0) {
+      this.logger.log(`Shutdown: ${this.activePermits.size} semaphore permit(s) left to lapse by TTL (crash bound); completed work still releases instantly.`);
+    }
     this.activePermits.clear();
   }
 
@@ -79,11 +92,14 @@ export class SemaphoreService implements ISemaphoreService, OnModuleDestroy {
    */
   async acquire(key: string, permits: number, options: ISemaphoreOptions = {}): Promise<ISemaphorePermit> {
     validateSemaphoreCall(key, permits, 'acquire');
+    validateSemaphoreCallOptions(options, 'acquire');
 
-    const span = this.tracing?.startSpan('semaphore.acquire', {
-      kind: 'INTERNAL',
-      attributes: { 'semaphore.key': key, 'semaphore.permits': permits, 'semaphore.ttl': options.ttl },
-    });
+    const span = this.quietly(() =>
+      this.tracing?.startSpan('semaphore.acquire', {
+        kind: 'INTERNAL',
+        attributes: { 'semaphore.key': key, 'semaphore.permits': permits, 'semaphore.ttl': options.ttl },
+      }),
+    );
 
     const fullKey = this.buildKey(key);
     const ttl = this.resolveTtl(options.ttl);
@@ -96,17 +112,39 @@ export class SemaphoreService implements ISemaphoreService, OnModuleDestroy {
 
     try {
       for (let attempt = 0; attempt <= retry.maxRetries; attempt++) {
-        const acquired = await this.store.acquire(fullKey, permitId, permits, ttl, Date.now());
+        if (this.destroyed) {
+          throw new SemaphoreAcquisitionError(key, 'shutdown');
+        }
+
+        let acquired: boolean;
+        try {
+          acquired = await this.store.acquire(fullKey, permitId, permits, ttl);
+        } catch (storeError) {
+          // Typed wrapping: the decorator's onUnavailable policy and
+          // withPermit callers must see the package's error (with the driver
+          // failure as the cause), not a raw ReplyError.
+          throw new SemaphoreAcquisitionError(key, 'error', storeError instanceof Error ? storeError : new Error(String(storeError)));
+        }
+
+        if (acquired && this.destroyed) {
+          // Won on the wire while shutdown ran: nothing would ever release
+          // this seat — give it back quietly and abort.
+          await Promise.resolve(this.store.release(fullKey, permitId)).catch(() => undefined);
+          throw new SemaphoreAcquisitionError(key, 'shutdown');
+        }
 
         if (acquired) {
           const waitDuration = (Date.now() - startTime) / 1000;
-          this.metrics?.observeHistogram('redisx_semaphore_wait_duration_seconds', waitDuration);
-          this.metrics?.incrementCounter('redisx_semaphore_acquisitions_total', { status: 'acquired' });
-          this.metrics?.incrementGauge('redisx_semaphore_permits_active');
+          this.quietly(() => this.metrics?.observeHistogram('redisx_semaphore_wait_duration_seconds', waitDuration));
+          this.quietly(() => this.metrics?.incrementCounter('redisx_semaphore_acquisitions_total', { status: 'acquired' }));
+          this.quietly(() => this.metrics?.incrementGauge('redisx_semaphore_permits_active'));
 
-          span?.setAttribute('semaphore.acquired', true);
-          span?.setAttribute('semaphore.attempts', attempt + 1);
-          span?.setStatus('OK');
+          this.quietly(() =>
+            span
+              ?.setAttribute('semaphore.acquired', true)
+              .setAttribute('semaphore.attempts', attempt + 1)
+              .setStatus('OK'),
+          );
 
           const permit = this.createPermit(fullKey, permitId, ttl, options);
           this.activePermits.add(permit);
@@ -118,11 +156,17 @@ export class SemaphoreService implements ISemaphoreService, OnModuleDestroy {
         const waitBudgetExhausted = waitTimeout !== undefined && Date.now() - startTime + delay >= waitTimeout;
 
         if (attempt === retry.maxRetries || waitBudgetExhausted) {
-          this.metrics?.incrementCounter('redisx_semaphore_acquisitions_total', { status: 'failed' });
-          span?.setAttribute('semaphore.acquired', false);
-          span?.setAttribute('semaphore.attempts', attempt + 1);
-          span?.setStatus('ERROR');
-          throw new SemaphoreAcquisitionError(key, 'timeout');
+          this.quietly(() => this.metrics?.incrementCounter('redisx_semaphore_acquisitions_total', { status: 'failed' }));
+          this.quietly(() =>
+            span
+              ?.setAttribute('semaphore.acquired', false)
+              .setAttribute('semaphore.attempts', attempt + 1)
+              .setStatus('ERROR'),
+          );
+          // 'timeout' only when the caller's wait budget ran out; a plain
+          // retry-cap exhaustion is 'exhausted' (distinct error codes, so
+          // consumers can back off differently).
+          throw new SemaphoreAcquisitionError(key, waitBudgetExhausted ? 'timeout' : 'exhausted');
         }
 
         await this.sleep(delay);
@@ -130,14 +174,13 @@ export class SemaphoreService implements ISemaphoreService, OnModuleDestroy {
       }
 
       // Unreachable (the loop exits via return or throw), but satisfy TS.
-      this.metrics?.incrementCounter('redisx_semaphore_acquisitions_total', { status: 'failed' });
-      throw new SemaphoreAcquisitionError(key, 'timeout');
+      this.quietly(() => this.metrics?.incrementCounter('redisx_semaphore_acquisitions_total', { status: 'failed' }));
+      throw new SemaphoreAcquisitionError(key, 'exhausted');
     } catch (error) {
-      span?.recordException(error as Error);
-      span?.setStatus('ERROR');
+      this.quietly(() => span?.recordException(error as Error).setStatus('ERROR'));
       throw error;
     } finally {
-      span?.end();
+      this.quietly(() => span?.end());
     }
   }
 
@@ -146,20 +189,35 @@ export class SemaphoreService implements ISemaphoreService, OnModuleDestroy {
    */
   async tryAcquire(key: string, permits: number, options: ISemaphoreOptions = {}): Promise<ISemaphorePermit | null> {
     validateSemaphoreCall(key, permits, 'tryAcquire');
+    validateSemaphoreCallOptions(options, 'tryAcquire');
 
     const fullKey = this.buildKey(key);
     const ttl = this.resolveTtl(options.ttl);
     const permitId = this.generatePermitId();
 
-    const acquired = await this.store.acquire(fullKey, permitId, permits, ttl, Date.now());
+    if (this.destroyed) {
+      throw new SemaphoreAcquisitionError(key, 'shutdown');
+    }
+
+    let acquired: boolean;
+    try {
+      acquired = await this.store.acquire(fullKey, permitId, permits, ttl);
+    } catch (storeError) {
+      throw new SemaphoreAcquisitionError(key, 'error', storeError instanceof Error ? storeError : new Error(String(storeError)));
+    }
+
+    if (acquired && this.destroyed) {
+      await Promise.resolve(this.store.release(fullKey, permitId)).catch(() => undefined);
+      throw new SemaphoreAcquisitionError(key, 'shutdown');
+    }
 
     if (!acquired) {
-      this.metrics?.incrementCounter('redisx_semaphore_acquisitions_total', { status: 'failed' });
+      this.quietly(() => this.metrics?.incrementCounter('redisx_semaphore_acquisitions_total', { status: 'failed' }));
       return null;
     }
 
-    this.metrics?.incrementCounter('redisx_semaphore_acquisitions_total', { status: 'acquired' });
-    this.metrics?.incrementGauge('redisx_semaphore_permits_active');
+    this.quietly(() => this.metrics?.incrementCounter('redisx_semaphore_acquisitions_total', { status: 'acquired' }));
+    this.quietly(() => this.metrics?.incrementGauge('redisx_semaphore_permits_active'));
 
     const permit = this.createPermit(fullKey, permitId, ttl, options);
     this.activePermits.add(permit);
@@ -177,7 +235,7 @@ export class SemaphoreService implements ISemaphoreService, OnModuleDestroy {
       return await fn();
     } finally {
       const holdDuration = (Date.now() - holdStart) / 1000;
-      this.metrics?.observeHistogram('redisx_semaphore_hold_duration_seconds', holdDuration);
+      this.quietly(() => this.metrics?.observeHistogram('redisx_semaphore_hold_duration_seconds', holdDuration));
 
       await permit
         .release()
@@ -195,7 +253,7 @@ export class SemaphoreService implements ISemaphoreService, OnModuleDestroy {
    */
   async usedPermits(key: string): Promise<number> {
     validateSemaphoreCall(key, 1, 'usedPermits');
-    return this.store.usedPermits(this.buildKey(key), Date.now());
+    return this.store.usedPermits(this.buildKey(key));
   }
 
   /**
@@ -203,7 +261,7 @@ export class SemaphoreService implements ISemaphoreService, OnModuleDestroy {
    */
   async availablePermits(key: string, permits: number): Promise<number> {
     validateSemaphoreCall(key, permits, 'availablePermits');
-    const used = await this.store.usedPermits(this.buildKey(key), Date.now());
+    const used = await this.store.usedPermits(this.buildKey(key));
     return Math.max(0, permits - used);
   }
 
@@ -216,6 +274,21 @@ export class SemaphoreService implements ISemaphoreService, OnModuleDestroy {
   }
 
   /**
+   * Containment for user-extensible observability (metrics, tracing): a
+   * throwing implementation must never break semaphore semantics — on the
+   * success path it would otherwise leak a seat already granted in Redis
+   * with no permit handed to the caller (nobody can release it until the
+   * TTL). Same total-containment bar the leader plugin hardened to.
+   */
+  private quietly<T>(fn: () => T): T | undefined {
+    try {
+      return fn();
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
    * Creates the permit entity with optional auto-renewal, mirroring the
    * release in metrics (gauge) when the permit is released directly.
    */
@@ -223,7 +296,7 @@ export class SemaphoreService implements ISemaphoreService, OnModuleDestroy {
     const permit = new SemaphorePermit(fullKey, permitId, ttl, this.store);
 
     const autoRenewEnabled = options.autoRenew ?? this.config.autoRenew?.enabled ?? DEFAULT_SEMAPHORE_CONFIG.autoRenew.enabled;
-    if (autoRenewEnabled) {
+    if (autoRenewEnabled && !this.destroyed) {
       const intervalFraction = this.config.autoRenew?.intervalFraction ?? DEFAULT_SEMAPHORE_CONFIG.autoRenew.intervalFraction;
       permit.startAutoRenew(ttl * intervalFraction);
     }
@@ -238,7 +311,7 @@ export class SemaphoreService implements ISemaphoreService, OnModuleDestroy {
       } finally {
         if (!gaugeSettled) {
           gaugeSettled = true;
-          this.metrics?.decrementGauge('redisx_semaphore_permits_active');
+          this.quietly(() => this.metrics?.decrementGauge('redisx_semaphore_permits_active'));
           this.activePermits.delete(permit);
         }
       }
@@ -284,6 +357,12 @@ export class SemaphoreService implements ISemaphoreService, OnModuleDestroy {
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise((resolve) => {
+      const timer = setTimeout(resolve, ms);
+      // Never keep a dying process alive for a backoff nap.
+      if (typeof timer.unref === 'function') {
+        timer.unref();
+      }
+    });
   }
 }
