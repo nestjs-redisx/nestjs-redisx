@@ -70,7 +70,7 @@ describe('SwrManagerService', () => {
       // When
       const result = disabledService.isStale(entry);
 
-      // Then — isStale is a pure time check, not affected by enabled flag
+      // Then - isStale is a pure time check, not affected by enabled flag
       expect(result).toBe(true);
     });
 
@@ -340,7 +340,7 @@ describe('SwrManagerService', () => {
       // When
       const entry = service.createSwrEntry('v', 60, 300, keepSeconds);
 
-      // Then — keepUntil = expiresAt + window
+      // Then - keepUntil = expiresAt + window
       expect(entry.keepUntil).toBe(entry.expiresAt + 3600000);
     });
 

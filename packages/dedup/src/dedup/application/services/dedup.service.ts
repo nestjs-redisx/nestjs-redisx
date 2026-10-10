@@ -30,13 +30,13 @@ export class DedupService implements IDedupService {
     @Inject(DEDUP_STORE) private readonly store: IDedupStore,
     @Optional() @Inject(METRICS_SERVICE) private readonly metrics?: IMetricsService,
   ) {
-    // The service is exported for direct wiring too — validate here as well
+    // The service is exported for direct wiring too - validate here as well
     // as in the plugin, so a hand-constructed service fails fast.
     validateDedupOptions(config, 'DedupService');
   }
 
   /**
-   * First-occurrence check (strict API — store failures always throw).
+   * First-occurrence check (strict API - store failures always throw).
    */
   async isFirst(key: string, options: IDedupOptions = {}): Promise<boolean> {
     validateDedupCall(key, options.window, 'isFirst');
@@ -80,7 +80,7 @@ export class DedupService implements IDedupService {
       return await fn();
     } catch (error) {
       // A failed first execution must not burn the whole window: release
-      // OUR marker (CAS on the token — a newer marker is never erased) so a
+      // OUR marker (CAS on the token - a newer marker is never erased) so a
       // retry can run. Best effort AND total: a store that throws
       // synchronously or rejects with a nullish reason must never replace
       // the business error the caller is owed.
@@ -94,14 +94,14 @@ export class DedupService implements IDedupService {
   }
 
   /**
-   * Distributed trailing debounce — the LAST caller in a quiet window
+   * Distributed trailing debounce - the LAST caller in a quiet window
    * executes; everyone it superseded resolves to undefined.
    */
   async debounce<T>(key: string, fn: () => Promise<T>, options: IDebounceOptions = {}): Promise<T | undefined> {
     validateDedupCall(key, options.window, 'debounce');
     // NUL-delimited internal segment: user dedupe keys cannot contain \u0000
     // (validated above), so a user calling dedupe('debounce:x') can never
-    // collide with the slot of debounce('x') — a plain 'debounce:' segment
+    // collide with the slot of debounce('x') - a plain 'debounce:' segment
     // let a plain SET stamp destroy a user's first-wins marker mid-window.
     const slotKey = this.buildKey(`\u0000debounce\u0000${key}`);
     const window = this.resolveWindow(options.window);
@@ -111,7 +111,7 @@ export class DedupService implements IDedupService {
       // Overwrite any previous caller: from now on, WE are the last call.
       // The slot outlives the window by a grace period so a claim never
       // races the key's own expiry. 5s: the local timer can fire late under
-      // event-loop lag or a GC pause — a tighter grace silently DROPPED the
+      // event-loop lag or a GC pause - a tighter grace silently DROPPED the
       // round (claim found the slot expired and nobody executed). A longer
       // slot costs nothing: new rounds overwrite it, and nothing else reads
       // it.
@@ -127,7 +127,7 @@ export class DedupService implements IDedupService {
     }
 
     // Local timer (unref'd): if this instance dies before the window
-    // elapses, this round simply doesn't execute — same contract as an
+    // elapses, this round simply doesn't execute - same contract as an
     // in-process debounce.
     await this.sleep(window);
 
@@ -142,16 +142,16 @@ export class DedupService implements IDedupService {
       if ((this.config.errorPolicy ?? DEFAULT_DEDUP_CONFIG.errorPolicy) === 'fail-closed') {
         throw new DedupStoreError(key, error instanceof Error ? error : undefined);
       }
-      this.quietly(() => this.logger.warn(`debounce("${key}"): claim failed with the store unreachable — skipping this round (running a possibly-superseded round would duplicate the winner's execution): ${describeError(error)}`));
+      this.quietly(() => this.logger.warn(`debounce("${key}"): claim failed with the store unreachable - skipping this round (running a possibly-superseded round would duplicate the winner's execution): ${describeError(error)}`));
       return undefined;
     }
 
     if (claim === 'expired') {
-      // The slot outlived its grace and vanished before we could claim it —
+      // The slot outlived its grace and vanished before we could claim it -
       // the process stalled (suspend, SIGSTOP, extreme lag). The round is
       // LOST, which must be loud: it is indistinguishable from supersession
       // only if nobody says anything.
-      this.quietly(() => this.logger.warn(`debounce("${key}"): the debounce slot expired before this caller could claim it (process stalled past the ${window + 5_000}ms slot lifetime) — this round was lost.`));
+      this.quietly(() => this.logger.warn(`debounce("${key}"): the debounce slot expired before this caller could claim it (process stalled past the ${window + 5_000}ms slot lifetime) - this round was lost.`));
       return undefined;
     }
 
@@ -164,7 +164,7 @@ export class DedupService implements IDedupService {
   }
 
   /**
-   * Manual marker removal (strict API — store failures always throw).
+   * Manual marker removal (strict API - store failures always throw).
    */
   async release(key: string): Promise<boolean> {
     validateDedupCall(key, undefined, 'release');
@@ -186,14 +186,14 @@ export class DedupService implements IDedupService {
       throw new DedupStoreError(key, error instanceof Error ? error : undefined);
     }
     // Total: a nullish rejection reason (bare reject()) must not break
-    // fail-open at the precise moment it exists for — the store outage.
-    this.quietly(() => this.logger.warn(`Dedup store unreachable for "${key}" — errorPolicy fail-open: executing WITHOUT deduplication (${describeError(error)})`));
+    // fail-open at the precise moment it exists for - the store outage.
+    this.quietly(() => this.logger.warn(`Dedup store unreachable for "${key}" - errorPolicy fail-open: executing WITHOUT deduplication (${describeError(error)})`));
     return fn();
   }
 
   /**
    * Containment for the user-extensible metrics implementation: a throwing
-   * emit must never break dedup semantics — after markFirst succeeded, a
+   * emit must never break dedup semantics - after markFirst succeeded, a
    * detonating counter would otherwise leave the event MARKED but never
    * handled (lost for the whole window).
    */

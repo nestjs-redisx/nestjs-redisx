@@ -1,5 +1,5 @@
 /**
- * End-to-end coverage for `mode: 'l1-only'` — the cache running with NO Redis.
+ * End-to-end coverage for `mode: 'l1-only'` - the cache running with NO Redis.
  *
  * The app is booted pointing at a DEAD Redis port (nothing listens there). If
  * anything tried to open a connection the boot (or the first operation) would
@@ -7,7 +7,7 @@
  * get/set, getOrSet + singleflight, getMany/setMany, ttl, tags + invalidation,
  * invalidateByPattern, SWR, and stale-if-error.
  *
- * Runs everywhere (no external dependency) — deliberately NOT gated by
+ * Runs everywhere (no external dependency) - deliberately NOT gated by
  * SKIP_INTEGRATION, and uses a dead port so it can never reach a real Redis.
  */
 
@@ -19,7 +19,7 @@ import { CachePlugin } from '../../src/cache.plugin';
 import type { ICacheService } from '../../src/cache/application/ports/cache-service.port';
 import { CACHE_SERVICE } from '../../src/shared/constants';
 
-// A port nothing listens on — proves l1-only never dials Redis.
+// A port nothing listens on - proves l1-only never dials Redis.
 const DEAD_PORT = 6399;
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
@@ -64,7 +64,7 @@ describe('CachePlugin mode: l1-only (no Redis)', () => {
     expect(await cache.has('u:1')).toBe(true);
   });
 
-  it('stores each value once — no L1/L2 duplication (same object reference)', async () => {
+  it('stores each value once - no L1/L2 duplication (same object reference)', async () => {
     // Given a large-ish object
     const big = { blob: 'x'.repeat(1000), n: 42 };
 
@@ -73,7 +73,7 @@ describe('CachePlugin mode: l1-only (no Redis)', () => {
     const a = await cache.get<typeof big>('big:1');
     const b = await cache.get<typeof big>('big:1');
 
-    // Then — l1-only shares the live object across tiers (not a serialized copy)
+    // Then - l1-only shares the live object across tiers (not a serialized copy)
     expect(a).toBe(b);
     expect(a).toBe(big);
   });
@@ -102,7 +102,7 @@ describe('CachePlugin mode: l1-only (no Redis)', () => {
     // When 20 callers race for the same cold key
     const results = await Promise.all(Array.from({ length: 20 }, () => cache.getOrSet('sf:1', loader)));
 
-    // Then — exactly one load, everyone gets the value
+    // Then - exactly one load, everyone gets the value
     expect(results.every((r) => r === 'once')).toBe(true);
     expect(loader).toHaveBeenCalledTimes(1);
   });
@@ -114,7 +114,7 @@ describe('CachePlugin mode: l1-only (no Redis)', () => {
       { key: 'm:2', value: 'b' },
     ]);
 
-    // Then — getMany
+    // Then - getMany
     expect(await cache.getMany(['m:1', 'm:2', 'm:3'])).toEqual(['a', 'b', null]);
 
     // ttl reflects a positive remaining lifetime
@@ -145,7 +145,7 @@ describe('CachePlugin mode: l1-only (no Redis)', () => {
     // When
     const invalidated = await cache.invalidateTag('group');
 
-    // Then — tagged keys gone, untagged survives
+    // Then - tagged keys gone, untagged survives
     expect(invalidated).toBe(2);
     expect(await cache.get('p:1')).toBeNull();
     expect(await cache.get('p:2')).toBeNull();
@@ -178,7 +178,7 @@ describe('CachePlugin mode: l1-only (no Redis)', () => {
     version = 2;
     const stale = await cache.getOrSet('swr:1', loader, { ttl: 1, swr: { enabled: true, staleTime: 5 } });
 
-    // Then — stale value is served immediately (background refresh kicks off)
+    // Then - stale value is served immediately (background refresh kicks off)
     expect(stale).toBe('v1');
 
     // And after the background revalidation completes, the fresh value is present
@@ -197,7 +197,7 @@ describe('CachePlugin mode: l1-only (no Redis)', () => {
     const failing = vi.fn().mockRejectedValue(new Error('503 down'));
     const served = await cache.getOrSet('sie:1', failing, { ttl: 1, swr: { enabled: false } });
 
-    // Then — the last known value is served, loader attempted exactly once
+    // Then - the last known value is served, loader attempted exactly once
     expect(served).toBe('good');
     expect(failing).toHaveBeenCalledTimes(1);
   });

@@ -94,14 +94,14 @@ export class RedisModule {
   /**
    * Two plugins with the same name would silently collapse: their DI tokens
    * (Symbol.for globals) collide, so Nest keeps only the LAST instance's
-   * providers — the first plugin's options, callbacks, and clients are
+   * providers - the first plugin's options, callbacks, and clients are
    * discarded with zero signal. Fail fast instead.
    */
   private static assertUniquePluginNames(plugins: IRedisXPlugin[]): void {
     const seen = new Set<string>();
     for (const plugin of plugins) {
       if (seen.has(plugin.name)) {
-        throw new RedisXError(`Duplicate plugin "${plugin.name}": registering the same plugin twice silently replaces the first instance (their injection tokens collide). ` + `Configure ONE instance per plugin — e.g. several election groups belong in one LeaderPlugin's "groups" option, not in two LeaderPlugins.`, ErrorCode.CFG_INVALID, undefined, { plugin: plugin.name });
+        throw new RedisXError(`Duplicate plugin "${plugin.name}": registering the same plugin twice silently replaces the first instance (their injection tokens collide). ` + `Configure ONE instance per plugin - e.g. several election groups belong in one LeaderPlugin's "groups" option, not in two LeaderPlugins.`, ErrorCode.CFG_INVALID, undefined, { plugin: plugin.name });
       }
       seen.add(plugin.name);
     }
@@ -146,7 +146,7 @@ export class RedisModule {
       });
     }
 
-    // Copy: REGISTERED_PLUGINS must be a snapshot — a caller mutating its
+    // Copy: REGISTERED_PLUGINS must be a snapshot - a caller mutating its
     // array after registration would bypass the duplicate check and change
     // which plugins the registry runs lifecycle hooks on.
     const plugins = [...(options.plugins || [])];
@@ -168,7 +168,7 @@ export class RedisModule {
    * existing provider, or class-based factory. Supports plugins.
    *
    * Note: Plugins must be provided in the async options (outside useFactory),
-   * not in the factory result. This is a standard NestJS pattern — plugins
+   * not in the factory result. This is a standard NestJS pattern - plugins
    * must be available at module construction time for NestJS DI.
    *
    * @param options - Async Redis module options

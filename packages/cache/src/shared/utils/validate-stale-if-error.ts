@@ -6,7 +6,7 @@ type StaleIfErrorOptions = NonNullable<ICachePluginOptions['staleIfError']>;
 /**
  * Fail-fast validation for the stale-if-error configuration. Used by the
  * plugin at bootstrap (merged defaults) and by the service for per-call
- * overrides — invalid values throw instead of silently misbehaving
+ * overrides - invalid values throw instead of silently misbehaving
  * (e.g. a zero/negative window would delete entries instantly).
  */
 export function validateStaleIfError<T extends { window?: number; defaultWindow?: number; shouldServe?: (error: Error) => boolean }>(options: T): T {

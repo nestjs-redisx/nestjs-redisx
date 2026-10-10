@@ -34,7 +34,7 @@ async function flushRedis(): Promise<void> {
   await client.quit();
 }
 
-describeIntegration('RateLimitPlugin — token-bucket peek/getState', () => {
+describeIntegration('RateLimitPlugin - token-bucket peek/getState', () => {
   let module: TestingModule;
   let service: IRateLimitService;
 

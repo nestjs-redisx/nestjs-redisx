@@ -130,7 +130,7 @@ describe('LfuStrategy', () => {
       strategy.recordAccess('key1'); // freq: 3
       strategy.recordAccess('key3'); // freq: 2
 
-      // When — key2 has freq 1 (lowest)
+      // When - key2 has freq 1 (lowest)
       const victim = strategy.selectVictim();
 
       // Then
@@ -147,7 +147,7 @@ describe('LfuStrategy', () => {
       // When
       const victim = strategy.selectVictim();
 
-      // Then — key1 is oldest
+      // Then - key1 is oldest
       expect(victim).toBe('key1');
     });
 
@@ -160,7 +160,7 @@ describe('LfuStrategy', () => {
       strategy.recordAccess('b'); // freq: 2
       strategy.recordAccess('a'); // freq: 3
 
-      // When — c has freq 1 (lowest)
+      // When - c has freq 1 (lowest)
       const victim = strategy.selectVictim();
 
       // Then
@@ -173,10 +173,10 @@ describe('LfuStrategy', () => {
       strategy.recordInsert('key2');
       // Both freq: 1, key1 is oldest → victim is key1
 
-      // When — boost key1 frequency
+      // When - boost key1 frequency
       strategy.recordAccess('key1'); // freq: 2
 
-      // Then — key2 is now least frequent
+      // Then - key2 is now least frequent
       expect(strategy.selectVictim()).toBe('key2');
     });
   });
@@ -241,7 +241,7 @@ describe('LfuStrategy', () => {
       // When
       const keys = strategy.getKeys();
 
-      // Then — key2(1) < key1(2) < key3(3)
+      // Then - key2(1) < key1(2) < key3(3)
       expect(keys).toEqual(['key2', 'key1', 'key3']);
     });
 
@@ -255,7 +255,7 @@ describe('LfuStrategy', () => {
       // When
       const keys = strategy.getKeys();
 
-      // Then — sorted by insertOrder: c(1), a(2), b(3)
+      // Then - sorted by insertOrder: c(1), a(2), b(3)
       expect(keys).toEqual(['c', 'a', 'b']);
     });
   });
@@ -292,10 +292,10 @@ describe('LfuStrategy', () => {
       strategy.recordAccess('key2'); // freq: 2
       strategy.recordAccess('key2'); // freq: 3
 
-      // When — need to evict 1 to reach target 2
+      // When - need to evict 1 to reach target 2
       const victims = strategy.getVictims(2);
 
-      // Then — key1 and key3 have freq 1, key1 inserted first
+      // Then - key1 and key3 have freq 1, key1 inserted first
       expect(victims).toEqual(['key1']);
     });
 
@@ -309,10 +309,10 @@ describe('LfuStrategy', () => {
       strategy.recordAccess('key4'); // freq: 3
       strategy.recordAccess('key4'); // freq: 4
 
-      // When — evict 3 to reach target 1
+      // When - evict 3 to reach target 1
       const victims = strategy.getVictims(1);
 
-      // Then — key1(1), key2(1), key3(1) are victims, key4(4) survives
+      // Then - key1(1), key2(1), key3(1) are victims, key4(4) survives
       expect(victims).toHaveLength(3);
       expect(victims).toEqual(['key1', 'key2', 'key3']);
     });
@@ -380,7 +380,7 @@ describe('LfuStrategy', () => {
 
   describe('LFU behavior scenarios', () => {
     it('should prefer evicting least frequent over oldest', () => {
-      // Given — key1 is oldest but accessed more
+      // Given - key1 is oldest but accessed more
       strategy.recordInsert('key1');
       strategy.recordInsert('key2');
       strategy.recordAccess('key1'); // key1 freq: 2
@@ -389,7 +389,7 @@ describe('LfuStrategy', () => {
       // When
       const victim = strategy.selectVictim();
 
-      // Then — key2 has lower frequency despite being newer
+      // Then - key2 has lower frequency despite being newer
       expect(victim).toBe('key2');
     });
 
@@ -399,7 +399,7 @@ describe('LfuStrategy', () => {
       strategy.recordAccess('key1'); // freq: 2
       strategy.recordDelete('key1');
 
-      // When — re-insert resets frequency
+      // When - re-insert resets frequency
       strategy.recordInsert('key1');
 
       // Then
@@ -424,7 +424,7 @@ describe('LfuStrategy', () => {
       // When
       const victims = strategy.getVictims(1);
 
-      // Then — cold(1), warm(4), hot(11)
+      // Then - cold(1), warm(4), hot(11)
       expect(victims).toEqual(['cold', 'warm']);
     });
 

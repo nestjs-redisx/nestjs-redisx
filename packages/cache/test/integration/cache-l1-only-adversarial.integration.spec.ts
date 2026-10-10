@@ -1,10 +1,10 @@
 /**
- * Adversarial verification of `mode: 'l1-only'` — actively trying to break the
+ * Adversarial verification of `mode: 'l1-only'` - actively trying to break the
  * core promises rather than just exercising the happy path:
  *
  *  1. NO Redis is ever touched (the driver stays a disconnected null object,
  *     even after every kind of operation, against a dead port).
- *  2. NO value duplication — L1 and the in-memory L2 hold the SAME object
+ *  2. NO value duplication - L1 and the in-memory L2 hold the SAME object
  *     instance, so a large value is stored once, not copied.
  *  3. deleteMany actually clears BOTH tiers in l1-only (no stale L2 entry that
  *     would resurrect a "deleted" key).
@@ -22,9 +22,9 @@ import type { IL1CacheStore } from '../../src/cache/application/ports/l1-cache-s
 import type { IL2CacheStore } from '../../src/cache/application/ports/l2-cache-store.port';
 import { CACHE_REDIS_DRIVER, CACHE_SERVICE, L1_CACHE_STORE, L2_CACHE_STORE } from '../../src/shared/constants';
 
-const DEAD_PORT = 6399; // nothing listens here — any real Redis dial would fail
+const DEAD_PORT = 6399; // nothing listens here - any real Redis dial would fail
 
-describe('CachePlugin mode: l1-only — adversarial', () => {
+describe('CachePlugin mode: l1-only - adversarial', () => {
   let app: TestingModule;
   let cache: ICacheService;
 
@@ -45,7 +45,7 @@ describe('CachePlugin mode: l1-only — adversarial', () => {
     await app?.close();
   });
 
-  it('never connects to Redis — the driver is a disconnected null object before AND after work', async () => {
+  it('never connects to Redis - the driver is a disconnected null object before AND after work', async () => {
     // Given the wired drivers
     const cacheDriver = app.get<IRedisDriver>(CACHE_REDIS_DRIVER);
     const coreDriver = app.get<IRedisDriver>(REDIS_DRIVER);
@@ -68,7 +68,7 @@ describe('CachePlugin mode: l1-only — adversarial', () => {
     expect(await cacheDriver.get('anything')).toBeNull();
   });
 
-  it('stores a value ONCE — L1 and the in-memory L2 reference the same instance (no duplication)', async () => {
+  it('stores a value ONCE - L1 and the in-memory L2 reference the same instance (no duplication)', async () => {
     // Given a large value
     const big = { blob: 'x'.repeat(100_000) };
     const l1 = app.get<IL1CacheStore>(L1_CACHE_STORE);
@@ -85,7 +85,7 @@ describe('CachePlugin mode: l1-only — adversarial', () => {
     expect(l1Entry?.value).toBe(big);
   });
 
-  it('deleteMany clears BOTH tiers — no stale L2 entry resurrects a deleted key', async () => {
+  it('deleteMany clears BOTH tiers - no stale L2 entry resurrects a deleted key', async () => {
     // Given values present in both tiers
     const l2 = app.get<IL2CacheStore>(L2_CACHE_STORE);
     await cache.set('d:1', 'a');
@@ -116,7 +116,7 @@ describe('CachePlugin mode: l1-only — adversarial', () => {
     expect(await cache.get('axb:1')).toBe(2);
   });
 
-  it('coalesces a FAILING loader via singleflight — one attempt, all callers reject', async () => {
+  it('coalesces a FAILING loader via singleflight - one attempt, all callers reject', async () => {
     // Given a slow, failing loader
     let attempts = 0;
     const failing = vi.fn().mockImplementation(async () => {

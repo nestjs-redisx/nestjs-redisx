@@ -6,7 +6,7 @@ import { RedisXError, ErrorCode } from '../../errors';
  * Lazy loading of the optional driver libraries (`ioredis`, `redis`).
  *
  * Both packages are optional: users install only the driver they configure.
- * The adapters therefore must not reference them via static `import` — in the
+ * The adapters therefore must not reference them via static `import` - in the
  * ESM build a static import is resolved by Node BEFORE any code runs, so a
  * missing optional package would crash every consumer at startup. Loading via
  * `createRequire` keeps resolution lazy AND synchronous (both driver
@@ -15,7 +15,7 @@ import { RedisXError, ErrorCode } from '../../errors';
  * Anchored to `__filename` (NOT `import.meta.url`, which the CommonJS
  * `module` setting of this codebase rejects at typecheck): native in the CJS
  * bundle and under Vitest, and polyfilled from `import.meta.url` by the tsup
- * `shims` option in the ESM bundle — resolution always starts next to this
+ * `shims` option in the ESM bundle - resolution always starts next to this
  * file, exactly like a regular `require` would.
  */
 const requireDriver = createRequire(__filename);
@@ -37,7 +37,7 @@ export interface INodeRedisLib {
 }
 
 /**
- * True only for "the package itself is not installed" — a package that IS
+ * True only for "the package itself is not installed" - a package that IS
  * installed but fails to load (broken install, its own missing dependency)
  * must surface its original error instead of a misleading "not installed".
  */
@@ -51,7 +51,7 @@ function missingDriverError(pkg: string, driverType: string): RedisXError {
 }
 
 // `null` = confirmed not installed; `undefined` = not probed yet. A load
-// failure other than "not installed" is NOT cached — it rethrows on every
+// failure other than "not installed" is NOT cached - it rethrows on every
 // call so the original error stays visible.
 let ioredisLib: IIoredisLib | null | undefined;
 let nodeRedisLib: INodeRedisLib | null | undefined;
@@ -106,7 +106,7 @@ export function loadNodeRedis(): INodeRedisLib {
 }
 
 /**
- * Resolvability probe for {@link detectAvailableDriver} — never loads the
+ * Resolvability probe for {@link detectAvailableDriver} - never loads the
  * package, never throws.
  */
 export function isDriverPackageInstalled(pkg: 'ioredis' | 'redis'): boolean {

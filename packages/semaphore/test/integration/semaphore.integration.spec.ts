@@ -21,7 +21,7 @@ describe.skipIf(SKIP)('SemaphorePlugin on live Redis', () => {
   let app: TestingModule;
   let serviceA: ISemaphoreService;
   let serviceB: SemaphoreService;
-  const run = `${process.pid}-${Date.now()}`; // unique keys per run — shared server
+  const run = `${process.pid}-${Date.now()}`; // unique keys per run - shared server
 
   const key = (name: string): string => `it:${run}:${name}`;
 
@@ -62,7 +62,7 @@ describe.skipIf(SKIP)('SemaphorePlugin on live Redis', () => {
   });
 
   it('should sweep an expired holder and let a waiter in (crash recovery)', async () => {
-    // Given — short-lease holder that never releases
+    // Given - short-lease holder that never releases
     await serviceA.acquire(key('crashy'), 1, { ttl: 150, autoRenew: false });
 
     // When
@@ -101,19 +101,19 @@ describe.skipIf(SKIP)('SemaphorePlugin on live Redis', () => {
     const value = await serviceA.withPermit(key('wp'), 1, async () => 'ok');
     await expect(serviceA.withPermit(key('wp'), 1, async () => Promise.reject(new Error('boom')))).rejects.toThrow('boom');
 
-    // Then — both executions released their seats
+    // Then - both executions released their seats
     expect(value).toBe('ok');
     expect(await serviceA.usedPermits(key('wp'))).toBe(0);
   });
 
   it('should leave no residue: the semaphore key expires with its longest permit', async () => {
-    // Given — one short-lived permit, never released
+    // Given - one short-lived permit, never released
     await serviceA.acquire(key('residue'), 1, { ttl: 150, autoRenew: false });
 
-    // When — past the TTL, nobody touches the key again
+    // When - past the TTL, nobody touches the key again
     await wait(400);
 
-    // Then — the key itself is gone (key-level PEXPIRE hygiene)
+    // Then - the key itself is gone (key-level PEXPIRE hygiene)
     expect(await serviceA.usedPermits(key('residue'))).toBe(0);
   });
 });

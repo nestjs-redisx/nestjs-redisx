@@ -43,8 +43,8 @@ if (headings.length === 0) {
     const existsElsewhere = headings.some((h) => h[1] === version);
     errors.push(
       existsElsewhere
-        ? `CHANGELOG.md has an entry for ${version}, but it is not the topmost one — the newest release must come first.`
-        : `CHANGELOG.md has no entry for ${version} — every published version gets an entry, including patches. Write it before releasing.`,
+        ? `CHANGELOG.md has an entry for ${version}, but it is not the topmost one - the newest release must come first.`
+        : `CHANGELOG.md has no entry for ${version} - every published version gets an entry, including patches. Write it before releasing.`,
     );
   } else if (!/^\d{4}-\d{2}-\d{2}$/.test(topDate)) {
     errors.push(`CHANGELOG.md entry for ${version} has an invalid date "${topDate}" (expected YYYY-MM-DD).`);
@@ -63,18 +63,18 @@ for (const name of readdirSync(join(repoRoot, 'packages'))) {
   if (pkg.private) continue;
   publishable++;
   if (pkg.version !== version) {
-    errors.push(`${pkg.name} is at ${pkg.version} — expected lockstep version ${version}.`);
+    errors.push(`${pkg.name} is at ${pkg.version} - expected lockstep version ${version}.`);
   }
 }
 if (publishable === 0) {
-  errors.push('No publishable packages found under packages/ — the guard cannot verify lockstep.');
+  errors.push('No publishable packages found under packages/ - the guard cannot verify lockstep.');
 }
 
 // 3. Site nav version (manual, not derived from package.json)
 const navConfig = readFileSync(join(repoRoot, 'website/.vitepress/config.ts'), 'utf8');
 if (!navConfig.includes(`text: 'v${version}'`)) {
   const stale = navConfig.match(/text: 'v(\d+\.\d+\.\d+)'/)?.[1];
-  errors.push(`website/.vitepress/config.ts nav shows ${stale ? `v${stale}` : 'no version'} — expected "text: 'v${version}'".`);
+  errors.push(`website/.vitepress/config.ts nav shows ${stale ? `v${stale}` : 'no version'} - expected "text: 'v${version}'".`);
 }
 
 if (errors.length > 0) {

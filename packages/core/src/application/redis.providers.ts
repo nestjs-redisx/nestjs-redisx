@@ -201,7 +201,7 @@ function createClientProviders(options: IRedisModuleOptions): Provider[] {
 
   // Initialization barrier so plugins (which inject REDIS_CLIENTS_INITIALIZATION)
   // resolve in synchronous forRoot mode too. It depends on every client
-  // provider, so it only resolves once all clients have been created — mirroring
+  // provider, so it only resolves once all clients have been created - mirroring
   // the async path without re-creating clients.
   providers.push({
     provide: REDIS_CLIENTS_INITIALIZATION,

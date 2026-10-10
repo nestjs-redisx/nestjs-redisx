@@ -3,7 +3,7 @@
  * default (Passport-convention) user ID extractor.
  *
  * Time is always injected (`nowMs`); this module never reads the clock.
- * The TTL math here mirrors the arithmetic inside the Lua scripts — keep both
+ * The TTL math here mirrors the arithmetic inside the Lua scripts - keep both
  * in sync.
  */
 

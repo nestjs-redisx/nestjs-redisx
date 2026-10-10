@@ -19,7 +19,7 @@ export class InvalidCounterConfigError extends CounterError {
 }
 
 /**
- * Error thrown when a counter key holds a non-numeric value — the key is
+ * Error thrown when a counter key holds a non-numeric value - the key is
  * shared with something else, which is a wiring bug worth failing loudly on.
  */
 export class CounterValueError extends CounterError {
@@ -27,6 +27,6 @@ export class CounterValueError extends CounterError {
     public readonly counterKey: string,
     public readonly rawValue: string,
   ) {
-    super(`Counter "${counterKey}" holds a non-numeric value (${JSON.stringify(rawValue)}) — the key is not a counter`, ErrorCode.OP_TYPE_MISMATCH, undefined, { counterKey, rawValue });
+    super(`Counter "${counterKey}" holds a non-numeric value (${JSON.stringify(rawValue)}) - the key is not a counter`, ErrorCode.OP_TYPE_MISMATCH, undefined, { counterKey, rawValue });
   }
 }

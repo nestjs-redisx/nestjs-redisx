@@ -2,7 +2,7 @@ import { ISemaphoreOptions } from '../../../shared/types';
 import { ISemaphorePermit } from '../../domain/entities/semaphore-permit.entity';
 
 /**
- * Semaphore service interface — bound concurrency across instances.
+ * Semaphore service interface - bound concurrency across instances.
  *
  * A counting semaphore allows at most `permits` concurrent holders of the
  * same key across the whole fleet. Each holder gets a leased permit that
@@ -21,7 +21,7 @@ export interface ISemaphoreService {
    * @param options - Permit options (TTL, waitTimeout, retry, auto-renewal)
    * @returns A permit that must be released
    * @throws {SemaphoreAcquisitionError} reason 'exhausted' (retry cap ran
-   *   out), 'timeout' (waitTimeout budget ran out), 'error' (store outage —
+   *   out), 'timeout' (waitTimeout budget ran out), 'error' (store outage -
    *   cause carries the driver error), or 'shutdown' (service destroyed)
    * @throws {InvalidSemaphoreConfigError} On invalid key/capacity/options
    *
@@ -48,7 +48,7 @@ export interface ISemaphoreService {
    * @example
    * ```typescript
    * const permit = await semaphore.tryAcquire('imports', 2);
-   * if (!permit) return; // at capacity — skip this round
+   * if (!permit) return; // at capacity - skip this round
    * ```
    */
   tryAcquire(key: string, permits: number, options?: ISemaphoreOptions): Promise<ISemaphorePermit | null>;
@@ -92,7 +92,7 @@ export interface ISemaphoreService {
    * Force-releases every permit on a key (admin operation).
    *
    * Frees all seats regardless of ownership. In-flight holders keep
-   * running; their eventual release() throws SemaphorePermitNotHeldError —
+   * running; their eventual release() throws SemaphorePermitNotHeldError -
    * the honest signal that the seat was taken away from under their work
    * (withPermit and @WithSemaphore absorb it into an error log). Use for
    * operator recovery.

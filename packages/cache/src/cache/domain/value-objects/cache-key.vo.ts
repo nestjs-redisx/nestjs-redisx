@@ -8,7 +8,7 @@ import { CacheKeyError } from '../../../shared/errors';
 /**
  * Cache-key character validation mode.
  *
- * - `'safe'` (default): reject only what is genuinely dangerous — empty keys,
+ * - `'safe'` (default): reject only what is genuinely dangerous - empty keys,
  *   whitespace, and control characters. Everything else is allowed, because
  *   Redis keys are binary-safe: `/`, `?`, `=`, `%`, unicode, etc. are valid.
  *   This lets URL / path keys (`http:/api/users/123`) work out of the box.
@@ -78,7 +78,7 @@ export class CacheKey {
       throw new CacheKeyError(key, 'Key cannot be empty');
     }
 
-    // Always reject whitespace and control characters — genuine footguns
+    // Always reject whitespace and control characters - genuine footguns
     // (RESP/logging corruption, accidental trailing newlines from env vars),
     // regardless of validation mode.
     if (/\s/.test(normalizedKey)) {
@@ -90,7 +90,7 @@ export class CacheKey {
 
     // Character-set validation. Redis keys are binary-safe, so the default
     // 'safe' mode allows any printable character (incl. `/`, `?`, `=`, `%`,
-    // unicode) — enough for URL / path keys. 'strict' keeps the historical
+    // unicode) - enough for URL / path keys. 'strict' keeps the historical
     // clean-key allowlist; 'off' skips the char check; a custom `pattern`
     // overrides the mode.
     if (opts.pattern) {

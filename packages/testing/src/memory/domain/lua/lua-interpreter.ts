@@ -299,7 +299,7 @@ export class LuaInterpreter {
       if (typeof v === 'number') return v;
       if (typeof v === 'string') {
         // Real Lua: tonumber('') and tonumber('   ') are nil; JS Number('')
-        // is 0 — the divergence let blank-string guards pass on the memory
+        // is 0 - the divergence let blank-string guards pass on the memory
         // driver while failing on real Redis.
         if (v.trim() === '') return null;
         const n = Number(v);

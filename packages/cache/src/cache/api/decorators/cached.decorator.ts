@@ -137,7 +137,7 @@ export interface ICachedOptions {
    * Values are resolved from contextProvider at call time.
    * Adds to (not replaces) global contextKeys.
    *
-   * Works on any Injectable — values come from contextProvider (CLS, AsyncLocalStorage, etc.),
+   * Works on any Injectable - values come from contextProvider (CLS, AsyncLocalStorage, etc.),
    * not from HTTP headers. Ignored if contextProvider is not configured.
    *
    * @example
@@ -222,7 +222,7 @@ export function Cached(options: ICachedOptions = {}): MethodDecorator {
         return originalMethod.apply(this, args);
       }
 
-      // Check condition (before execution) — if false, bypass cache entirely
+      // Check condition (before execution) - if false, bypass cache entirely
       if (options.condition && !options.condition(...args)) {
         return originalMethod.apply(this, args);
       }
@@ -247,7 +247,7 @@ export function Cached(options: ICachedOptions = {}): MethodDecorator {
         }
       };
 
-      // Delegate to getOrSet — stampede protection is handled internally
+      // Delegate to getOrSet - stampede protection is handled internally
       try {
         return await cacheService.getOrSet(key, loader, {
           ttl: options.ttl,
@@ -283,7 +283,7 @@ export function Cached(options: ICachedOptions = {}): MethodDecorator {
     });
 
     // Carry over metadata stamped by decorators applied BEFORE this one
-    // (written below @Cached in source order — e.g. @Cron). Discovery-based
+    // (written below @Cached in source order - e.g. @Cron). Discovery-based
     // consumers (the scheduler among them) read metadata off the prototype's
     // method, which is now the wrapper; without the copy, `@Cached` above
     // `@Cron()` silently unregisters the job on every instance.
@@ -392,7 +392,7 @@ function sanitizeForKey(value: string): string {
  * Resolves a `tags` option to concrete tag strings.
  *
  * A function receives the call arguments. A static array supports the SAME
- * `{n}` template placeholders as `key` — so `tags: ['user:{0}']` becomes
+ * `{n}` template placeholders as `key` - so `tags: ['user:{0}']` becomes
  * `['user:42']` instead of the literal `user:{0}` (which would never match on
  * invalidation). Shared by `@Cached` and `@InvalidateTags` so the tag written
  * on read and the tag invalidated on write are produced identically.
@@ -409,7 +409,7 @@ export function resolveTags(tags: string[] | ((...args: unknown[]) => string[]) 
 
 /**
  * Interpolates `{n}` positional placeholders in each static tag with the
- * method arguments — the single source of truth shared by every proxy-based
+ * method arguments - the single source of truth shared by every proxy-based
  * decorator (`@Cached`, `@InvalidateTags`, `@InvalidateOn`) so the tag written
  * on read and the tag invalidated on write are produced IDENTICALLY. Tags
  * without a `{` are returned untouched.
@@ -448,7 +448,7 @@ function serializeArg(arg: unknown): string {
 
   if (typeof arg === 'object') {
     try {
-      // Same frozen algorithm as the public hashKey() — moving it must never
+      // Same frozen algorithm as the public hashKey() - moving it must never
       // change the generated cache keys (guarded by a golden-vector test).
       return hashKey(arg);
     } catch {

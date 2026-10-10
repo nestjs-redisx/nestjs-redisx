@@ -727,11 +727,11 @@ export class RedisService implements OnApplicationShutdown {
   }
 
   /**
-   * NestJS lifecycle hook — close clients during application shutdown.
+   * NestJS lifecycle hook - close clients during application shutdown.
    *
    * Deliberately `onApplicationShutdown` (phase 3), NOT `onModuleDestroy`
    * (phase 1): plugin providers release distributed state (leader leases,
-   * locks, stream consumers) in their own `onModuleDestroy` — closing the
+   * locks, stream consumers) in their own `onModuleDestroy` - closing the
    * connections in phase 1 would kill every such cleanup. Nest runs a
    * module's phase-3 hooks concurrently, so this call races the manager's
    * own hook; closeAll is single-flight, which makes the duplicate a no-op.

@@ -32,7 +32,7 @@ export function parseRedisUrl(url: string): Partial<ISingleConnectionConfig> {
   if (parsed.port) {
     result.port = Number(parsed.port);
   }
-  // userinfo — username may be empty while a password is present (redis://:pass@host)
+  // userinfo - username may be empty while a password is present (redis://:pass@host)
   if (parsed.username) {
     result.username = decodeURIComponent(parsed.username);
   }

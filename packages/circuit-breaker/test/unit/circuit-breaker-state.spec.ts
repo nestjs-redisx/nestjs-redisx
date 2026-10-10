@@ -42,13 +42,13 @@ describe('CircuitBreakerState', () => {
       // When
       cb.recordFailure(100);
       cb.recordFailure(200);
-      // Then — still closed below threshold
+      // Then - still closed below threshold
       expect(cb.snapshot(200)).toMatchObject({ state: 'closed', failuresInWindow: 2 });
 
-      // When — third failure crosses the threshold
+      // When - third failure crosses the threshold
       cb.recordFailure(300);
 
-      // Then — OPEN, counters cleared, requests denied within cooldown
+      // Then - OPEN, counters cleared, requests denied within cooldown
       expect(cb.snapshot(300)).toMatchObject({ state: 'open', failuresInWindow: 0 });
       expect(cb.canRequest(300)).toBe(false);
     });
@@ -57,12 +57,12 @@ describe('CircuitBreakerState', () => {
       // Given
       const cb = new CircuitBreakerState(baseConfig());
 
-      // When — three failures, but the first two fall out of the window by the third
+      // When - three failures, but the first two fall out of the window by the third
       cb.recordFailure(0);
       cb.recordFailure(500);
       cb.recordFailure(1600); // cutoff = 600 -> 0 and 500 dropped, only 1600 remains
 
-      // Then — only one failure counts; still closed
+      // Then - only one failure counts; still closed
       expect(cb.snapshot(1600)).toMatchObject({ state: 'closed', failuresInWindow: 1 });
     });
 
@@ -70,11 +70,11 @@ describe('CircuitBreakerState', () => {
       // Given
       const cb = new CircuitBreakerState(baseConfig({ failureThreshold: 2 }));
 
-      // When — first at t=0, second at t=1000 -> cutoff = 0, so t=0 is dropped (<= cutoff)
+      // When - first at t=0, second at t=1000 -> cutoff = 0, so t=0 is dropped (<= cutoff)
       cb.recordFailure(0);
       cb.recordFailure(1000);
 
-      // Then — only the second failure is in-window; threshold (2) not reached
+      // Then - only the second failure is in-window; threshold (2) not reached
       expect(cb.snapshot(1000)).toMatchObject({ state: 'closed', failuresInWindow: 1 });
     });
 
@@ -82,13 +82,13 @@ describe('CircuitBreakerState', () => {
       // Given
       const cb = new CircuitBreakerState(baseConfig());
 
-      // When — two failures, a success, then a third failure inside the window
+      // When - two failures, a success, then a third failure inside the window
       cb.recordFailure(100);
       cb.recordFailure(200);
       cb.recordSuccess(250); // must not clear the two failures
       cb.recordFailure(300);
 
-      // Then — success did not help; breaker trips
+      // Then - success did not help; breaker trips
       expect(cb.snapshot(300)).toMatchObject({ state: 'open' });
     });
   });
@@ -103,10 +103,10 @@ describe('CircuitBreakerState', () => {
     }
 
     it('should deny requests before the cooldown elapses', () => {
-      // Given — opened at 300, openDurationMs = 5000
+      // Given - opened at 300, openDurationMs = 5000
       const cb = trippedAt(300);
 
-      // When / Then — just before cooldown boundary
+      // When / Then - just before cooldown boundary
       expect(cb.canRequest(300 + 4999)).toBe(false);
       expect(cb.snapshot(5299)).toMatchObject({ state: 'open' });
     });
@@ -115,23 +115,23 @@ describe('CircuitBreakerState', () => {
       // Given
       const cb = trippedAt(300);
 
-      // When — exactly at the cooldown boundary
+      // When - exactly at the cooldown boundary
       const allowed = cb.canRequest(300 + 5000);
 
-      // Then — flips to half-open and grants the first probe
+      // Then - flips to half-open and grants the first probe
       expect(allowed).toBe(true);
       expect(cb.snapshot(5300)).toMatchObject({ state: 'half-open', halfOpenInFlight: 1, halfOpenSuccesses: 0 });
     });
 
     it('should ignore recordFailure/recordSuccess while OPEN (openedAt is not pushed forward)', () => {
-      // Given — opened at 300
+      // Given - opened at 300
       const cb = trippedAt(300);
 
-      // When — activity during OPEN must be ignored
+      // When - activity during OPEN must be ignored
       cb.recordFailure(400);
       cb.recordSuccess(500);
 
-      // Then — cooldown is still measured from 300, so the boundary still flips at 5300
+      // Then - cooldown is still measured from 300, so the boundary still flips at 5300
       expect(cb.canRequest(300 + 4999)).toBe(false);
       expect(cb.canRequest(300 + 5000)).toBe(true);
       expect(cb.snapshot(5300)).toMatchObject({ state: 'half-open' });
@@ -141,10 +141,10 @@ describe('CircuitBreakerState', () => {
       // Given
       const cb = trippedAt(300);
 
-      // When — query well past the cooldown, but only via snapshot
+      // When - query well past the cooldown, but only via snapshot
       const snap = cb.snapshot(999_999);
 
-      // Then — still reports the committed OPEN state
+      // Then - still reports the committed OPEN state
       expect(snap.state).toBe('open');
     });
   });
@@ -162,11 +162,11 @@ describe('CircuitBreakerState', () => {
     }
 
     it('should cap in-flight probes at halfOpenMaxCalls', () => {
-      // Given — halfOpenMaxCalls = 2; first probe already granted in helper
+      // Given - halfOpenMaxCalls = 2; first probe already granted in helper
       const cb = halfOpen();
       const now = 3 + 5000;
 
-      // When — second probe granted, third denied
+      // When - second probe granted, third denied
       const second = cb.canRequest(now);
       const third = cb.canRequest(now);
 
@@ -177,30 +177,30 @@ describe('CircuitBreakerState', () => {
     });
 
     it('should close after successThreshold successful probes and clear counters', () => {
-      // Given — two probes in flight
+      // Given - two probes in flight
       const cb = halfOpen();
       const now = 3 + 5000;
       cb.canRequest(now); // probe #2 -> inFlight = 2
 
-      // When — two successful probes (successThreshold = 2)
+      // When - two successful probes (successThreshold = 2)
       cb.recordSuccess(now);
       expect(cb.snapshot(now)).toMatchObject({ state: 'half-open', halfOpenSuccesses: 1, halfOpenInFlight: 1 });
       cb.recordSuccess(now);
 
-      // Then — CLOSED and everything cleared
+      // Then - CLOSED and everything cleared
       expect(cb.snapshot(now)).toEqual({ state: 'closed', failuresInWindow: 0, halfOpenSuccesses: 0, halfOpenInFlight: 0 });
       expect(cb.canRequest(now)).toBe(true);
     });
 
     it('should reopen on a single probe failure and set a fresh openedAt', () => {
-      // Given — in half-open after cooldown from openedAt = 3
+      // Given - in half-open after cooldown from openedAt = 3
       const cb = halfOpen();
       const reopenAt = 3 + 5000 + 42;
 
-      // When — a probe fails
+      // When - a probe fails
       cb.recordFailure(reopenAt);
 
-      // Then — OPEN again, half-open counters cleared, cooldown measured from reopenAt
+      // Then - OPEN again, half-open counters cleared, cooldown measured from reopenAt
       expect(cb.snapshot(reopenAt)).toMatchObject({ state: 'open', halfOpenSuccesses: 0, halfOpenInFlight: 0 });
       expect(cb.canRequest(reopenAt + 4999)).toBe(false);
       expect(cb.canRequest(reopenAt + 5000)).toBe(true); // proves openedAt = reopenAt
@@ -209,24 +209,24 @@ describe('CircuitBreakerState', () => {
 
   describe('edge cases', () => {
     it('should require successThreshold successes across multiple probes before closing', () => {
-      // Given — half-open with room for 2 concurrent probes, needs 2 successes
+      // Given - half-open with room for 2 concurrent probes, needs 2 successes
       const cb = new CircuitBreakerState(baseConfig({ failureThreshold: 1, halfOpenMaxCalls: 2, successThreshold: 2 }));
       cb.recordFailure(1); // OPEN at 1
       expect(cb.canRequest(1 + 5000)).toBe(true); // probe #1 (inflight 1)
       const now = 1 + 5000;
       expect(cb.canRequest(now)).toBe(true); // probe #2 (inflight 2)
 
-      // When — first success: still half-open (1/2)
+      // When - first success: still half-open (1/2)
       cb.recordSuccess(now);
       expect(cb.snapshot(now)).toMatchObject({ state: 'half-open', halfOpenSuccesses: 1, halfOpenInFlight: 1 });
 
-      // Then — second success closes
+      // Then - second success closes
       cb.recordSuccess(now);
       expect(cb.snapshot(now).state).toBe('closed');
     });
 
     it('should free a probe slot on success so another probe can be admitted', () => {
-      // Given — 2 concurrent slots, needs 2 successes, but probes arrive one at a time
+      // Given - 2 concurrent slots, needs 2 successes, but probes arrive one at a time
       const cb = new CircuitBreakerState(baseConfig({ failureThreshold: 1, halfOpenMaxCalls: 2, successThreshold: 2 }));
       cb.recordFailure(1);
       const now = 1 + 5000;
@@ -257,7 +257,7 @@ describe('CircuitBreakerState', () => {
     });
 
     it('should allow successThreshold == halfOpenMaxCalls', () => {
-      // Given/When/Then — valid config, closes after exactly N probes
+      // Given/When/Then - valid config, closes after exactly N probes
       const cb = new CircuitBreakerState(baseConfig({ failureThreshold: 1, halfOpenMaxCalls: 3, successThreshold: 3 }));
       cb.recordFailure(1);
       const now = 1 + 5000;
@@ -271,7 +271,7 @@ describe('CircuitBreakerState', () => {
     });
 
     it('should reset cleanly from HALF_OPEN', () => {
-      // Given — half-open with an in-flight probe
+      // Given - half-open with an in-flight probe
       const cb = new CircuitBreakerState(baseConfig({ failureThreshold: 1 }));
       cb.recordFailure(1);
       cb.canRequest(1 + 5000);
@@ -289,10 +289,10 @@ describe('CircuitBreakerState', () => {
       const cb = new CircuitBreakerState(baseConfig({ failureThreshold: 2, windowMs: 5000 }));
       cb.recordFailure(100);
 
-      // When — a stray success in CLOSED
+      // When - a stray success in CLOSED
       cb.recordSuccess(200);
 
-      // Then — the failure is still counted
+      // Then - the failure is still counted
       expect(cb.snapshot(300).failuresInWindow).toBe(1);
     });
   });
@@ -306,16 +306,16 @@ describe('CircuitBreakerState', () => {
     }
 
     it('should reclaim an expired probe slot so a new probe is admitted', () => {
-      // Given — single slot, probes expire after 1000ms
+      // Given - single slot, probes expire after 1000ms
       const cb = trippedSingleSlot(1000);
       const t0 = 1 + 5000;
       expect(cb.canRequest(t0)).toBe(true); // probe #1 occupies the slot
       expect(cb.canRequest(t0 + 999)).toBe(false); // still within probeTimeoutMs
 
-      // When — the probe's outcome was never recorded and the timeout elapses
+      // When - the probe's outcome was never recorded and the timeout elapses
       const allowed = cb.canRequest(t0 + 1000); // started <= now - 1000 -> expired
 
-      // Then — the slot is reclaimed and a fresh probe is admitted
+      // Then - the slot is reclaimed and a fresh probe is admitted
       expect(allowed).toBe(true);
       expect(cb.snapshot(t0 + 1000)).toMatchObject({ state: 'half-open', halfOpenInFlight: 1 });
     });
@@ -326,7 +326,7 @@ describe('CircuitBreakerState', () => {
       const t0 = 1 + 5000;
       cb.canRequest(t0);
 
-      // When / Then — boundary semantics match the failure window (<= cutoff is OUT)
+      // When / Then - boundary semantics match the failure window (<= cutoff is OUT)
       expect(cb.snapshot(t0 + 1000).halfOpenInFlight).toBe(0);
       expect(cb.canRequest(t0 + 1000)).toBe(true);
     });
@@ -337,65 +337,65 @@ describe('CircuitBreakerState', () => {
       const t0 = 1 + 5000;
       cb.canRequest(t0);
 
-      // When — query far past the timeout, twice (non-mutating)
+      // When - query far past the timeout, twice (non-mutating)
       const first = cb.snapshot(t0 + 5000);
       const second = cb.snapshot(t0 + 5000);
 
-      // Then — reports 0 in-flight but the committed state is untouched
+      // Then - reports 0 in-flight but the committed state is untouched
       expect(first).toEqual(second);
       expect(first).toMatchObject({ state: 'half-open', halfOpenInFlight: 0 });
     });
 
     it('a probe that outlived its slot still counts toward closing when it succeeds', () => {
-      // Given — the probe times out (slot reclaimed), but the caller is alive, just slow
+      // Given - the probe times out (slot reclaimed), but the caller is alive, just slow
       const cb = trippedSingleSlot(1000);
       const t0 = 1 + 5000;
       cb.canRequest(t0);
 
-      // When — the slow probe finally succeeds after its slot expired
+      // When - the slow probe finally succeeds after its slot expired
       cb.recordSuccess(t0 + 2000);
 
-      // Then — the success closes the breaker (successThreshold = 1)
+      // Then - the success closes the breaker (successThreshold = 1)
       expect(cb.snapshot(t0 + 2000).state).toBe('closed');
     });
 
     it('success releases the most recently started probe (the older one still expires on time)', () => {
-      // Given — two slots, probes started at t0 and t0+500; the t0 probe is a zombie
+      // Given - two slots, probes started at t0 and t0+500; the t0 probe is a zombie
       const cb = trippedSingleSlot(1000, 2, 2);
       const t0 = 1 + 5000;
       cb.canRequest(t0); // zombie
       cb.canRequest(t0 + 500); // live probe
 
-      // When — the live probe succeeds (releases the NEWEST timestamp, t0+500)
+      // When - the live probe succeeds (releases the NEWEST timestamp, t0+500)
       cb.recordSuccess(t0 + 600);
 
-      // Then — the remaining tracked probe is the zombie (t0): it expires at t0+1000
+      // Then - the remaining tracked probe is the zombie (t0): it expires at t0+1000
       expect(cb.snapshot(t0 + 999).halfOpenInFlight).toBe(1);
       expect(cb.snapshot(t0 + 1000).halfOpenInFlight).toBe(0);
     });
 
     it('success releases the max-start-time probe even when now values were non-monotonic', () => {
-      // Given — two slots; clock skew makes the second probe carry an OLDER timestamp
+      // Given - two slots; clock skew makes the second probe carry an OLDER timestamp
       const cb = trippedSingleSlot(1000, 2, 2);
       const t0 = 1 + 5000;
       cb.canRequest(t0 + 500); // probe recorded at t0+500 (newest by time, first by insertion)
       cb.canRequest(t0); // probe recorded at t0 (older timestamp, inserted last)
 
-      // When — a success releases the max-timestamp probe (t0+500), like Lua ZRANGE -1 -1
+      // When - a success releases the max-timestamp probe (t0+500), like Lua ZRANGE -1 -1
       cb.recordSuccess(t0 + 600);
 
-      // Then — the remaining tracked probe is the OLDER one (t0): it expires at t0+1000
+      // Then - the remaining tracked probe is the OLDER one (t0): it expires at t0+1000
       expect(cb.snapshot(t0 + 999).halfOpenInFlight).toBe(1);
       expect(cb.snapshot(t0 + 1000).halfOpenInFlight).toBe(0);
     });
 
     it('reclaim does not bypass the cap while a probe is still fresh', () => {
-      // Given — single slot, long probe timeout
+      // Given - single slot, long probe timeout
       const cb = trippedSingleSlot(10000);
       const t0 = 1 + 5000;
       expect(cb.canRequest(t0)).toBe(true);
 
-      // When / Then — repeated attempts within the timeout are all rejected
+      // When / Then - repeated attempts within the timeout are all rejected
       expect(cb.canRequest(t0 + 1)).toBe(false);
       expect(cb.canRequest(t0 + 5000)).toBe(false);
       expect(cb.canRequest(t0 + 9999)).toBe(false);
@@ -404,7 +404,7 @@ describe('CircuitBreakerState', () => {
 
   describe('reset', () => {
     it('should return to CLOSED and clear all counters from any state', () => {
-      // Given — an OPEN breaker
+      // Given - an OPEN breaker
       const cb = new CircuitBreakerState(baseConfig());
       cb.recordFailure(1);
       cb.recordFailure(2);

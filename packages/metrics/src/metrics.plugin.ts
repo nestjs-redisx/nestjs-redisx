@@ -71,7 +71,7 @@ export class MetricsPlugin implements IRedisXPlugin {
   private static mergeDefaults(options: IMetricsPluginOptions): IMetricsPluginOptions {
     const registry = options.registry ?? DEFAULT_METRICS_CONFIG.registry;
     // External registry: the app almost certainly collects process metrics
-    // there already — duplicating them is opt-in, not the default.
+    // there already - duplicating them is opt-in, not the default.
     const collectDefaultMetricsFallback = registry === 'own' ? DEFAULT_METRICS_CONFIG.collectDefaultMetrics : false;
 
     return {

@@ -4,7 +4,7 @@
  * Real Redis delivers published messages to every subscribed connection of the
  * server. Memory adapters each own an isolated keyspace, but Pub/Sub must span
  * "connections" (e.g. a plugin's dedicated subscriber client and the default
- * publisher client), so the bus is module-global — mirroring the single-node
+ * publisher client), so the bus is module-global - mirroring the single-node
  * semantics the memory driver already documents.
  */
 

@@ -20,7 +20,7 @@ export class InvalidDedupConfigError extends DedupError {
 }
 
 /**
- * Error thrown when a store operation fails — on the manual APIs always, and
+ * Error thrown when a store operation fails - on the manual APIs always, and
  * on the gates (`dedupe`, `debounce`, `@Dedupe`) under errorPolicy
  * 'fail-closed'.
  */

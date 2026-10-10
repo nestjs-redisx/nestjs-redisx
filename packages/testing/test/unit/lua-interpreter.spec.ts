@@ -14,7 +14,7 @@ describe('LuaInterpreter', () => {
 
   it('converts a nil Redis reply to Lua false (Redis semantics)', () => {
     // Given: real Redis converts a nil bulk reply from redis.call into Lua
-    // false — `if x == false` must behave identically on the memory driver
+    // false - `if x == false` must behave identically on the memory driver
     const missGet: RedisCallPort = () => null;
 
     // When / Then
@@ -147,7 +147,7 @@ describe('LuaInterpreter', () => {
 
   describe('tonumber fidelity', () => {
     it('should treat blank strings as nil, like real Lua (not JS Number coercion)', () => {
-      // Given/When — a script guarding on tonumber of a GET result
+      // Given/When - a script guarding on tonumber of a GET result
       const check = (value: string) => run('if tonumber(ARGV[1]) then return 1 else return 0 end', [], [value]);
 
       // Then

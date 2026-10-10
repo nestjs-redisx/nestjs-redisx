@@ -162,7 +162,7 @@ describe('RateLimitGuard', () => {
     });
 
     it('should IGNORE spoofable forwarding headers by default (secure default)', async () => {
-      // Given — a client tries to spoof its IP; trustProxy defaults to false
+      // Given - a client tries to spoof its IP; trustProxy defaults to false
       mockRequest.ip = '192.168.1.1';
       mockRequest.headers['x-forwarded-for'] = '10.0.0.1, 10.0.0.2';
       mockRequest.headers['x-real-ip'] = '172.16.0.1';
@@ -170,7 +170,7 @@ describe('RateLimitGuard', () => {
       // When
       await guard.canActivate(mockContext);
 
-      // Then — the framework IP is used, not the attacker-controlled header
+      // Then - the framework IP is used, not the attacker-controlled header
       expect(mockService.check).toHaveBeenCalledWith('192.168.1.1', expect.any(Object));
     });
 
@@ -183,7 +183,7 @@ describe('RateLimitGuard', () => {
       // When
       await trusted.canActivate(mockContext);
 
-      // Then — leftmost forwarded IP
+      // Then - leftmost forwarded IP
       expect(mockService.check).toHaveBeenCalledWith('10.0.0.1', expect.any(Object));
     });
 
@@ -284,7 +284,7 @@ describe('RateLimitGuard', () => {
 
   describe('store passthrough', () => {
     it('should forward the decorator store option to the service', async () => {
-      // Given — @RateLimit({ store: 'memory' }) on the handler
+      // Given - @RateLimit({ store: 'memory' }) on the handler
       mockReflector.get.mockReturnValue({ store: 'memory', points: 10 });
 
       // When

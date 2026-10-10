@@ -65,7 +65,7 @@ export interface IRateLimitOptions {
    *
    * @example
    * ```typescript
-   * // Plugin default store: 'memory' — cheap per-node limiting everywhere
+   * // Plugin default store: 'memory' - cheap per-node limiting everywhere
    * @Post('login')
    * @RateLimit({ store: 'redis', points: 5, duration: 300 })
    * login() {}

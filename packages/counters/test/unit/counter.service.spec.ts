@@ -94,7 +94,7 @@ describe('CounterService', () => {
     });
 
     it('should fail loudly on a non-numeric value instead of returning NaN', async () => {
-      // Given — the key is shared with something that wrote a string
+      // Given - the key is shared with something that wrote a string
       store.get.mockResolvedValue(Number.NaN);
 
       // When/Then

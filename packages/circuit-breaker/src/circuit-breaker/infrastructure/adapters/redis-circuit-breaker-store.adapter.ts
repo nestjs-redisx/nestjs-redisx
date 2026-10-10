@@ -12,7 +12,7 @@ import { CAN_REQUEST_SCRIPT, GET_STATE_SCRIPT, RECORD_FAILURE_SCRIPT, RECORD_SUC
  * Redis-based circuit breaker state store.
  * Uses inline Lua scripts for atomic state transitions.
  *
- * Time is obtained here via Date.now() and passed into the scripts as ARGV —
+ * Time is obtained here via Date.now() and passed into the scripts as ARGV -
  * the Lua never reads time itself (mirrors the rate-limit sliding-window store).
  */
 @Injectable()
@@ -39,7 +39,7 @@ export class RedisCircuitBreakerStoreAdapter implements ICircuitBreakerStore, On
   }
 
   async canRequest(key: string, config: ICircuitBreakerConfig): Promise<ICircuitBreakerDecision> {
-    const now = Date.now(); // ⚠ real time — supplied to Lua as ARGV, never read inside Lua
+    const now = Date.now(); // ⚠ real time - supplied to Lua as ARGV, never read inside Lua
     const member = this.uniqueMember(now); // probe ZSET member when a half-open slot is granted
     const keys = this.buildKeys(key);
     const args = [...this.buildConfigArgs(config), now, member];

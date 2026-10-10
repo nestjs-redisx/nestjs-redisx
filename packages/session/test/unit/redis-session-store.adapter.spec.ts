@@ -184,7 +184,7 @@ describe('RedisSessionStoreAdapter', () => {
 
     it('should repair lost ownership: re-stamp userId and re-index on read', async () => {
       // Given: metadata lost its userId (eviction/TTL skew healed createdAt
-      // only) — the payload still identifies the owner via the extractor
+      // only) - the payload still identifies the owner via the extractor
       const adapter = await initAdapter(driver, baseOptions());
       routeEvalsha(driver, {
         get: () => [1, '{"cookie":{},"passport":{"user":"user-7"}}', ''],
@@ -195,7 +195,7 @@ describe('RedisSessionStoreAdapter', () => {
       // When
       const result = await adapter.get('sid-1');
 
-      // Then: identity restored and both indexes re-scored — revokeAll works again
+      // Then: identity restored and both indexes re-scored - revokeAll works again
       expect(result).toEqual({ cookie: {}, passport: { user: 'user-7' } });
       expect(driver.hset).toHaveBeenCalledWith('sess:{sid-1}:meta', 'userId', 'user-7');
       const reserves = callsOf(driver, 'reserve');
@@ -428,7 +428,7 @@ describe('RedisSessionStoreAdapter', () => {
     });
 
     it('should clamp the reject-policy reservation to the absolute lifetime cap', async () => {
-      // Given: 1-day TTL but only 1s of cap — the index score must not outlive
+      // Given: 1-day TTL but only 1s of cap - the index score must not outlive
       // the session by a day (zombie seat lockout)
       const adapter = await initAdapter(driver, baseOptions({ maxSessionsPerUser: 1, maxSessionsPolicy: 'reject', absoluteLifetimeMs: 1_000, defaultTtlMs: 86_400_000 }));
       const reserveArgs: Array<Array<string | number>> = [];
@@ -484,7 +484,7 @@ describe('RedisSessionStoreAdapter', () => {
     });
 
     it('should NOT release the seat when a session is actually live after a failed write', async () => {
-      // Given: a failed RE-SAVE (or a timed-out write that landed) — blindly
+      // Given: a failed RE-SAVE (or a timed-out write that landed) - blindly
       // compensating would un-index a live session (unrevocable + limit bypass)
       const adapter = await initAdapter(driver, baseOptions({ maxSessionsPerUser: 1, maxSessionsPolicy: 'reject' }));
       driver.exists.mockResolvedValue(1);
@@ -616,7 +616,7 @@ describe('RedisSessionStoreAdapter', () => {
       const result = await adapter.touch('sid-1');
 
       // Then: index refresh goes through the reserve script (bare zadd would
-      // let the index KEY expire under rolling sessions — revokeAll would
+      // let the index KEY expire under rolling sessions - revokeAll would
       // silently stop working)
       expect(result).toBe(true);
       const reserves = callsOf(driver, 'reserve');
@@ -723,7 +723,7 @@ describe('RedisSessionStoreAdapter', () => {
     });
 
     it('should re-derive the owner from the payload when metadata was lost', async () => {
-      // Given: metadata evicted, payload intact — destroy is the only public
+      // Given: metadata evicted, payload intact - destroy is the only public
       // repair path, so it must not leave a phantom seat behind
       const adapter = await initAdapter(driver, baseOptions());
       routeEvalsha(driver, { destroy: () => [1, '', '{"cookie":{},"passport":{"user":"user-7"}}'] });
@@ -748,7 +748,7 @@ describe('RedisSessionStoreAdapter', () => {
     });
 
     it('should clean the owner index even when only metadata remained (phantom repair)', async () => {
-      // Given: payload gone (evicted) but metadata + index entry linger — destroy
+      // Given: payload gone (evicted) but metadata + index entry linger - destroy
       // is the public repair path and must not discard the owner it just read
       const adapter = await initAdapter(driver, baseOptions(), metrics);
       routeEvalsha(driver, { destroy: () => [0, 'user-7', ''] });

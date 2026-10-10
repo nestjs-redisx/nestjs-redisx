@@ -29,16 +29,16 @@ export interface ITracingPluginOptions {
   /**
    * Tracer provider strategy.
    *
-   * - `'auto'` — if the application already registered a global OpenTelemetry
+   * - `'auto'` - if the application already registered a global OpenTelemetry
    *   tracer provider, use it (pure `trace.getTracer()` consumer); otherwise
    *   set up an own provider when the SDK packages are importable, or run as
    *   a silent no-op with one informational log line when they are not.
-   * - `'external'` — never create a provider: spans flow into whatever the
+   * - `'external'` - never create a provider: spans flow into whatever the
    *   application registered (or become no-ops). Only `@opentelemetry/api`
    *   is used in this mode.
-   * - `'standalone'` — always set up an own provider with the configured
+   * - `'standalone'` - always set up an own provider with the configured
    *   exporter. If a global provider is already registered, the plugin warns
-   *   and uses it instead — it NEVER overrides an application provider.
+   *   and uses it instead - it NEVER overrides an application provider.
    *   Requires the OpenTelemetry SDK packages to be installed.
    * @default 'auto'
    */
@@ -46,7 +46,7 @@ export interface ITracingPluginOptions {
 
   /**
    * Trace every Redis command executed through RedisX drivers as a
-   * `redis.<COMMAND>` CLIENT span — native, no external instrumentation
+   * `redis.<COMMAND>` CLIENT span - native, no external instrumentation
    * package required. Covers all named clients and runtime-created ones
    * (e.g. the Pub/Sub subscriber connection). Spans honor
    * `spans.excludeCommands`, `spans.includeArgs`, `spans.includeResult`,
@@ -54,7 +54,7 @@ export interface ITracingPluginOptions {
    *
    * When an external OpenTelemetry Redis instrumentation (e.g.
    * `@opentelemetry/instrumentation-ioredis`) is detected as active, the
-   * hook pauses automatically to avoid duplicate spans — checked per
+   * hook pauses automatically to avoid duplicate spans - checked per
    * command, so late-enabled or runtime-disabled instrumentation is
    * handled. Set `'force'` to emit native spans regardless.
    * @default true
@@ -63,7 +63,7 @@ export interface ITracingPluginOptions {
 
   /**
    * Startup check for HTTP request tracing.
-   * @remarks HTTP instrumentation cannot be registered by this plugin — it
+   * @remarks HTTP instrumentation cannot be registered by this plugin - it
    * must load BEFORE the `http` module is imported, i.e. in your own
    * OpenTelemetry bootstrap. When enabled, the plugin warns at startup if
    * `@opentelemetry/instrumentation-http` is not installed.
@@ -106,12 +106,12 @@ export interface ITracingPluginOptions {
   sampling?: {
     /**
      * Sampling strategy.
-     * - 'always' — always create spans
-     * - 'never' — never create spans
-     * - 'ratio' — sample based on `ratio` (0-1)
-     * - 'parent' — inherit the parent span's sampling decision; root spans
+     * - 'always' - always create spans
+     * - 'never' - never create spans
+     * - 'ratio' - sample based on `ratio` (0-1)
+     * - 'parent' - inherit the parent span's sampling decision; root spans
      *   fall back to ratio-based sampling
-     * @default 'parent' — OTel SDK convention; with 'always', an app that
+     * @default 'parent' - OTel SDK convention; with 'always', an app that
      * head-samples its request traces would still emit RedisX spans for
      * unsampled requests (orphaned spans whose parents were dropped)
      */

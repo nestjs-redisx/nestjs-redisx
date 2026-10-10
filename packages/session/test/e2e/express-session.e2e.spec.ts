@@ -13,7 +13,7 @@ import { SessionPlugin, SESSION_SERVICE, SESSION_STORE, SessionLimitExceededErro
  * SKIP_INTEGRATION=true.
  *
  * Login mimics passport's req.logIn: regenerate (fixation defense) +
- * `session.passport.user` + explicit save — so the default userIdExtractor
+ * `session.passport.user` + explicit save - so the default userIdExtractor
  * and the "old cookie rejected" flows are exercised exactly as in production.
  */
 const skipIntegration = process.env.SKIP_INTEGRATION === 'true';
@@ -155,7 +155,7 @@ describeIntegration('Session e2e (express-session, live Redis)', () => {
     await phone.post('/login/user-1').set('User-Agent', 'Phone UA').expect(200);
 
     // Activity stamping runs before the route handler, so the login request
-    // itself is not yet authenticated — any later request stamps the metadata.
+    // itself is not yet authenticated - any later request stamps the metadata.
     await laptop.get('/me').set('User-Agent', 'Laptop UA').expect(200);
 
     // When: the device page is read from the phone

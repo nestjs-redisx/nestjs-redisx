@@ -22,7 +22,7 @@ export class SemaphoreAcquisitionError extends SemaphoreError {
     key: string,
     /**
      * 'timeout' = the waitTimeout budget ran out; 'exhausted' = the retry
-     * cap ran out; 'error' = the store failed (outage — the cause carries
+     * cap ran out; 'error' = the store failed (outage - the cause carries
      * the driver error); 'shutdown' = the service was destroyed mid-wait.
      */
     public readonly reason: 'timeout' | 'exhausted' | 'error' | 'shutdown',

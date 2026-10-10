@@ -40,7 +40,7 @@ describe('CircuitBreakerService', () => {
     service = new CircuitBreakerService(options, store);
   });
 
-  describe('execute — happy path', () => {
+  describe('execute - happy path', () => {
     it('should run the function, record success, and return its result', async () => {
       // Given
       const fn = vi.fn().mockResolvedValue('ok');
@@ -68,7 +68,7 @@ describe('CircuitBreakerService', () => {
     });
   });
 
-  describe('execute — breaker rejects (open)', () => {
+  describe('execute - breaker rejects (open)', () => {
     beforeEach(() => {
       store.canRequest.mockResolvedValue({ allowed: false, snapshot: openSnapshot() });
     });
@@ -106,7 +106,7 @@ describe('CircuitBreakerService', () => {
     });
   });
 
-  describe('execute — store failure & errorPolicy', () => {
+  describe('execute - store failure & errorPolicy', () => {
     it('fail-open: should run the function when the store fails', async () => {
       // Given
       service = new CircuitBreakerService({ ...options, errorPolicy: 'fail-open' }, store);
@@ -132,7 +132,7 @@ describe('CircuitBreakerService', () => {
     });
   });
 
-  describe('execute — record errors do not mask the result', () => {
+  describe('execute - record errors do not mask the result', () => {
     it('should still return the result when recordSuccess fails', async () => {
       // Given
       store.recordSuccess.mockRejectedValue(new Error('record failed'));
@@ -157,13 +157,13 @@ describe('CircuitBreakerService', () => {
 
   describe('package defaults (empty plugin options)', () => {
     it('should fall back to DEFAULT_CIRCUIT_BREAKER_CONFIG for every knob and the default key prefix', async () => {
-      // Given — a service built with completely empty plugin options
+      // Given - a service built with completely empty plugin options
       service = new CircuitBreakerService({}, store);
 
       // When
       await service.execute('svc', vi.fn().mockResolvedValue('ok'));
 
-      // Then — package defaults everywhere, probeTimeoutMs = default openDurationMs
+      // Then - package defaults everywhere, probeTimeoutMs = default openDurationMs
       expect(store.canRequest).toHaveBeenCalledWith('cb:svc', {
         failureThreshold: 5,
         windowMs: 10000,
@@ -193,7 +193,7 @@ describe('CircuitBreakerService', () => {
       // Given
       const fn = vi.fn();
 
-      // When / Then — windowMs: 0 would silently break the Lua window math
+      // When / Then - windowMs: 0 would silently break the Lua window math
       await expect(service.execute('api', fn, { windowMs: 0 })).rejects.toBeInstanceOf(InvalidCircuitBreakerConfigError);
       expect(store.canRequest).not.toHaveBeenCalled();
       expect(fn).not.toHaveBeenCalled();
@@ -206,14 +206,14 @@ describe('CircuitBreakerService', () => {
     });
 
     it('should reject successThreshold > halfOpenMaxCalls combined from override + plugin options', async () => {
-      // Given — plugin halfOpenMaxCalls = 2; override pushes successThreshold above it
+      // Given - plugin halfOpenMaxCalls = 2; override pushes successThreshold above it
       // When / Then
       await expect(service.getState('api', { successThreshold: 3 })).rejects.toBeInstanceOf(InvalidCircuitBreakerConfigError);
       expect(store.getState).not.toHaveBeenCalled();
     });
 
     it('should NOT apply errorPolicy to config errors (fail-open still throws)', async () => {
-      // Given — programmer error is never subject to errorPolicy
+      // Given - programmer error is never subject to errorPolicy
       service = new CircuitBreakerService({ ...options, errorPolicy: 'fail-open' }, store);
       const fn = vi.fn();
 
@@ -233,10 +233,10 @@ describe('CircuitBreakerService', () => {
     });
 
     it('should default probeTimeoutMs to the resolved openDurationMs', async () => {
-      // When — plugin options (openDurationMs: 5000) do not set probeTimeoutMs
+      // When - plugin options (openDurationMs: 5000) do not set probeTimeoutMs
       await service.execute('svc', vi.fn().mockResolvedValue('ok'));
 
-      // Then — the store receives the dynamic default
+      // Then - the store receives the dynamic default
       expect(store.canRequest).toHaveBeenCalledWith('cb:svc', expect.objectContaining({ openDurationMs: 5000, probeTimeoutMs: 5000 }));
     });
 

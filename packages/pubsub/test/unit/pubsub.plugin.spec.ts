@@ -117,7 +117,7 @@ describe('PubSubPlugin', () => {
       // When
       const resolved = await findProvider(new PubSubPlugin(), PUBSUB_SUBSCRIBER_DRIVER).useFactory(manager, undefined, {});
 
-      // Then — created once with the SAME connection config AND driver type
+      // Then - created once with the SAME connection config AND driver type
       expect(manager.createClient).toHaveBeenCalledWith('default:pubsub-subscriber', config, { driverType: 'memory' });
       expect(resolved).toBe(dedicated);
     });

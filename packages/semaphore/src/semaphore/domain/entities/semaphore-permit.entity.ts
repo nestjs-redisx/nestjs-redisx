@@ -29,7 +29,7 @@ export interface ISemaphorePermit {
    * Releases the permit (frees the seat). Idempotent.
    *
    * @throws {SemaphorePermitNotHeldError} If the permit already expired or
-   *   was force-released — the seat was NOT protected for the full duration.
+   *   was force-released - the seat was NOT protected for the full duration.
    */
   release(): Promise<void>;
 
@@ -56,7 +56,7 @@ export interface ISemaphorePermit {
 /**
  * Semaphore permit entity.
  *
- * A leased seat on a counting semaphore with optional automatic renewal —
+ * A leased seat on a counting semaphore with optional automatic renewal -
  * the distributed analogue of holding one slot of a bounded worker pool.
  *
  * @example
@@ -118,7 +118,7 @@ export class SemaphorePermit implements ISemaphorePermit {
   /**
    * Releases the permit.
    *
-   * Stops auto-renewal and frees the seat. Idempotent — repeated calls are
+   * Stops auto-renewal and frees the seat. Idempotent - repeated calls are
    * no-ops. Throws when the store no longer holds the permit: the seat
    * expired (or was force-released) before the work finished, so the
    * concurrency bound was NOT honored for the full duration.
@@ -129,7 +129,7 @@ export class SemaphorePermit implements ISemaphorePermit {
     }
     // Single-flight: a second concurrent release() (user finally racing
     // another path) must share the SAME outcome instead of issuing a second
-    // ZREM — the loser of a double-ZREM would see 0 and throw a FALSE
+    // ZREM - the loser of a double-ZREM would see 0 and throw a FALSE
     // SemaphorePermitNotHeldError for a perfectly clean release.
     if (this.releasing) {
       return this.releasing;
@@ -203,7 +203,7 @@ export class SemaphorePermit implements ISemaphorePermit {
         //   re-score ZADD, failover blip) -> KEEP RETRYING while the lease
         //   still has life in it: a single blip must not strand a long job
         //   whose seat was perfectly recoverable. Once the local expiry
-        //   passes, the seat is gone anyway (crash bound) — stop.
+        //   passes, the seat is gone anyway (crash bound) - stop.
         // Containment is TOTAL: a nullish rejection must not mint a
         // TypeError inside this catch (an unhandled rejection in a timer
         // callback crashes the process), and a throwing log line must not

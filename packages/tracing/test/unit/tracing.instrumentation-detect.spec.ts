@@ -72,7 +72,7 @@ describe('TracingService external instrumentation detection', () => {
     // When
     const result = await hook('ping', [], exec, { clientName: 'default' });
 
-    // Then — no duplicate span, exactly one informational line
+    // Then - no duplicate span, exactly one informational line
     expect(result).toBe('PONG');
     expect(exec).toHaveBeenCalledTimes(1);
     expect(appExporter.getFinishedSpans()).toHaveLength(0);
@@ -88,14 +88,14 @@ describe('TracingService external instrumentation detection', () => {
     (service as any).instrumentationProbes = [() => wrapped];
     const exec = vi.fn().mockResolvedValue('v');
 
-    // When — three commands while wrapped, then instrumentation disabled
+    // When - three commands while wrapped, then instrumentation disabled
     await hook('get', ['a'], exec, { clientName: 'default' });
     await hook('get', ['b'], exec, { clientName: 'default' });
     await hook('get', ['c'], exec, { clientName: 'default' });
     wrapped = false;
     await hook('get', ['d'], exec, { clientName: 'default' });
 
-    // Then — one "paused" line, one "resumed" line, and the last command traced
+    // Then - one "paused" line, one "resumed" line, and the last command traced
     expect(logSpy).toHaveBeenCalledTimes(2);
     expect(appExporter.getFinishedSpans().map((s) => s.name)).toEqual(['redis.GET']);
   });
@@ -109,7 +109,7 @@ describe('TracingService external instrumentation detection', () => {
     // When
     await hook('set', ['k', 'v'], exec, { clientName: 'default' });
 
-    // Then — span emitted despite the wrapped probe
+    // Then - span emitted despite the wrapped probe
     expect(appExporter.getFinishedSpans().map((s) => s.name)).toEqual(['redis.SET']);
   });
 
@@ -119,7 +119,7 @@ describe('TracingService external instrumentation detection', () => {
     const circular: Record<string, unknown> = {};
     circular.self = circular;
 
-    // When — circular structure, then an oversized argument
+    // When - circular structure, then an oversized argument
     await hook('set', [circular], vi.fn().mockResolvedValue('OK'), { clientName: 'default' });
     await hook('set', ['k', 'x'.repeat(300)], vi.fn().mockResolvedValue('OK'), { clientName: 'default' });
 
@@ -131,7 +131,7 @@ describe('TracingService external instrumentation detection', () => {
   });
 
   it('should detect a shimmer-wrapped ioredis sendCommand through the real probe', async () => {
-    // Given — simulate @opentelemetry/instrumentation-ioredis being active
+    // Given - simulate @opentelemetry/instrumentation-ioredis being active
     const hook = await build();
     expect(((service as any).instrumentationProbes as unknown[]).length).toBeGreaterThanOrEqual(1);
     const sendCommand = Redis.prototype.sendCommand as unknown as { __wrapped?: boolean };
@@ -142,7 +142,7 @@ describe('TracingService external instrumentation detection', () => {
       // When
       await hook('get', ['k'], exec, { clientName: 'default' });
 
-      // Then — hook paused, command still executed
+      // Then - hook paused, command still executed
       expect(exec).toHaveBeenCalledTimes(1);
       expect(appExporter.getFinishedSpans()).toHaveLength(0);
     } finally {

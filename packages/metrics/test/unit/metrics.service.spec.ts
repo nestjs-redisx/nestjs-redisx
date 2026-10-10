@@ -152,7 +152,7 @@ describe('MetricsService', () => {
 
   describe('canonical metric names under a custom prefix', () => {
     it('should resolve a canonical redisx_* emit against the configured prefix instead of silently dropping it', async () => {
-      // Given — this registry uses prefix 'test_', so the standard leader
+      // Given - this registry uses prefix 'test_', so the standard leader
       // counters are registered as test_leader_*; feature packages hardcode
       // the canonical redisx_* names when they emit
 
@@ -160,14 +160,14 @@ describe('MetricsService', () => {
       service.incrementCounter('redisx_leader_elected_total', { group: 'default' });
       service.incrementCounter('test_leader_lost_total', { group: 'default', reason: 'expired' });
 
-      // Then — both the canonical and the exact name reach the same series
+      // Then - both the canonical and the exact name reach the same series
       const metrics = await service.getMetrics();
       expect(metrics).toContain('test_leader_elected_total{group="default"} 1');
       expect(metrics).toContain('test_leader_lost_total{group="default",reason="expired"} 1');
     });
 
     it('should not resolve names outside the canonical redisx_ namespace', async () => {
-      // When — an unknown foreign name must stay a no-op
+      // When - an unknown foreign name must stay a no-op
       service.incrementCounter('other_leader_elected_total', { group: 'default' });
 
       // Then
@@ -518,7 +518,7 @@ describe('MetricsService', () => {
       newService.onModuleInit();
       const metrics = await newService.getMetrics();
 
-      // Then — default metrics include process/nodejs prefixed gauges
+      // Then - default metrics include process/nodejs prefixed gauges
       expect(metrics).toContain('test_process_cpu');
       newService.onModuleDestroy();
     });
@@ -534,7 +534,7 @@ describe('MetricsService', () => {
       newService.onModuleInit();
       const metrics = await newService.getMetrics();
 
-      // Then — no default metrics (only our standard metrics)
+      // Then - no default metrics (only our standard metrics)
       expect(metrics).not.toContain('test_process_cpu');
       newService.onModuleDestroy();
     });

@@ -16,7 +16,7 @@ describe('ttlMsFromSession', () => {
   });
 
   it('should fall back when cookie.expires is an unparseable date', () => {
-    // Given: a foreign serializer may store expires as a garbage string —
+    // Given: a foreign serializer may store expires as a garbage string -
     // NaN must never reach the store (it would defeat the ttl <= 0 guard
     // and produce a PERSISTED key on real Redis)
     const session = { cookie: { expires: 'not-a-date' } };

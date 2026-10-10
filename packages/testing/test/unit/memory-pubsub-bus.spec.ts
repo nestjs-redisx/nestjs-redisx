@@ -69,7 +69,7 @@ describe('memoryPubSubBus', () => {
   });
 
   it('spans multiple subscribers (separate adapters) like single-node Redis', async () => {
-    // Given — two independent "connections"
+    // Given - two independent "connections"
     const a = createSubscriber();
     const b = createSubscriber();
     memoryPubSubBus.subscribe(a, 'ch');
@@ -91,7 +91,7 @@ describe('memoryPubSubBus', () => {
     memoryPubSubBus.subscribe(sub, 'a');
     memoryPubSubBus.subscribe(sub, 'b');
 
-    // When — explicit
+    // When - explicit
     memoryPubSubBus.unsubscribe(sub, ['a']);
     memoryPubSubBus.publish('a', '1');
     memoryPubSubBus.publish('b', '2');
@@ -100,7 +100,7 @@ describe('memoryPubSubBus', () => {
     // Then
     expect(sub.messages).toEqual([['b', '2']]);
 
-    // When — empty list removes the rest
+    // When - empty list removes the rest
     memoryPubSubBus.unsubscribe(sub, []);
     memoryPubSubBus.publish('b', '3');
     await flush();
@@ -141,7 +141,7 @@ describe('memoryPubSubBus', () => {
     memoryPubSubBus.publish('ch', 'x');
     order.push('after-publish');
 
-    // Then — publish returned before delivery ran
+    // Then - publish returned before delivery ran
     expect(order).toEqual(['after-publish']);
   });
 });

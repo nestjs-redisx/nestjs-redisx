@@ -2,7 +2,7 @@
  * @WithCircuitBreaker decorator for distributed circuit breaking.
  *
  * Uses immediate proxy-based wrapping (not a NestJS guard/interceptor), so it
- * works on ANY Injectable class method — services, repositories, gateways —
+ * works on ANY Injectable class method - services, repositories, gateways -
  * not just controllers. Mirrors the @WithLock / @Cached pattern.
  */
 
@@ -166,7 +166,7 @@ export function WithCircuitBreaker(options: IWithCircuitBreakerOptions): MethodD
     });
 
     // Carry over metadata stamped by decorators applied BEFORE this one
-    // (written below @WithCircuitBreaker in source order — e.g. @Cron). Discovery-based
+    // (written below @WithCircuitBreaker in source order - e.g. @Cron). Discovery-based
     // consumers (the scheduler among them) read metadata off the prototype's
     // method, which is now the wrapper; without the copy, `@WithCircuitBreaker` above
     // `@Cron()` silently unregisters the job on every instance.

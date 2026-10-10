@@ -43,10 +43,10 @@ describe('CircuitBreakerPlugin', () => {
     });
 
     it('should default probeTimeoutMs to the RESOLVED openDurationMs', () => {
-      // Given — custom cooldown, no explicit probe timeout
+      // Given - custom cooldown, no explicit probe timeout
       const value = optionsProviderValue(new CircuitBreakerPlugin({ openDurationMs: 5000 }));
 
-      // Then — probe timeout follows the cooldown
+      // Then - probe timeout follows the cooldown
       expect(value).toMatchObject({ openDurationMs: 5000, probeTimeoutMs: 5000 });
     });
 
@@ -153,7 +153,7 @@ describe('CircuitBreakerPlugin', () => {
       // Given
       const plugin = new CircuitBreakerPlugin(options as ICircuitBreakerPluginOptions);
 
-      // When / Then — sync path validates when providers are built
+      // When / Then - sync path validates when providers are built
       expect(() => plugin.getProviders()).toThrow(InvalidCircuitBreakerConfigError);
     });
 
@@ -174,7 +174,7 @@ describe('CircuitBreakerPlugin', () => {
       const providers = plugin.getProviders();
       const optionsProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === CIRCUIT_BREAKER_PLUGIN_OPTIONS) as { useFactory: (...args: unknown[]) => Promise<unknown> };
 
-      // When / Then — async path validates when the factory resolves
+      // When / Then - async path validates when the factory resolves
       await expect(optionsProvider.useFactory()).rejects.toBeInstanceOf(InvalidCircuitBreakerConfigError);
     });
   });

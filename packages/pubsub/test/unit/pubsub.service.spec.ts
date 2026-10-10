@@ -73,7 +73,7 @@ describe('PubSubService', () => {
     });
 
     it('should wrap serialization failures in PubSubPublishError', async () => {
-      // Given — a circular structure
+      // Given - a circular structure
       const circular: Record<string, unknown> = {};
       circular.self = circular;
 
@@ -100,7 +100,7 @@ describe('PubSubService', () => {
       });
       expect(sub.driver.subscribe).toHaveBeenCalledWith('user.created');
 
-      // When — the driver delivers a message
+      // When - the driver delivers a message
       sub.emitter.emit(DriverEvent.MESSAGE, 'user.created', '{"id":7}');
       await flush();
 
@@ -121,7 +121,7 @@ describe('PubSubService', () => {
       sub.emitter.emit(DriverEvent.MESSAGE, 'ch', '"x"');
       await flush();
 
-      // Then — one underlying subscription, both handlers called
+      // Then - one underlying subscription, both handlers called
       expect(sub.driver.subscribe).toHaveBeenCalledTimes(1);
       expect(first).toHaveBeenCalledTimes(1);
       expect(second).toHaveBeenCalledTimes(1);
@@ -134,17 +134,17 @@ describe('PubSubService', () => {
         received.push(msg);
       });
 
-      // When — a non-RedisX publisher sent a plain string
+      // When - a non-RedisX publisher sent a plain string
       sub.emitter.emit(DriverEvent.MESSAGE, 'legacy', 'plain-text');
       await flush();
 
-      // Then — fail-open delivery
+      // Then - fail-open delivery
       expect(received[0]!.data).toBe('plain-text');
       expect(received[0]!.raw).toBe('plain-text');
     });
 
     it('should isolate handler failures (sync throw and async rejection)', async () => {
-      // Given — a bad sync handler, a bad async handler, and a good one
+      // Given - a bad sync handler, a bad async handler, and a good one
       const good = vi.fn();
       await service.subscribe('ch', () => {
         throw new Error('sync boom');
@@ -158,7 +158,7 @@ describe('PubSubService', () => {
       sub.emitter.emit(DriverEvent.MESSAGE, 'ch', '1');
       await flush();
 
-      // Then — the good handler still ran; nothing crashed
+      // Then - the good handler still ran; nothing crashed
       expect(good).toHaveBeenCalledTimes(1);
     });
 
@@ -171,11 +171,11 @@ describe('PubSubService', () => {
       });
       expect(sub.driver.subscribe).toHaveBeenCalledWith('app:user.created');
 
-      // When — driver delivers with the FULL channel name
+      // When - driver delivers with the FULL channel name
       sub.emitter.emit(DriverEvent.MESSAGE, 'app:user.created', '1');
       await flush();
 
-      // Then — the handler sees the logical name
+      // Then - the handler sees the logical name
       expect(received[0]!.channel).toBe('user.created');
     });
 
@@ -221,11 +221,11 @@ describe('PubSubService', () => {
       const subA = await service.subscribe('ch', vi.fn());
       const subB = await service.subscribe('ch', vi.fn());
 
-      // When — first handler leaves: subscription stays
+      // When - first handler leaves: subscription stays
       await subA.unsubscribe();
       expect(sub.driver.unsubscribe).not.toHaveBeenCalled();
 
-      // When — last handler leaves: released
+      // When - last handler leaves: released
       await subB.unsubscribe();
       expect(sub.driver.unsubscribe).toHaveBeenCalledWith('ch');
       expect(service.getSubscriptions().channels).toEqual([]);
@@ -239,7 +239,7 @@ describe('PubSubService', () => {
       await subscription.unsubscribe();
       await subscription.unsubscribe();
 
-      // Then — released exactly once
+      // Then - released exactly once
       expect(sub.driver.unsubscribe).toHaveBeenCalledTimes(1);
     });
 
@@ -249,7 +249,7 @@ describe('PubSubService', () => {
       const subscription = await service.subscribe('ch', handler);
       await subscription.unsubscribe();
 
-      // When — a late message arrives (e.g. in flight during unsubscribe)
+      // When - a late message arrives (e.g. in flight during unsubscribe)
       sub.emitter.emit(DriverEvent.MESSAGE, 'ch', '1');
       await flush();
 
@@ -288,26 +288,26 @@ describe('PubSubService', () => {
       sub.driver.unsubscribe.mockRejectedValue(new Error('gone'));
       const subscription = await service.subscribe('ch', vi.fn());
 
-      // When / Then — no throw
+      // When / Then - no throw
       await expect(subscription.unsubscribe()).resolves.toBeUndefined();
     });
   });
 
   describe('concurrency (per-target serialization)', () => {
     it('should keep BOTH handlers when two first-subscribes race on the same channel', async () => {
-      // Given — SUBSCRIBE resolves asynchronously so both calls overlap
+      // Given - SUBSCRIBE resolves asynchronously so both calls overlap
       let release!: () => void;
       sub.driver.subscribe.mockImplementation(() => new Promise<void>((resolve) => (release = resolve)));
       const handlerA = vi.fn();
       const handlerB = vi.fn();
 
-      // When — both subscribe before the SUBSCRIBE command completes
+      // When - both subscribe before the SUBSCRIBE command completes
       const subscribing = Promise.all([service.subscribe('ch', handlerA), service.subscribe('ch', handlerB)]);
       await flush();
       release();
       await subscribing;
 
-      // Then — one SUBSCRIBE command, and BOTH handlers receive messages
+      // Then - one SUBSCRIBE command, and BOTH handlers receive messages
       expect(sub.driver.subscribe).toHaveBeenCalledTimes(1);
       sub.emitter.emit(DriverEvent.MESSAGE, 'ch', '"x"');
       await flush();
@@ -316,15 +316,15 @@ describe('PubSubService', () => {
     });
 
     it('should reject concurrent first-subscribers when SUBSCRIBE fails (no phantom handlers, each attempt independent)', async () => {
-      // Given — the SUBSCRIBE command keeps failing
+      // Given - the SUBSCRIBE command keeps failing
       sub.driver.subscribe.mockRejectedValue(new Error('down'));
       const handler = vi.fn();
 
-      // When — two concurrent subscribers race on the same new channel
+      // When - two concurrent subscribers race on the same new channel
       const a = service.subscribe('ch', handler);
       const b = service.subscribe('ch', handler);
 
-      // Then — both fail (the second made its OWN attempt after the first),
+      // Then - both fail (the second made its OWN attempt after the first),
       // and no phantom handler is left behind
       await expect(a).rejects.toBeInstanceOf(PubSubSubscribeError);
       await expect(b).rejects.toBeInstanceOf(PubSubSubscribeError);
@@ -336,13 +336,13 @@ describe('PubSubService', () => {
     });
 
     it('should re-subscribe when a new subscribe races a last-handler unsubscribe', async () => {
-      // Given — an active subscription whose release is slow
+      // Given - an active subscription whose release is slow
       const handlerA = vi.fn();
       const subscription = await service.subscribe('ch', handlerA);
       let releaseUnsub!: () => void;
       sub.driver.unsubscribe.mockImplementation(() => new Promise<void>((resolve) => (releaseUnsub = resolve)));
 
-      // When — last-handler unsubscribe starts, then a new subscribe overlaps
+      // When - last-handler unsubscribe starts, then a new subscribe overlaps
       const unsubscribing = subscription.unsubscribe();
       const handlerB = vi.fn();
       const subscribing = service.subscribe('ch', handlerB);
@@ -350,7 +350,7 @@ describe('PubSubService', () => {
       releaseUnsub();
       await Promise.all([unsubscribing, subscribing]);
 
-      // Then — the release went through AND the channel was re-subscribed for B
+      // Then - the release went through AND the channel was re-subscribed for B
       expect(sub.driver.unsubscribe).toHaveBeenCalledWith('ch');
       expect(sub.driver.subscribe).toHaveBeenCalledTimes(2);
       sub.emitter.emit(DriverEvent.MESSAGE, 'ch', '"x"');
@@ -381,18 +381,18 @@ describe('PubSubService', () => {
     });
 
     it('unsubscribeAll should wait for an in-flight subscribe and release it too', async () => {
-      // Given — a subscribe that is still awaiting its SUBSCRIBE command
+      // Given - a subscribe that is still awaiting its SUBSCRIBE command
       let release!: () => void;
       sub.driver.subscribe.mockImplementation(() => new Promise<void>((resolve) => (release = resolve)));
       const subscribing = service.subscribe('ch', vi.fn());
       await flush();
 
-      // When — shutdown sweep starts while the subscribe is in flight
+      // When - shutdown sweep starts while the subscribe is in flight
       const sweeping = service.unsubscribeAll();
       release();
       await Promise.all([subscribing, sweeping]);
 
-      // Then — the late subscription did not survive the sweep
+      // Then - the late subscription did not survive the sweep
       expect(sub.driver.unsubscribe).toHaveBeenCalledWith('ch');
       expect(service.getSubscriptions().channels).toEqual([]);
     });

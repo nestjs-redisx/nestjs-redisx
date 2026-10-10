@@ -20,7 +20,7 @@ export const COUNTER_STORE = Symbol.for('COUNTER_STORE');
 export const COUNTERS_REDIS_DRIVER = Symbol.for('COUNTERS_REDIS_DRIVER');
 
 /**
- * Default plugin configuration — the single source of defaults.
+ * Default plugin configuration - the single source of defaults.
  */
 export const DEFAULT_COUNTERS_CONFIG = {
   keyPrefix: '_ctr:',

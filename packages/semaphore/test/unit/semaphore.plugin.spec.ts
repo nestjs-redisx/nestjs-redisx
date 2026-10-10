@@ -42,7 +42,7 @@ describe('SemaphorePlugin', () => {
       const provider = findProvider(plugin, SEMAPHORE_PLUGIN_OPTIONS) as ValueProvider;
       const options = provider.useValue as Record<string, unknown>;
 
-      // Then — defaults filled, override kept
+      // Then - defaults filled, override kept
       expect(options.defaultTtl).toBe(10_000);
       expect(options.keyPrefix).toBe('_sem:');
       expect(options.maxTtl).toBe(300_000);
@@ -51,7 +51,7 @@ describe('SemaphorePlugin', () => {
     });
 
     it('should fail fast on an invalid sync config at registration time', () => {
-      // Given/When/Then — getProviders runs mergeDefaults + validation
+      // Given/When/Then - getProviders runs mergeDefaults + validation
       expect(() => new SemaphorePlugin({ defaultTtl: -1 }).getProviders()).toThrow(InvalidSemaphoreConfigError);
     });
   });

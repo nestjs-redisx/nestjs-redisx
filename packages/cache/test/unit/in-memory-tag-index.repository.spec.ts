@@ -40,7 +40,7 @@ describe('InMemoryTagIndexRepository', () => {
     // When
     const count = await tags.invalidateTag('t1');
 
-    // Then — values gone, tag cleared
+    // Then - values gone, tag cleared
     expect(count).toBe(2);
     expect(await store.get('a')).toBeNull();
     expect(await store.get('b')).toBeNull();
@@ -71,7 +71,7 @@ describe('InMemoryTagIndexRepository', () => {
     // When
     await tags.clearAllTags();
 
-    // Then — index cleared, value survives (values are cleared separately)
+    // Then - index cleared, value survives (values are cleared separately)
     expect(await tags.getKeysByTag('t1')).toEqual([]);
     expect((await store.get<number>('a'))?.value).toBe(1);
   });

@@ -25,7 +25,7 @@ describe('InMemoryL2StoreAdapter', () => {
     // When
     await store.set('k', e);
 
-    // Then — no serialization: the exact object comes back (shared with L1)
+    // Then - no serialization: the exact object comes back (shared with L1)
     expect(await store.get('k')).toBe(e);
   });
 

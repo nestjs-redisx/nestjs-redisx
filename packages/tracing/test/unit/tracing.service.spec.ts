@@ -53,7 +53,7 @@ describe('TracingService', () => {
   let config: ITracingPluginOptions;
 
   // The standalone path registers into the REAL OTel global slot (the SDK is
-  // not mocked, only @opentelemetry/api is) — clear it around every test so
+  // not mocked, only @opentelemetry/api is) - clear it around every test so
   // 'auto' mode keeps choosing the standalone path and tests stay isolated.
   const clearOtelGlobalSlot = (): void => {
     delete (globalThis as Record<symbol, unknown>)[Symbol.for('opentelemetry.js.api.1')];
@@ -213,7 +213,7 @@ describe('TracingService', () => {
       // When
       customService.startSpan('test');
 
-      // Then — service name should be set as attribute (no throw)
+      // Then - service name should be set as attribute (no throw)
       expect(true).toBe(true);
     });
 
@@ -230,7 +230,7 @@ describe('TracingService', () => {
         attributes: { 'db.statement': 'PING' },
       });
 
-      // Then — should return noop span
+      // Then - should return noop span
       expect(span.spanId).toBe('');
     });
 
@@ -247,12 +247,12 @@ describe('TracingService', () => {
         attributes: { 'db.statement': 'GET' },
       });
 
-      // Then — should return real span
+      // Then - should return real span
       expect(span.spanId).toBe('123');
     });
 
     it('should strip db.statement.args when includeArgs is false', async () => {
-      // Given — default: includeArgs is false
+      // Given - default: includeArgs is false
       const argsService = new TracingService({
         ...config,
         spans: { includeArgs: false },
@@ -264,7 +264,7 @@ describe('TracingService', () => {
         attributes: { 'db.statement.args': 'my-key' },
       });
 
-      // Then — span should be created without the args attribute
+      // Then - span should be created without the args attribute
       expect(span).toBeDefined();
     });
 
@@ -281,7 +281,7 @@ describe('TracingService', () => {
         attributes: { 'db.statement.args': 'my-key' },
       });
 
-      // Then — span should be created
+      // Then - span should be created
       expect(span).toBeDefined();
     });
 
@@ -298,7 +298,7 @@ describe('TracingService', () => {
         attributes: { 'db.statement.result': 'some-value' },
       });
 
-      // Then — span should be created
+      // Then - span should be created
       expect(span).toBeDefined();
     });
 
@@ -315,7 +315,7 @@ describe('TracingService', () => {
         attributes: { 'db.statement.args': 'this-is-a-very-long-argument-string' },
       });
 
-      // Then — should create span (truncation applied internally)
+      // Then - should create span (truncation applied internally)
       expect(span).toBeDefined();
     });
 
@@ -330,7 +330,7 @@ describe('TracingService', () => {
       // When
       const span = zeroSample.startSpan('test');
 
-      // Then — should be noop (sampleRate 0 → always skip)
+      // Then - should be noop (sampleRate 0 → always skip)
       expect(span.spanId).toBe('');
     });
   });
@@ -488,13 +488,13 @@ describe('TracingService', () => {
     });
 
     it('should be a no-op when tracing is disabled (provider is null)', async () => {
-      // Given — disabled service with no initialized provider
+      // Given - disabled service with no initialized provider
       const disabledService = new TracingService({ enabled: false });
 
       // When
       await disabledService.onModuleDestroy();
 
-      // Then — no provider was created or torn down
+      // Then - no provider was created or torn down
       expect((disabledService as any).provider).toBeNull();
     });
 
@@ -505,13 +505,13 @@ describe('TracingService', () => {
       provider.shutdown = vi.fn().mockRejectedValue(new Error('collector unreachable'));
       const warnSpy = vi.spyOn((service as any).logger, 'warn').mockImplementation(() => {});
 
-      // When/Then — a failing collector must not take down app.close()
+      // When/Then - a failing collector must not take down app.close()
       await expect(service.onModuleDestroy()).resolves.toBeUndefined();
       expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('collector unreachable'));
     });
 
     it('should return within the bounded timeout when provider.shutdown() hangs', async () => {
-      // Given — provider whose shutdown never resolves
+      // Given - provider whose shutdown never resolves
       await service.onModuleInit();
       const provider = (service as any).provider;
       provider.shutdown = vi.fn().mockReturnValue(new Promise<void>(() => {}));
@@ -522,7 +522,7 @@ describe('TracingService', () => {
         const destroyPromise = service.onModuleDestroy();
         await vi.advanceTimersByTimeAsync(2_000);
 
-        // Then — the shutdown race is bounded so app.close() cannot hang on a
+        // Then - the shutdown race is bounded so app.close() cannot hang on a
         // dead collector
         await expect(destroyPromise).resolves.toBeUndefined();
       } finally {
@@ -674,7 +674,7 @@ describe('TracingService', () => {
     type ManagerHook = (command: string, args: readonly unknown[], exec: () => Promise<unknown>, context: { clientName: string }) => Promise<unknown>;
 
     beforeEach(async () => {
-      // mockSpan is shared across the file — reset call history so
+      // mockSpan is shared across the file - reset call history so
       // "not.toHaveBeenCalled" assertions see only this test's activity
       vi.clearAllMocks();
     });
@@ -782,14 +782,14 @@ describe('TracingService', () => {
       // When
       const result = await hook('ping', [], exec, { clientName: 'default' });
 
-      // Then — command executed untouched, no real span ended
+      // Then - command executed untouched, no real span ended
       expect(result).toBe('PONG');
       expect(exec).toHaveBeenCalledTimes(1);
       expect(mockSpan.end).not.toHaveBeenCalled();
     });
 
     it('should run the command untraced when the service is disabled after init', async () => {
-      // Given — hook captured from an enabled service, then simulate a
+      // Given - hook captured from an enabled service, then simulate a
       // disabled path by calling the hook of a service built disabled
       const manager = createManagerStub();
       const svc = new TracingService({ ...config, enabled: false, traceRedisCommands: true }, manager as never);
@@ -804,7 +804,7 @@ describe('TracingService', () => {
 
   describe('edge cases', () => {
     it('should wrap own-provider construction failures in TracingInitializationError', async () => {
-      // Given — SDK "loads" but its constructors are unusable
+      // Given - SDK "loads" but its constructors are unusable
       const svc = new TracingService({ ...config });
       (svc as any).loadSdk = async () => ({
         node: {},
@@ -819,7 +819,7 @@ describe('TracingService', () => {
     });
 
     it('should end up with no probes when no known driver package can be resolved', async () => {
-      // Given — resolution rooted in a directory where no driver exists
+      // Given - resolution rooted in a directory where no driver exists
       const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue('/nonexistent-redisx-test-dir');
       try {
         const manager = { setCommandHook: vi.fn() };
@@ -828,7 +828,7 @@ describe('TracingService', () => {
         // When
         await svc.onModuleInit();
 
-        // Then — hook installed, but nothing to probe
+        // Then - hook installed, but nothing to probe
         expect(manager.setCommandHook).toHaveBeenCalledTimes(1);
         expect((svc as any).instrumentationProbes).toEqual([]);
       } finally {
@@ -837,7 +837,7 @@ describe('TracingService', () => {
     });
 
     it('should run commands untraced when the tracer is not initialized', async () => {
-      // Given — hook invoked before/without init
+      // Given - hook invoked before/without init
       const svc = new TracingService({ ...config, traceRedisCommands: true }, { setCommandHook: vi.fn() } as never);
       const exec = vi.fn().mockResolvedValue('v');
 
@@ -850,7 +850,7 @@ describe('TracingService', () => {
     });
 
     it('should run the function directly when withSpan gets a noop span', async () => {
-      // Given — sampleRate 0 makes startSpan return the noop span
+      // Given - sampleRate 0 makes startSpan return the noop span
       const zero = new TracingService({ ...config, sampleRate: 0 });
       await zero.onModuleInit();
       const fn = vi.fn().mockResolvedValue('done');
@@ -871,7 +871,7 @@ describe('TracingService', () => {
       // When
       const span = exclService.startSpan('custom-op');
 
-      // Then — real span
+      // Then - real span
       expect(span.spanId).toBe('123');
     });
 
@@ -880,7 +880,7 @@ describe('TracingService', () => {
       const svc = new TracingService({ ...config, spans: { includeArgs: true } });
       await svc.onModuleInit();
 
-      // When / Then — long args truncated with the default 100 limit, no throw
+      // When / Then - long args truncated with the default 100 limit, no throw
       svc.startSpan('redis.SET', { attributes: { 'db.statement.args': 'a'.repeat(150) } });
     });
 

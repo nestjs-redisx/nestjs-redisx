@@ -42,7 +42,7 @@ export interface IBaseConnectionConfig {
   /**
    * Command timeout in milliseconds; `0` disables the deadline entirely
    * (the only way to turn the ioredis default off). On the node-redis
-   * driver there is no default — set it explicitly to bound commands hung
+   * driver there is no default - set it explicitly to bound commands hung
    * on a dead connection (the deadline abandons the local wait; a command
    * already sent may still execute server-side). Long BLOCKING commands
    * must stay under it.
@@ -51,7 +51,7 @@ export interface IBaseConnectionConfig {
   commandTimeout?: number;
 
   /**
-   * Keep-alive interval in milliseconds (ioredis driver only — the
+   * Keep-alive interval in milliseconds (ioredis driver only - the
    * node-redis driver manages TCP keep-alive itself).
    * @default 0 (disabled)
    */
@@ -70,7 +70,7 @@ export interface IBaseConnectionConfig {
   enableAutoReconnect?: boolean;
 
   /**
-   * Maximum retry attempts for commands (ioredis driver only — the
+   * Maximum retry attempts for commands (ioredis driver only - the
    * node-redis driver has no equivalent and ignores it).
    * @default 3
    */
@@ -82,7 +82,7 @@ export interface IBaseConnectionConfig {
   retryStrategy?: (times: number) => number | null;
 
   /**
-   * Reconnect on error function (ioredis driver only — node-redis has no
+   * Reconnect on error function (ioredis driver only - node-redis has no
    * equivalent hook and ignores it).
    */
   reconnectOnError?: (error: Error) => boolean | 1 | 2;
@@ -238,7 +238,7 @@ export interface ISentinelConnectionConfig extends IBaseConnectionConfig {
     sentinelPassword?: string;
 
     /**
-     * Retry strategy for sentinel connections (ioredis driver only —
+     * Retry strategy for sentinel connections (ioredis driver only -
      * @redis/client hardcodes sentinel-client reconnects off and rotates
      * to the next sentinel instead, overriding anything set here).
      */
@@ -248,7 +248,7 @@ export interface ISentinelConnectionConfig extends IBaseConnectionConfig {
      * Prefer slave nodes for reads.
      * @deprecated Non-functional: never forwarded to any driver (and real
      * ioredis `preferredSlaves` needs an array/function plus `role: 'slave'`
-     * — a boolean could not drive it). Will be removed in 2.0.
+     * - a boolean could not drive it). Will be removed in 2.0.
      * @default false
      */
     preferredSlaves?: boolean;
@@ -357,7 +357,7 @@ export interface IRedisClientOptions {
  *
  * Built-in: 'ioredis' (default), 'node-redis'. Custom driver types registered
  * via `registerDriver()` (e.g. 'memory' from @nestjs-redisx/testing) are also
- * accepted — the string union keeps autocomplete for built-ins while allowing
+ * accepted - the string union keeps autocomplete for built-ins while allowing
  * registered types.
  */
 export type DriverType = 'ioredis' | 'node-redis' | (string & {});
@@ -391,7 +391,7 @@ export interface IGlobalConfig {
 
   /**
    * Enable graceful shutdown.
-   * @deprecated Reserved — not currently consumed by core (shutdown always
+   * @deprecated Reserved - not currently consumed by core (shutdown always
    * runs the graceful path; the node-redis close deadline follows
    * `commandTimeout`).
    * @default true
@@ -400,14 +400,14 @@ export interface IGlobalConfig {
 
   /**
    * Graceful shutdown timeout (milliseconds).
-   * @deprecated Reserved — not currently consumed by core.
+   * @deprecated Reserved - not currently consumed by core.
    * @default 5000
    */
   gracefulShutdownTimeout?: number;
 
   /**
    * Enable health checks.
-   * @deprecated Reserved — not currently consumed by core (health checks
+   * @deprecated Reserved - not currently consumed by core (health checks
    * are on-demand via `healthCheck()`; no periodic loop exists).
    * @default true
    */
@@ -415,7 +415,7 @@ export interface IGlobalConfig {
 
   /**
    * Health check interval (milliseconds).
-   * @deprecated Reserved — not currently consumed by core.
+   * @deprecated Reserved - not currently consumed by core.
    * @default 30000
    */
   healthCheckInterval?: number;

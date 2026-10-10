@@ -90,7 +90,7 @@ export class PubSubPlugin implements IRedisXPlugin {
       },
 
       // Subscriber: a DEDICATED connection cloned from the named client's
-      // config — a Redis connection in subscriber mode cannot execute regular
+      // config - a Redis connection in subscriber mode cannot execute regular
       // commands, so subscriptions must never share the publisher connection.
       {
         provide: PUBSUB_SUBSCRIBER_DRIVER,

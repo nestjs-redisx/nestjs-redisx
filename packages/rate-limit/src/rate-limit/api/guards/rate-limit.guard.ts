@@ -35,8 +35,8 @@ interface ITracingService {
  *
  * The {@link RateLimit} decorator binds this guard via `UseGuards`. NestJS does
  * not deduplicate the same guard across binding scopes, so a route decorated on
- * both the class and the method — or a route decorated with `@RateLimit` while
- * the guard is also registered globally as `APP_GUARD` — would otherwise run
+ * both the class and the method - or a route decorated with `@RateLimit` while
+ * the guard is also registered globally as `APP_GUARD` - would otherwise run
  * `canActivate` (and consume a point) more than once for a single request. The
  * marker makes consumption idempotent within one request.
  */

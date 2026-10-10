@@ -8,7 +8,7 @@ import { IdempotencyError, IdempotencyKeyRequiredError, IdempotencyFingerprintMi
  *
  * Without this filter the idempotency errors (which extend `RedisXError`, not
  * `HttpException`) would surface as `500 Internal Server Error`. That is wrong
- * for situations that are part of normal idempotent-request handling — a reused
+ * for situations that are part of normal idempotent-request handling - a reused
  * key with a different body, a still-in-progress concurrent request, or a key
  * whose previous attempt failed. This filter maps each error to an appropriate
  * 4xx status while leaving genuinely unexpected errors as 500.

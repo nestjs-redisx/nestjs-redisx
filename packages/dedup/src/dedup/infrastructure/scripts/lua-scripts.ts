@@ -6,7 +6,7 @@
  */
 
 /**
- * Release a dedup marker only if owned by the token — the first-caller that
+ * Release a dedup marker only if owned by the token - the first-caller that
  * failed may re-open the window for a retry without erasing a marker a NEWER
  * first-caller has since set.
  *
@@ -27,7 +27,7 @@ end
  * recorded may execute, and claiming consumes the slot atomically.
  *
  * Distinguishes the two 0-claim causes: a MISSING slot means the round was
- * lost to expiry (process stalled past the grace period) — silently
+ * lost to expiry (process stalled past the grace period) - silently
  * conflating it with legitimate supersession hid lost executions.
  *
  * KEYS[1] = debounce last-call key

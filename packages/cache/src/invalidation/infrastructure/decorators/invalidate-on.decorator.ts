@@ -150,7 +150,7 @@ export function InvalidateOn(options: IInvalidateOnOptions): MethodDecorator {
     });
 
     // Carry over metadata stamped by decorators applied BEFORE this one
-    // (written below @InvalidateOn in source order — e.g. @Cron). Discovery-based
+    // (written below @InvalidateOn in source order - e.g. @Cron). Discovery-based
     // consumers (the scheduler among them) read metadata off the prototype's
     // method, which is now the wrapper; without the copy, `@InvalidateOn` above
     // `@Cron()` silently unregisters the job on every instance.
@@ -178,7 +178,7 @@ function resolveTags(tags: string[] | ((result: unknown, args: unknown[]) => str
   }
 
   // Static tags interpolate {n} placeholders over the method args, matching
-  // @Cached — so a tag written on read is invalidated here, not silently missed.
+  // @Cached - so a tag written on read is invalidated here, not silently missed.
   return interpolateTags(tags, args);
 }
 

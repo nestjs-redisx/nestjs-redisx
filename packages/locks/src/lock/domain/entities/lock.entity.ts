@@ -195,7 +195,7 @@ export class Lock implements ILock {
       try {
         await this.extend(this.ttl);
       } catch (error) {
-        // Extension failed — the lock may already be lost. Surface it (the
+        // Extension failed - the lock may already be lost. Surface it (the
         // previous silent catch hid lost locks) and stop renewing. Callers can
         // also detect this via `isAutoRenewing` flipping to false.
         this.logger.warn(`Auto-renewal failed for lock "${this.key}"; the lock may have expired and renewal has stopped: ${(error as Error).message}`);

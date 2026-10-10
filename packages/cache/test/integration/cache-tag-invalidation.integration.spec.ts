@@ -35,7 +35,7 @@ async function flushRedis(): Promise<void> {
   await client.quit();
 }
 
-describeIntegration('CachePlugin — tag invalidation', () => {
+describeIntegration('CachePlugin - tag invalidation', () => {
   let module: TestingModule;
   let cache: ICacheService;
   let tagIndex: ITagIndex;
@@ -68,12 +68,12 @@ describeIntegration('CachePlugin — tag invalidation', () => {
   });
 
   it('getOrSet immediately after invalidateTags reloads fresh data (no stale stampede-flight window)', async () => {
-    // Given — a value cached via getOrSet with a tag (the load registers a
+    // Given - a value cached via getOrSet with a tag (the load registers a
     // stampede flight for the key)
     const v1 = await cache.getOrSet('user:42', async () => 'V1', { tags: ['users'] });
     expect(v1).toBe('V1');
 
-    // When — the tag is invalidated (key really deleted from Redis)...
+    // When - the tag is invalidated (key really deleted from Redis)...
     await cache.invalidateTags(['users']);
     expect(await cache.get('user:42')).toBeNull();
 
@@ -81,7 +81,7 @@ describeIntegration('CachePlugin — tag invalidation', () => {
     // mutation -> invalidateTags -> instant refetch pattern (SSE/TanStack Query)
     const v2 = await cache.getOrSet('user:42', async () => 'V2');
 
-    // Then — the loader MUST run and the fresh value MUST be cached; a
+    // Then - the loader MUST run and the fresh value MUST be cached; a
     // lingering resolved stampede flight would silently return 'V1'
     expect(v2).toBe('V2');
     expect(await cache.get('user:42')).toBe('V2');

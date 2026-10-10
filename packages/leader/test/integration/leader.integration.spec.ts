@@ -42,7 +42,7 @@ async function bootInstance(instanceId: string): Promise<TestingModule> {
   return app;
 }
 
-describeIntegration('LeaderPlugin — live Redis, two competing instances', () => {
+describeIntegration('LeaderPlugin - live Redis, two competing instances', () => {
   let redis: Redis;
   let apps: TestingModule[];
 
@@ -71,7 +71,7 @@ describeIntegration('LeaderPlugin — live Redis, two competing instances', () =
     const a = appA.get<ILeaderService>(LEADER_SERVICE);
     const b = appB.get<ILeaderService>(LEADER_SERVICE);
 
-    // Then — first boot wins, both agree on who leads
+    // Then - first boot wins, both agree on who leads
     expect(a.isLeader()).toBe(true);
     expect(b.isLeader()).toBe(false);
     expect(await b.getLeaderId()).toBe('live-a');
@@ -87,27 +87,27 @@ describeIntegration('LeaderPlugin — live Redis, two competing instances', () =
     const b = appB.get<ILeaderService>(LEADER_SERVICE);
     expect(b.isLeader()).toBe(false);
 
-    // When — the leader's app closes (lease released, no TTL wait)
+    // When - the leader's app closes (lease released, no TTL wait)
     await appA.close();
     apps.shift();
 
-    // Then — the follower takes over within a few retry intervals
+    // Then - the follower takes over within a few retry intervals
     await wait(RETRY * 3);
     expect(b.isLeader()).toBe(true);
     expect(await redis.get('leader:default')).toBe('live-b');
   });
 
   it('recovers from a CRASHED leader once its lease expires', async () => {
-    // Given — a dead node's lease with a short remaining TTL, planted directly
+    // Given - a dead node's lease with a short remaining TTL, planted directly
     await redis.set('leader:default', 'crashed-node', 'PX', 700);
 
-    // When — a healthy instance boots while the seat is still taken
+    // When - a healthy instance boots while the seat is still taken
     const app = await bootInstance('live-a');
     apps.push(app);
     const service = app.get<ILeaderService>(LEADER_SERVICE);
     expect(service.isLeader()).toBe(false);
 
-    // Then — after the dead lease expires, the healthy instance wins
+    // Then - after the dead lease expires, the healthy instance wins
     await wait(700 + RETRY * 3);
     expect(service.isLeader()).toBe(true);
     expect(await redis.get('leader:default')).toBe('live-a');
@@ -127,37 +127,37 @@ describeIntegration('LeaderPlugin — live Redis, two competing instances', () =
     await a.stepDown();
     await wait(RETRY * 3);
 
-    // Then — B leads; A stays out for its cooldown even though it keeps ticking
+    // Then - B leads; A stays out for its cooldown even though it keeps ticking
     expect(b.isLeader()).toBe(true);
     expect(a.isLeader()).toBe(false);
     expect(await redis.get('leader:default')).toBe('live-b');
   });
 
   it('re-leads instantly after a restart with the same instanceId (stale own lease re-claimed)', async () => {
-    // Given — the previous run's lease is still unexpired (unclean restart:
+    // Given - the previous run's lease is still unexpired (unclean restart:
     // the process died without releasing, then came back with the same id)
     await redis.set('leader:default', 'live-a', 'PX', TTL);
 
-    // When — the "restarted" process boots
+    // When - the "restarted" process boots
     const app = await bootInstance('live-a');
     apps.push(app);
     const service = app.get<ILeaderService>(LEADER_SERVICE);
 
-    // Then — leader immediately (no ttl wait, unlike a foreign crashed lease),
+    // Then - leader immediately (no ttl wait, unlike a foreign crashed lease),
     // and the lease TTL was refreshed by the re-claim
     expect(service.isLeader()).toBe(true);
     expect(await redis.get('leader:default')).toBe('live-a');
     expect(await redis.pttl('leader:default')).toBeGreaterThan(TTL / 2);
   });
 
-  it('acquire re-claims only an own lease — the script contract on live Redis', async () => {
-    // Given — the seat belongs to another (dead) node for the next 5 seconds
+  it('acquire re-claims only an own lease - the script contract on live Redis', async () => {
+    // Given - the seat belongs to another (dead) node for the next 5 seconds
     await redis.set('leader:default', 'other-node', 'PX', 5_000);
     const app = await bootInstance('live-a'); // boots as follower
     apps.push(app);
     const store = app.get<ILeaderStore>(LEADER_STORE);
 
-    // When/Then — a competitor cannot take or extend the seat...
+    // When/Then - a competitor cannot take or extend the seat...
     expect(await store.acquire('leader:default', 'live-a', TTL)).toBe(false);
 
     // ...while the holder itself re-claims (extends) it
@@ -165,17 +165,17 @@ describeIntegration('LeaderPlugin — live Redis, two competing instances', () =
     expect(await redis.get('leader:default')).toBe('other-node');
   });
 
-  it('re-claims an own stale lease under maxmemory pressure — the OOM-denied SET must not shadow the re-claim branch', async () => {
-    // Given — an own stale lease on a side key while Redis rejects writes.
+  it('re-claims an own stale lease under maxmemory pressure - the OOM-denied SET must not shadow the re-claim branch', async () => {
+    // Given - an own stale lease on a side key while Redis rejects writes.
     // Redis 7.x checks denyoom per redis.call: GET+PEXPIRE stay allowed, SET
-    // does not — so the re-claim check must run BEFORE the SET in the script.
+    // does not - so the re-claim check must run BEFORE the SET in the script.
     const app = await bootInstance('live-a');
     apps.push(app);
     const store = app.get<ILeaderStore>(LEADER_STORE);
     await redis.set('leader:oom-test', 'oom-node', 'PX', 5_000);
     await redis.config('SET', 'maxmemory', '1');
     try {
-      // When/Then — the own-id re-claim still lands (pre-fix: every acquire
+      // When/Then - the own-id re-claim still lands (pre-fix: every acquire
       // OOM-aborted at the leading SET and the lease died within one ttl)...
       expect(await store.acquire('leader:oom-test', 'oom-node', 5_000)).toBe(true);
       expect(await redis.get('leader:oom-test')).toBe('oom-node');
@@ -194,10 +194,10 @@ describeIntegration('LeaderPlugin — live Redis, two competing instances', () =
     apps.push(app);
     const service = app.get<ILeaderService>(LEADER_SERVICE);
 
-    // When — several full TTL windows pass
+    // When - several full TTL windows pass
     await wait(TTL * 2);
 
-    // Then — still the leader, and the key TTL is being refreshed
+    // Then - still the leader, and the key TTL is being refreshed
     expect(service.isLeader()).toBe(true);
     const pttl = await redis.pttl('leader:default');
     expect(pttl).toBeGreaterThan(0);

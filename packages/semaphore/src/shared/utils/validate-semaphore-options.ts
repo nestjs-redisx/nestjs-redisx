@@ -19,7 +19,7 @@ function describe(value: unknown): string {
 }
 
 /**
- * Validates a semaphore key and capacity at the call site — the service
+ * Validates a semaphore key and capacity at the call site - the service
  * calls this on every public entry point (fail-fast, never subject to any
  * error policy).
  */
@@ -58,7 +58,7 @@ export function validateSemaphoreCallOptions(options: { ttl?: number; waitTimeou
  */
 export function validateSemaphoreOptions(options: ISemaphorePluginOptions, source = 'SemaphorePlugin'): void {
   if (options.keyPrefix !== undefined && (typeof options.keyPrefix !== 'string' || options.keyPrefix.length === 0)) {
-    // An empty prefix would make a semaphore key a bare user string —
+    // An empty prefix would make a semaphore key a bare user string -
     // the same self-collision hazard the leader plugin guards against.
     throw new InvalidSemaphoreConfigError(`${source}: keyPrefix must be a non-empty string, got ${describe(options.keyPrefix)}.`);
   }

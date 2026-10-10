@@ -1,5 +1,5 @@
 /**
- * End-to-end validation on the in-memory driver — NO Redis. Exercises the
+ * End-to-end validation on the in-memory driver - NO Redis. Exercises the
  * full stack (service -> atomic Lua scripts -> memory Lua interpreter)
  * through production code, including the @WithSemaphore decorator and a
  * second service instance competing over the SAME store (two "application
@@ -58,14 +58,14 @@ describe('SemaphorePlugin on the in-memory driver (no Redis)', () => {
   });
 
   it('should enforce the capacity across two service instances (real Lua on the memory interpreter)', async () => {
-    // Given — capacity 2, both seats taken by instance A
+    // Given - capacity 2, both seats taken by instance A
     const p1 = await serviceA.acquire('jobs', 2, { ttl: 2_000 });
     const p2 = await serviceA.acquire('jobs', 2, { ttl: 2_000 });
 
-    // When — instance B tries the third seat
+    // When - instance B tries the third seat
     const third = await serviceB.tryAcquire('jobs', 2);
 
-    // Then — full
+    // Then - full
     expect(third).toBeNull();
     expect(await serviceB.usedPermits('jobs')).toBe(2);
     expect(await serviceB.availablePermits('jobs', 2)).toBe(0);
@@ -80,15 +80,15 @@ describe('SemaphorePlugin on the in-memory driver (no Redis)', () => {
   });
 
   it('should free a crashed holder seat after its TTL (expired permits are swept inside acquire)', async () => {
-    // Given — a "crashed" holder: acquired with a short TTL, never released,
+    // Given - a "crashed" holder: acquired with a short TTL, never released,
     // auto-renewal off
     const crashed = await serviceA.acquire('crashy', 1, { ttl: 120, autoRenew: false });
     expect(await serviceB.tryAcquire('crashy', 1)).toBeNull();
 
-    // When — the lease lapses
+    // When - the lease lapses
     await wait(150);
 
-    // Then — the seat is takeable again
+    // Then - the seat is takeable again
     const takeover = await serviceB.tryAcquire('crashy', 1);
     expect(takeover).not.toBeNull();
 
@@ -98,13 +98,13 @@ describe('SemaphorePlugin on the in-memory driver (no Redis)', () => {
   });
 
   it('should keep a long-running holder seated via auto-renewal', async () => {
-    // Given — TTL shorter than the work, auto-renew on (default)
+    // Given - TTL shorter than the work, auto-renew on (default)
     const permit = await serviceA.acquire('long', 1, { ttl: 150 });
 
-    // When — work outlives the TTL by several renewal rounds
+    // When - work outlives the TTL by several renewal rounds
     await wait(400);
 
-    // Then — still held, still blocking the second seat
+    // Then - still held, still blocking the second seat
     expect(await permit.isHeld()).toBe(true);
     expect(await serviceB.tryAcquire('long', 1)).toBeNull();
 
@@ -119,7 +119,7 @@ describe('SemaphorePlugin on the in-memory driver (no Redis)', () => {
     await permit.extend(2_000);
     await wait(250); // past the ORIGINAL ttl
 
-    // Then — extension kept the seat
+    // Then - extension kept the seat
     expect(await permit.isHeld()).toBe(true);
     await permit.release();
   });
@@ -128,17 +128,17 @@ describe('SemaphorePlugin on the in-memory driver (no Redis)', () => {
     // Given
     const worker = app.get(BoundedWorker);
 
-    // When — 5 concurrent calls against capacity 2
+    // When - 5 concurrent calls against capacity 2
     await Promise.all(Array.from({ length: 5 }, () => worker.render()));
 
-    // Then — the observed concurrency never exceeded the capacity
+    // Then - the observed concurrency never exceeded the capacity
     expect(worker.peak).toBeLessThanOrEqual(2);
     expect(worker.concurrent).toBe(0);
     expect(await serviceA.usedPermits('memory:render')).toBe(0);
   });
 
   it('should throw SemaphoreAcquisitionError when the wait budget runs out', async () => {
-    // Given — seat taken
+    // Given - seat taken
     const permit = await serviceA.acquire('budget', 1);
 
     // When/Then
@@ -160,15 +160,15 @@ describe('SemaphorePlugin on the in-memory driver (no Redis)', () => {
     expect(await serviceA.usedPermits('stuck')).toBe(0);
   });
 
-  it('should NOT yank seats on shutdown — they lapse by TTL unless the owner releases first', async () => {
-    // Given — a held seat whose protected work may still be running
+  it('should NOT yank seats on shutdown - they lapse by TTL unless the owner releases first', async () => {
+    // Given - a held seat whose protected work may still be running
     const permit = await serviceA.acquire('shutdown', 1, { ttl: 200 });
     expect(await serviceB.tryAcquire('shutdown', 1)).toBeNull();
 
-    // When — the shutdown hook runs (what app.close() invokes)
+    // When - the shutdown hook runs (what app.close() invokes)
     (serviceA as SemaphoreService).onModuleDestroy();
 
-    // Then — the seat is STILL protected (no silent split bound) ...
+    // Then - the seat is STILL protected (no silent split bound) ...
     expect(await serviceB.tryAcquire('shutdown', 1)).toBeNull();
 
     // ... the owner's own finally still releases instantly ...
@@ -178,16 +178,16 @@ describe('SemaphorePlugin on the in-memory driver (no Redis)', () => {
     await takeover!.release();
   });
 
-  it('should let an abandoned seat lapse by TTL after shutdown (renewal stopped — crash bound)', async () => {
-    // Given — auto-renewed seat, then shutdown with the work never finishing
+  it('should let an abandoned seat lapse by TTL after shutdown (renewal stopped - crash bound)', async () => {
+    // Given - auto-renewed seat, then shutdown with the work never finishing
     await serviceA.acquire('abandoned', 1, { ttl: 150 });
     (serviceA as SemaphoreService).onModuleDestroy();
     expect(await serviceB.tryAcquire('abandoned', 1)).toBeNull();
 
-    // When — past the remaining TTL (renewal no longer extends it)
+    // When - past the remaining TTL (renewal no longer extends it)
     await wait(200);
 
-    // Then — the seat freed itself, exactly like a crash
+    // Then - the seat freed itself, exactly like a crash
     const takeover = await serviceB.tryAcquire('abandoned', 1);
     expect(takeover).not.toBeNull();
     await takeover!.release();

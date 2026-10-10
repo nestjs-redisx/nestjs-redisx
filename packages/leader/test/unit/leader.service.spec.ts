@@ -122,7 +122,7 @@ describe('LeaderService', () => {
       await service.onModuleInit();
       expect(service.isLeader()).toBe(false);
 
-      // When — seat frees up before the next retry
+      // When - seat frees up before the next retry
       store.acquire.mockResolvedValue(true);
       await vi.advanceTimersByTimeAsync(RETRY);
 
@@ -154,7 +154,7 @@ describe('LeaderService', () => {
       await service.onModuleInit();
       await vi.advanceTimersByTimeAsync(RETRY * 2);
 
-      // Then — still follower, loop still running, no unhandled rejection
+      // Then - still follower, loop still running, no unhandled rejection
       expect(service.isLeader()).toBe(false);
       expect(store.acquire.mock.calls.length).toBeGreaterThanOrEqual(2);
     });
@@ -210,7 +210,7 @@ describe('LeaderService', () => {
       await vi.advanceTimersByTimeAsync(RENEW);
       expect(service.isLeader()).toBe(false);
 
-      // When — next follower retry re-acquires
+      // When - next follower retry re-acquires
       await vi.advanceTimersByTimeAsync(RETRY);
 
       // Then
@@ -218,7 +218,7 @@ describe('LeaderService', () => {
     });
 
     it('should report not-leader when the local lease expires even if the loop stalled', async () => {
-      // Given — jump wall-clock past the lease WITHOUT firing timers
+      // Given - jump wall-clock past the lease WITHOUT firing timers
       service = createService();
       await service.onModuleInit();
       expect(service.isLeader()).toBe(true);
@@ -255,7 +255,7 @@ describe('LeaderService', () => {
       await service.onModuleInit();
       await vi.advanceTimersByTimeAsync(RENEW);
 
-      // Then — still leader, heartbeat still running
+      // Then - still leader, heartbeat still running
       expect(service.isLeader()).toBe(true);
       expect(store.renew).toHaveBeenCalled();
     });
@@ -292,11 +292,11 @@ describe('LeaderService', () => {
       expect(service.isLeader()).toBe(false);
       expect(onLost).toHaveBeenCalledWith('default', 'stepdown');
 
-      // And — no re-candidacy during the cooldown window
+      // And - no re-candidacy during the cooldown window
       await vi.advanceTimersByTimeAsync(TTL - RETRY);
       expect(store.acquire).not.toHaveBeenCalled();
 
-      // And — candidacy resumes after the cooldown
+      // And - candidacy resumes after the cooldown
       await vi.advanceTimersByTimeAsync(TTL);
       expect(store.acquire).toHaveBeenCalled();
     });
@@ -317,7 +317,7 @@ describe('LeaderService', () => {
       await service.onModuleInit();
       store.release.mockRejectedValue(new Error('down'));
 
-      // When/Then — local demotion still happens
+      // When/Then - local demotion still happens
       await expect(service.stepDown()).resolves.toBeUndefined();
       expect(service.isLeader()).toBe(false);
     });

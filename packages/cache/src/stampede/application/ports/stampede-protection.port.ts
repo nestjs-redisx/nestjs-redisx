@@ -10,7 +10,7 @@ export interface IStampedeProtection {
    *
    * Layer 1 (local singleflight): only one concurrent execution per key within
    * the same process; concurrent callers coalesce onto the in-flight promise.
-   * The flight is removed synchronously on completion — a finished flight is
+   * The flight is removed synchronously on completion - a finished flight is
    * NEVER served to later calls (that would return stale, pre-invalidation
    * values).
    *

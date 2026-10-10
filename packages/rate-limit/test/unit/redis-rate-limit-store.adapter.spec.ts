@@ -235,7 +235,7 @@ describe('RedisRateLimitStoreAdapter', () => {
 
   describe('peek', () => {
     it('should peek fixed-window state from the current-window hash', async () => {
-      // Given — state stored as {window, count} at the bare key
+      // Given - state stored as {window, count} at the bare key
       const now = Math.floor(Date.now() / 1000);
       const window = Math.floor(now / 60) * 60;
       mockDriver.hmget.mockResolvedValue([String(window), '50']);
@@ -255,7 +255,7 @@ describe('RedisRateLimitStoreAdapter', () => {
     });
 
     it('should peek fixed-window as empty when the stored window is stale', async () => {
-      // Given — counter from a previous window must not count against the current one
+      // Given - counter from a previous window must not count against the current one
       const now = Math.floor(Date.now() / 1000);
       const staleWindow = Math.floor(now / 60) * 60 - 120;
       mockDriver.hmget.mockResolvedValue([String(staleWindow), '99']);

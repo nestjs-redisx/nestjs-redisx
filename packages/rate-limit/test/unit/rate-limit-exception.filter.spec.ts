@@ -198,13 +198,13 @@ describe('RateLimitExceptionFilter', () => {
 
   describe('store failure (RateLimitScriptError)', () => {
     it('should map a store failure to 503, not an uncaught 500', () => {
-      // Given — fail-closed raises RateLimitScriptError when Redis is down
+      // Given - fail-closed raises RateLimitScriptError when Redis is down
       const error = new RateLimitScriptError('Rate limit check failed: connection refused');
 
       // When
       filter.catch(error, mockHost);
 
-      // Then — clean 503 Service Unavailable
+      // Then - clean 503 Service Unavailable
       expect(mockHttpAdapter.reply).toHaveBeenCalledWith(mockResponse, expect.objectContaining({ statusCode: HttpStatus.SERVICE_UNAVAILABLE, error: 'Service Unavailable' }), HttpStatus.SERVICE_UNAVAILABLE);
     });
 

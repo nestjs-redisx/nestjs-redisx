@@ -4,7 +4,7 @@
  * Boots TWO independent Nest applications (two CacheService instances, two
  * separate stampede flight maps) sharing one Redis. While instance A holds the
  * distributed stampede lock and loads, instance B must WAIT for the lock to
- * clear and serve the value A cached — without running its own loader.
+ * clear and serve the value A cached - without running its own loader.
  *
  * Requires a running Redis instance on REDIS_HOST:REDIS_PORT (defaults to
  * localhost:6379). Skipped when SKIP_INTEGRATION=true.
@@ -49,7 +49,7 @@ async function bootApp(): Promise<TestingModule> {
 
 const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-describeIntegration('CachePlugin — cross-instance stampede coordination', () => {
+describeIntegration('CachePlugin - cross-instance stampede coordination', () => {
   let appA: TestingModule;
   let appB: TestingModule;
   let cacheA: ICacheService;
@@ -70,7 +70,7 @@ describeIntegration('CachePlugin — cross-instance stampede coordination', () =
   });
 
   it('instance B waits for instance A and serves its value without loading', async () => {
-    // Given — instance A starts a slow load (holds the distributed lock; the
+    // Given - instance A starts a slow load (holds the distributed lock; the
     // cache write happens inside the protected section, before lock release)
     const slowLoader = vi.fn(async () => {
       await wait(400);
@@ -78,12 +78,12 @@ describeIntegration('CachePlugin — cross-instance stampede coordination', () =
     });
     const promiseA = cacheA.getOrSet('shared:key', slowLoader);
 
-    // When — instance B asks for the same key while A is still loading
+    // When - instance B asks for the same key while A is still loading
     await wait(100); // A holds the lock by now
     const loaderB = vi.fn(async () => 'B-value');
     const valueB = await cacheB.getOrSet('shared:key', loaderB);
 
-    // Then — B waited for A's lock, recheckd the cache, and reused A's value;
+    // Then - B waited for A's lock, recheckd the cache, and reused A's value;
     // B's loader never ran (the load happened exactly once across instances)
     expect(await promiseA).toBe('A-value');
     expect(valueB).toBe('A-value');
@@ -92,7 +92,7 @@ describeIntegration('CachePlugin — cross-instance stampede coordination', () =
   });
 
   it('instance B loads itself when the leader cached nothing (unless)', async () => {
-    // Given — A loads but `unless` suppresses the cache write
+    // Given - A loads but `unless` suppresses the cache write
     const promiseA = cacheA.getOrSet(
       'shared:empty',
       async () => {
@@ -102,7 +102,7 @@ describeIntegration('CachePlugin — cross-instance stampede coordination', () =
       { unless: () => true },
     );
 
-    // When — B waits for the lock, finds no cached value, and loads itself
+    // When - B waits for the lock, finds no cached value, and loads itself
     await wait(100);
     const valueB = await cacheB.getOrSet('shared:empty', async () => 'B-own');
 

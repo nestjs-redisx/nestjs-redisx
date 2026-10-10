@@ -19,7 +19,7 @@ import { RedisSemaphoreStoreAdapter } from './semaphore/infrastructure/adapters/
 /**
  * Distributed counting semaphore plugin for NestJS RedisX.
  *
- * At most N concurrent holders of a key across the whole fleet — the
+ * At most N concurrent holders of a key across the whole fleet - the
  * distributed analogue of a bounded worker pool. Permits are leases: a
  * crashed holder frees its seat after the TTL, and auto-renewal keeps
  * long-running work seated.

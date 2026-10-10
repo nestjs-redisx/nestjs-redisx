@@ -12,7 +12,7 @@ function createMockDriver(): IRedisDriver {
   } as unknown as IRedisDriver;
 }
 
-describe('StampedeProtectionService — mode: l1-only', () => {
+describe('StampedeProtectionService - mode: l1-only', () => {
   it('coalesces concurrent loads via singleflight WITHOUT any distributed-lock driver calls', async () => {
     // Given l1-only stampede over a driver that must never be touched
     const driver = createMockDriver();
@@ -28,7 +28,7 @@ describe('StampedeProtectionService — mode: l1-only', () => {
     // When 10 callers race for the same cold key
     const results = await Promise.all(Array.from({ length: 10 }, () => service.protect('k', loader)));
 
-    // Then — exactly one load, everyone gets the value, and the driver was never used
+    // Then - exactly one load, everyone gets the value, and the driver was never used
     expect(results.every((r) => r.value === 'value')).toBe(true);
     expect(loads).toBe(1);
     expect(driver.set).not.toHaveBeenCalled();

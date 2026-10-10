@@ -25,9 +25,9 @@ export interface IDedupPluginOptions {
   /**
    * What the GATES (`dedupe`, `debounce`, `@Dedupe`) do when the store is
    * unreachable:
-   * - 'fail-open' (default): run the function — duplicates become possible
+   * - 'fail-open' (default): run the function - duplicates become possible
    *   during the outage (at-least-once).
-   * - 'fail-closed': throw DedupStoreError — work is skipped rather than
+   * - 'fail-closed': throw DedupStoreError - work is skipped rather than
    *   possibly duplicated.
    *
    * Manual APIs (`isFirst`, `release`) are always strict and throw.

@@ -18,7 +18,7 @@ import { IDEMPOTENT_OPTIONS, IIdempotentOptions } from '../decorators/idempotent
  * (global APP_INTERCEPTOR + @Idempotent on the method, controller-level
  * @UseInterceptors + method decorator, controller inheritance). Without the
  * marker the inner pass would see its own 'processing' record and wait for
- * itself until the lock TTL expires — a self-deadlock. Mirrors
+ * itself until the lock TTL expires - a self-deadlock. Mirrors
  * RATE_LIMIT_CONSUMED in the rate-limit guard.
  */
 const IDEMPOTENCY_HANDLED = Symbol('redisx.idempotencyHandled');
@@ -73,7 +73,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
       // same request. Before rejecting, retry once with the legacy
       // fingerprint; a match means "same request, pre-upgrade record" and the
       // flow proceeds normally (replay / wait / takeover). Only applies to
-      // the built-in generator — custom generators are the user's algorithm.
+      // the built-in generator - custom generators are the user's algorithm.
       if (checkResult.fingerprintMismatch && !this.config.fingerprintGenerator) {
         const legacyFingerprint = this.generateLegacyFingerprint(context, options);
         if (legacyFingerprint !== fingerprint) {

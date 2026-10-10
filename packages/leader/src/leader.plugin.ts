@@ -40,7 +40,7 @@ import { validateLeaderOptions } from './shared/utils/validate-leader-options';
 export class LeaderPlugin implements IRedisXPlugin {
   readonly name = 'leader';
   readonly version: string = version;
-  readonly description = 'Leader election with lease heartbeats and automatic failover — run singleton work on exactly one instance';
+  readonly description = 'Leader election with lease heartbeats and automatic failover - run singleton work on exactly one instance';
 
   private asyncOptions?: IPluginAsyncOptions<ILeaderPluginOptions>;
 
@@ -49,7 +49,7 @@ export class LeaderPlugin implements IRedisXPlugin {
   static registerAsync(asyncOptions: IPluginAsyncOptions<ILeaderPluginOptions>): LeaderPlugin {
     if (!asyncOptions || typeof asyncOptions.useFactory !== 'function') {
       // A falsy argument (misspelled config import resolving to undefined)
-      // would silently select the SYNC branch with all-defaults options —
+      // would silently select the SYNC branch with all-defaults options -
       // dropping groups and the onElected/onLost callbacks with zero
       // signal, against the documented never-masked fail-fast contract.
       throw new InvalidLeaderConfigError(`LeaderPlugin.registerAsync: asyncOptions with a "useFactory" function is required, got ${asyncOptions === null ? 'null' : typeof asyncOptions}.`);
@@ -109,7 +109,7 @@ export class LeaderPlugin implements IRedisXPlugin {
           } catch (error) {
             // Only an actually-missing client is a configuration mistake;
             // everything else (lazy connect failing, manager shutting down)
-            // must surface with its REAL cause — rewriting ECONNREFUSED into
+            // must surface with its REAL cause - rewriting ECONNREFUSED into
             // "add a client" advice sends the operator to the wrong place.
             if (error instanceof RedisXError && error.code === ErrorCode.CFG_INVALID) {
               throw new InvalidLeaderConfigError(`LeaderPlugin: Redis client "${clientName}" not found. ` + `Available clients are configured in RedisModule.forRoot({ clients: { ... } }). ` + `Either add a "${clientName}" client or remove the "client" option to use the default connection.`);

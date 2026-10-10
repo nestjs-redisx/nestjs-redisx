@@ -44,7 +44,7 @@ export class CachePlugin implements IRedisXPlugin {
   /**
    * Create a CachePlugin with async configuration from DI.
    *
-   * `mode` is a deployment-structural choice, so — like the plugin list itself —
+   * `mode` is a deployment-structural choice, so - like the plugin list itself -
    * it is set here on the async options, NOT returned by `useFactory`.
    *
    * @example
@@ -104,10 +104,10 @@ export class CachePlugin implements IRedisXPlugin {
           useFactory: async (...args: unknown[]) => {
             const userOptions = await this.asyncOptions!.useFactory(...args);
             const mode = this.resolveMode();
-            // `mode` is structural — it must match the construction-time value,
+            // `mode` is structural - it must match the construction-time value,
             // never be introduced by the factory (the wiring already committed).
             if (userOptions.mode !== undefined && userOptions.mode !== mode) {
-              throw new CacheConfigError(`set "mode" on the registerAsync options (next to useFactory), not in the factory result — factory returned "${userOptions.mode}" but the options say "${mode}".`);
+              throw new CacheConfigError(`set "mode" on the registerAsync options (next to useFactory), not in the factory result - factory returned "${userOptions.mode}" but the options say "${mode}".`);
             }
             return CachePlugin.mergeDefaults({ ...userOptions, mode });
           },
@@ -122,7 +122,7 @@ export class CachePlugin implements IRedisXPlugin {
     // injections without ever connecting. The same null driver also OVERRIDES
     // the core `REDIS_DRIVER` alias (plugin providers win on token collision),
     // so RedisModule's default-client provider no longer eagerly connects at
-    // startup — this is what lets the app boot with no reachable Redis.
+    // startup - this is what lets the app boot with no reachable Redis.
     // Otherwise the driver resolves the named client from the manager.
     const driverProviders: Provider[] = l1Only
       ? (() => {

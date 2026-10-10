@@ -138,9 +138,9 @@ export class IdempotencyService implements IIdempotencyService {
       }
 
       // Takeover triggers:
-      // - record vanished (retention expired) — backstop path, or
+      // - record vanished (retention expired) - backstop path, or
       // - record still exists but its lock is STALE (the original attempt
-      //   exceeded lockTimeout without completing — presumed dead). The
+      //   exceeded lockTimeout without completing - presumed dead). The
       //   record is retained past the staleness threshold precisely so this
       //   takeover happens ATOMICALLY inside the Lua script: exactly one
       //   contender flips startedAt and wins; everyone else keeps waiting.
@@ -159,7 +159,7 @@ export class IdempotencyService implements IIdempotencyService {
           // A different request re-claimed the key while we waited.
           throw new IdempotencyFingerprintMismatchError(key);
         }
-        // 'processing' — another waiter won the takeover; keep waiting.
+        // 'processing' - another waiter won the takeover; keep waiting.
       }
 
       await this.sleep(POLL_INTERVAL_MS);

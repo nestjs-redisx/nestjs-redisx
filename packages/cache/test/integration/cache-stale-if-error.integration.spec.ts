@@ -67,7 +67,7 @@ describeIntegration('Cache stale-if-error (live Redis)', () => {
     // Given / When
     await cache.getOrSet('sie:ttl-check', async () => 'v1', { ttl: 1 });
 
-    // Then — physical TTL is ~1s (ttl) + 3s (window), not just 1s
+    // Then - physical TTL is ~1s (ttl) + 3s (window), not just 1s
     const ttl = await redis.ttl('cache:sie:ttl-check');
     expect(ttl).toBeGreaterThan(2);
     expect(ttl).toBeLessThanOrEqual(4);
@@ -78,11 +78,11 @@ describeIntegration('Cache stale-if-error (live Redis)', () => {
     await cache.getOrSet('sie:report', async () => 'v1', { ttl: 1 });
     await sleep(1100); // past expiry, inside the window
 
-    // When — the upstream fails
+    // When - the upstream fails
     const failing = vi.fn().mockRejectedValue(new Error('503 upstream down'));
     const served = await cache.getOrSet('sie:report', failing, { ttl: 1 });
 
-    // Then — stale-on-error, exactly one loader attempt (no retry storm)
+    // Then - stale-on-error, exactly one loader attempt (no retry storm)
     expect(served).toBe('v1');
     expect(failing).toHaveBeenCalledTimes(1);
 
@@ -101,7 +101,7 @@ describeIntegration('Cache stale-if-error (live Redis)', () => {
   });
 
   it('rethrows once the window has fully passed (key evicted by Redis)', async () => {
-    // Given — ttl 1s + window 3s => retention ~4s
+    // Given - ttl 1s + window 3s => retention ~4s
     await cache.getOrSet('sie:gone', async () => 'v1', { ttl: 1 });
 
     // When

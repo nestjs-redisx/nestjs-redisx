@@ -95,7 +95,7 @@ export default tseslint.config(
         },
       ],
 
-      // Rules new in typescript-eslint v8 — preserve v6 behavior
+      // Rules new in typescript-eslint v8 - preserve v6 behavior
       '@typescript-eslint/no-base-to-string': 'off',
       '@typescript-eslint/no-unsafe-function-type': 'warn',
       '@typescript-eslint/prefer-promise-reject-errors': 'off',

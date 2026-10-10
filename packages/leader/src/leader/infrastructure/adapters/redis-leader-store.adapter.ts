@@ -25,7 +25,7 @@ export class RedisLeaderStoreAdapter implements ILeaderStore, OnModuleInit {
   /**
    * Pre-load Lua scripts on module initialization. Best effort: a transient
    * hiccup here (Redis LOADING after a restart, a failover mid-bootstrap)
-   * must not crash the whole application — every runtime path degrades to a
+   * must not crash the whole application - every runtime path degrades to a
    * plain EVAL while the shas are null, and the election loop contains store
    * errors anyway.
    */
@@ -68,7 +68,7 @@ export class RedisLeaderStoreAdapter implements ILeaderStore, OnModuleInit {
    */
   private async runScript(operation: string, sha: string | null, script: string, keys: string[], args: Array<string | number>): Promise<unknown> {
     if (sha === null) {
-      // onModuleInit has not run (yet) — EVAL directly; it also populates the
+      // onModuleInit has not run (yet) - EVAL directly; it also populates the
       // server-side script cache.
       try {
         return await this.driver.eval(script, keys, args);

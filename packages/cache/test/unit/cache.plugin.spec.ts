@@ -120,7 +120,7 @@ describe('CachePlugin', () => {
     });
 
     it('should fail fast at construction on an invalid staleIfError window', () => {
-      // Given / When / Then — zero, negative, and non-finite windows all throw
+      // Given / When / Then - zero, negative, and non-finite windows all throw
       expect(() => new CachePlugin({ staleIfError: { enabled: true, defaultWindow: 0 } }).getProviders()).toThrow(/staleIfError window/);
       expect(() => new CachePlugin({ staleIfError: { enabled: true, defaultWindow: -60 } }).getProviders()).toThrow(/staleIfError window/);
       expect(() => new CachePlugin({ staleIfError: { enabled: true, defaultWindow: Infinity } }).getProviders()).toThrow(/staleIfError window/);

@@ -2,7 +2,7 @@
  * Stable object hashing for cache keys.
  *
  * This is the SAME algorithm the `@Cached` decorator uses to auto-generate
- * keys from object arguments — exposed for the manual path
+ * keys from object arguments - exposed for the manual path
  * (`cache.getOrSet` / `get` / `delete`), so nobody has to hand-roll a
  * "sort keys then hash" helper (and get the edge cases wrong: BigInt throws
  * in JSON.stringify, Map/Set collapse to `{}`, nested keys stay unsorted).
@@ -97,7 +97,7 @@ export function stableStringify(value: unknown): string {
  * CacheKey-safe string: SHA-256 over the stable serialization, truncated to
  * 16 hex chars (64 bits). Key-order-insensitive at every nesting level.
  *
- * Intended for CACHE KEYS only — the 64-bit truncation is not suitable for
+ * Intended for CACHE KEYS only - the 64-bit truncation is not suitable for
  * identity, deduplication ledgers, or anything security-sensitive.
  *
  * @example

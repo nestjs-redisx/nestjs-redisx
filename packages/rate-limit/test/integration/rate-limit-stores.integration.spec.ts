@@ -59,7 +59,7 @@ async function flushRedis(): Promise<void> {
   await client.quit();
 }
 
-describeIntegration('RateLimitPlugin — memory/redis stores (live Redis)', () => {
+describeIntegration('RateLimitPlugin - memory/redis stores (live Redis)', () => {
   let app: INestApplication;
   let service: IRateLimitService;
 
@@ -98,14 +98,14 @@ describeIntegration('RateLimitPlugin — memory/redis stores (live Redis)', () =
   });
 
   it('limits the memory-store route per instance without touching Redis keys', async () => {
-    // When — exhaust the memory-backed limit
+    // When - exhaust the memory-backed limit
     for (let i = 0; i < MEM_LIMIT; i++) {
       const res = await request(app.getHttpServer()).get('/mem').expect(200);
       expect(res.headers['x-ratelimit-remaining']).toBe(String(MEM_LIMIT - 1 - i));
     }
     await request(app.getHttpServer()).get('/mem').expect(429);
 
-    // Then — no rate-limit keys were written to Redis for this route
+    // Then - no rate-limit keys were written to Redis for this route
     const client = new Redis({ host: REDIS_HOST, port: REDIS_PORT, lazyConnect: true });
     await client.connect();
     const keys = await client.keys('rl:*mem-route*');
@@ -120,7 +120,7 @@ describeIntegration('RateLimitPlugin — memory/redis stores (live Redis)', () =
     }
     await request(app.getHttpServer()).get('/strict').expect(429);
 
-    // Then — the counter is a real Redis key
+    // Then - the counter is a real Redis key
     const client = new Redis({ host: REDIS_HOST, port: REDIS_PORT, lazyConnect: true });
     await client.connect();
     const keys = await client.keys('rl:fixed-window:strict-route*');
@@ -159,7 +159,7 @@ describeIntegration('RateLimitPlugin — memory/redis stores (live Redis)', () =
     // When
     await service.reset(key);
 
-    // Then — counting starts from scratch
+    // Then - counting starts from scratch
     expect((await service.peek(key, { ...config, store: 'redis' })).current).toBe(0);
     const after = await service.check(key, { ...config, store: 'redis' });
     expect(after.current).toBe(1);
@@ -172,12 +172,12 @@ describeIntegration('RateLimitPlugin — memory/redis stores (live Redis)', () =
     await service.check(key, { ...config, store: 'redis' });
     await service.check(key, { ...config, store: 'memory' });
 
-    // When — targeted reset leaves the other store intact
+    // When - targeted reset leaves the other store intact
     await service.reset(key, { store: 'redis' });
     expect((await service.peek(key, { ...config, store: 'redis' })).current).toBe(0);
     expect((await service.peek(key, { ...config, store: 'memory' })).current).toBe(1);
 
-    // And — the default reset sweeps what remains
+    // And - the default reset sweeps what remains
     await service.reset(key);
     expect((await service.peek(key, { ...config, store: 'memory' })).current).toBe(0);
   });

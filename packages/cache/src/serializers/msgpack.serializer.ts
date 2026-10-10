@@ -30,7 +30,7 @@ import { SerializationError } from '../shared/errors';
  * bundle ("Dynamic require of msgpackr is not supported"), which made the
  * constructor report "msgpackr package is required" even with the package
  * installed. `createRequire(__filename)` resolves exactly like a regular
- * require next to this file — `__filename` is native in the CJS bundle and
+ * require next to this file - `__filename` is native in the CJS bundle and
  * polyfilled from `import.meta.url` by the tsup `shims` option in ESM
  * (`import.meta` itself is rejected by this codebase's CommonJS `module`
  * setting at typecheck).

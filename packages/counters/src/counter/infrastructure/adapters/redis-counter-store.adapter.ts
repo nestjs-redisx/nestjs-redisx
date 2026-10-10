@@ -21,7 +21,7 @@ export class RedisCounterStoreAdapter implements ICounterStore, OnModuleInit {
 
   /**
    * Pre-loads the Lua scripts. Best-effort: a transient hiccup during
-   * bootstrap must not crash the application — every runtime path lazily
+   * bootstrap must not crash the application - every runtime path lazily
    * re-loads on demand.
    */
   async onModuleInit(): Promise<void> {

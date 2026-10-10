@@ -48,8 +48,8 @@ export interface ISessionInfo<T = unknown> {
 
 /**
  * What to do when a user would exceed `maxSessionsPerUser`.
- * - `reject` — refuse the new session (`SessionLimitExceededError`)
- * - `evict-oldest` — destroy the oldest sessions (by `createdAt`) over the limit
+ * - `reject` - refuse the new session (`SessionLimitExceededError`)
+ * - `evict-oldest` - destroy the oldest sessions (by `createdAt`) over the limit
  */
 export type SessionLimitPolicy = 'reject' | 'evict-oldest';
 

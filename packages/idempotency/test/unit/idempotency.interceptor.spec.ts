@@ -389,7 +389,7 @@ describe('IdempotencyInterceptor', () => {
     });
 
     it('should produce the SAME fingerprint for bodies that differ only in key order (canonicalization)', async () => {
-      // Given — two semantically identical bodies, different key order
+      // Given - two semantically identical bodies, different key order
       const captureFingerprint = async (body: unknown, key: string): Promise<string> => {
         mockRequest = { headers: { 'idempotency-key': key }, method: 'POST', url: '/api/test', body, query: {} };
         mockService.checkAndLock.mockClear();
@@ -404,7 +404,7 @@ describe('IdempotencyInterceptor', () => {
       const fp2 = await captureFingerprint({ meta: { a: 1, b: 2 }, currency: 'USD', amount: 100 }, 'k-order-2');
       const fpDifferent = await captureFingerprint({ amount: 999, currency: 'USD', meta: { a: 1, b: 2 } }, 'k-order-3');
 
-      // Then — order-insensitive at every nesting level, but data-sensitive
+      // Then - order-insensitive at every nesting level, but data-sensitive
       expect(fp1).toBe(fp2);
       expect(fpDifferent).not.toBe(fp1);
     });
@@ -412,7 +412,7 @@ describe('IdempotencyInterceptor', () => {
 
   describe('legacy fingerprint fallback (upgrade transition)', () => {
     it('should retry with the legacy (order-sensitive) fingerprint on mismatch and replay the pre-upgrade record', async () => {
-      // Given — an UNSORTED body (canonical differs from legacy) and a stored
+      // Given - an UNSORTED body (canonical differs from legacy) and a stored
       // record created by a pre-canonicalization version
       mockRequest.headers['idempotency-key'] = 'key-legacy';
       mockRequest.body = { b: 2, a: 1 };
@@ -432,7 +432,7 @@ describe('IdempotencyInterceptor', () => {
       const result = await interceptor.intercept(mockContext, mockNext);
       const body = await firstValueFrom(result);
 
-      // Then — two attempts with DIFFERENT fingerprints, then a normal replay
+      // Then - two attempts with DIFFERENT fingerprints, then a normal replay
       expect(mockService.checkAndLock).toHaveBeenCalledTimes(2);
       const [firstFp, secondFp] = [mockService.checkAndLock.mock.calls[0][1], mockService.checkAndLock.mock.calls[1][1]];
       expect(firstFp).not.toBe(secondFp);
@@ -441,7 +441,7 @@ describe('IdempotencyInterceptor', () => {
     });
 
     it('should NOT retry when the body is already ordered (legacy fingerprint equals canonical)', async () => {
-      // Given — sorted flat body: canonical === legacy, a mismatch is genuine
+      // Given - sorted flat body: canonical === legacy, a mismatch is genuine
       mockRequest.headers['idempotency-key'] = 'key-genuine';
       mockRequest.body = { a: 1, b: 2 };
       mockService.checkAndLock.mockResolvedValue({ isNew: false, fingerprintMismatch: true });
@@ -457,13 +457,13 @@ describe('IdempotencyInterceptor', () => {
       mockRequest.body = { z: 1, a: 2 };
       mockService.checkAndLock.mockResolvedValue({ isNew: false, fingerprintMismatch: true });
 
-      // When / Then — both attempts mismatch -> 422 path
+      // When / Then - both attempts mismatch -> 422 path
       await expect(interceptor.intercept(mockContext, mockNext)).rejects.toThrow(IdempotencyFingerprintMismatchError);
       expect(mockService.checkAndLock).toHaveBeenCalledTimes(2);
     });
 
     it('should NOT apply the legacy fallback when a custom fingerprintGenerator is configured', async () => {
-      // Given — the algorithm is the user's; a mismatch is theirs to own
+      // Given - the algorithm is the user's; a mismatch is theirs to own
       mockRequest.headers['idempotency-key'] = 'key-custom-gen';
       config.fingerprintGenerator = vi.fn().mockReturnValue('user-fp');
       interceptor = new IdempotencyInterceptor(mockService, config, mockReflector, mockAdapterHost as any);
@@ -637,7 +637,7 @@ describe('IdempotencyInterceptor', () => {
       await new Promise((resolve) => resultFromAdapter.subscribe(resolve));
       const fingerprintFromAdapter = mockService.checkAndLock.mock.calls[0][1];
 
-      // And given — same request but adapter now returns undefined, so it falls back to raw url.
+      // And given - same request but adapter now returns undefined, so it falls back to raw url.
       // Clear the per-request handled marker so the second pass engages again.
       Object.getOwnPropertySymbols(mockRequest).forEach((sym) => delete (mockRequest as Record<symbol, unknown>)[sym]);
       mockService.checkAndLock.mockClear();
@@ -648,7 +648,7 @@ describe('IdempotencyInterceptor', () => {
       await new Promise((resolve) => resultFromUrl.subscribe(resolve));
       const fingerprintFromUrl = mockService.checkAndLock.mock.calls[0][1];
 
-      // Then — different paths produce different fingerprints
+      // Then - different paths produce different fingerprints
       expect(fingerprintFromAdapter).not.toBe(fingerprintFromUrl);
       expect(mockHttpAdapter.getRequestUrl).toHaveBeenCalledWith(mockRequest);
     });
@@ -656,7 +656,7 @@ describe('IdempotencyInterceptor', () => {
 
   describe('duplicate binding (per-request handled marker)', () => {
     it('should engage idempotency at most once when the interceptor is bound twice', async () => {
-      // Given — the same interceptor instance wired twice into the chain
+      // Given - the same interceptor instance wired twice into the chain
       // (global registration + @Idempotent, or manual @UseInterceptors)
       mockRequest.headers['idempotency-key'] = 'dup-1';
       mockService.checkAndLock.mockResolvedValue({ isNew: true });
@@ -673,29 +673,29 @@ describe('IdempotencyInterceptor', () => {
         },
       };
 
-      // When — outer pass engages, inner pass must be a pure passthrough
+      // When - outer pass engages, inner pass must be a pure passthrough
       const result = await interceptor.intercept(mockContext, outerNext);
       await firstValueFrom(result);
       // allow the inner intercept microtask to run
       await new Promise((resolve) => setImmediate(resolve));
 
-      // Then — checkAndLock ran exactly ONCE (no self-deadlock wait)
+      // Then - checkAndLock ran exactly ONCE (no self-deadlock wait)
       expect(mockService.checkAndLock).toHaveBeenCalledTimes(1);
     });
 
     it('inner pass resolves instantly via passthrough (no waitForCompletion self-deadlock)', async () => {
-      // Given — request already handled by an outer pass
+      // Given - request already handled by an outer pass
       mockRequest.headers['idempotency-key'] = 'dup-2';
       mockService.checkAndLock.mockResolvedValue({ isNew: true });
       const outer = await interceptor.intercept(mockContext, mockNext);
       await firstValueFrom(outer);
       mockService.checkAndLock.mockClear();
 
-      // When — a second pass arrives on the same request object
+      // When - a second pass arrives on the same request object
       const inner = await interceptor.intercept(mockContext, mockNext);
       const value = await firstValueFrom(inner);
 
-      // Then — passthrough: handler ran, the service was never consulted
+      // Then - passthrough: handler ran, the service was never consulted
       expect(value).toEqual({ result: 'success' });
       expect(mockService.checkAndLock).not.toHaveBeenCalled();
     });
@@ -708,12 +708,12 @@ describe('IdempotencyInterceptor', () => {
       mockService.checkAndLock.mockResolvedValue({ isNew: true });
       mockService.complete.mockRejectedValue(new Error('redis down'));
 
-      // When — the response flows normally
+      // When - the response flows normally
       const result = await interceptor.intercept(mockContext, mockNext);
       const value = await firstValueFrom(result);
       await new Promise((resolve) => setImmediate(resolve)); // flush the rejection
 
-      // Then — client result unaffected; no unhandled rejection escaped
+      // Then - client result unaffected; no unhandled rejection escaped
       expect(value).toEqual({ result: 'success' });
     });
 
@@ -728,7 +728,7 @@ describe('IdempotencyInterceptor', () => {
       await firstValueFrom(result);
       await new Promise((resolve) => setImmediate(resolve));
 
-      // Then — the same fingerprint used for checkAndLock is persisted
+      // Then - the same fingerprint used for checkAndLock is persisted
       const fingerprint = mockService.checkAndLock.mock.calls[0][1];
       expect(mockService.complete).toHaveBeenCalledWith('ff-2', expect.any(Object), { ttl: undefined, fingerprint });
     });

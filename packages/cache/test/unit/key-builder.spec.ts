@@ -436,11 +436,11 @@ describe('KeyBuilder', () => {
     });
 
     it('deprecated hash() output stays EXACTLY as before (backward compatibility contract)', () => {
-      // Given / When — golden vectors; existing user keys must not shift
+      // Given / When - golden vectors; existing user keys must not shift
       const sorted = KeyBuilder.create().hash({ a: 1, b: 2 }).build();
       const unsorted = KeyBuilder.create().hash({ b: 2, a: 1 }).build();
 
-      // Then — same (order-dependent, weak) outputs as always
+      // Then - same (order-dependent, weak) outputs as always
       expect(sorted).toBe('kz8hg0');
       expect(unsorted).toBe('k2g9cg');
       expect(sorted).not.toBe(unsorted); // the documented flaw is preserved on purpose
@@ -468,7 +468,7 @@ describe('KeyBuilder', () => {
       // Given
       const body = { b: 2, a: 1 };
 
-      // When / Then — golden vector shared with stable-hash.spec
+      // When / Then - golden vector shared with stable-hash.spec
       expect(KeyBuilder.create().hashStable(body).build()).toBe('43258cff783fe703');
     });
 

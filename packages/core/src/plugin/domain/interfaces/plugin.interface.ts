@@ -36,7 +36,7 @@ export interface IPluginAsyncOptions<T = unknown> {
    *
    * Parameters are typed `any[]` (matching NestJS's own `useFactory`) so a
    * strongly-typed factory such as `(config: ConfigService) => ({ ... })`
-   * assigns cleanly under `strict` — `unknown[]` would reject it via parameter
+   * assigns cleanly under `strict` - `unknown[]` would reject it via parameter
    * contravariance.
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

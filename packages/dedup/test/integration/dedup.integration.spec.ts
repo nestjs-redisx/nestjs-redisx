@@ -21,7 +21,7 @@ describe.skipIf(SKIP)('DedupPlugin on live Redis', () => {
   let app: TestingModule;
   let serviceA: IDedupService;
   let serviceB: DedupService;
-  const run = `${process.pid}-${Date.now()}`; // unique keys per run — shared server
+  const run = `${process.pid}-${Date.now()}`; // unique keys per run - shared server
 
   const key = (name: string): string => `it:${run}:${name}`;
 
@@ -64,14 +64,14 @@ describe.skipIf(SKIP)('DedupPlugin on live Redis', () => {
   });
 
   it('should run dedupe once, skip duplicates, and re-open after a failure', async () => {
-    // Given — a failing first
+    // Given - a failing first
     await expect(
       serviceA.dedupe(key('order'), async () => {
         throw new Error('transient');
       }),
     ).rejects.toThrow('transient');
 
-    // When/Then — retry runs, then duplicates skip
+    // When/Then - retry runs, then duplicates skip
     expect(await serviceB.dedupe(key('order'), async () => 'retried')).toBe('retried');
     expect(await serviceA.dedupe(key('order'), async () => 'dup')).toBeUndefined();
   });

@@ -88,14 +88,14 @@ describe('LeaderPlugin', () => {
       expect(driverProvider.inject).toContain(LEADER_PLUGIN_OPTIONS);
     });
 
-    it('should reject registerAsync without a useFactory — a falsy argument would silently boot with all-defaults sync options', () => {
-      // When/Then — a misspelled config import resolving to undefined
+    it('should reject registerAsync without a useFactory - a falsy argument would silently boot with all-defaults sync options', () => {
+      // When/Then - a misspelled config import resolving to undefined
       expect(() => LeaderPlugin.registerAsync(undefined as never)).toThrow(InvalidLeaderConfigError);
       expect(() => LeaderPlugin.registerAsync({} as never)).toThrow(InvalidLeaderConfigError);
     });
 
     it('should reject an async factory returning undefined with a source-tagged config error, not a bare TypeError', async () => {
-      // Given — the classic misconfiguration: ConfigService.get('leader')
+      // Given - the classic misconfiguration: ConfigService.get('leader')
       // for a missing key returns undefined
       const plugin = LeaderPlugin.registerAsync({ useFactory: () => undefined as never });
       const optionsFactory = findProvider(plugin.getProviders(), LEADER_PLUGIN_OPTIONS).useFactory;
@@ -106,7 +106,7 @@ describe('LeaderPlugin', () => {
     });
 
     it('should throw a descriptive config error when the named client does not exist', async () => {
-      // Given — the manager reports a missing client the way core does
+      // Given - the manager reports a missing client the way core does
       const plugin = new LeaderPlugin({ client: 'missing' });
       const factory = findProvider(plugin.getProviders(), LEADER_REDIS_DRIVER).useFactory;
       const manager = {
@@ -121,7 +121,7 @@ describe('LeaderPlugin', () => {
     });
 
     it('should propagate a connection failure with its REAL cause instead of rewriting it into config advice', async () => {
-      // Given — the client exists but its lazy connect fails
+      // Given - the client exists but its lazy connect fails
       const plugin = new LeaderPlugin();
       const factory = findProvider(plugin.getProviders(), LEADER_REDIS_DRIVER).useFactory;
       const manager = {
@@ -136,7 +136,7 @@ describe('LeaderPlugin', () => {
         (error: Error) => error,
       );
 
-      // Then — the operator must see the connectivity error, not
+      // Then - the operator must see the connectivity error, not
       // instructions to edit the client configuration
       expect(failure).toBeInstanceOf(RedisXError);
       expect((failure as Error).message).toContain('ECONNREFUSED');
@@ -175,8 +175,8 @@ describe('LeaderPlugin', () => {
       expect(() => new LeaderPlugin({ groups: [''] }).getProviders()).toThrow(InvalidLeaderConfigError);
     });
 
-    it('should reject a Promise passed as sync options — an un-awaited async config must not boot all-defaults', () => {
-      // Given — `new LeaderPlugin(loadConfig())` where loadConfig is async
+    it('should reject a Promise passed as sync options - an un-awaited async config must not boot all-defaults', () => {
+      // Given - `new LeaderPlugin(loadConfig())` where loadConfig is async
       // (plain-JS only; TS rejects the shape at compile time). Validation
       // runs on the RAW value before defaults are merged, so the guard sees
       // the thenable instead of a spread-erased empty object.

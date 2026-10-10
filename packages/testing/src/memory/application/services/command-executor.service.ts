@@ -46,7 +46,7 @@ export class CommandExecutor implements ICommandExecutor {
     switch (cmd) {
       // --- connection / server ---
       case 'TIME': {
-        // [seconds, microseconds] as strings — real Redis reply shape.
+        // [seconds, microseconds] as strings - real Redis reply shape.
         const nowMs = Date.now();
         return [String(Math.floor(nowMs / 1000)), String((nowMs % 1000) * 1000)];
       }
@@ -611,7 +611,7 @@ export class CommandExecutor implements ICommandExecutor {
       }
       if (tok === 'COUNT') count = this.num(args[++i]);
       else if (tok === 'BLOCK')
-        i += 1; // ignored — the in-memory driver never blocks
+        i += 1; // ignored - the in-memory driver never blocks
       else if (tok === 'NOACK') continue;
     }
     const rest = args.slice(i).map((a) => this.str(a));

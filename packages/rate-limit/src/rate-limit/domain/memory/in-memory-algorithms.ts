@@ -4,7 +4,7 @@ import { IRateLimitResult } from '../../../shared/types';
  * Pure, time-injected implementations of the three rate limit algorithms for
  * the in-memory store. Result parity contract: for the same inputs these
  * functions produce exactly what the Lua scripts + the Redis adapter's
- * parse helpers produce — including rounding and the `retryAfter`
+ * parse helpers produce - including rounding and the `retryAfter`
  * 0 -> undefined mapping. `now` is always epoch milliseconds.
  */
 

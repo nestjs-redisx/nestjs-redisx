@@ -53,14 +53,14 @@ describe('L1MemoryStoreAdapter', () => {
     });
 
     it('should treat explicit ttl as seconds, not milliseconds', async () => {
-      // Given — regression for issue #10: entry used to expire ~60ms after write
+      // Given - regression for issue #10: entry used to expire ~60ms after write
       vi.useFakeTimers();
       await store.set('key', 'value', 60);
 
-      // When — well past 60ms but within the 60s TTL
+      // When - well past 60ms but within the 60s TTL
       vi.advanceTimersByTime(1_000);
 
-      // Then — still cached (previously this was already expired)
+      // Then - still cached (previously this was already expired)
       expect(await store.get('key')).toBe('value');
     });
 
@@ -69,11 +69,11 @@ describe('L1MemoryStoreAdapter', () => {
       vi.useFakeTimers();
       await store.set('key', 'value', 60);
 
-      // When — just before expiry
+      // When - just before expiry
       vi.advanceTimersByTime(59_000);
       const beforeExpiry = await store.get('key');
 
-      // When — just after expiry
+      // When - just after expiry
       vi.advanceTimersByTime(2_000);
       const afterExpiry = await store.get('key');
 
@@ -83,7 +83,7 @@ describe('L1MemoryStoreAdapter', () => {
     });
 
     it('should apply configured default ttl (seconds) when ttl omitted', async () => {
-      // Given — default l1.ttl is 60 seconds
+      // Given - default l1.ttl is 60 seconds
       vi.useFakeTimers();
       await store.set('key', 'value');
 
@@ -104,7 +104,7 @@ describe('L1MemoryStoreAdapter', () => {
       vi.useFakeTimers();
       await store.set('key', 'old', 60);
 
-      // When — overwrite resets expiry with the new (seconds) ttl
+      // When - overwrite resets expiry with the new (seconds) ttl
       await store.set('key', 'new', 60);
       vi.advanceTimersByTime(1_000);
 

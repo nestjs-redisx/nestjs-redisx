@@ -1,5 +1,5 @@
 /**
- * @Dedupe decorator — run a method only for the FIRST occurrence of its key
+ * @Dedupe decorator - run a method only for the FIRST occurrence of its key
  * within the window; duplicate calls are skipped (resolve to undefined).
  *
  * Uses immediate proxy-based wrapping (etalon: @WithLock), so it works on
@@ -77,7 +77,7 @@ export interface IDedupeOptions {
  * out for the rest of the window.
  *
  * Without the plugin registered, the method EXECUTES without deduplication
- * (with a warning) — fail-open: a possible duplicate is recoverable, a
+ * (with a warning) - fail-open: a possible duplicate is recoverable, a
  * silently skipped business method is not.
  *
  * @example
@@ -114,7 +114,7 @@ export function Dedupe(options: IDedupeOptions): MethodDecorator {
     });
 
     // Carry over metadata stamped by decorators applied BEFORE this one
-    // (written below @Dedupe in source order — e.g. @Cron). Discovery-based
+    // (written below @Dedupe in source order - e.g. @Cron). Discovery-based
     // consumers (the scheduler among them) read metadata off the prototype's
     // method, which is now the wrapper; without the copy, `@Dedupe` above
     // `@Cron()` silently unregisters the job on every instance.
@@ -146,11 +146,11 @@ function buildDedupeKey(args: unknown[], options: IDedupeOptions): string {
     }
     const rendered = String(value);
     if (rendered === '[object Object]' && !warnedObjectTemplates.has(options)) {
-      // Every distinct event collapses onto ONE key — the first one in each
+      // Every distinct event collapses onto ONE key - the first one in each
       // window runs and ALL the others are silently skipped as "duplicates".
       // Loud once per decorator site.
       warnedObjectTemplates.add(options);
-      logger.warn(`@Dedupe: key template "${options.key as string}" interpolated an object as "[object Object]" — ALL calls share one dedup key and distinct events will be skipped. Interpolate a scalar id or use a key builder function.`);
+      logger.warn(`@Dedupe: key template "${options.key as string}" interpolated an object as "[object Object]" - ALL calls share one dedup key and distinct events will be skipped. Interpolate a scalar id or use a key builder function.`);
     }
     return rendered;
   });

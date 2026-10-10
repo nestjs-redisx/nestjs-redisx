@@ -29,7 +29,7 @@ const REDIS_PORT = Number(process.env.REDIS_PORT || 6379);
 
 const LIMIT = 10;
 
-/** Decorated on the method only — guard bound once. */
+/** Decorated on the method only - guard bound once. */
 @Controller('single')
 class SingleController {
   @Get()
@@ -39,7 +39,7 @@ class SingleController {
   }
 }
 
-/** Decorated on BOTH class and method — guard bound twice for the same route. */
+/** Decorated on BOTH class and method - guard bound twice for the same route. */
 @RateLimit({ key: 'rl-double', points: LIMIT, duration: 60, algorithm: 'fixed-window' })
 @Controller('double')
 class DoubleController {
@@ -57,7 +57,7 @@ async function flushRedis(): Promise<void> {
   await client.quit();
 }
 
-describeIntegration('RateLimitPlugin — single consumption per request', () => {
+describeIntegration('RateLimitPlugin - single consumption per request', () => {
   let app: INestApplication;
 
   beforeAll(async () => {

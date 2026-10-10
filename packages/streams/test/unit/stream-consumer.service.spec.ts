@@ -322,11 +322,11 @@ describe('StreamConsumerService', () => {
       const handler = vi.fn();
       service.consume('orders', 'processors', 'worker-1', handler);
 
-      // When — double shutdown must not throw or diverge
+      // When - double shutdown must not throw or diverge
       const first = service.onApplicationShutdown();
       const second = service.onApplicationShutdown();
 
-      // Then — both calls resolve, and the second one rides on the same drain
+      // Then - both calls resolve, and the second one rides on the same drain
       await expect(first).resolves.toBeUndefined();
       await expect(second).resolves.toBeUndefined();
     });

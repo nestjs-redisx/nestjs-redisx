@@ -52,7 +52,7 @@ export interface IRateLimitService {
    * memory); pass `options.store` to target one.
    *
    * Per-node semantics: resetting the memory store only clears the counter on
-   * the instance that executes the call — other instances keep their local
+   * the instance that executes the call - other instances keep their local
    * counters until the window expires. Redis-backed keys are cleared globally.
    *
    * @param key - Rate limit key to reset

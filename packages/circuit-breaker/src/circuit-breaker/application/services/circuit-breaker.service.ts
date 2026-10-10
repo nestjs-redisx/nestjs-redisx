@@ -16,11 +16,11 @@ import { ICircuitBreakerStore } from '../ports/circuit-breaker-store.port';
  * - execute(): a store failure on the canRequest gate is governed by
  *   `errorPolicy` (fail-open runs `fn`, fail-closed throws); store failures
  *   while recording the outcome are logged and never mask `fn`'s own result.
- * - manual API (recordSuccess/recordFailure/getState/reset): ALWAYS strict —
+ * - manual API (recordSuccess/recordFailure/getState/reset): ALWAYS strict -
  *   store failures throw CircuitBreakerStoreError regardless of `errorPolicy`
  *   (there is no meaningful "open" fallback for an explicit state operation).
  * - invalid configuration (plugin options or per-call overrides) always throws
- *   InvalidCircuitBreakerConfigError — a programmer error is never subject to
+ *   InvalidCircuitBreakerConfigError - a programmer error is never subject to
  *   errorPolicy.
  */
 @Injectable()
@@ -98,7 +98,7 @@ export class CircuitBreakerService implements ICircuitBreakerService {
    * Record success without masking the guarded call's result on store errors.
    *
    * NOTE: if this fails while the breaker is HALF_OPEN, the consumed probe slot
-   * is not released immediately — it is auto-reclaimed after probeTimeoutMs.
+   * is not released immediately - it is auto-reclaimed after probeTimeoutMs.
    * The log message points operators at reset() as the instant remedy.
    */
   private async safeRecordSuccess(key: string, cfg: ICircuitBreakerConfig): Promise<void> {
@@ -123,7 +123,7 @@ export class CircuitBreakerService implements ICircuitBreakerService {
 
   /**
    * Merge per-call overrides over plugin options over package defaults, then
-   * validate — an invalid config must never reach the Lua scripts.
+   * validate - an invalid config must never reach the Lua scripts.
    *
    * @throws {InvalidCircuitBreakerConfigError} on invalid values
    */

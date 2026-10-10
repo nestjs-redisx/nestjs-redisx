@@ -20,7 +20,7 @@ export class CounterService implements ICounterService {
     @Inject(COUNTERS_PLUGIN_OPTIONS) private readonly config: ICountersPluginOptions,
     @Inject(COUNTER_STORE) private readonly store: ICounterStore,
   ) {
-    // The service is exported for direct wiring too — validate here as well
+    // The service is exported for direct wiring too - validate here as well
     // as in the plugin, so a hand-constructed service fails fast.
     validateCountersOptions(config, 'CounterService');
   }
@@ -60,7 +60,7 @@ export class CounterService implements ICounterService {
     validateCounterKey(key, 'getAndReset');
     const value = await this.store.getAndReset(this.buildKey(key));
     if (!Number.isSafeInteger(value)) {
-      // Backstop for custom stores — the Redis adapter already throws with
+      // Backstop for custom stores - the Redis adapter already throws with
       // the actual raw value.
       throw new CounterValueError(key, String(value));
     }
@@ -69,7 +69,7 @@ export class CounterService implements ICounterService {
 
   async next(sequence: string): Promise<number> {
     validateCounterKey(sequence, 'next');
-    // No TTL — sequences are permanent by definition.
+    // No TTL - sequences are permanent by definition.
     return this.store.incrementBy(this.buildKey(sequence), 1);
   }
 
@@ -79,7 +79,7 @@ export class CounterService implements ICounterService {
   }
 
   /**
-   * Reads a counter as a number; 0 when absent, loud when non-numeric —
+   * Reads a counter as a number; 0 when absent, loud when non-numeric -
    * silently returning NaN would poison every downstream aggregate.
    */
   private async readNumeric(key: string): Promise<number> {
@@ -88,7 +88,7 @@ export class CounterService implements ICounterService {
       return 0;
     }
     if (!Number.isSafeInteger(value)) {
-      // Backstop for custom stores — the Redis adapter already throws with
+      // Backstop for custom stores - the Redis adapter already throws with
       // the actual raw value.
       throw new CounterValueError(key, String(value));
     }

@@ -202,7 +202,7 @@ describe('RateLimitPlugin', () => {
       // Given / When
       const providers = new RateLimitPlugin({ registerExceptionFilter: false }).getProviders();
 
-      // Then — opt-out leaves rate-limit errors to the host app's own filters
+      // Then - opt-out leaves rate-limit errors to the host app's own filters
       const filter = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === APP_FILTER);
       expect(filter).toBeUndefined();
       expect(providers).toHaveLength(7);
@@ -217,7 +217,7 @@ describe('RateLimitPlugin', () => {
       // When
       const providers = plugin.getProviders();
 
-      // Then — both stores registered; service picks per check
+      // Then - both stores registered; service picks per check
       const memoryProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === RATE_LIMIT_MEMORY_STORE);
       const redisProvider = providers.find((p) => typeof p === 'object' && 'provide' in p && p.provide === RATE_LIMIT_STORE);
       expect((memoryProvider as any).useClass).toBe(InMemoryRateLimitStoreAdapter);

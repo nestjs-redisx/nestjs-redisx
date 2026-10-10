@@ -551,7 +551,7 @@ describe('RateLimitService', () => {
     });
 
     it('should throw InvalidRateLimitConfigError when memory store is requested but not available', async () => {
-      // Given — manual construction without a memory store
+      // Given - manual construction without a memory store
       const svc = new RateLimitService(config, mockStore);
 
       // When/Then
@@ -559,7 +559,7 @@ describe('RateLimitService', () => {
     });
 
     it('should throw InvalidRateLimitConfigError for an unknown store value even with fail-open', async () => {
-      // Given — validation is never subject to errorPolicy
+      // Given - validation is never subject to errorPolicy
       const svc = new RateLimitService({ ...config, errorPolicy: 'fail-open' }, mockStore, memoryStore);
 
       // When/Then
@@ -595,7 +595,7 @@ describe('RateLimitService', () => {
       // When
       await svc.reset('user:1');
 
-      // Then — 3 algorithm variants per store
+      // Then - 3 algorithm variants per store
       expect(mockStore.reset).toHaveBeenCalledTimes(3);
       expect(memoryStore.reset).toHaveBeenCalledTimes(3);
       expect(memoryStore.reset).toHaveBeenCalledWith('rl:sliding-window:user:1');
@@ -626,7 +626,7 @@ describe('RateLimitService', () => {
     });
 
     it('should reset only the redis store when no memory store is available', async () => {
-      // Given — manual construction without a memory store
+      // Given - manual construction without a memory store
       const svc = new RateLimitService(config, mockStore);
 
       // When

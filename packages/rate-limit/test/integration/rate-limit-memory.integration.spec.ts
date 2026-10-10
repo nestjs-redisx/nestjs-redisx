@@ -1,5 +1,5 @@
 /**
- * End-to-end validation on the in-memory driver — NO Redis required.
+ * End-to-end validation on the in-memory driver - NO Redis required.
  *
  * Covers the two-store feature through production code:
  * - plugin default `store: 'memory'` limits routes via the in-process store;
@@ -73,7 +73,7 @@ describe('RateLimitPlugin stores on the in-memory driver (no Redis)', () => {
 
   describe('HTTP routes with mixed stores', () => {
     it('limits a route through the memory store when it is the plugin default', async () => {
-      // When — exhaust the memory-backed limit
+      // When - exhaust the memory-backed limit
       for (let i = 0; i < MEM_LIMIT; i++) {
         const res = await request(app.getHttpServer()).get('/mem').expect(200);
         expect(res.headers['x-ratelimit-limit']).toBe(String(MEM_LIMIT));
@@ -85,7 +85,7 @@ describe('RateLimitPlugin stores on the in-memory driver (no Redis)', () => {
     });
 
     it('limits a store:redis route through the driver-backed store', async () => {
-      // When — exhaust the redis-backed limit (fixed-window Lua on the driver)
+      // When - exhaust the redis-backed limit (fixed-window Lua on the driver)
       for (let i = 0; i < REDIS_LIMIT; i++) {
         await request(app.getHttpServer()).get('/strict').expect(200);
       }
@@ -108,11 +108,11 @@ describe('RateLimitPlugin stores on the in-memory driver (no Redis)', () => {
         const key = `parity:${algorithm}`;
         const config = { algorithm, points: 5, duration: 60 };
 
-        // When — consume twice on each store
+        // When - consume twice on each store
         const redisResults = [await service.check(key, { ...config, store: 'redis' }), await service.check(key, { ...config, store: 'redis' })];
         const memoryResults = [await service.check(key, { ...config, store: 'memory' }), await service.check(key, { ...config, store: 'memory' })];
 
-        // Then — identical semantics
+        // Then - identical semantics
         for (let i = 0; i < 2; i++) {
           expect(memoryResults[i]!.allowed).toBe(redisResults[i]!.allowed);
           expect(memoryResults[i]!.limit).toBe(redisResults[i]!.limit);
@@ -127,7 +127,7 @@ describe('RateLimitPlugin stores on the in-memory driver (no Redis)', () => {
       const key = 'independent';
       const config = { algorithm: 'sliding-window', points: 5, duration: 60 } as const;
 
-      // When — 3 hits on redis, 1 on memory
+      // When - 3 hits on redis, 1 on memory
       await service.check(key, { ...config, store: 'redis' });
       await service.check(key, { ...config, store: 'redis' });
       await service.check(key, { ...config, store: 'redis' });
@@ -179,10 +179,10 @@ describe('RateLimitPlugin stores on the in-memory driver (no Redis)', () => {
       await service.check(key, { ...config, store: 'redis' });
       await service.check(key, { ...config, store: 'memory' });
 
-      // When — clear only the redis store
+      // When - clear only the redis store
       await service.reset(key, { store: 'redis' });
 
-      // Then — the memory counter survives
+      // Then - the memory counter survives
       expect((await service.peek(key, { ...config, store: 'redis' })).current).toBe(0);
       expect((await service.peek(key, { ...config, store: 'memory' })).current).toBe(1);
     });

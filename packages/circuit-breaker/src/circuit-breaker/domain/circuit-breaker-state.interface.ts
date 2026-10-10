@@ -52,7 +52,7 @@ export interface ICircuitSnapshot {
  *  HALF_OPEN
  *    Each permitted probe records its start time. A probe whose start time is
  *    <= now - probeTimeoutMs is EXPIRED: its slot is reclaimed (the probe is
- *    presumed dead — e.g. the caller crashed before recording an outcome).
+ *    presumed dead - e.g. the caller crashed before recording an outcome).
  *    - canRequest(now)      -> drop expired probes; if remaining in-flight < halfOpenMaxCalls:
  *                              register a probe started at `now`, true; else false.
  *    - recordSuccess(now)   -> drop expired probes; release the most recently started

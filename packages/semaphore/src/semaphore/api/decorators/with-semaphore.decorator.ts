@@ -1,5 +1,5 @@
 /**
- * @WithSemaphore decorator — bound concurrency for a method across instances.
+ * @WithSemaphore decorator - bound concurrency for a method across instances.
  *
  * Uses immediate proxy-based wrapping (etalon: @WithLock), so it works on ANY
  * @Injectable class method. At most `permits` concurrent executions of the
@@ -112,7 +112,7 @@ export interface IWithSemaphoreOptions {
  *
  * Acquires a semaphore permit before the method runs and always releases it
  * afterwards. Without the plugin registered, the method executes WITHOUT the
- * bound (with a warning) — a missing ceiling is observable and recoverable,
+ * bound (with a warning) - a missing ceiling is observable and recoverable,
  * a silently skipped business method is not.
  *
  * @example
@@ -182,7 +182,7 @@ export function WithSemaphore(options: IWithSemaphoreOptions): MethodDecorator {
     });
 
     // Carry over metadata stamped by decorators applied BEFORE this one
-    // (written below @WithSemaphore in source order — e.g. @Cron).
+    // (written below @WithSemaphore in source order - e.g. @Cron).
     // Discovery-based consumers (the scheduler among them) read metadata off
     // the prototype's method, which is now the wrapper; without the copy,
     // `@WithSemaphore` above `@Cron()` silently unregisters the job on every
@@ -215,10 +215,10 @@ function buildSemaphoreKey(args: unknown[], options: IWithSemaphoreOptions): str
     }
     const rendered = String(value);
     if (rendered === '[object Object]' && !warnedObjectTemplates.has(options)) {
-      // Every call collapses onto ONE key — all tenants silently share one
+      // Every call collapses onto ONE key - all tenants silently share one
       // semaphore. Loud once per decorator site.
       warnedObjectTemplates.add(options);
-      logger.warn(`@WithSemaphore: key template "${options.key as string}" interpolated an object as "[object Object]" — every call shares ONE semaphore key. Interpolate a scalar id or use a key builder function.`);
+      logger.warn(`@WithSemaphore: key template "${options.key as string}" interpolated an object as "[object Object]" - every call shares ONE semaphore key. Interpolate a scalar id or use a key builder function.`);
     }
     return rendered;
   });
@@ -228,7 +228,7 @@ function buildSemaphoreKey(args: unknown[], options: IWithSemaphoreOptions): str
  * Cross-copy-safe acquisition-failure detection: with the dual CJS + ESM
  * build the SERVICE may have been loaded from the other module copy, so its
  * SemaphoreAcquisitionError is a DIFFERENT class and `instanceof` alone
- * fails — the onUnavailable policy would silently die. The error code is
+ * fails - the onUnavailable policy would silently die. The error code is
  * copy-independent.
  */
 function isAcquisitionFailure(error: unknown): error is SemaphoreAcquisitionError {
@@ -242,7 +242,7 @@ function isAcquisitionFailure(error: unknown): error is SemaphoreAcquisitionErro
 /**
  * Applies the configured onUnavailable policy. Total: a user policy
  * function returning a non-Error (or nothing) must not surface as
- * `throw undefined` — the original acquisition error is thrown instead.
+ * `throw undefined` - the original acquisition error is thrown instead.
  */
 function handleUnavailable(key: string, options: IWithSemaphoreOptions, error: unknown): undefined {
   const policy = options.onUnavailable ?? 'throw';

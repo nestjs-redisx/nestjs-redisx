@@ -71,7 +71,7 @@ describe('IdempotencyExceptionFilter', () => {
   });
 
   it('should include a machine-readable code so clients can DISTINGUISH the 409 variants', () => {
-    // Given — two different situations both mapped to 409
+    // Given - two different situations both mapped to 409
     const timeout = new IdempotencyTimeoutError('key-t');
     const failed = new IdempotencyFailedError('key-f', 'boom');
 
@@ -79,7 +79,7 @@ describe('IdempotencyExceptionFilter', () => {
     filter.catch(timeout, mockHost);
     filter.catch(failed, mockHost);
 
-    // Then — same status, different codes (in-progress vs previous-failed)
+    // Then - same status, different codes (in-progress vs previous-failed)
     const codes = mockHttpAdapter.reply.mock.calls.map((c: unknown[]) => (c[1] as { code: string }).code);
     expect(codes[0]).toBeDefined();
     expect(codes[1]).toBeDefined();

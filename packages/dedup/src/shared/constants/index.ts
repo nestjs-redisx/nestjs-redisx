@@ -20,7 +20,7 @@ export const DEDUP_STORE = Symbol.for('DEDUP_STORE');
 export const DEDUP_REDIS_DRIVER = Symbol.for('DEDUP_REDIS_DRIVER');
 
 /**
- * Default plugin configuration — the single source of defaults.
+ * Default plugin configuration - the single source of defaults.
  */
 export const DEFAULT_DEDUP_CONFIG = {
   keyPrefix: '_dedup:',

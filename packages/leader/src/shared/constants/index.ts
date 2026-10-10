@@ -23,7 +23,7 @@ export const DEFAULT_LEADER_GROUP = 'default';
 /**
  * Upper bound for every configured duration (ttl, renew, retry): Node's
  * setTimeout clamps any delay above 2^31 - 1 ms (~24.8 days) to 1 ms, which
- * would turn the configured cadence into a hot loop hammering Redis — so
+ * would turn the configured cadence into a hot loop hammering Redis - so
  * the JS timer range, not PEXPIRE (which accepts far more), is the binding
  * constraint.
  */

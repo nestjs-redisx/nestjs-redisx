@@ -9,7 +9,7 @@ export type StreamEntry = {
 /** A pending (delivered, not-yet-acked) entry in a group's PEL. */
 export type PendingEntry = {
   consumer: string;
-  /** Last delivery time (epoch ms) — used to compute idle time. */
+  /** Last delivery time (epoch ms) - used to compute idle time. */
   deliveryTime: number;
   deliveryCount: number;
 };
@@ -54,7 +54,7 @@ function resolveRangeBound(token: string, isStart: boolean): { id: string; exclu
 /**
  * In-memory Redis Stream: an ordered entry log plus consumer groups with
  * per-group delivery cursors and pending-entries lists (PEL). Pure data
- * structure — the caller passes the current time so it stays deterministic.
+ * structure - the caller passes the current time so it stays deterministic.
  */
 export class StreamValue {
   readonly entries: StreamEntry[] = [];
@@ -245,7 +245,7 @@ export class StreamValue {
       if (now - p.deliveryTime < minIdle) continue;
       const entry = this.entries.find((e) => e.id === id);
       if (!entry) {
-        // Entry was deleted from the stream — drop it from the PEL like Redis does.
+        // Entry was deleted from the stream - drop it from the PEL like Redis does.
         group.pending.delete(id);
         continue;
       }

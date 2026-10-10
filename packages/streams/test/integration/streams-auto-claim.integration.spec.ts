@@ -45,7 +45,7 @@ const waitFor = async (predicate: () => boolean, timeoutMs: number): Promise<voi
   throw new Error('waitFor timed out');
 };
 
-describeIntegration('StreamsPlugin — auto-claim & autoCreate', () => {
+describeIntegration('StreamsPlugin - auto-claim & autoCreate', () => {
   let module: TestingModule;
   let producer: IStreamProducer;
   let consumer: IStreamConsumer;

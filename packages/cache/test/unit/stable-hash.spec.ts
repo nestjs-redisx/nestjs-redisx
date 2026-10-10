@@ -49,7 +49,7 @@ describe('hashKey', () => {
 
   describe('FROZEN ALGORITHM (golden vectors)', () => {
     // These exact outputs are a public contract: user cache keys are derived
-    // from them. If one of these assertions fails, the algorithm changed —
+    // from them. If one of these assertions fails, the algorithm changed -
     // which silently invalidates every derived key on upgrade. Do NOT update
     // the expected values; ship a changed algorithm under a NEW name instead.
     it.each([
@@ -103,7 +103,7 @@ describe('hashKey', () => {
     });
 
     it('Map stays deterministic when distinct keys serialize identically', () => {
-      // Given — two different object references with the same canonical form.
+      // Given - two different object references with the same canonical form.
       // Sorting entries by key alone would leave the tie broken by insertion
       // order; the (key, value) comparator makes both orderings converge.
       const k1 = { a: 1 };

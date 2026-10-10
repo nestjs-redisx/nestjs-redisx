@@ -20,7 +20,7 @@ export const SEMAPHORE_STORE = Symbol.for('SEMAPHORE_STORE');
 export const SEMAPHORE_REDIS_DRIVER = Symbol.for('SEMAPHORE_REDIS_DRIVER');
 
 /**
- * Default plugin configuration — the single source of defaults
+ * Default plugin configuration - the single source of defaults
  * (plugin mergeDefaults and the service resolve against this).
  */
 export const DEFAULT_SEMAPHORE_CONFIG = {

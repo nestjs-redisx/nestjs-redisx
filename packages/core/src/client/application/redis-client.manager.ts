@@ -178,7 +178,7 @@ export class RedisClientManager implements IRedisDriverManager, OnApplicationShu
   ): Promise<IRedisDriver> {
     if (this.isShuttingDown) {
       // Same latch as getClient: closeAll is single-flight, so a client
-      // registered after it would never be swept — its socket would outlive
+      // registered after it would never be swept - its socket would outlive
       // every subsequent shutdown.
       throw new RedisXError('Client manager is shutting down', ErrorCode.CONN_FAILED, undefined, { clientName: name });
     }
@@ -259,7 +259,7 @@ export class RedisClientManager implements IRedisDriverManager, OnApplicationShu
   }
 
   /**
-   * Installs a hook around raw command execution on ALL clients — current and
+   * Installs a hook around raw command execution on ALL clients - current and
    * future (including runtime-created ones, e.g. a Pub/Sub subscriber).
    * Pass null to remove. Used by observability plugins (e.g. tracing) to
    * create per-command spans; the hook receives the client name as context.
@@ -299,13 +299,13 @@ export class RedisClientManager implements IRedisDriverManager, OnApplicationShu
     });
   }
 
-  /** In-flight (or completed) closeAll — see the single-flight note below. */
+  /** In-flight (or completed) closeAll - see the single-flight note below. */
   private closeAllInFlight: Promise<void> | null = null;
 
   /**
    * Closes all client connections. Single-flight: both RedisService and
    * this manager hook `onApplicationShutdown`, and Nest runs a module's
-   * provider hooks CONCURRENTLY — without the guard every client got two
+   * provider hooks CONCURRENTLY - without the guard every client got two
    * racing disconnect()s (double quit, duplicate DISCONNECTED events).
    */
   async closeAll(): Promise<void> {
@@ -421,7 +421,7 @@ export class RedisClientManager implements IRedisDriverManager, OnApplicationShu
   }
 
   /**
-   * NestJS lifecycle hook — close clients during application shutdown.
+   * NestJS lifecycle hook - close clients during application shutdown.
    * Phase 3 (`onApplicationShutdown`), so plugin providers can still talk to
    * Redis from their `onModuleDestroy` cleanups (see RedisService note).
    */
@@ -560,7 +560,7 @@ export class RedisClientManager implements IRedisDriverManager, OnApplicationShu
       // No reconnects during/after shutdown OR an intentional close: an
       // ERROR/CLOSE event racing the disconnect window would otherwise arm
       // a fresh timer AFTER disconnectClient's one-time clear and
-      // resurrect the client past closeAll/closeClient — a zombie
+      // resurrect the client past closeAll/closeClient - a zombie
       // connection nothing can ever close.
       return;
     }
@@ -610,7 +610,7 @@ export class RedisClientManager implements IRedisDriverManager, OnApplicationShu
     reconnection.timer = setTimeout(async () => {
       if (this.isShuttingDown || managedClient.closing || !this.clients.has(managedClient.name)) {
         // Shutdown started, the client is being intentionally closed, or it
-        // was removed from the registry while this timer was pending — a
+        // was removed from the registry while this timer was pending - a
         // reconnect here would create a connection nothing tracks.
         return;
       }

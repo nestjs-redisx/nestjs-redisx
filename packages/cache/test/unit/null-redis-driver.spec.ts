@@ -46,7 +46,7 @@ describe('createNullRedisDriver', () => {
     // Given
     const driver = createNullRedisDriver();
 
-    // When / Then — none of these throw
+    // When / Then - none of these throw
     expect(() => {
       const handler = (): void => undefined;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -70,7 +70,7 @@ describe('createNullRedisDriver', () => {
     // Given
     const driver = createNullRedisDriver();
 
-    // When / Then — awaiting a non-thenable yields the object itself
+    // When / Then - awaiting a non-thenable yields the object itself
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((driver as any).then).toBeUndefined();
     expect(await driver).toBe(driver);
@@ -80,7 +80,7 @@ describe('createNullRedisDriver', () => {
     // Given
     const driver = createNullRedisDriver();
 
-    // When / Then — chained commands return the pipeline; discard is a no-op
+    // When / Then - chained commands return the pipeline; discard is a no-op
     const pipeline = driver.pipeline();
     expect(pipeline.set('k', 'v').del('k').discard()).toBeUndefined();
     const multi = driver.multi();
@@ -91,7 +91,7 @@ describe('createNullRedisDriver', () => {
     // Given
     const driver = createNullRedisDriver();
 
-    // When / Then — every stub is a safe no-op / benign miss
+    // When / Then - every stub is a safe no-op / benign miss
     await expect(driver.select(0)).resolves.toBeUndefined();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     driver.once('ready' as any, () => undefined);

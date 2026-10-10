@@ -79,7 +79,7 @@ export class TagInvalidationError extends CacheError {
 
 /**
  * Thrown at bootstrap (plugin registration) or at call time when cache
- * configuration is invalid — fail-fast instead of silently misbehaving.
+ * configuration is invalid - fail-fast instead of silently misbehaving.
  */
 export class CacheConfigError extends CacheError {
   constructor(message: string) {

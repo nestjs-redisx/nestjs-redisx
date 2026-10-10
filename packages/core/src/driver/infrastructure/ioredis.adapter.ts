@@ -26,7 +26,7 @@ export class IoRedisAdapter extends BaseRedisDriver {
 
   /**
    * The lazily loaded `ioredis` library. Loaded in the constructor (NOT via a
-   * static import) so the package stays a true optional dependency — see
+   * static import) so the package stays a true optional dependency - see
    * `driver-loader.ts`. Construction fails fast with a clear error when
    * `ioredis` is not installed.
    */
@@ -171,9 +171,9 @@ export class IoRedisAdapter extends BaseRedisDriver {
       enableReadyCheck: true,
       enableOfflineQueue: config.enableOfflineQueue ?? true,
       maxRetriesPerRequest: config.maxRetriesPerRequest ?? 3,
-      // `enableAutoReconnect: false` means "stay down after a drop" — in
+      // `enableAutoReconnect: false` means "stay down after a drop" - in
       // ioredis that is a null-returning retryStrategy (it is NOT the ready
-      // check, which this option was previously — wrongly — wired to).
+      // check, which this option was previously - wrongly - wired to).
       retryStrategy: config.enableAutoReconnect === false ? () => null : config.retryStrategy,
       reconnectOnError: config.reconnectOnError,
       lazyConnect: true,
@@ -211,7 +211,7 @@ export class IoRedisAdapter extends BaseRedisDriver {
         connectTimeout: config.connectTimeout ?? 10000,
         commandTimeout: config.commandTimeout === 0 ? undefined : (config.commandTimeout ?? 5000),
         maxRetriesPerRequest: config.maxRetriesPerRequest ?? 3,
-        // NOTE: no per-node enableOfflineQueue here — the cluster client owns
+        // NOTE: no per-node enableOfflineQueue here - the cluster client owns
         // the offline queue (set at the cluster level below) and ioredis
         // 5.9.3+ excludes the option from ClusterOptions['redisOptions'].
         keepAlive: config.keepAlive ?? 0,
@@ -254,7 +254,7 @@ export class IoRedisAdapter extends BaseRedisDriver {
       sentinelRetryStrategy: config.sentinelOptions?.sentinelRetryStrategy,
       sentinelPassword: config.sentinelOptions?.sentinelPassword,
       // CAREFUL: in ioredis this option gates the DATA-NODE streams, not the
-      // sentinel hops — the opposite of what its name suggests and of this
+      // sentinel hops - the opposite of what its name suggests and of this
       // package's documented semantics ("TLS for sentinel connections").
       // Data-node TLS follows `tls.enabled` here; the user-facing flag below
       // governs `sentinelTLS`, matching the documented meaning and the
@@ -268,7 +268,7 @@ export class IoRedisAdapter extends BaseRedisDriver {
 
     // TLS configuration: `tls` covers the data-node streams (gated by the
     // enableTLSForSentinelMode option set above), `sentinelTLS` covers the
-    // sentinel hops — strictly OPT-IN via the documented sentinelOptions
+    // sentinel hops - strictly OPT-IN via the documented sentinelOptions
     // flag (default false on both drivers: TLS data nodes with plaintext
     // sentinels is a standard deployment shape, and wrapping the hops by
     // default breaks it at the handshake). Without this mapping the

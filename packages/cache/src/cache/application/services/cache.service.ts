@@ -55,7 +55,7 @@ export class CacheService implements ICacheService {
   private readonly swrEnabled: boolean;
   private readonly tagsEnabled: boolean;
   private readonly sieEnabled: boolean;
-  /** mode: 'l1-only' — the L2 tier is the in-memory store; no Redis driver. */
+  /** mode: 'l1-only' - the L2 tier is the in-memory store; no Redis driver. */
   private readonly l1Only: boolean;
 
   private readonly keyPrefix: string;
@@ -251,7 +251,7 @@ export class CacheService implements ICacheService {
         }
       }
 
-      // SWR miss or expired — load and cache with SWR metadata. The write
+      // SWR miss or expired - load and cache with SWR metadata. The write
       // happens INSIDE the stampede flight (writeBack), so it is covered by
       // the distributed lock and no plain CacheEntry is double-written.
       // With SWR disabled (stale-if-error only) staleTime is 0: the entry is
@@ -271,7 +271,7 @@ export class CacheService implements ICacheService {
           },
         });
       } catch (error) {
-        // Stale-if-error: the loader (or the whole load path) failed — serve
+        // Stale-if-error: the loader (or the whole load path) failed - serve
         // the retained value if one exists inside its keepUntil window.
         const served = await this.serveStaleOnError<T>(enrichedKey, sie, error as Error);
         if (served.hit) {
@@ -281,7 +281,7 @@ export class CacheService implements ICacheService {
       }
     }
 
-    // Regular flow (no SWR) — use enrichedKey directly to avoid double-enrichment
+    // Regular flow (no SWR) - use enrichedKey directly to avoid double-enrichment
     const cached = await this.get<T>(enrichedKey);
     if (cached !== null) {
       return cached;
@@ -293,8 +293,8 @@ export class CacheService implements ICacheService {
   /**
    * Loads value with stampede protection if enabled.
    *
-   * The cache write (`writeBack`) runs INSIDE the protected section — after
-   * the loader, before the distributed lock is released — so another instance
+   * The cache write (`writeBack`) runs INSIDE the protected section - after
+   * the loader, before the distributed lock is released - so another instance
    * that waited for the lock is guaranteed to find the value on `recheck`.
    *
    * @param key - Normalized cache key
@@ -347,7 +347,7 @@ export class CacheService implements ICacheService {
       }
 
       if (result.cached) {
-        // Stampede was prevented — another request (or instance) loaded the value
+        // Stampede was prevented - another request (or instance) loaded the value
         this.metrics?.incrementCounter('redisx_cache_stampede_prevented_total');
         return result.value;
       }
@@ -356,7 +356,7 @@ export class CacheService implements ICacheService {
       return result.value;
     }
 
-    // No stampede protection — direct load + write
+    // No stampede protection - direct load + write
     return loadAndWrite();
   }
 

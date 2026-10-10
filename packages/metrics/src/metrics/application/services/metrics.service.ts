@@ -64,7 +64,7 @@ export class MetricsService implements IMetricsService, OnModuleInit, OnModuleDe
 
     this.registerStandardMetrics();
 
-    // Own registry: collect by default. External registry: opt-in only — the
+    // Own registry: collect by default. External registry: opt-in only - the
     // application almost certainly collects process metrics there already.
     const collectDefault = this.ownRegistry ? this.config.collectDefaultMetrics !== false : this.config.collectDefaultMetrics === true;
 
@@ -82,7 +82,7 @@ export class MetricsService implements IMetricsService, OnModuleInit, OnModuleDe
     if (this.ownRegistry) {
       this.registry.clear();
     } else {
-      // External registry: remove ONLY the metrics this service registered —
+      // External registry: remove ONLY the metrics this service registered -
       // clearing would wipe the application's metrics.
       for (const name of [...this.counters.keys(), ...this.histograms.keys(), ...this.gauges.keys()]) {
         this.registry.removeSingleMetric(name);
@@ -178,7 +178,7 @@ export class MetricsService implements IMetricsService, OnModuleInit, OnModuleDe
   /**
    * Look up a metric by the name the caller emits. Feature packages hardcode
    * canonical `redisx_*` names; when this registry uses a custom prefix the
-   * series is registered under that prefix instead — resolve the canonical
+   * series is registered under that prefix instead - resolve the canonical
    * name against it rather than silently no-oping the emit.
    */
   private resolveMetric<T>(metrics: Map<string, T>, name: string): T | undefined {

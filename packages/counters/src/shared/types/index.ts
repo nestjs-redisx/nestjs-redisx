@@ -22,7 +22,7 @@ export interface ICountersPluginOptions {
 export interface ICounterOptions {
   /**
    * Window TTL in milliseconds, applied only when the mutation CREATES the
-   * key (first write in the window) — the idiomatic daily/hourly counter:
+   * key (first write in the window) - the idiomatic daily/hourly counter:
    * later mutations never extend the window.
    */
   ttl?: number;

@@ -1,10 +1,10 @@
-# NestJS RedisX — Example App
+# NestJS RedisX - Example App
 
 Demo application showing all `@nestjs-redisx` plugins in action.
 
 ## Architecture
 
-Uses **plugin architecture** — all 7 plugins registered via `RedisModule.forRootAsync()` with `ConfigService`.
+Uses **plugin architecture** - all 7 plugins registered via `RedisModule.forRootAsync()` with `ConfigService`.
 
 ## Running
 
@@ -22,43 +22,43 @@ npm run start:dev
 See the Postman collection: `NestJS-RedisX.postman_collection.json`
 
 ### Core
-- `GET /demo/core/health` — health check
-- `GET /demo/core/info` — Redis server info
-- `GET /demo/core/string/:key` — get string value
-- `POST /demo/core/string` — set string value
+- `GET /demo/core/health` - health check
+- `GET /demo/core/info` - Redis server info
+- `GET /demo/core/string/:key` - get string value
+- `POST /demo/core/string` - set string value
 
 ### Cache
-- `GET /demo/cache/test` — basic cache test
-- `GET /demo/cache/user/:id` — cached user lookup
-- `GET /demo/cache/products/:category` — L1+L2 cached products
-- `GET /demo/cache/stats` — cache hit/miss statistics
+- `GET /demo/cache/test` - basic cache test
+- `GET /demo/cache/user/:id` - cached user lookup
+- `GET /demo/cache/products/:category` - L1+L2 cached products
+- `GET /demo/cache/stats` - cache hit/miss statistics
 
 ### Locks
-- `POST /demo/locks/demo` — distributed lock demo
-- `GET /demo/locks/status` — lock status
+- `POST /demo/locks/demo` - distributed lock demo
+- `GET /demo/locks/status` - lock status
 
 ### Rate Limit
-- `GET /demo/rate-limit/test` — rate limiting test
-- `GET /demo/rate-limit/fixed` — fixed window algorithm
-- `GET /demo/rate-limit/memory` — in-memory (per-instance) store, zero Redis round-trip
-- `GET /demo/rate-limit/strict` — pinned to the Redis store (exact, shared by all instances)
+- `GET /demo/rate-limit/test` - rate limiting test
+- `GET /demo/rate-limit/fixed` - fixed window algorithm
+- `GET /demo/rate-limit/memory` - in-memory (per-instance) store, zero Redis round-trip
+- `GET /demo/rate-limit/strict` - pinned to the Redis store (exact, shared by all instances)
 
 ### Leader Election
-- `GET /demo/leader/status` — who leads, is this instance the leader, cron run count
-- `POST /demo/leader/step-down` — hand leadership over to another instance
+- `GET /demo/leader/status` - who leads, is this instance the leader, cron run count
+- `POST /demo/leader/step-down` - hand leadership over to another instance
 
 ### Idempotency
-- `POST /demo/idempotency/order` — idempotent order creation (use `Idempotency-Key` header)
+- `POST /demo/idempotency/order` - idempotent order creation (use `Idempotency-Key` header)
 
 ### Streams
-- `POST /demo/streams/publish` — publish message to a stream
-- `GET /demo/streams/stats` — stream consumer statistics
+- `POST /demo/streams/publish` - publish message to a stream
+- `GET /demo/streams/stats` - stream consumer statistics
 
 ### Metrics
-- `GET /metrics` — Prometheus metrics endpoint
+- `GET /metrics` - Prometheus metrics endpoint
 
 ### Integration
-- `POST /integration/checkout` — combined scenario using all plugins
+- `POST /integration/checkout` - combined scenario using all plugins
 
 ## Configuration
 

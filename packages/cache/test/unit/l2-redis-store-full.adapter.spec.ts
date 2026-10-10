@@ -613,7 +613,7 @@ describe('L2RedisStoreAdapter (Full)', () => {
     });
 
     it('should derive the Redis TTL from keepUntil when present (stale-if-error retention)', async () => {
-      // Given — keepUntil extends 1 hour past expiresAt
+      // Given - keepUntil extends 1 hour past expiresAt
       const key = 'sie-key';
       const now = Date.now();
       const swrEntry: SwrEntry<string> = {
@@ -627,7 +627,7 @@ describe('L2RedisStoreAdapter (Full)', () => {
       // When
       await adapter.setSwr(key, swrEntry);
 
-      // Then — TTL covers the whole retention window (~3660s), not just expiresAt (~60s)
+      // Then - TTL covers the whole retention window (~3660s), not just expiresAt (~60s)
       const ttlSeconds = mockDriver.setex.mock.calls.at(-1)![1] as number;
       expect(ttlSeconds).toBeGreaterThan(3600);
       expect(ttlSeconds).toBeLessThanOrEqual(3661);
@@ -647,7 +647,7 @@ describe('L2RedisStoreAdapter (Full)', () => {
       // When
       await adapter.setSwr(key, swrEntry);
 
-      // Then — exactly today's behavior (~60s)
+      // Then - exactly today's behavior (~60s)
       const ttlSeconds = mockDriver.setex.mock.calls.at(-1)![1] as number;
       expect(ttlSeconds).toBeLessThanOrEqual(60);
     });

@@ -32,15 +32,15 @@ describe('RedisLeaderStoreAdapter', () => {
       expect(mockDriver.scriptLoad).toHaveBeenCalledWith(RELEASE_LEADER_SCRIPT);
     });
 
-    it('should NOT fail bootstrap when script loading fails — it degrades to plain EVAL', async () => {
-      // Given — Redis hiccups exactly during init (LOADING, brief failover)
+    it('should NOT fail bootstrap when script loading fails - it degrades to plain EVAL', async () => {
+      // Given - Redis hiccups exactly during init (LOADING, brief failover)
       mockDriver.scriptLoad.mockRejectedValue(new Error('LOADING Redis is loading the dataset in memory'));
 
-      // When — init completes without throwing (a transient hiccup must not
+      // When - init completes without throwing (a transient hiccup must not
       // crash-loop the whole application; the loop contains store errors)
       await expect(adapter.onModuleInit()).resolves.toBeUndefined();
 
-      // Then — operations still work through the sha-less EVAL path
+      // Then - operations still work through the sha-less EVAL path
       mockDriver.eval.mockResolvedValue(1);
       await expect(adapter.acquire('leader:default', 'node-1', 15000)).resolves.toBe(true);
       expect(mockDriver.eval).toHaveBeenCalled();
@@ -100,7 +100,7 @@ describe('RedisLeaderStoreAdapter', () => {
 
   describe('before onModuleInit (no cached sha)', () => {
     it('should EVAL the acquire script directly instead of EVALSHA(null)', async () => {
-      // Given — adapter constructed but never initialized
+      // Given - adapter constructed but never initialized
       mockDriver.eval.mockResolvedValue(1);
 
       // When
@@ -163,7 +163,7 @@ describe('RedisLeaderStoreAdapter', () => {
     });
 
     it('should wrap NOSCRIPT-fallback failures in LeaderStoreError too', async () => {
-      // Given — the fallback eval itself fails with a connection error
+      // Given - the fallback eval itself fails with a connection error
       mockDriver.evalsha.mockRejectedValue(new Error('NOSCRIPT No matching script'));
       mockDriver.eval.mockRejectedValue(new Error('connection reset'));
 

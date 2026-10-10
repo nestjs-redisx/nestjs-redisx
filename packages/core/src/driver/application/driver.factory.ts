@@ -36,7 +36,7 @@ export type DriverFactoryFn = (config: ConnectionConfig, options?: IDriverFactor
  * Lives on `globalThis` under a `Symbol.for` key (not in module scope): with
  * the dual CJS + ESM build a process can end up with BOTH copies of this
  * module loaded (e.g. an ESM application plus a CJS dependency that requires
- * core). A module-scoped map would then split — `registerDriver` through one
+ * core). A module-scoped map would then split - `registerDriver` through one
  * copy would be invisible to `createDriver` through the other.
  */
 const DRIVER_REGISTRY_KEY = Symbol.for('nestjs-redisx.core.driver-registry');
@@ -52,8 +52,8 @@ function driverRegistry(): Map<string, DriverFactoryFn> {
 }
 
 /**
- * Registers a custom driver type so `createDriver({ type })` — and therefore
- * `RedisModule.forRoot({ clients: { type } })` — can construct it.
+ * Registers a custom driver type so `createDriver({ type })` - and therefore
+ * `RedisModule.forRoot({ clients: { type } })` - can construct it.
  *
  * @param type - Driver type identifier (e.g. 'memory'). Built-in types cannot be overridden.
  * @param factory - Function that builds the driver from a connection config.
@@ -92,7 +92,7 @@ export function createDriver(rawConfig: ConnectionConfig, options?: IDriverFacto
   const enableLogging = options?.enableLogging ?? false;
 
   // Expand a single-connection `url` (e.g. REDIS_URL) into concrete fields so
-  // every adapter — built-in or custom — receives a normalized config.
+  // every adapter - built-in or custom - receives a normalized config.
   const config = normalizeConnectionConfig(rawConfig);
 
   switch (driverType) {

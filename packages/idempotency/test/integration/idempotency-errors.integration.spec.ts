@@ -48,7 +48,7 @@ async function flushRedis(): Promise<void> {
   await client.quit();
 }
 
-describeIntegration('IdempotencyPlugin — HTTP error mapping', () => {
+describeIntegration('IdempotencyPlugin - HTTP error mapping', () => {
   let app: INestApplication;
 
   beforeAll(async () => {

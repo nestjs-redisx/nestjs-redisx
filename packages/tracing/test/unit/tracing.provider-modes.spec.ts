@@ -9,7 +9,7 @@ import { SpanWrapper } from '../../src/tracing/domain/value-objects/span-wrapper
 /**
  * Provider-mode matrix against the REAL OpenTelemetry API and SDK.
  * The global tracer provider is process-wide state, so every test cleans the
- * global registrations in afterEach — otherwise specs contaminate each other.
+ * global registrations in afterEach - otherwise specs contaminate each other.
  */
 describe('TracingService provider modes', () => {
   const baseConfig: ITracingPluginOptions = {
@@ -49,7 +49,7 @@ describe('TracingService provider modes', () => {
 
   describe("mode 'auto' (default)", () => {
     it('should use the application provider and create no own provider when a global provider is registered', async () => {
-      // Given — the application registered its own SDK before the plugin init
+      // Given - the application registered its own SDK before the plugin init
       registerAppProvider();
       service = new TracingService({ ...baseConfig });
 
@@ -58,7 +58,7 @@ describe('TracingService provider modes', () => {
       const span = service.startSpan('auto-external-op');
       span.end();
 
-      // Then — span flowed into the app exporter, no own provider was built
+      // Then - span flowed into the app exporter, no own provider was built
       expect((service as any).provider).toBeNull();
       const finished = appExporter!.getFinishedSpans();
       expect(finished).toHaveLength(1);
@@ -66,17 +66,17 @@ describe('TracingService provider modes', () => {
     });
 
     it('should build and register an own provider when no global provider exists and the SDK is available', async () => {
-      // Given — pristine global state
+      // Given - pristine global state
       service = new TracingService({ ...baseConfig });
 
       // When
       await service.onModuleInit();
 
-      // Then — own provider exists and IS the registered global delegate
+      // Then - own provider exists and IS the registered global delegate
       expect((service as any).provider).not.toBeNull();
       expect(globalDelegate()).toBe((service as any).provider);
 
-      // And spans are recording (never .end() a console-exported span here —
+      // And spans are recording (never .end() a console-exported span here -
       // keeps test output clean)
       const span = service.startSpan('auto-standalone-op');
       expect((span as SpanWrapper).unwrap().isRecording()).toBe(true);
@@ -98,8 +98,8 @@ describe('TracingService provider modes', () => {
       expect(warnSpy).not.toHaveBeenCalled();
     });
 
-    it('should NEVER register over an existing global provider — warn and degrade to external', async () => {
-      // Given — app provider registered first
+    it('should NEVER register over an existing global provider - warn and degrade to external', async () => {
+      // Given - app provider registered first
       registerAppProvider();
       service = new TracingService({ ...baseConfig, provider: 'standalone' });
       const warnSpy = vi.spyOn((service as any).logger, 'warn').mockImplementation(() => {});
@@ -109,7 +109,7 @@ describe('TracingService provider modes', () => {
       const span = service.startSpan('standalone-degraded-op');
       span.end();
 
-      // Then — global delegate untouched, our spans flow to the app provider
+      // Then - global delegate untouched, our spans flow to the app provider
       expect((service as any).provider).toBeNull();
       expect(globalDelegate()).toBe(appProvider);
       expect(warnSpy).toHaveBeenCalledTimes(1);
@@ -135,13 +135,13 @@ describe('TracingService provider modes', () => {
     });
 
     it('should degrade to non-recording no-op spans when no global provider exists', async () => {
-      // Given — no app SDK, external mode: getTracer() returns a proxy no-op
+      // Given - no app SDK, external mode: getTracer() returns a proxy no-op
       service = new TracingService({ ...baseConfig, provider: 'external' });
 
       // When
       await service.onModuleInit();
 
-      // Then — nothing registered, nothing thrown, spans are non-recording
+      // Then - nothing registered, nothing thrown, spans are non-recording
       expect((service as any).provider).toBeNull();
       const span = service.startSpan('noop-op');
       expect((span as SpanWrapper).unwrap().isRecording()).toBe(false);

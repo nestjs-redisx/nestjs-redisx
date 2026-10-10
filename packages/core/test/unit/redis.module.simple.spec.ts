@@ -36,7 +36,7 @@ describe('RedisModule (Structure)', () => {
       expect(module.global).toBe(true);
     });
 
-    it('should snapshot the plugins array — a caller mutating it after registration must not change what the registry runs', () => {
+    it('should snapshot the plugins array - a caller mutating it after registration must not change what the registry runs', () => {
       // Given
       const plugins: Array<{ name: string; version: string }> = [{ name: 'leader', version: '1.0.0' }];
       const module = RedisModule.forRoot({
@@ -44,17 +44,17 @@ describe('RedisModule (Structure)', () => {
         plugins,
       });
 
-      // When — the caller pushes a duplicate AFTER registration (bypassing
+      // When - the caller pushes a duplicate AFTER registration (bypassing
       // the duplicate check, which ran at forRoot time)
       plugins.push({ name: 'leader', version: '1.0.0' });
 
-      // Then — the registered snapshot still holds exactly one plugin
+      // Then - the registered snapshot still holds exactly one plugin
       const registered = (module.providers as Array<{ provide?: unknown; useValue?: unknown }>).find((p) => p.provide === REGISTERED_PLUGINS);
       expect(registered?.useValue).toHaveLength(1);
     });
 
-    it('should reject two plugins with the same name — their DI tokens would silently collide', () => {
-      // Given — a plausible attempt at per-cluster elections: without the
+    it('should reject two plugins with the same name - their DI tokens would silently collide', () => {
+      // Given - a plausible attempt at per-cluster elections: without the
       // guard, Nest keeps only the LAST plugin's providers and the first
       // one's options/callbacks are discarded with zero signal
       const first = { name: 'leader', version: '1.0.0' };

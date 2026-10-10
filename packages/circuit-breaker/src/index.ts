@@ -11,10 +11,10 @@ export type { ICircuitBreakerStore } from './circuit-breaker/application/ports/c
 // Decorators
 export { WithCircuitBreaker, type IWithCircuitBreakerOptions } from './circuit-breaker/api/decorators/with-circuit-breaker.decorator';
 
-// Domain — types & contract
+// Domain - types & contract
 export type { CircuitState, ICircuitBreakerConfig, ICircuitSnapshot, ICircuitBreakerState } from './circuit-breaker/domain/circuit-breaker-state.interface';
 
-// Domain — state machine
+// Domain - state machine
 export { CircuitBreakerState } from './circuit-breaker/domain/circuit-breaker-state';
 
 // Types

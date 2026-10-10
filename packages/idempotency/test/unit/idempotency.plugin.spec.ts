@@ -199,7 +199,7 @@ describe('IdempotencyPlugin', () => {
       // Given
       const plugin = new IdempotencyPlugin(options as never);
 
-      // When / Then — non-positive timings silently break TTL semantics
+      // When / Then - non-positive timings silently break TTL semantics
       expect(() => plugin.getProviders()).toThrow(IdempotencyConfigError);
     });
 

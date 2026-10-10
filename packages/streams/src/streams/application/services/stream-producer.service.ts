@@ -67,7 +67,7 @@ export class StreamProducerService implements IStreamProducer {
    * Resolves the trim-related XADD options for a publish.
    *
    * Precedence: an explicit per-publish `maxLen` always wins. Otherwise the
-   * `trim` config is honored — `trim.enabled: false` disables trimming entirely
+   * `trim` config is honored - `trim.enabled: false` disables trimming entirely
    * (keep-all), and `trim.maxLen`/`trim.approximate` control trimming when
    * enabled. When no `trim` config is set, the legacy `producer.maxLen` default
    * applies. (Trimming uses MAXLEN; MINID is not derivable from config.)

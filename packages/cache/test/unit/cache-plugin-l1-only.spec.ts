@@ -16,7 +16,7 @@ function byToken(providers: Provider[], token: unknown): any {
   return providers.find((p) => p && typeof p === 'object' && 'provide' in p && (p as { provide: unknown }).provide === token);
 }
 
-describe('CachePlugin — l1-only wiring', () => {
+describe('CachePlugin - l1-only wiring', () => {
   it('swaps L2 store / tag index / driver to in-memory and drops the Lua loader', () => {
     // When
     const providers = new CachePlugin({ mode: 'l1-only' }).getProviders();
@@ -71,7 +71,7 @@ describe('CachePlugin — l1-only wiring', () => {
       // Given the factory tries to introduce a different mode
       const providers = CachePlugin.registerAsync({ mode: 'l1-only', useFactory: () => ({ mode: 'l1-l2' }) }).getProviders();
 
-      // When the options factory resolves — Then it fails fast
+      // When the options factory resolves - Then it fails fast
       await expect(optionsFactory(providers)()).rejects.toThrow(CacheConfigError);
     });
   });

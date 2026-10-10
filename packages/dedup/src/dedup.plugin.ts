@@ -19,7 +19,7 @@ import { RedisDedupStoreAdapter } from './dedup/infrastructure/adapters/redis-de
 /**
  * Event deduplication plugin for NestJS RedisX.
  *
- * Lightweight first-wins markers: "has this key been seen in the window?" —
+ * Lightweight first-wins markers: "has this key been seen in the window?" -
  * run webhooks, queue messages, and user actions exactly once per window
  * across the fleet, plus a distributed trailing debounce. For request-grade
  * idempotency with fingerprints and response replay, use

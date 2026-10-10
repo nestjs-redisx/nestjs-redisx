@@ -1,5 +1,5 @@
 /**
- * End-to-end validation on the in-memory driver — NO Redis. Exercises the
+ * End-to-end validation on the in-memory driver - NO Redis. Exercises the
  * full stack (service -> CAS Lua scripts -> memory Lua interpreter) through
  * production code.
  *
@@ -68,7 +68,7 @@ describe('LeaderPlugin on the in-memory driver (no Redis)', () => {
   });
 
   it('elects exactly one leader between two competing instances', async () => {
-    // Then — the app instance booted first and holds the lease
+    // Then - the app instance booted first and holds the lease
     expect(serviceA.isLeader()).toBe(true);
     expect(serviceB.isLeader()).toBe(false);
     expect(await serviceA.getLeaderId()).toBe('node-a');
@@ -76,7 +76,7 @@ describe('LeaderPlugin on the in-memory driver (no Redis)', () => {
   });
 
   it('keeps the leader stable across many heartbeats', async () => {
-    // When — several renew cycles pass
+    // When - several renew cycles pass
     await wait(RENEW * 4);
 
     // Then
@@ -88,7 +88,7 @@ describe('LeaderPlugin on the in-memory driver (no Redis)', () => {
     // When
     await serviceA.stepDown();
 
-    // Then — the seat is free and B takes it within one retry interval
+    // Then - the seat is free and B takes it within one retry interval
     await wait(RETRY * 3);
     expect(serviceB.isLeader()).toBe(true);
     expect(serviceA.isLeader()).toBe(false);
@@ -96,13 +96,13 @@ describe('LeaderPlugin on the in-memory driver (no Redis)', () => {
   });
 
   it('fails over when the leader shuts down gracefully (released lease)', async () => {
-    // Given — B is a follower
+    // Given - B is a follower
     expect(serviceB.isLeader()).toBe(false);
 
-    // When — A's process goes away
+    // When - A's process goes away
     await app.get<LeaderService>(LEADER_SERVICE).onModuleDestroy();
 
-    // Then — B wins within a retry interval, no TTL wait needed
+    // Then - B wins within a retry interval, no TTL wait needed
     await wait(RETRY * 3);
     expect(serviceB.isLeader()).toBe(true);
   });
@@ -111,14 +111,14 @@ describe('LeaderPlugin on the in-memory driver (no Redis)', () => {
     // Given
     const jobs = app.get(SingletonJobs);
 
-    // When — leader instance runs the method
+    // When - leader instance runs the method
     const onLeader = await jobs.nightly();
 
     // Then
     expect(onLeader).toBe('ran');
     expect(jobs.runs).toBe(1);
 
-    // And — after the leader steps down and B takes over, the method skips
+    // And - after the leader steps down and B takes over, the method skips
     await serviceA.stepDown();
     await wait(RETRY * 3);
     expect(serviceB.isLeader()).toBe(true);
@@ -128,12 +128,12 @@ describe('LeaderPlugin on the in-memory driver (no Redis)', () => {
   });
 
   it('runs independent elections per group', async () => {
-    // Given — only node-b runs the "reports" election
+    // Given - only node-b runs the "reports" election
     const reportsOnly = new LeaderService({ ttlMs: TTL, renewIntervalMs: RENEW, retryIntervalMs: RETRY, instanceId: 'node-c', groups: ['reports'] }, app.get<ILeaderStore>(LEADER_STORE));
     await reportsOnly.onModuleInit();
 
     try {
-      // Then — node-a leads 'default', node-c leads 'reports'
+      // Then - node-a leads 'default', node-c leads 'reports'
       expect(serviceA.isLeader('default')).toBe(true);
       expect(reportsOnly.isLeader('reports')).toBe(true);
       expect(await serviceA.getLeaderId('reports')).toBe('node-c');
@@ -143,26 +143,26 @@ describe('LeaderPlugin on the in-memory driver (no Redis)', () => {
   });
 
   it("re-claims an own lease but never someone else's via the acquire script (memory Lua path)", async () => {
-    // Given — node-a already holds the seat (booted first)
+    // Given - node-a already holds the seat (booted first)
     const store = app.get<ILeaderStore>(LEADER_STORE);
 
-    // When/Then — the same holder re-claims, a competitor is rejected
+    // When/Then - the same holder re-claims, a competitor is rejected
     expect(await store.acquire('leader:default', 'node-a', TTL)).toBe(true);
     expect(await store.acquire('leader:default', 'node-b', TTL)).toBe(false);
     expect(await store.getHolder('leader:default')).toBe('node-a');
   });
 
   it('re-leads immediately when a stale own lease from a previous run is still present', async () => {
-    // Given — a "previous run" of node-r left an unexpired lease behind
+    // Given - a "previous run" of node-r left an unexpired lease behind
     const store = app.get<ILeaderStore>(LEADER_STORE);
     await store.acquire('leader:restart', 'node-r', TTL);
 
-    // When — the process "restarts" with the same instanceId
+    // When - the process "restarts" with the same instanceId
     const restarted = new LeaderService({ ttlMs: TTL, renewIntervalMs: RENEW, retryIntervalMs: RETRY, instanceId: 'node-r', groups: ['restart'] }, store);
     await restarted.onModuleInit();
 
     try {
-      // Then — leader right away, no dead ttl window
+      // Then - leader right away, no dead ttl window
       expect(restarted.isLeader('restart')).toBe(true);
       expect(await store.getHolder('leader:restart')).toBe('node-r');
     } finally {

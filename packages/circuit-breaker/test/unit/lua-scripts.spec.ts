@@ -9,7 +9,7 @@ import { CAN_REQUEST_SCRIPT, RECORD_SUCCESS_SCRIPT, RECORD_FAILURE_SCRIPT, GET_S
 describe('circuit breaker Lua scripts', () => {
   const ALL = [CAN_REQUEST_SCRIPT, RECORD_SUCCESS_SCRIPT, RECORD_FAILURE_SCRIPT, GET_STATE_SCRIPT];
 
-  it('never read time inside Lua — now always comes from ARGV', () => {
+  it('never read time inside Lua - now always comes from ARGV', () => {
     for (const script of ALL) {
       expect(script).not.toContain("redis.call('TIME')");
       expect(script).toContain('tonumber(ARGV[7])'); // now

@@ -4,10 +4,10 @@ import { RedisModule, type IRedisModuleOptions, type IRedisModuleAsyncOptions } 
 import { MEMORY_DRIVER_TYPE } from '../../shared/constants';
 import { registerMemoryDriver } from './register-memory-driver';
 
-/** Default (ignored) connection config — the memory driver never connects. */
+/** Default (ignored) connection config - the memory driver never connects. */
 const DEFAULT_CLIENTS: IRedisModuleOptions['clients'] = { type: 'single', host: 'localhost', port: 6379 };
 
-/** Module options where `clients` is optional — the in-memory driver never connects. */
+/** Module options where `clients` is optional - the in-memory driver never connects. */
 export type RedisTestingModuleOptions = Omit<IRedisModuleOptions, 'clients'> & {
   clients?: IRedisModuleOptions['clients'];
 };

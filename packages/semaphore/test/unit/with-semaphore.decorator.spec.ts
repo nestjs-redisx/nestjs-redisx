@@ -87,7 +87,7 @@ describe('@WithSemaphore decorator', () => {
       // When
       await new Worker().run('x');
 
-      // Then — index 5 has no argument
+      // Then - index 5 has no argument
       expect(service.acquire).toHaveBeenCalledWith('a:x:', 1, expect.any(Object));
     });
 
@@ -111,7 +111,7 @@ describe('@WithSemaphore decorator', () => {
     });
 
     it('should execute WITHOUT a bound when the getter returns null (service torn down)', async () => {
-      // Given — a registered getter whose service is gone
+      // Given - a registered getter whose service is gone
       registerSemaphoreServiceGetter((() => null) as never);
 
       class Worker {
@@ -125,8 +125,8 @@ describe('@WithSemaphore decorator', () => {
       expect(await new Worker().work()).toBe('ran-unbounded');
     });
 
-    it('should execute WITHOUT a bound (and warn) when no service is registered — fail-open, not fail-skip', async () => {
-      // Given — no plugin registered
+    it('should execute WITHOUT a bound (and warn) when no service is registered - fail-open, not fail-skip', async () => {
+      // Given - no plugin registered
       class Worker {
         @WithSemaphore({ key: 'renders', permits: 1 })
         async work(): Promise<string> {
@@ -134,7 +134,7 @@ describe('@WithSemaphore decorator', () => {
         }
       }
 
-      // When/Then — business method still runs
+      // When/Then - business method still runs
       expect(await new Worker().work()).toBe('ran-unbounded');
     });
   });
@@ -196,7 +196,7 @@ describe('@WithSemaphore decorator', () => {
     });
 
     it('should NOT apply the policy to a method failure after acquisition (only to acquisition)', async () => {
-      // Given — acquisition succeeds, the METHOD throws an acquisition-shaped error
+      // Given - acquisition succeeds, the METHOD throws an acquisition-shaped error
       const service = createFakeService();
       service.acquire.mockResolvedValue({ release: service.release });
       registerSemaphoreServiceGetter(() => service as never);
@@ -208,7 +208,7 @@ describe('@WithSemaphore decorator', () => {
         }
       }
 
-      // When/Then — the method's own error surfaces; skip-policy must not eat it
+      // When/Then - the method's own error surfaces; skip-policy must not eat it
       await expect(new Worker().work()).rejects.toThrow(SemaphoreAcquisitionError);
       expect(service.release).toHaveBeenCalledTimes(1);
     });
@@ -216,7 +216,7 @@ describe('@WithSemaphore decorator', () => {
 
   describe('adversarial: policy totality and cross-copy errors', () => {
     it('should fall back to the ORIGINAL error when a custom policy returns a non-Error (never `throw undefined`)', async () => {
-      // Given — a policy written as a logger, returning nothing
+      // Given - a policy written as a logger, returning nothing
       registerSemaphoreServiceGetter(() => ({ acquire: vi.fn().mockRejectedValue(new SemaphoreAcquisitionError('renders', 'exhausted')) }) as never);
       class Worker {
         @WithSemaphore({ key: 'renders', permits: 1, onUnavailable: (() => undefined) as never })
@@ -225,12 +225,12 @@ describe('@WithSemaphore decorator', () => {
         }
       }
 
-      // When/Then — the acquisition error surfaces, not `undefined`
+      // When/Then - the acquisition error surfaces, not `undefined`
       await expect(new Worker().work()).rejects.toThrow(SemaphoreAcquisitionError);
     });
 
     it('should apply the policy to a CROSS-COPY acquisition error (code match, not instanceof)', async () => {
-      // Given — the service was loaded from the OTHER module copy: same
+      // Given - the service was loaded from the OTHER module copy: same
       // shape and code, different class identity
       const foreignError = Object.assign(new Error('Failed to acquire semaphore permit for "renders": exhausted'), { code: 'SEMAPHORE_ACQUISITION_FAILED' });
       registerSemaphoreServiceGetter(() => ({ acquire: vi.fn().mockRejectedValue(foreignError) }) as never);
@@ -243,7 +243,7 @@ describe('@WithSemaphore decorator', () => {
         }
       }
 
-      // When/Then — skip engages instead of a raw rethrow through a 'skip' cron
+      // When/Then - skip engages instead of a raw rethrow through a 'skip' cron
       expect(await new Worker().work()).toBeUndefined();
       expect(body).not.toHaveBeenCalled();
     });
@@ -273,11 +273,11 @@ describe('@WithSemaphore decorator', () => {
         }
       }
 
-      // When — object interpolation
+      // When - object interpolation
       await new Worker().run({ id: 1 });
       await new Worker().run({ id: 2 });
 
-      // Then — both calls collapsed onto one key
+      // Then - both calls collapsed onto one key
       expect(service.acquire).toHaveBeenNthCalledWith(1, 'export:[object Object]', 1, expect.any(Object));
       expect(service.acquire).toHaveBeenNthCalledWith(2, 'export:[object Object]', 1, expect.any(Object));
     });
@@ -299,8 +299,8 @@ describe('@WithSemaphore decorator', () => {
       expect(Reflect.getMetadata(WITH_SEMAPHORE_OPTIONS, wrapper)).toEqual({ key: 'renders', permits: 4 });
     });
 
-    it('should carry metadata stamped by decorators applied before it — @Cron below @WithSemaphore must not silently unregister the job', async () => {
-      // Given — a method already stamped by an earlier decorator
+    it('should carry metadata stamped by decorators applied before it - @Cron below @WithSemaphore must not silently unregister the job', async () => {
+      // Given - a method already stamped by an earlier decorator
       const CRON_METADATA = 'test:schedule-expression';
       class Worker {
         async job(): Promise<string> {
@@ -314,7 +314,7 @@ describe('@WithSemaphore decorator', () => {
       WithSemaphore({ key: 'jobs', permits: 1 })(Worker.prototype, 'job', descriptor);
       Object.defineProperty(Worker.prototype, 'job', descriptor);
 
-      // Then — the wrapper carries the earlier decorator's metadata and still
+      // Then - the wrapper carries the earlier decorator's metadata and still
       // runs fail-open without a service
       const wrapper = Worker.prototype.job;
       expect(Reflect.getMetadata(CRON_METADATA, wrapper)).toBe('0 3 * * *');
@@ -324,12 +324,12 @@ describe('@WithSemaphore decorator', () => {
 
   describe('dual-package safety', () => {
     it('should share the service getter with a second copy of the decorator module', async () => {
-      // Given — a second, independent module instance (the ?copy query forces
+      // Given - a second, independent module instance (the ?copy query forces
       // Vite to instantiate it again), standing in for the CJS/ESM pair.
       const service = createFakeService();
       registerSemaphoreServiceGetter(() => service as never);
 
-      // When — the OTHER copy defines a decorated class
+      // When - the OTHER copy defines a decorated class
       const secondCopy: typeof import('../../src/semaphore/api/decorators/with-semaphore.decorator') = await import('../../src/semaphore/api/decorators/with-semaphore.decorator?copy=b' as string);
       class Worker {
         async work(): Promise<string> {
@@ -340,7 +340,7 @@ describe('@WithSemaphore decorator', () => {
       secondCopy.WithSemaphore({ key: 'dual', permits: 1 })(Worker.prototype, 'work', descriptor);
       Object.defineProperty(Worker.prototype, 'work', descriptor);
 
-      // Then — the copy sees the getter registered through THIS module
+      // Then - the copy sees the getter registered through THIS module
       expect(secondCopy.WithSemaphore).not.toBe(WithSemaphore);
       expect(await new Worker().work()).toBe('ok');
       expect(service.acquire).toHaveBeenCalledWith('dual', 1, expect.any(Object));

@@ -15,7 +15,7 @@ import { SpanWrapper } from '../../domain/value-objects/span-wrapper.vo';
 import type { ISpan } from '../ports/span.port';
 import type { ITracingService } from '../ports/tracing-service.port';
 
-// Type-only references to the SDK packages — erased at compile time, so the
+// Type-only references to the SDK packages - erased at compile time, so the
 // only RUNTIME OpenTelemetry import of this file is `@opentelemetry/api`.
 // The SDK itself is loaded via dynamic import() exclusively on the
 // standalone-provider path (see loadSdk).
@@ -38,7 +38,7 @@ type OwnTracerProvider = InstanceType<SdkTraceNode['NodeTracerProvider']>;
 
 // Slot the OpenTelemetry API uses for global registrations
 // (trace/context/propagation/diag). Checking `.trace` on it is the reliable
-// way to know whether the application registered a tracer provider —
+// way to know whether the application registered a tracer provider -
 // constructor-name checks break under minification.
 const OTEL_API_GLOBAL_KEY = Symbol.for('opentelemetry.js.api.1');
 
@@ -70,7 +70,7 @@ export class TracingService implements ITracingService, OnModuleInit, OnModuleDe
     if (mode !== 'external') {
       if (this.hasExternalGlobalProvider()) {
         if (mode === 'standalone') {
-          this.logger.warn("provider: 'standalone' requested, but a global OpenTelemetry tracer provider is already registered — using it instead. The plugin never overrides an application provider.");
+          this.logger.warn("provider: 'standalone' requested, but a global OpenTelemetry tracer provider is already registered - using it instead. The plugin never overrides an application provider.");
         }
       } else {
         await this.setupOwnProvider(mode);
@@ -91,7 +91,7 @@ export class TracingService implements ITracingService, OnModuleInit, OnModuleDe
 
     // Span export can fail or hang at shutdown if the collector is down (e.g.
     // in tests or with an unreachable OTLP endpoint). A best-effort flush must
-    // not take down — or even noticeably slow down — application shutdown, so
+    // not take down - or even noticeably slow down - application shutdown, so
     // race the provider shutdown against a short timeout and swallow failures.
     const shutdownTimeoutMs = 2_000;
     try {
@@ -132,12 +132,12 @@ export class TracingService implements ITracingService, OnModuleInit, OnModuleDe
       ...options.attributes,
     };
 
-    // Apply spans.includeArgs policy — strip args if disabled
+    // Apply spans.includeArgs policy - strip args if disabled
     if (this.config.spans?.includeArgs === false) {
       delete attributes['db.statement.args'];
     }
 
-    // Apply spans.includeResult policy — strip result if disabled
+    // Apply spans.includeResult policy - strip result if disabled
     if (this.config.spans?.includeResult === false) {
       delete attributes['db.statement.result'];
     }
@@ -234,7 +234,7 @@ export class TracingService implements ITracingService, OnModuleInit, OnModuleDe
       if (mode === 'standalone') {
         throw new TracingInitializationError(error instanceof Error ? error : undefined);
       }
-      this.logger.log('OpenTelemetry SDK packages are not available — tracing runs in no-op mode. Register a tracer provider in your application (or install @opentelemetry/sdk-trace-node and related packages) to activate spans.');
+      this.logger.log('OpenTelemetry SDK packages are not available - tracing runs in no-op mode. Register a tracer provider in your application (or install @opentelemetry/sdk-trace-node and related packages) to activate spans.');
       return;
     }
 
@@ -270,7 +270,7 @@ export class TracingService implements ITracingService, OnModuleInit, OnModuleDe
 
   /**
    * Wraps every Redis command executed through RedisX drivers in a CLIENT
-   * span (`redis.<COMMAND>`). Native — no external instrumentation package
+   * span (`redis.<COMMAND>`). Native - no external instrumentation package
    * needed, and it covers runtime-created clients (e.g. the Pub/Sub
    * subscriber) because the hook is installed at the client-manager level.
    */
@@ -290,7 +290,7 @@ export class TracingService implements ITracingService, OnModuleInit, OnModuleDe
    * Builds cheap per-command probes that report whether an external
    * OpenTelemetry Redis instrumentation is currently active. OTel
    * instrumentations patch driver methods via shimmer, which marks the
-   * wrapper function with `__wrapped = true` — and unmarks it on disable().
+   * wrapper function with `__wrapped = true` - and unmarks it on disable().
    */
   private setupInstrumentationProbes(): void {
     const probes: Array<() => boolean> = [];
@@ -304,11 +304,11 @@ export class TracingService implements ITracingService, OnModuleInit, OnModuleDe
         probes.push(() => (proto['sendCommand'] as { __wrapped?: boolean } | undefined)?.__wrapped === true);
       }
     } catch {
-      // driver not installed — nothing to probe
+      // driver not installed - nothing to probe
     }
 
     // node-redis: @opentelemetry/instrumentation-redis-4 patches the client
-    // class inside @redis/client (internal path — the same file it patches)
+    // class inside @redis/client (internal path - the same file it patches)
     try {
       const mod = appRequire('@redis/client/dist/lib/client/index.js') as { default?: { prototype?: Record<string, unknown> } };
       const proto = mod?.default?.prototype;
@@ -316,7 +316,7 @@ export class TracingService implements ITracingService, OnModuleInit, OnModuleDe
         probes.push(() => ['sendCommand', 'commandsExecutor'].some((method) => (proto[method] as { __wrapped?: boolean } | undefined)?.__wrapped === true));
       }
     } catch {
-      // driver not installed — nothing to probe
+      // driver not installed - nothing to probe
     }
 
     this.instrumentationProbes = probes;
@@ -335,9 +335,9 @@ export class TracingService implements ITracingService, OnModuleInit, OnModuleDe
     if (active !== this.externallyInstrumented) {
       this.externallyInstrumented = active;
       if (active) {
-        this.logger.log("External OpenTelemetry Redis instrumentation detected — pausing the native command hook to avoid duplicate spans. Set traceRedisCommands: 'force' to emit both.");
+        this.logger.log("External OpenTelemetry Redis instrumentation detected - pausing the native command hook to avoid duplicate spans. Set traceRedisCommands: 'force' to emit both.");
       } else {
-        this.logger.log('External OpenTelemetry Redis instrumentation is no longer active — the native command hook resumed emitting redis.* spans.');
+        this.logger.log('External OpenTelemetry Redis instrumentation is no longer active - the native command hook resumed emitting redis.* spans.');
       }
     }
     return active;
@@ -349,7 +349,7 @@ export class TracingService implements ITracingService, OnModuleInit, OnModuleDe
     }
 
     // An active external instrumentation already emits a span for this
-    // command — run it untouched instead of duplicating.
+    // command - run it untouched instead of duplicating.
     if (this.isExternallyInstrumented()) {
       return exec();
     }
@@ -456,7 +456,7 @@ export class TracingService implements ITracingService, OnModuleInit, OnModuleDe
   private createSampler(base: SdkTraceBase): InstanceType<SdkTraceBase['AlwaysOnSampler']> | InstanceType<SdkTraceBase['AlwaysOffSampler']> | InstanceType<SdkTraceBase['TraceIdRatioBasedSampler']> | InstanceType<SdkTraceBase['ParentBasedSampler']> {
     // Default is parent-based (OTel SDK convention, parentbased_always_on):
     // with 'always', an app that head-samples its request traces would still
-    // get RedisX spans for UNsampled requests — orphaned spans whose parents
+    // get RedisX spans for UNsampled requests - orphaned spans whose parents
     // were dropped upstream.
     const strategy = this.config.sampling?.strategy ?? 'parent';
     const ratio = this.config.sampling?.ratio ?? 1.0;

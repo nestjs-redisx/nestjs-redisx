@@ -37,7 +37,7 @@ describe('SemaphorePermit', () => {
       expect(store.release).toHaveBeenCalledWith('_sem:renders', 'permit-1');
     });
 
-    it('should be idempotent — a second release is a no-op', async () => {
+    it('should be idempotent - a second release is a no-op', async () => {
       // Given
       await permit.release();
 
@@ -48,8 +48,8 @@ describe('SemaphorePermit', () => {
       expect(store.release).toHaveBeenCalledTimes(1);
     });
 
-    it('should throw SemaphorePermitNotHeldError when the seat was already lost — and still not retry on a repeat call', async () => {
-      // Given — the permit expired on the store
+    it('should throw SemaphorePermitNotHeldError when the seat was already lost - and still not retry on a repeat call', async () => {
+      // Given - the permit expired on the store
       store.release.mockResolvedValue(false);
 
       // When/Then
@@ -136,7 +136,7 @@ describe('SemaphorePermit', () => {
       // When
       await vi.advanceTimersByTimeAsync(2_100);
 
-      // Then — two renewal rounds with the original TTL
+      // Then - two renewal rounds with the original TTL
       expect(store.extend).toHaveBeenCalledTimes(2);
       expect(store.extend).toHaveBeenCalledWith('_sem:renders', 'permit-1', 30_000);
     });
@@ -150,37 +150,37 @@ describe('SemaphorePermit', () => {
       // When
       await vi.advanceTimersByTimeAsync(3_100);
 
-      // Then — one attempt, then renewal stops
+      // Then - one attempt, then renewal stops
       expect(store.extend).toHaveBeenCalledTimes(1);
       expect(permit.isAutoRenewing).toBe(false);
     });
 
     it('should KEEP retrying through transient store errors while the lease is alive (a blip must not strand a long job)', async () => {
-      // Given — the store is briefly unreachable, the permit itself is fine
+      // Given - the store is briefly unreachable, the permit itself is fine
       vi.useFakeTimers();
       store.extend.mockRejectedValueOnce(new Error('connection reset')).mockRejectedValueOnce(new Error('connection reset')).mockResolvedValue(true);
       permit.startAutoRenew(1_000);
 
-      // When — three renewal rounds
+      // When - three renewal rounds
       await vi.advanceTimersByTimeAsync(3_100);
 
-      // Then — still renewing (recovered on the third attempt)
+      // Then - still renewing (recovered on the third attempt)
       expect(store.extend).toHaveBeenCalledTimes(3);
       expect(permit.isAutoRenewing).toBe(true);
     });
 
-    it('should stop retrying once the lease lapsed during the outage (crash bound) — and survive a NULLISH rejection', async () => {
-      // Given — a short lease and a store that rejects with undefined
+    it('should stop retrying once the lease lapsed during the outage (crash bound) - and survive a NULLISH rejection', async () => {
+      // Given - a short lease and a store that rejects with undefined
       vi.useFakeTimers();
       const shortPermit = new SemaphorePermit('_sem:k', 'p', 50, store);
       // eslint-disable-next-line prefer-promise-reject-errors
       store.extend.mockImplementation(() => Promise.reject(undefined));
       shortPermit.startAutoRenew(40);
 
-      // When — past the lease expiry
+      // When - past the lease expiry
       await vi.advanceTimersByTimeAsync(130);
 
-      // Then — no unhandled TypeError from the containment, renewal stopped
+      // Then - no unhandled TypeError from the containment, renewal stopped
       expect(shortPermit.isAutoRenewing).toBe(false);
       shortPermit.stopAutoRenew();
     });

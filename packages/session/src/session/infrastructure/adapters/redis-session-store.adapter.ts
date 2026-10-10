@@ -33,18 +33,18 @@ type ScriptName = keyof typeof SCRIPTS;
  * Redis-based session store.
  *
  * Keyspace (default prefix `sess:`):
- * - `sess:{<sid>}` — middleware payload as JSON (hash-tagged with its metadata)
- * - `sess:{<sid>}:meta` — metadata hash (userId, ip, userAgent, timestamps)
- * - `sess:user:<userId>` — per-user ZSET `sid -> expiresAtMs`
- * - `sess:index` — global ZSET `sid -> expiresAtMs`
+ * - `sess:{<sid>}` - middleware payload as JSON (hash-tagged with its metadata)
+ * - `sess:{<sid>}:meta` - metadata hash (userId, ip, userAgent, timestamps)
+ * - `sess:user:<userId>` - per-user ZSET `sid -> expiresAtMs`
+ * - `sess:index` - global ZSET `sid -> expiresAtMs`
  *
  * Payload+metadata operations are atomic Lua on one cluster slot; index
  * operations are single-key (cluster-safe) and always go through the reserve
  * script, which also keeps the index KEY's TTL at least as long as its
  * longest-lived refresh. Cross-key sequences (eviction, index cleanup after
- * destroy) are best-effort — stale index entries are swept lazily by score.
+ * destroy) are best-effort - stale index entries are swept lazily by score.
  *
- * Time is obtained here via Date.now() and passed into the scripts as ARGV —
+ * Time is obtained here via Date.now() and passed into the scripts as ARGV -
  * the Lua never reads time itself.
  */
 @Injectable()
@@ -135,7 +135,7 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
         result = (await this.runScript('set', this.sessionKeys(sessionId), [payload, ttlMs, now, userId ?? '', cap])) as Array<number | string>;
       } catch (error) {
         // Compensation: a reservation without a session must not burn a seat.
-        // Guarded by a liveness probe — on a failed RE-SAVE (or a timed-out
+        // Guarded by a liveness probe - on a failed RE-SAVE (or a timed-out
         // write that actually landed) the entry belongs to a LIVE session and
         // must stay indexed, or the session becomes unrevocable.
         if (reserved && userId !== undefined) {
@@ -269,7 +269,7 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
   // ---------------------------------------------------------------------------
 
   /**
-   * An empty sid — or one starting with `}` — produces an EMPTY cluster hash
+   * An empty sid - or one starting with `}` - produces an EMPTY cluster hash
    * tag, which makes Redis hash the whole key: payload and metadata would land
    * on different slots and every multi-key script would fail with CROSSSLOT.
    */
@@ -346,7 +346,7 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
 
   /**
    * Extractor results are normalized: only non-empty strings (and finite
-   * numbers, stringified) count as a user identity — an empty string would
+   * numbers, stringified) count as a user identity - an empty string would
    * index sessions under `sess:user:` and orphan them forever.
    */
   private extractUserId(sessionId: string, session: unknown): string | undefined {
@@ -367,7 +367,7 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
   }
 
   /**
-   * Release a reservation ONLY when no session actually exists for the sid —
+   * Release a reservation ONLY when no session actually exists for the sid -
    * blind compensation would un-index a live session after a failed re-save
    * or a timed-out write that landed.
    */
@@ -392,7 +392,7 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
     try {
       const userId = this.extractUserIdSafe(payload);
       if (userId === undefined) {
-        return; // genuinely anonymous — nothing to repair
+        return; // genuinely anonymous - nothing to repair
       }
       await this.driver.hset(this.metaKey(sessionId), 'userId', userId);
       const expiresAt = Number(await this.driver.hget(this.metaKey(sessionId), 'expiresAt'));
@@ -415,7 +415,7 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
     }
   }
 
-  /** Index write/refresh — always via Lua (sweep + score + index-key TTL). */
+  /** Index write/refresh - always via Lua (sweep + score + index-key TTL). */
   private reserve(indexKey: string, sessionId: string, expiresAt: number, now: number, max: number, reject: boolean): Promise<unknown> {
     return this.runScript('reserve', [indexKey], [sessionId, expiresAt, now, max, reject ? 1 : 0]);
   }
@@ -447,7 +447,7 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
   /**
    * Remove payload+metadata and clean both index entries.
    * When the metadata (hence the owner) was lost, the owner is re-derived from
-   * the payload the script returned — otherwise the per-user index would keep
+   * the payload the script returned - otherwise the per-user index would keep
    * a phantom seat that no public API could ever clean.
    */
   private async removeSession(sessionId: string): Promise<{ existed: boolean; userId?: string }> {
@@ -509,7 +509,7 @@ export class RedisSessionStoreAdapter implements ISessionStore, OnModuleInit {
     }
   }
 
-  /** Metrics are observability — a broken metrics service must never fail a request. */
+  /** Metrics are observability - a broken metrics service must never fail a request. */
   private countMetric(name: string, labels?: Record<string, string>): void {
     try {
       if (labels) {

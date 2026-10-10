@@ -60,7 +60,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
    * outer race that bounds the whole dispatch (including the sentinel
    * pool-lease wait). OPT-IN only (no default): a default would break long
    * blocking commands for existing deployments. A deadline on a command
-   * already on the wire only abandons the local wait — it may still execute
+   * already on the wire only abandons the local wait - it may still execute
    * server-side.
    */
   private readonly commandTimeout: number | undefined;
@@ -69,7 +69,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
    * True once an initial connect has succeeded. @redis/client applies the
    * reconnect strategy to the INITIAL connection too, so an unconditional
    * retry-forever default would make `connect()` never settle with Redis
-   * down at bootstrap — NestFactory.create() would hang with no error.
+   * down at bootstrap - NestFactory.create() would hang with no error.
    * The default strategy is bounded until the first success and retries
    * forever afterwards.
    */
@@ -78,7 +78,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
   /**
    * The lazily loaded `redis` (node-redis) library. Loaded in the constructor
    * (NOT via a static import) so the package stays a true optional dependency
-   * — see `driver-loader.ts`. Construction fails fast with a clear error when
+   * - see `driver-loader.ts`. Construction fails fast with a clear error when
    * `redis` is not installed.
    */
   private readonly lib: INodeRedisLib;
@@ -144,7 +144,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
       // Bounded: a graceful QUIT/close landing in a reconnect window can
       // PEND FOREVER in @redis/client (the queued QUIT has no timeout, and
       // the reconnect loop exits without flushing the queue once quit
-      // flipped the open flag) — which would hang closeAll and the whole
+      // flipped the open flag) - which would hang closeAll and the whole
       // application shutdown. On timeout, fall through to a force close.
       const graceful = this.isSentinel
         ? // Sentinel uses close() instead of quit()
@@ -165,7 +165,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
   /**
    * Rejects when the graceful close outlives its deadline (commandTimeout,
    * else 5s). `||`, not `??`: `commandTimeout: 0` means "no per-command
-   * deadline" — the CLOSE bound must never be zero (a 0 ms race turns
+   * deadline" - the CLOSE bound must never be zero (a 0 ms race turns
    * every shutdown into a force disconnect) and never absent (an unbounded
    * close is the shutdown-hang bug this exists to prevent).
    */
@@ -207,7 +207,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
       const dispatch = (): Promise<unknown> => {
         if (this.isSentinel) {
           // Sentinel uses .use() to get a client from the pool. The pooled
-          // client's signature is sendCommand(isReadonly, args, options) —
+          // client's signature is sendCommand(isReadonly, args, options) -
           // NOT the single-client (args, options) shape; the wrong shape
           // put the command array into the isReadonly slot and every
           // command failed.
@@ -241,7 +241,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
   /**
    * Race a dispatched command against the configured `commandTimeout`.
    * The rejection is wrapped into CommandError (with the command name) by
-   * the caller; the deadline only abandons the local wait — the command may
+   * the caller; the deadline only abandons the local wait - the command may
    * still execute server-side.
    */
   private async withCommandTimeout(execution: Promise<unknown>): Promise<unknown> {
@@ -303,7 +303,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
    * messages are re-emitted as DriverEvent.MESSAGE / PMESSAGE.
    *
    * Supported on single-node clients (use a dedicated connection); cluster and
-   * sentinel pub/sub are not supported by this adapter — use ioredis for those
+   * sentinel pub/sub are not supported by this adapter - use ioredis for those
    * topologies.
    */
   override async subscribe(...channels: string[]): Promise<void> {
@@ -602,7 +602,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
     };
 
     // NOTE: `sentinelOptions.sentinelRetryStrategy` is deliberately NOT
-    // mapped here — @redis/client hardcodes `reconnectStrategy: false` on
+    // mapped here - @redis/client hardcodes `reconnectStrategy: false` on
     // every sentinel-monitor client it creates (a failed sentinel rotates
     // to the next one instead of reconnecting), overriding anything set in
     // these options. The option is ioredis-only; see the type's JSDoc.
@@ -640,13 +640,13 @@ export class NodeRedisAdapter extends BaseRedisDriver {
       // A failed connect still leaves the instance live: its finally-block
       // installs the scan interval regardless, and partially-connected
       // internal clients stay open. `this.client` is not assigned yet, so
-      // doConnect's catch cannot clean this up — destroy it here or every
+      // doConnect's catch cannot clean this up - destroy it here or every
       // failed bootstrap attempt leaks an interval + client set.
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (sentinel as any).destroy?.();
       } catch {
-        // Best effort — the original connect error is what matters.
+        // Best effort - the original connect error is what matters.
       }
       throw error;
     }
@@ -663,7 +663,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
       // destroy() await the same internal connect/reconfigure promise, so a
       // wedged reconfigure (unreachable announced master) would otherwise
       // hang shutdown forever right after the graceful close timed out for
-      // the same reason. Bounded and best-effort — on timeout we proceed
+      // the same reason. Bounded and best-effort - on timeout we proceed
       // and accept a leaked handle over a wedged application shutdown.
       let force: Promise<unknown> | undefined;
       if (this.isSentinel && this.client) {
@@ -694,7 +694,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
         return false;
       }
       // After the first success, never give up: @redis/client treats a
-      // `false` return as PERMANENT — the client closes and no later
+      // `false` return as PERMANENT - the client closes and no later
       // connect() revives it, so a finite bound turned any outage longer
       // than the backoff sum (~2.5 min) into a dead client until process
       // restart. Parity with ioredis, whose default also retries forever.
@@ -805,7 +805,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
 
     const cmd = command.toUpperCase();
 
-    // EVAL/EVALSHA: args = [script/sha, numkeys, key1..keyN, arg1..argM] —
+    // EVAL/EVALSHA: args = [script/sha, numkeys, key1..keyN, arg1..argM] -
     // prefix exactly the declared key positions. ioredis prefixes script
     // keys through its native keyPrefix, so omitting them here would make
     // Lua scripts and plain commands operate on DIFFERENT keys under
@@ -914,7 +914,7 @@ export class NodeRedisAdapter extends BaseRedisDriver {
 }
 
 /**
- * v5 throws MultiErrorReply — carrying every command's reply — when ANY
+ * v5 throws MultiErrorReply - carrying every command's reply - when ANY
  * command in the batch errored. Map it back to the ioredis-style per-slot
  * [error|null, result] contract instead of collapsing the whole batch
  * (successful replies included) into one error tuple.
@@ -949,7 +949,7 @@ class NodeRedisPipelineAdapter implements IPipeline {
     for (const { command, args } of this.commands) {
       const commandArgs = [command, ...args.map(String)];
       if (this.isCluster) {
-        // Cluster multi signature: addCommand(firstKey, isReadonly, args) —
+        // Cluster multi signature: addCommand(firstKey, isReadonly, args) -
         // the single-client single-argument shape leaves args undefined and
         // the whole batch rejects at exec. The first argument after the
         // command name is the (already prefixed) key for slot routing.
@@ -1114,7 +1114,7 @@ class NodeRedisSentinelPipelineAdapter implements IPipeline {
       const multi = client.multi();
 
       for (const { command, args } of this.commands) {
-        // Sentinel multi signature: addCommand(isReadonly, args) — the
+        // Sentinel multi signature: addCommand(isReadonly, args) - the
         // single-argument shape leaves args undefined and exec rejects.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (multi as any).addCommand(false, [command, ...args.map(String)]);

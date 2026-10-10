@@ -42,7 +42,7 @@ describeIntegration('RedisModule.forRoot (sync) + plugin', () => {
 
     const moduleRef = await Test.createTestingModule({
       imports: [
-        // Synchronous forRoot with a plugin — must bootstrap without a DI error.
+        // Synchronous forRoot with a plugin - must bootstrap without a DI error.
         RedisModule.forRoot({
           clients: { type: 'single', host: REDIS_HOST, port: REDIS_PORT, db: REDIS_DB },
           plugins: [new CachePlugin({ l1: { enabled: false } })],

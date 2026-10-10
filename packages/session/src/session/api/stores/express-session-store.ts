@@ -31,7 +31,7 @@ function isModuleNotFound(error: unknown): boolean {
  * Loads `express-session` lazily so the package stays an optional peer:
  * fastify-only applications never pay for it.
  *
- * `require` is tried first — it also covers Jest, whose CJS test VM cannot
+ * `require` is tried first - it also covers Jest, whose CJS test VM cannot
  * host a dynamic `import()` callback. Pure-ESM runtimes (where `require` is
  * unavailable) fall back to dynamic `import()`.
  */
@@ -43,7 +43,7 @@ async function loadExpressSession(): Promise<ExpressSessionModule> {
     if (isModuleNotFound(error)) {
       throw new SessionMiddlewareMissingError('express-session', error as Error);
     }
-    // `require` unavailable — fall through to dynamic import.
+    // `require` unavailable - fall through to dynamic import.
   }
   try {
     return normalizeModule((await import('express-session')) as ExpressSessionModule & { default?: ExpressSessionModule });
@@ -54,7 +54,7 @@ async function loadExpressSession(): Promise<ExpressSessionModule> {
 
 /**
  * Builds an `express-session`-compatible `Store` over the plugin's session
- * store. Drop-in replacement for `connect-redis` — with the plugin's
+ * store. Drop-in replacement for `connect-redis` - with the plugin's
  * per-user indexing, seat limits, and absolute lifetime cap on top.
  *
  * @param store - The plugin's session store (`@Inject(SESSION_STORE)`)
@@ -89,7 +89,7 @@ export async function toExpressStore(store: ISessionStore, options: IExpressSess
     set(sid: string, session: SessionData, callback?: (err?: unknown) => void): void {
       const ttlMs = ttlMsFromSession(session, Date.now(), options.ttlMs);
       if (ttlMs !== undefined && ttlMs <= 0) {
-        // The cookie already expired — an expired session must not be written back.
+        // The cookie already expired - an expired session must not be written back.
         store.destroy(sid).then(
           () => invokeCallback(callback, null),
           (error: unknown) => invokeCallback(callback, error),
@@ -112,7 +112,7 @@ export async function toExpressStore(store: ISessionStore, options: IExpressSess
     override touch(sid: string, session: SessionData, callback?: (err?: unknown) => void): void {
       const ttlMs = ttlMsFromSession(session, Date.now(), options.ttlMs);
       if (ttlMs !== undefined && ttlMs <= 0) {
-        // The cookie already expired — end the session instead of erroring
+        // The cookie already expired - end the session instead of erroring
         // inside express-session's response end path.
         store.destroy(sid).then(
           () => invokeCallback(callback, null),

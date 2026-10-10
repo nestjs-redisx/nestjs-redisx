@@ -5,7 +5,7 @@
  * open question was whether tags / SWR / stale-if-error should fail-fast in
  * l1-only. This suite settles it with evidence:
  *
- *  - l1-only is single-instance for EVERYTHING — basic get/set is per-process,
+ *  - l1-only is single-instance for EVERYTHING - basic get/set is per-process,
  *    and tags are per-process in EXACTLY the same way. So allowing tags is
  *    consistent with allowing get/set; forbidding tags while allowing get/set
  *    would be incoherent (both are local in-memory ops, neither is shared).
@@ -25,7 +25,7 @@ import { CACHE_SERVICE } from '../../src/shared/constants';
 import { CacheConfigError } from '../../src/shared/errors';
 import type { ICachePluginOptions } from '../../src/shared/types';
 
-const DEAD_PORT = 6399; // nothing listens here — no real Redis is ever reached
+const DEAD_PORT = 6399; // nothing listens here - no real Redis is ever reached
 
 async function bootL1Only(extra: ICachePluginOptions = {}): Promise<TestingModule> {
   const app = await Test.createTestingModule({
@@ -40,7 +40,7 @@ async function bootL1Only(extra: ICachePluginOptions = {}): Promise<TestingModul
   return app;
 }
 
-describe('l1-only — fail-vs-work boundary', () => {
+describe('l1-only - fail-vs-work boundary', () => {
   it('is single-instance for EVERYTHING: two apps share neither values NOR tag invalidation (so tags are not a special footgun)', async () => {
     const a = await bootL1Only();
     const b = await bootL1Only();
@@ -55,7 +55,7 @@ describe('l1-only — fail-vs-work boundary', () => {
       expect(await cacheB.get('k')).toBe('B'); // independent value, not shared
 
       // ...and tag invalidation is per-instance in the SAME way: A invalidating
-      // its tag clears only A. B is untouched — exactly like get/set. This is
+      // its tag clears only A. B is untouched - exactly like get/set. This is
       // consistent behavior, not tags "silently broken".
       expect(await cacheA.invalidateTag('t')).toBe(1);
       expect(await cacheA.get('k')).toBeNull();
@@ -96,7 +96,7 @@ describe('l1-only — fail-vs-work boundary', () => {
 
   it('FAILS FAST: AMQP event invalidation depends on a broker, so it is rejected at bootstrap', async () => {
     // Given l1-only combined with an AMQP invalidation source
-    // When / Then — the module fails to build with a clear config error
+    // When / Then - the module fails to build with a clear config error
     await expect(bootL1Only({ invalidation: { source: 'amqp' } })).rejects.toThrow(CacheConfigError);
   });
 });

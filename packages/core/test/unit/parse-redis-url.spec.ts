@@ -66,7 +66,7 @@ describe('normalizeConnectionConfig', () => {
   });
 
   it('lets explicit fields override the url', () => {
-    // Given — explicit port/db win over the URL's
+    // Given - explicit port/db win over the URL's
     const config: ISingleConnectionConfig = { url: 'redis://h:6379/0', port: 7000, db: 5 };
 
     // When

@@ -32,7 +32,7 @@ describe('TracingService without the OpenTelemetry SDK installed', () => {
     // When
     await service.onModuleInit();
 
-    // Then — no throw, no own provider, one informational line
+    // Then - no throw, no own provider, one informational line
     expect((service as any).provider).toBeNull();
     expect(logSpy).toHaveBeenCalledTimes(1);
     expect(logSpy.mock.calls[0][0]).toContain('no-op');
@@ -45,7 +45,7 @@ describe('TracingService without the OpenTelemetry SDK installed', () => {
   });
 
   it("should throw TracingInitializationError in explicit 'standalone' mode", async () => {
-    // Given — the user explicitly demanded an own provider
+    // Given - the user explicitly demanded an own provider
     const service = new TracingService({ ...baseConfig, provider: 'standalone' });
 
     // When / Then
@@ -56,7 +56,7 @@ describe('TracingService without the OpenTelemetry SDK installed', () => {
     // Given
     const service = new TracingService({ ...baseConfig, provider: 'external' });
 
-    // When / Then — external mode must not even try to load the SDK
+    // When / Then - external mode must not even try to load the SDK
     await expect(service.onModuleInit()).resolves.toBeUndefined();
     expect((service as any).provider).toBeNull();
   });

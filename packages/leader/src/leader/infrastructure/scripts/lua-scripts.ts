@@ -14,14 +14,14 @@
  * The re-claim branch matters: after an unconfirmed renewal (store error) the
  * service demotes itself locally while the key may still hold THIS instance's
  * id, and a restart with a stable `instanceId` leaves a stale own lease
- * behind. A plain SET NX can never win against our own key — the group would
+ * behind. A plain SET NX can never win against our own key - the group would
  * stay leaderless until the lease expired. Re-claiming is CAS on our own id,
  * so it can never steal another instance's seat.
  *
  * ORDER MATTERS: the own-id check runs BEFORE the SET. Redis 7.x checks the
  * denyoom flag per redis.call, so under maxmemory pressure a leading SET
  * aborts the whole script even when the key already holds our id and only
- * the OOM-safe GET+PEXPIRE re-claim would actually run — forfeiting a
+ * the OOM-safe GET+PEXPIRE re-claim would actually run - forfeiting a
  * leadership the renew script (GET+PEXPIRE, OOM-immune) would have kept.
  * With the re-claim first, an OOM episode only blocks FRESH acquires (a
  * loud, contained error), never the re-seating of an existing own lease.

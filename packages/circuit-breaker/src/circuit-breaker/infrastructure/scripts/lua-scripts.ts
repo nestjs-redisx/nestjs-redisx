@@ -6,7 +6,7 @@
  *
  * Semantics mirror the pure `CircuitBreakerState` one-to-one. The current time
  * (`now`, epoch ms) is supplied by the adapter via Date.now() and passed in
- * ARGV — the scripts NEVER read time themselves (exactly like sliding-window).
+ * ARGV - the scripts NEVER read time themselves (exactly like sliding-window).
  *
  * State storage (per circuit, all keys share a hash tag => same cluster slot):
  *  KEYS[1] = state hash    -> fields: state ('open'|'half-open'; absent = closed),
@@ -47,7 +47,7 @@ local ttl_ms = math.max(window_ms, open_ms, probe_timeout_ms) * 2 + 60000
 `;
 
 /**
- * CAN_REQUEST — apply the request rule (mutating) and return the decision.
+ * CAN_REQUEST - apply the request rule (mutating) and return the decision.
  * ARGV[8] = unique probe member id (used when a half-open slot is granted).
  *
  * Returns: {allowed(0/1), stateCode, failuresInWindow, halfOpenSuccesses, halfOpenInFlight}
@@ -94,7 +94,7 @@ return {1, 0, cnt, 0, 0}
 ).trim();
 
 /**
- * RECORD_SUCCESS — record a success (mutating) and return the snapshot.
+ * RECORD_SUCCESS - record a success (mutating) and return the snapshot.
  *
  * Returns: {stateCode, failuresInWindow, halfOpenSuccesses, halfOpenInFlight}
  */
@@ -138,7 +138,7 @@ end
 ).trim();
 
 /**
- * RECORD_FAILURE — record a failure (mutating) and return the snapshot.
+ * RECORD_FAILURE - record a failure (mutating) and return the snapshot.
  * ARGV[8] = unique failure member id (CLOSED window entry).
  *
  * Returns: {stateCode, failuresInWindow, halfOpenSuccesses, halfOpenInFlight}
@@ -181,7 +181,7 @@ return {0, cnt, 0, 0}
 ).trim();
 
 /**
- * GET_STATE — read the committed state WITHOUT mutating it.
+ * GET_STATE - read the committed state WITHOUT mutating it.
  * Does not flip OPEN -> HALF_OPEN and does not reclaim probes; counts use
  * exclusive lower bounds (strictly newer than the cutoff are IN).
  *

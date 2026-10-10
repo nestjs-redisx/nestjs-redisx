@@ -344,7 +344,7 @@ jobs:
         run: cd "$SMOKE_DIR" && npx vitest run --reporter=verbose
 
       # ---------------------------------------------------------------------
-      # ESM smoke: NestJS 12 is native ESM — consume every package through
+      # ESM smoke: NestJS 12 is native ESM - consume every package through
       # `import` from a "type": "module" project, exercising the dist/*.mjs
       # entries end-to-end (in-memory driver, no Redis service needed).
       # ---------------------------------------------------------------------
@@ -426,7 +426,7 @@ jobs:
           const buf = ser.serialize({ a: 1 });
           check('MsgpackSerializer works under ESM', ser.deserialize(buf).a === 1);
 
-          // A plugin on the in-memory driver — full Nest 12 DI boot, no Redis.
+          // A plugin on the in-memory driver - full Nest 12 DI boot, no Redis.
           const { Test } = await import('@nestjs/testing');
           const app = await Test.createTestingModule({
             imports: [mods.testing.RedisTestingModule.forRoot({ plugins: [new mods.cache.CachePlugin()] })],

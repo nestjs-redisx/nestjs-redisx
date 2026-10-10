@@ -35,7 +35,7 @@ async function withRawClient<T>(fn: (client: Redis) => Promise<T>): Promise<T> {
   }
 }
 
-describeIntegration('LocksPlugin — auto-renewal failure visibility', () => {
+describeIntegration('LocksPlugin - auto-renewal failure visibility', () => {
   let moduleRef: TestingModule;
   let lockService: ILockService;
 

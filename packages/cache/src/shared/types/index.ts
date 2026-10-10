@@ -6,8 +6,8 @@ export type { IContextProvider } from './context-provider.interface';
 
 /**
  * Cache deployment topology.
- * - `'l1-l2'` — L1 in-memory + L2 Redis (the default; needs a Redis connection).
- * - `'l1-only'` — run entirely in local process memory, with NO Redis.
+ * - `'l1-l2'` - L1 in-memory + L2 Redis (the default; needs a Redis connection).
+ * - `'l1-only'` - run entirely in local process memory, with NO Redis.
  */
 export type CacheMode = 'l1-l2' | 'l1-only';
 
@@ -24,9 +24,9 @@ export interface ICachePluginOptions {
   /**
    * Deployment topology for the cache.
    *
-   * - `'l1-l2'` (default) — L1 in-memory in front of L2 Redis. Requires a
+   * - `'l1-l2'` (default) - L1 in-memory in front of L2 Redis. Requires a
    *   reachable Redis connection; cross-instance sharing and invalidation.
-   * - `'l1-only'` — run the cache entirely in local process memory with NO
+   * - `'l1-only'` - run the cache entirely in local process memory with NO
    *   Redis. The L2 tier is served by an in-memory store that holds live
    *   object references, so each value is stored once and shared with L1 (no
    *   duplication). Tags, SWR, stale-if-error and singleflight all work, but
@@ -83,7 +83,7 @@ export interface ICachePluginOptions {
     enabled?: boolean;
     /**
      * Seconds to retain AND serve the value on loader errors, beyond the
-     * normal expiry (TTL + SWR staleTime). Always a finite number — for a
+     * normal expiry (TTL + SWR staleTime). Always a finite number - for a
      * "practically infinite" outage budget set an explicit large value
      * (e.g. 30 days): an explicit number keeps Redis memory bounded.
      * default: 86400 (24h)
@@ -92,7 +92,7 @@ export interface ICachePluginOptions {
     /**
      * Decides whether a given loader error qualifies for stale serving
      * (default: any error). Use it to EXCLUDE errors that mean the data is
-     * gone for good (404/410, revoked access) — serving stale forever on
+     * gone for good (404/410, revoked access) - serving stale forever on
      * those silently exposes dead data.
      */
     shouldServe?: (error: Error) => boolean;
@@ -120,7 +120,7 @@ export interface ICachePluginOptions {
     separator?: string; // default: ':'
     /**
      * Character validation for cache keys.
-     * - 'safe' (default): reject only empty/whitespace/control characters —
+     * - 'safe' (default): reject only empty/whitespace/control characters -
      *   Redis keys are binary-safe, so `/`, `?`, `=`, `%`, unicode, etc. are
      *   allowed (URL / path keys work out of the box).
      * - 'strict': allow only `[A-Za-z0-9-_:.]` (pre-1.9.2 behavior).
@@ -249,7 +249,7 @@ export interface ISwrEntry<T> {
    * Timestamp until which the value is physically retained for
    * stale-if-error serving (ms). Present only when staleIfError is enabled;
    * between expiresAt and keepUntil the value is used ONLY when the loader
-   * fails — on the success path this range behaves as a miss.
+   * fails - on the success path this range behaves as a miss.
    */
   keepUntil?: number;
 }

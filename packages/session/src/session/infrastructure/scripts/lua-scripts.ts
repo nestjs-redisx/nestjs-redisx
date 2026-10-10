@@ -2,10 +2,10 @@
  * Inline Lua scripts for the session store.
  *
  * Conventions (shared with the other plugins):
- * - Scripts NEVER read the clock — `now` always arrives via ARGV.
+ * - Scripts NEVER read the clock - `now` always arrives via ARGV.
  * - The payload key and metadata key share a hash tag (`{prefix+sid}` /
  *   `{prefix+sid}:meta`), so multi-key scripts stay on one cluster slot.
- * - Index scripts (`reserve`, `count`, `range`) touch exactly ONE key each —
+ * - Index scripts (`reserve`, `count`, `range`) touch exactly ONE key each -
  *   cluster-safe without hash tags.
  * - Missing replies are tested with `if not x` (never `== nil`): real Redis
  *   maps nil bulk replies to Lua `false`, and the idiom is portable to the
@@ -23,7 +23,7 @@
  * ARGV: payload JSON, ttlMs, nowMs, userId ('' = anonymous), capMs (0 = off)
  *
  * Returns `{created(0|1), expiresAt, prevUserId}` (`prevUserId` = '' when the
- * session had no owner — lets the adapter clean the previous owner's index on
+ * session had no owner - lets the adapter clean the previous owner's index on
  * an account switch), or `{-1}` when the absolute lifetime cap is already
  * exhausted (the session is destroyed instead of written).
  */
@@ -180,7 +180,7 @@ return {existed, userId, payload}
 /**
  * Reserve/refresh an index slot: sweep expired entries, enforce the seat
  * limit under the reject policy, (re-)score the member, and keep the index
- * KEY's TTL at least as long as this member's lifetime — a bare ZADD would
+ * KEY's TTL at least as long as this member's lifetime - a bare ZADD would
  * let the index key expire under rolling sessions while its sessions live.
  *
  * Used for BOTH the per-user index and the global index (with max=0,

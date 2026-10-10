@@ -41,7 +41,7 @@ describe('StreamConsumerDiscovery', () => {
     // When
     await discovery.onModuleInit();
 
-    // Then — should not throw, no consumers registered
+    // Then - should not throw, no consumers registered
     expect(mockConsumerService.createGroup).not.toHaveBeenCalled();
   });
 

@@ -31,7 +31,7 @@ describe('LeaderElectionState', () => {
     });
 
     it('should NOT be leader once the lease expires, even without an explicit demotion (fail-safe)', () => {
-      // Given — a stalled loop must never keep claiming leadership
+      // Given - a stalled loop must never keep claiming leadership
       const state = new LeaderElectionState('default');
       state.elected(NOW, TTL);
 
@@ -72,7 +72,7 @@ describe('LeaderElectionState', () => {
 
   describe('hold generations (out-of-order release settlements)', () => {
     it('should ignore a confirmedNotHolder for a generation older than the latest confirmed hold', () => {
-      // Given — a release issued against generation G...
+      // Given - a release issued against generation G...
       const state = new LeaderElectionState('default');
       state.confirmedHolder();
       const issuedAt = state.currentHoldGeneration();
@@ -80,10 +80,10 @@ describe('LeaderElectionState', () => {
       // ...and a NEWER hold confirmed while that release was on the wire
       state.confirmedHolder();
 
-      // When — the old release settles late
+      // When - the old release settles late
       state.confirmedNotHolder(issuedAt);
 
-      // Then — the newer hold survives: shutdown must still retry
+      // Then - the newer hold survives: shutdown must still retry
       expect(state.mayHoldLease()).toBe(true);
     });
 
@@ -92,11 +92,11 @@ describe('LeaderElectionState', () => {
       const state = new LeaderElectionState('default');
       state.confirmedHolder();
 
-      // When/Then — matching generation clears
+      // When/Then - matching generation clears
       state.confirmedNotHolder(state.currentHoldGeneration());
       expect(state.mayHoldLease()).toBe(false);
 
-      // And — the no-argument form (same-flight confirmations) clears too
+      // And - the no-argument form (same-flight confirmations) clears too
       state.confirmedHolder();
       state.confirmedNotHolder();
       expect(state.mayHoldLease()).toBe(false);
@@ -118,16 +118,16 @@ describe('LeaderElectionState', () => {
       // Given
       const state = new LeaderElectionState('default');
 
-      // Then — no lease
+      // Then - no lease
       expect(state.lapsesInMs(NOW)).toBe(0);
 
-      // When — a lease exists but the deadline passed
+      // When - a lease exists but the deadline passed
       state.elected(NOW, TTL);
 
       // Then
       expect(state.lapsesInMs(NOW + TTL)).toBeLessThanOrEqual(0);
 
-      // And — lost() resets it to none
+      // And - lost() resets it to none
       state.lost();
       expect(state.lapsesInMs(NOW)).toBe(0);
     });

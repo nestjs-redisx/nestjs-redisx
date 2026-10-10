@@ -7,11 +7,11 @@
  * A semaphore is a single sorted set: member = permit id, score = permit
  * expiry (ms epoch). Expired members are swept inside the acquire script, so
  * crashed holders free their seats after their TTL with no background job.
- * One key per semaphore — cluster-safe without hash tags. Time comes in via
+ * One key per semaphore - cluster-safe without hash tags. Time comes in via
  * ARGV (never Lua clocks): scripts stay deterministic and replica-safe, and
  * the in-memory testing driver runs them byte-for-byte.
  *
- * No ZADD flags (XX/NX/GT) are used — existence is checked explicitly inside
+ * No ZADD flags (XX/NX/GT) are used - existence is checked explicitly inside
  * the atomic script, which also keeps the scripts runnable on the in-memory
  * Lua interpreter.
  */
@@ -104,7 +104,7 @@ return redis.call("zcount", KEYS[1], "(" .. ARGV[1], "+inf")
 /**
  * Force-release every permit (admin operation).
  *
- * Reports LIVE holders only (ZCOUNT over the unexpired range) — counting
+ * Reports LIVE holders only (ZCOUNT over the unexpired range) - counting
  * expired-but-unswept residue would tell an operator "4 permits
  * force-released" when a single live holder was displaced.
  *

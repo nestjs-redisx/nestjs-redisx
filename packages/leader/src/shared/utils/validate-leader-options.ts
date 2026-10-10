@@ -5,7 +5,7 @@ import { ILeaderPluginOptions } from '../types';
 function describeValue(value: unknown): string {
   // The guard's own throw path must never replace or falsify the
   // source-tagged error: JSON.stringify throws on BigInt and on
-  // circular/toJSON-throwing objects, and renders NaN/±Infinity as "null" —
+  // circular/toJSON-throwing objects, and renders NaN/±Infinity as "null" -
   // which would send the operator hunting a null that never existed.
   if (typeof value === 'bigint') {
     return `${String(value)}n`;
@@ -49,7 +49,7 @@ export function validateLeaderOptions(options: ILeaderPluginOptions, source: str
   if (options === null || typeof options !== 'object' || Array.isArray(options)) {
     // A registerAsync factory returning undefined (a missing config key is
     // the classic case), a JS caller passing null, or an accidentally
-    // list-wrapped config (`[realConfig]` — every property read yields
+    // list-wrapped config (`[realConfig]` - every property read yields
     // undefined, so validation would silently pass with all-defaults) must
     // fail with a source-tagged error, not a bare TypeError or a silent
     // defaults boot.
@@ -58,7 +58,7 @@ export function validateLeaderOptions(options: ILeaderPluginOptions, source: str
   if (typeof (options as { then?: unknown }).then === 'function') {
     // An un-awaited async config (`new LeaderPlugin(loadConfig())` with an
     // async loader) is a thenable with zero own enumerable keys: it passes
-    // every per-key check and boots all-defaults — the same silent hazard
+    // every per-key check and boots all-defaults - the same silent hazard
     // the array guard closes. The async path (registerAsync) awaits its
     // factory result before validating, so a thenable is never legitimate
     // here.
@@ -71,7 +71,7 @@ export function validateLeaderOptions(options: ILeaderPluginOptions, source: str
   const effectiveTtl = options.ttlMs ?? DEFAULT_LEADER_CONFIG.ttlMs;
   const effectiveRenew = options.renewIntervalMs ?? DEFAULT_LEADER_CONFIG.renewIntervalMs;
   if (effectiveRenew >= effectiveTtl) {
-    throw new InvalidLeaderConfigError(`${source}: "renewIntervalMs" (${effectiveRenew}) must be strictly less than "ttlMs" (${effectiveTtl}) — otherwise the lease expires before its own heartbeat.`);
+    throw new InvalidLeaderConfigError(`${source}: "renewIntervalMs" (${effectiveRenew}) must be strictly less than "ttlMs" (${effectiveTtl}) - otherwise the lease expires before its own heartbeat.`);
   }
 
   if (options.groups !== undefined) {
@@ -92,7 +92,7 @@ export function validateLeaderOptions(options: ILeaderPluginOptions, source: str
   }
 
   // Callbacks pair to start/stop singleton workers; a non-function here
-  // would only surface as a contained warn on the winning pod — the
+  // would only surface as a contained warn on the winning pod - the
   // silent-worst-failure the fail-fast doctrine exists to prevent.
   if (options.onElected !== undefined && typeof options.onElected !== 'function') {
     throw new InvalidLeaderConfigError(`${source}: "onElected" must be a function when provided, got ${typeof options.onElected}.`);

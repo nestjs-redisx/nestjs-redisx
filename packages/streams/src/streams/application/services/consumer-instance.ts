@@ -44,7 +44,7 @@ export interface IConsumerInstanceConfig<T> {
   retryMultiplier: number;
   /**
    * Reclaim messages left pending (idle) longer than this many milliseconds by
-   * other consumers — e.g. a consumer that crashed mid-processing. 0 disables
+   * other consumers - e.g. a consumer that crashed mid-processing. 0 disables
    * auto-claim.
    */
   claimIdleTimeout: number;
@@ -82,7 +82,7 @@ export class ConsumerInstance<T> {
   /**
    * Stop the consumer and wait for the poll loop + in-flight messages to drain.
    * Safe to call multiple times. After `timeoutMs` elapses the method returns
-   * even if some messages are still being processed — their handlers keep
+   * even if some messages are still being processed - their handlers keep
    * running in the background until their own work completes or the owning
    * Redis client disconnects.
    */
@@ -233,7 +233,7 @@ export class ConsumerInstance<T> {
       this.metrics?.observeHistogram('redisx_stream_processing_duration_seconds', (Date.now() - startTime) / 1000, labels);
     } catch (error) {
       // Driver can disappear mid-processing when the application is shutting
-      // down. Don't try to ACK / re-enqueue into a torn-down connection — let
+      // down. Don't try to ACK / re-enqueue into a torn-down connection - let
       // Redis PEL redeliver the message to the next consumer on restart.
       if (!this.running || isShutdownError(error)) {
         return;

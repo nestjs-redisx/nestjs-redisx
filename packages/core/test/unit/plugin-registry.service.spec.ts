@@ -41,18 +41,18 @@ function createService(plugins: IRedisXPlugin[], options?: Partial<IRedisModuleO
 describe('PluginRegistryService', () => {
   describe('onModuleInit', () => {
     it('should run lifecycle hooks ONCE for a duplicated plugin name instead of reporting a bogus circular dependency', async () => {
-      // Given — RedisModule rejects duplicates, but this service is public
+      // Given - RedisModule rejects duplicates, but this service is public
       // API and can be handed a raw array with a repeated name
       const onRegisterFirst = vi.fn();
       const onRegisterSecond = vi.fn();
       const plugins = [createMockPlugin({ name: 'leader', onRegister: onRegisterFirst }), createMockPlugin({ name: 'leader', onRegister: onRegisterSecond })];
       const service = createService(plugins);
 
-      // When — must not throw "Circular dependency detected among plugins: "
+      // When - must not throw "Circular dependency detected among plugins: "
       // with an empty plugin list (the raw-length check did exactly that)
       await service.onModuleInit();
 
-      // Then — exactly one surviving instance ran its hook, exactly once
+      // Then - exactly one surviving instance ran its hook, exactly once
       expect(onRegisterSecond).toHaveBeenCalledTimes(1);
       expect(onRegisterFirst).not.toHaveBeenCalled();
     });
@@ -131,7 +131,7 @@ describe('PluginRegistryService', () => {
       ];
       const service = createService(plugins);
 
-      // When/Then — should not throw
+      // When/Then - should not throw
       await expect(service.onModuleInit()).resolves.toBeUndefined();
       expect(plugins[1].onRegister).toHaveBeenCalledTimes(1);
       expect(plugins[1].onModuleInit).toHaveBeenCalledTimes(1);
@@ -141,7 +141,7 @@ describe('PluginRegistryService', () => {
       // Given
       const service = createService([]);
 
-      // When/Then — should not throw
+      // When/Then - should not throw
       await expect(service.onModuleInit()).resolves.toBeUndefined();
     });
 
@@ -230,7 +230,7 @@ describe('PluginRegistryService', () => {
     });
 
     it('should contain a throwing plugin hook so remaining cleanups run and close() reaches the shutdown phase', async () => {
-      // Given — a third-party plugin whose destroy hook throws. If the throw
+      // Given - a third-party plugin whose destroy hook throws. If the throw
       // escaped, Nest would abort close() before onApplicationShutdown and
       // every Redis connection would leak.
       const callOrder: string[] = [];
@@ -250,7 +250,7 @@ describe('PluginRegistryService', () => {
       ];
       const service = createService(plugins);
 
-      // When/Then — no throw escapes, and the other plugin still cleaned up
+      // When/Then - no throw escapes, and the other plugin still cleaned up
       await expect(service.onModuleDestroy()).resolves.toBeUndefined();
       expect(callOrder).toEqual(['destroy-a']);
     });

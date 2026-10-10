@@ -35,7 +35,7 @@ describe('@Dedupe decorator', () => {
     });
 
     it('should resolve undefined for duplicates (service skips)', async () => {
-      // Given — service reports a duplicate
+      // Given - service reports a duplicate
       const service = { dedupe: vi.fn().mockResolvedValue(undefined) };
       registerDedupServiceGetter(() => service as never);
       const body = vi.fn();
@@ -93,7 +93,7 @@ describe('@Dedupe decorator', () => {
       expect(service.dedupe).toHaveBeenCalledWith('a:x:', expect.any(Function), expect.any(Object));
     });
 
-    it('should collapse object template args onto ONE key (and warn once) — the over-dedup footgun made loud', async () => {
+    it('should collapse object template args onto ONE key (and warn once) - the over-dedup footgun made loud', async () => {
       // Given
       const service = createFakeService();
       registerDedupServiceGetter(() => service as never);
@@ -105,17 +105,17 @@ describe('@Dedupe decorator', () => {
         }
       }
 
-      // When — the DTO (not its id) lands in the template
+      // When - the DTO (not its id) lands in the template
       await new Handler().handle({ id: 1 });
       await new Handler().handle({ id: 2 });
 
-      // Then — both distinct events share one key (duplicates skipped!)
+      // Then - both distinct events share one key (duplicates skipped!)
       expect(service.dedupe).toHaveBeenNthCalledWith(1, 'evt:[object Object]', expect.any(Function), expect.any(Object));
       expect(service.dedupe).toHaveBeenNthCalledWith(2, 'evt:[object Object]', expect.any(Function), expect.any(Object));
     });
 
     it('should execute WITHOUT deduplication (and warn) when no service is registered', async () => {
-      // Given — no plugin
+      // Given - no plugin
       class Handler {
         @Dedupe({ key: 'k' })
         async handle(): Promise<string> {
@@ -123,7 +123,7 @@ describe('@Dedupe decorator', () => {
         }
       }
 
-      // When/Then — fail-open
+      // When/Then - fail-open
       expect(await new Handler().handle()).toBe('ran-undeduplicated');
     });
 
@@ -159,7 +159,7 @@ describe('@Dedupe decorator', () => {
       expect(Reflect.getMetadata(DEDUPE_OPTIONS, wrapper)).toEqual({ key: 'k', window: 1_000 });
     });
 
-    it('should carry metadata stamped by decorators applied before it — @Cron below @Dedupe must not silently unregister the job', async () => {
+    it('should carry metadata stamped by decorators applied before it - @Cron below @Dedupe must not silently unregister the job', async () => {
       // Given
       const CRON_METADATA = 'test:schedule-expression';
       class Handler {
@@ -187,7 +187,7 @@ describe('@Dedupe decorator', () => {
       const service = createFakeService();
       registerDedupServiceGetter(() => service as never);
 
-      // When — the OTHER copy decorates a class
+      // When - the OTHER copy decorates a class
       const secondCopy: typeof import('../../src/dedup/api/decorators/dedupe.decorator') = await import('../../src/dedup/api/decorators/dedupe.decorator?copy=b' as string);
       class Handler {
         async handle(): Promise<string> {

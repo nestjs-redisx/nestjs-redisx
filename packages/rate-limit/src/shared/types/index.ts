@@ -62,7 +62,7 @@ export interface IRateLimitPluginOptions {
    * Default store backend for all routes.
    *
    * `'redis'` (default) keeps limits distributed and exact across all
-   * application instances. `'memory'` counts per instance in process memory —
+   * application instances. `'memory'` counts per instance in process memory -
    * no Redis round-trip on the request path, at the cost of approximate
    * global limits (each node enforces its own counter). Routes can override
    * per check via `@RateLimit({ store })` / `check(key, { store })`.
@@ -126,7 +126,7 @@ export interface IRateLimitPluginOptions {
   /**
    * Error handling strategy.
    * - fail-open: Allow request on error (high availability)
-   * - fail-closed: Reject request on error (strict enforcement) — the store
+   * - fail-closed: Reject request on error (strict enforcement) - the store
    *   error surfaces as `RateLimitScriptError`, which the built-in filter maps
    *   to `503 Service Unavailable` (not an uncaught 500).
    * @default 'fail-closed'

@@ -5,7 +5,7 @@
  * `Map<tag, Set<key>>` instead of Redis sets, so tag-based invalidation works
  * with NO Redis (single-instance). It mirrors {@link TagIndexRepository}: it
  * stores the FULL (prefixed) cache keys it is given, validates via the same
- * Tag/Tags value objects, and — on invalidation — removes the tagged values
+ * Tag/Tags value objects, and - on invalidation - removes the tagged values
  * from the in-memory L2 store through the {@link IL2CacheStore} port (so no
  * concrete coupling and no stale entries left behind).
  */

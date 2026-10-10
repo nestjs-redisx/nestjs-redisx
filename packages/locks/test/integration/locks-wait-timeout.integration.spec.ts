@@ -33,7 +33,7 @@ async function flushRedis(): Promise<void> {
   await client.quit();
 }
 
-describeIntegration('LocksPlugin — waitTimeout', () => {
+describeIntegration('LocksPlugin - waitTimeout', () => {
   let moduleRef: TestingModule;
   let lockService: ILockService;
 

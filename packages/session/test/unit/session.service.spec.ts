@@ -95,7 +95,7 @@ describe('SessionService', () => {
     });
 
     it('should never expose a session that now belongs to another user', async () => {
-      // Given: stale index entry after an account switch on the same sid —
+      // Given: stale index entry after an account switch on the same sid -
       // listing it would leak the NEW owner's payload on the old owner's
       // device page
       store.getUserSessionIds.mockResolvedValue(['sid-mine', 'sid-switched']);
@@ -155,7 +155,7 @@ describe('SessionService', () => {
     });
 
     it('should still destroy phantom index entries whose session is gone', async () => {
-      // Given: the index lists a sid whose payload was evicted — revocation is
+      // Given: the index lists a sid whose payload was evicted - revocation is
       // the repair path for a dirty index, so it must not skip it
       store.getUserSessionIds.mockResolvedValue(['sid-live', 'sid-phantom']);
       store.get.mockImplementation(async (sid: string) => (sid === 'sid-live' ? { cookie: {} } : null));
@@ -173,7 +173,7 @@ describe('SessionService', () => {
 
     it('should never revoke a session that now belongs to another user', async () => {
       // Given: a stale index entry points at a sid that was re-saved under a
-      // different user (account switch) — the victim's revokeAll must not kill
+      // different user (account switch) - the victim's revokeAll must not kill
       // the new owner's session
       store.getUserSessionIds.mockResolvedValue(['sid-mine', 'sid-switched']);
       store.get.mockImplementation(async () => ({ cookie: {} }));

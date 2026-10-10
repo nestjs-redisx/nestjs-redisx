@@ -259,7 +259,7 @@ describe('@Cached decorator', () => {
     });
 
     it('auto-generated keys hash object args with the FROZEN algorithm (golden vector)', async () => {
-      // Given — no explicit key: `Class:method:<hash(arg)>`; the hash is the
+      // Given - no explicit key: `Class:method:<hash(arg)>`; the hash is the
       // shared public hashKey(). If this golden value changes, every user's
       // auto-generated cache key silently shifts on upgrade.
       registerCachePluginOptions({});
@@ -271,12 +271,12 @@ describe('@Cached decorator', () => {
         }
       }
 
-      // When — key order must not matter
+      // When - key order must not matter
       const svc = new Svc();
       await svc.calc({ b: 2, a: 1 });
       await svc.calc({ a: 1, b: 2 });
 
-      // Then — both calls hit the same key with the frozen 43258cff783fe703
+      // Then - both calls hit the same key with the frozen 43258cff783fe703
       expect(mockCacheService.getOrSet).toHaveBeenNthCalledWith(1, 'Svc:calc:43258cff783fe703', expect.any(Function), expect.any(Object));
       expect(mockCacheService.getOrSet).toHaveBeenNthCalledWith(2, 'Svc:calc:43258cff783fe703', expect.any(Function), expect.any(Object));
     });
@@ -326,7 +326,7 @@ describe('@Cached decorator', () => {
       const svc = new Svc();
       await svc.getProducts();
 
-      // Then — both global contextKeys + varyBy, sorted alphabetically
+      // Then - both global contextKeys + varyBy, sorted alphabetically
       expect(mockCacheService.getOrSet).toHaveBeenCalledWith('products:_ctx_:locale.en:tenantId.acme', expect.any(Function), expect.any(Object));
     });
 
@@ -353,7 +353,7 @@ describe('@Cached decorator', () => {
       const svc = new Svc();
       await svc.getData();
 
-      // Then — only per-decorator contextKeys used, not global
+      // Then - only per-decorator contextKeys used, not global
       expect(mockCacheService.getOrSet).toHaveBeenCalledWith('data:_ctx_:locale.en', expect.any(Function), expect.any(Object));
     });
 
@@ -376,7 +376,7 @@ describe('@Cached decorator', () => {
       const svc = new Svc();
       await svc.getConfig();
 
-      // Then — no context suffix
+      // Then - no context suffix
       expect(mockCacheService.getOrSet).toHaveBeenCalledWith('config:app', expect.any(Function), expect.any(Object));
     });
 
@@ -399,7 +399,7 @@ describe('@Cached decorator', () => {
       const svc = new Svc();
       await svc.getUser('42');
 
-      // Then — single getOrSet call with enriched key
+      // Then - single getOrSet call with enriched key
       const expectedKey = 'user:42:_ctx_:tenantId.acme';
       expect(mockCacheService.getOrSet).toHaveBeenCalledWith(expectedKey, expect.any(Function), expect.objectContaining({ ttl: 60 }));
       expect(mockCacheService.get).not.toHaveBeenCalled();
@@ -425,7 +425,7 @@ describe('@Cached decorator', () => {
       const svc = new Svc();
       await svc.getData();
 
-      // Then — only tenantId present, missing-key ignored
+      // Then - only tenantId present, missing-key ignored
       expect(mockCacheService.getOrSet).toHaveBeenCalledWith('data:_ctx_:tenantId.acme', expect.any(Function), expect.any(Object));
     });
 
@@ -449,7 +449,7 @@ describe('@Cached decorator', () => {
       const svc = new Svc();
       await svc.getUser('42');
 
-      // Then — uses :: separator for _ctx_ marker
+      // Then - uses :: separator for _ctx_ marker
       expect(mockCacheService.getOrSet).toHaveBeenCalledWith('user:42::_ctx_::tenantId.acme', expect.any(Function), expect.any(Object));
     });
   });
@@ -533,7 +533,7 @@ describe('@Cached decorator', () => {
       const svc = new Svc();
       await svc.getUser('42');
 
-      // Then — the unless passed to getOrSet should be an adapter
+      // Then - the unless passed to getOrSet should be an adapter
       const getOrSetCall = mockCacheService.getOrSet.mock.calls[0];
       const adaptedUnless = getOrSetCall[2].unless;
       expect(adaptedUnless).toBeDefined();
@@ -562,7 +562,7 @@ describe('@Cached decorator', () => {
     });
 
     it('should fall back to original method on a genuine CACHE-infrastructure error', async () => {
-      // Given — getOrSet itself rejects (e.g. Redis down), loader never ran
+      // Given - getOrSet itself rejects (e.g. Redis down), loader never ran
       mockCacheService.getOrSet.mockRejectedValue(new Error('Redis down'));
 
       class Svc {
@@ -576,12 +576,12 @@ describe('@Cached decorator', () => {
       const svc = new Svc();
       const result = await svc.getUser('42');
 
-      // Then — fail-open: the method runs and returns its value
+      // Then - fail-open: the method runs and returns its value
       expect(result).toEqual({ id: '42' });
     });
 
     it('should propagate a LOADER error as-is, run the method ONCE, and not log a cache error', async () => {
-      // Given — the default mock actually invokes the loader, so the method's
+      // Given - the default mock actually invokes the loader, so the method's
       // own error surfaces through getOrSet (the "find or throw 404" pattern)
       const errorSpy = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
       const calls = vi.fn();
@@ -595,7 +595,7 @@ describe('@Cached decorator', () => {
         }
       }
 
-      // When / Then — the ORIGINAL error propagates unchanged
+      // When / Then - the ORIGINAL error propagates unchanged
       const svc = new Svc();
       await expect(svc.getUser('42')).rejects.toBeInstanceOf(NotFound);
 
@@ -608,7 +608,7 @@ describe('@Cached decorator', () => {
     });
 
     it('should unwrap a LoaderError and rethrow its cause (stampede-wrapped path)', async () => {
-      // Given — with stampede protection, a loader error reaches the decorator
+      // Given - with stampede protection, a loader error reaches the decorator
       // wrapped as LoaderError(cause = the business error)
       const errorSpy = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
       const calls = vi.fn();
@@ -626,7 +626,7 @@ describe('@Cached decorator', () => {
         }
       }
 
-      // When / Then — the ORIGINAL business error surfaces, not the LoaderError
+      // When / Then - the ORIGINAL business error surfaces, not the LoaderError
       const svc = new Svc();
       await expect(svc.getUser('42')).rejects.toBe(original);
       expect(calls).toHaveBeenCalledTimes(1);
@@ -686,7 +686,7 @@ describe('@Cached decorator', () => {
     });
 
     it('should interpolate {n} templates in static tags (same as the key)', async () => {
-      // Given — the reported footgun: tags:['user:{0}'] used to become the
+      // Given - the reported footgun: tags:['user:{0}'] used to become the
       // literal 'user:{0}', silently breaking invalidation
       class Svc {
         @Cached({ key: 'user:{0}', tags: ['user:{0}', 'users'] })
@@ -699,7 +699,7 @@ describe('@Cached decorator', () => {
       const svc = new Svc();
       await svc.getUser('42');
 
-      // Then — the template is resolved; the plain tag is left untouched
+      // Then - the template is resolved; the plain tag is left untouched
       expect(mockCacheService.getOrSet).toHaveBeenCalledWith('user:42', expect.any(Function), expect.objectContaining({ tags: ['user:42', 'users'] }));
     });
 
@@ -712,7 +712,7 @@ describe('@Cached decorator', () => {
         }
       }
 
-      // When — call with same data, different key order
+      // When - call with same data, different key order
       const svc = new Svc();
       await svc.find({ b: 2, a: 1 });
       const key1 = mockCacheService.getOrSet.mock.calls[0][0];
@@ -721,7 +721,7 @@ describe('@Cached decorator', () => {
       await svc.find({ a: 1, b: 2 });
       const key2 = mockCacheService.getOrSet.mock.calls[0][0];
 
-      // Then — both produce the same cache key
+      // Then - both produce the same cache key
       expect(key1).toBe(key2);
     });
 
@@ -765,7 +765,7 @@ describe('@Cached decorator', () => {
       await svc.find({ role: 'admin', status: 'active' });
       const key2 = mockCacheService.getOrSet.mock.calls[0][0];
 
-      // Then — same key regardless of property order, uses hash (no JSON special chars)
+      // Then - same key regardless of property order, uses hash (no JSON special chars)
       expect(key1).toBe(key2);
       expect(key1).toMatch(/^items:[a-f0-9]{16}$/);
     });
@@ -801,7 +801,7 @@ describe('@Cached decorator', () => {
         }
       }
 
-      // When — [1, undefined, 3] and [1, null, 3] should produce same key
+      // When - [1, undefined, 3] and [1, null, 3] should produce same key
       const svc = new Svc();
       await svc.find([1, undefined, 3]);
       const key1 = mockCacheService.getOrSet.mock.calls[0][0];
@@ -833,12 +833,12 @@ describe('@Cached decorator', () => {
       await svc.find({ active: true, ids: [3, 1, 2] });
       const key2 = mockCacheService.getOrSet.mock.calls[0][0];
 
-      // Then — same key (keys sorted, array order preserved)
+      // Then - same key (keys sorted, array order preserved)
       expect(key1).toBe(key2);
     });
 
     it('should produce CacheKey-valid keys for object arguments', async () => {
-      // Given — this is the P1 bug: object args used to generate JSON with {}",
+      // Given - this is the P1 bug: object args used to generate JSON with {}",
       // which failed CacheKey validation and silently disabled caching
       class Svc {
         @Cached()
@@ -852,7 +852,7 @@ describe('@Cached decorator', () => {
       await svc.find({ status: 'active', role: 'admin' });
       const key = mockCacheService.getOrSet.mock.calls[0][0] as string;
 
-      // Then — key must only contain CacheKey-valid characters
+      // Then - key must only contain CacheKey-valid characters
       expect(key).toMatch(/^[a-zA-Z0-9\-_:.]+$/);
     });
 
@@ -876,11 +876,11 @@ describe('@Cached decorator', () => {
   });
 
   describe('metadata carry-over', () => {
-    it('should carry metadata stamped by decorators applied before it — @Cron below @Cached must not silently unregister the job', () => {
-      // Given — a method already stamped by an earlier decorator. Source order
+    it('should carry metadata stamped by decorators applied before it - @Cron below @Cached must not silently unregister the job', () => {
+      // Given - a method already stamped by an earlier decorator. Source order
       // `@Cached` above `@Cron()` applies @Cron FIRST, to the ORIGINAL method;
       // discovery-based consumers (the scheduler among them) read metadata off
-      // the prototype's method — which is the wrapper after @Cached runs.
+      // the prototype's method - which is the wrapper after @Cached runs.
       const CRON_METADATA = 'test:schedule-expression';
       class CarryOverHost {
         async job(): Promise<string> {
@@ -890,11 +890,11 @@ describe('@Cached decorator', () => {
       const descriptor = Object.getOwnPropertyDescriptor(CarryOverHost.prototype, 'job')!;
       Reflect.defineMetadata(CRON_METADATA, '0 3 * * *', descriptor.value);
 
-      // When — @Cached wraps the already-stamped method
+      // When - @Cached wraps the already-stamped method
       Cached({ key: 'carry:{0}' })(CarryOverHost.prototype, 'job', descriptor);
       Object.defineProperty(CarryOverHost.prototype, 'job', descriptor);
 
-      // Then — the wrapper carries the earlier decorator's metadata (the cron
+      // Then - the wrapper carries the earlier decorator's metadata (the cron
       // stays discoverable) and still exposes its own options
       const wrapper = CarryOverHost.prototype.job;
       expect(Reflect.getMetadata(CRON_METADATA, wrapper)).toBe('0 3 * * *');

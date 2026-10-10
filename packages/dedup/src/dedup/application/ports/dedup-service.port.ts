@@ -1,11 +1,11 @@
 import { IDedupOptions, IDebounceOptions } from '../../../shared/types';
 
 /**
- * Deduplication service interface — first-wins event markers and
+ * Deduplication service interface - first-wins event markers and
  * distributed trailing debounce.
  *
  * Deduplication here is a LIGHTWEIGHT first-wins marker: "has this key been
- * seen in the window?" — nothing about the execution is stored or replayed.
+ * seen in the window?" - nothing about the execution is stored or replayed.
  * For request-grade idempotency with fingerprints and response replay, use
  * `@nestjs-redisx/idempotency`.
  */
@@ -34,7 +34,7 @@ export interface IDedupService {
    * window; duplicates resolve to undefined without running it.
    *
    * When the function THROWS, this caller's marker is released (best
-   * effort), so a retry is not locked out for the rest of the window —
+   * effort), so a retry is not locked out for the rest of the window -
    * failures don't burn the window. A crash (no throw path) leaves the
    * marker until the TTL.
    *
@@ -63,7 +63,7 @@ export interface IDedupService {
    * The returned promise settles AFTER the quiet window (it waits). The
    * executing timer lives in-process: if the last-calling instance dies
    * before the window elapses, this round does not execute (best-effort,
-   * like an in-process debounce — the next call starts a new round).
+   * like an in-process debounce - the next call starts a new round).
    *
    * @param key - Debounce key
    * @param fn - Function to run after the quiet window

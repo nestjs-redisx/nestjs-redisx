@@ -48,7 +48,7 @@ export class RateLimitExceptionFilter implements ExceptionFilter {
     }
 
     // Store/script failure under fail-closed (or any other rate-limit error):
-    // the limiter itself is degraded — 503, not a 500 — and log it so the
+    // the limiter itself is degraded - 503, not a 500 - and log it so the
     // outage is visible without being mistaken for an application bug.
     if (exception instanceof RateLimitScriptError) {
       this.logger.error(`Rate-limit store unavailable, rejecting request (fail-closed): ${exception.message}`);

@@ -7,7 +7,7 @@ import { PubSubPlugin, PUBSUB_SERVICE, Subscribe, type IPubSubService, type IPub
 
 /**
  * Integration tests against a LIVE Redis instance: TWO independent Nest
- * applications sharing one Redis — instance A publishes, instance B receives
+ * applications sharing one Redis - instance A publishes, instance B receives
  * through its dedicated subscriber connection (true cross-instance delivery,
  * ioredis driver, real SUBSCRIBE/PSUBSCRIBE).
  *
@@ -56,7 +56,7 @@ const until = async (predicate: () => boolean, timeoutMs = 3000): Promise<void> 
   }
 };
 
-describeIntegration('PubSub — cross-instance delivery (live Redis)', () => {
+describeIntegration('PubSub - cross-instance delivery (live Redis)', () => {
   let publisherApp: TestingModule;
   let subscriberApp: TestingModule;
   let publisherSide: IPubSubService;
@@ -79,17 +79,17 @@ describeIntegration('PubSub — cross-instance delivery (live Redis)', () => {
   });
 
   it('delivers a typed message from instance A to instance B (service subscribe)', async () => {
-    // Given — B subscribes programmatically
+    // Given - B subscribes programmatically
     const got: IPubSubMessage[] = [];
     const subscription = await subscriberSide.subscribe<{ n: number }>('itest.metrics', (msg) => {
       got.push(msg);
     });
 
-    // When — A publishes
+    // When - A publishes
     const receivers = await publisherSide.publish('itest.metrics', { n: 42 });
     await until(() => got.length > 0);
 
-    // Then — real cross-instance delivery, at least B's subscriber received it
+    // Then - real cross-instance delivery, at least B's subscriber received it
     expect(receivers).toBeGreaterThanOrEqual(1);
     expect(got[0]).toMatchObject({ channel: 'itest.metrics', data: { n: 42 } });
 
@@ -136,8 +136,8 @@ describeIntegration('PubSub — cross-instance delivery (live Redis)', () => {
   });
 
   it('the publisher connection still executes regular commands (subscriptions live on a dedicated connection)', async () => {
-    // Given — B has active subscriptions from the tests above / decorators
-    // When / Then — publishing (a regular command) keeps working on B too:
+    // Given - B has active subscriptions from the tests above / decorators
+    // When / Then - publishing (a regular command) keeps working on B too:
     // its main client is NOT in subscriber mode.
     await expect(subscriberSide.publish('itest.self-check', 'ok')).resolves.toBeGreaterThanOrEqual(0);
   });

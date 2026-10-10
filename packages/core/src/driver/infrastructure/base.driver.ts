@@ -60,7 +60,7 @@ export abstract class BaseRedisDriver implements IRedisDriver {
 
   /**
    * Installs a hook around raw command execution (or removes it with null).
-   * Every command issued through this driver flows through the hook — used by
+   * Every command issued through this driver flows through the hook - used by
    * observability plugins (e.g. tracing) to create per-command spans. The
    * adapter's own executeCommand stays untouched; the hook wraps it via an
    * instance-level override, so setting a new hook replaces the previous one.

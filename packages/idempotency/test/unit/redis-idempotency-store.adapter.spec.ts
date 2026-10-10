@@ -160,7 +160,7 @@ describe('RedisIdempotencyStoreAdapter', () => {
       // When
       await adapter.complete(key, data, ttl);
 
-      // Then — a single evalsha with the TTL (ms) and all field/value pairs;
+      // Then - a single evalsha with the TTL (ms) and all field/value pairs;
       // NO separate hmset/expire commands (a crash between them either kept
       // the leftover lock TTL or re-created the key without any TTL)
       expect(mockDriver.evalsha).toHaveBeenCalledTimes(1);
@@ -204,7 +204,7 @@ describe('RedisIdempotencyStoreAdapter', () => {
       // When
       await adapter.fail(key, error, 30);
 
-      // Then — one atomic script call carrying both the fields and the TTL
+      // Then - one atomic script call carrying both the fields and the TTL
       expect(mockDriver.evalsha).toHaveBeenCalledTimes(1);
       const [sha, keys, args] = mockDriver.evalsha.mock.calls[0] as [string, string[], unknown[]];
       expect(sha).toBe('shaStoreRecord');
@@ -381,7 +381,7 @@ describe('RedisIdempotencyStoreAdapter', () => {
       // Given / When
       await adapter.complete('idempotency:k1', { fingerprint: 'fp-1', statusCode: 201, response: '{"id":1}', completedAt: 123 }, 3600);
 
-      // Then — the atomic write includes the fingerprint so a record
+      // Then - the atomic write includes the fingerprint so a record
       // re-created after lock expiry still matches future replays (no 422)
       const args = mockDriver.evalsha.mock.calls[0][2] as unknown[];
       expect(args).toContain('fingerprint');
@@ -399,13 +399,13 @@ describe('RedisIdempotencyStoreAdapter', () => {
     });
 
     it('get() should tolerate records without fingerprint/startedAt (legacy rewrites)', async () => {
-      // Given — a record re-created by a pre-fix complete() after expiry
+      // Given - a record re-created by a pre-fix complete() after expiry
       mockDriver.hgetall.mockResolvedValue({ status: 'completed', statusCode: '200', response: '"ok"', completedAt: '5' });
 
       // When
       const record = await adapter.get('idempotency:k3');
 
-      // Then — no crash, sane defaults
+      // Then - no crash, sane defaults
       expect(record).toMatchObject({ status: 'completed', fingerprint: '', startedAt: 0 });
     });
   });

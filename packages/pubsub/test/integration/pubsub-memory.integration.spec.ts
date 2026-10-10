@@ -7,7 +7,7 @@ import { MEMORY_DRIVER_TYPE } from '@nestjs-redisx/testing';
 import { PubSubPlugin, PUBSUB_SERVICE, Subscribe, type IPubSubService, type IPubSubMessage } from '../../src';
 
 /**
- * End-to-end validation on the in-memory driver — NO Redis. Exercises the full
+ * End-to-end validation on the in-memory driver - NO Redis. Exercises the full
  * stack (plugin -> dedicated subscriber client -> driver events -> dispatch)
  * through production code; the memory driver's process-global bus mirrors
  * single-node Redis Pub/Sub delivery.
@@ -87,7 +87,7 @@ describe('PubSub on the in-memory driver (no Redis)', () => {
     await pubsub.publish('order.paid', { total: 10 });
     await until(() => received.length >= 2);
 
-    // Then — channel handler got the typed payload; pattern handler got both fields
+    // Then - channel handler got the typed payload; pattern handler got both fields
     const created = received.find((m) => m.channel === 'user.created');
     const order = received.find((m) => m.channel === 'order.paid');
     expect(created?.data).toEqual({ id: 5 });
@@ -107,7 +107,7 @@ describe('PubSub on the in-memory driver (no Redis)', () => {
     await pubsub.publish('greeting', 'hello');
     await until(() => got.length > 0);
 
-    // Then — prefix is invisible to handlers
+    // Then - prefix is invisible to handlers
     expect(got[0]).toMatchObject({ channel: 'greeting', data: 'hello' });
   });
 

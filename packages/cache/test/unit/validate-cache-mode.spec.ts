@@ -25,7 +25,7 @@ describe('validateCacheMode', () => {
         invalidation: { source: 'internal' },
       };
 
-      // When / Then — these are supported single-instance, so no throw
+      // When / Then - these are supported single-instance, so no throw
       expect(() => validateCacheMode(options)).not.toThrow();
     });
   });

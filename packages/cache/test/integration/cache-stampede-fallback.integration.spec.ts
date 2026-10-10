@@ -56,7 +56,7 @@ async function createService(fallback: 'load' | 'error' | 'null'): Promise<{ mod
   return { module, cache: module.get<ICacheService>(CACHE_SERVICE) };
 }
 
-describeIntegration('CachePlugin — stampede fallback', () => {
+describeIntegration('CachePlugin - stampede fallback', () => {
   beforeEach(async () => {
     await flushRedis();
   });

@@ -51,7 +51,7 @@ export interface ILeaderPluginOptions {
 
   /**
    * Stable identity of this instance, stored as the election key's value.
-   * Must be UNIQUE per replica (e.g. the pod name — NOT a shared host name
+   * Must be UNIQUE per replica (e.g. the pod name - NOT a shared host name
    * with several workers per host). Two replicas presenting the same id
    * BOTH win the election (acquire re-claims a key holding the caller's own
    * id), so a shared value silently collapses "exactly one instance" into

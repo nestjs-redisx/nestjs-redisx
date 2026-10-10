@@ -6,7 +6,7 @@ import { validateCircuitBreakerConfig } from './validate-circuit-breaker-config'
  *
  * No I/O and no `Date.now()`: every time-dependent method receives an explicit
  * `now` (epoch ms). See {@link ICircuitBreakerState} for the authoritative
- * transition semantics — this class implements them verbatim.
+ * transition semantics - this class implements them verbatim.
  */
 export class CircuitBreakerState implements ICircuitBreakerState {
   private state: CircuitState = 'closed';
@@ -63,7 +63,7 @@ export class CircuitBreakerState implements ICircuitBreakerState {
 
       case 'half-open':
         // Release the most recently started (max start-time) in-flight probe
-        // slot, if any — exact parity with the Lua store, which removes the
+        // slot, if any - exact parity with the Lua store, which removes the
         // highest-score ZSET entry, even if `now` values were non-monotonic.
         // A probe that outlived probeTimeoutMs already lost its slot, but its
         // outcome still counts toward closing.

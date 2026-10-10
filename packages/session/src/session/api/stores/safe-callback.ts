@@ -6,7 +6,7 @@ const logger = new Logger('SessionMiddlewareStore');
  * Invokes a middleware callback exactly once, containing its own exceptions.
  *
  * The naive `.then(cb).catch(cb)` chain re-enters the callback with the error
- * a throwing callback produced — double invocation corrupts the middleware's
+ * a throwing callback produced - double invocation corrupts the middleware's
  * request state. Callback errors are the application's bug; they are logged
  * and never re-dispatched.
  */

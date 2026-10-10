@@ -724,7 +724,7 @@ export interface IRedisDriver {
   /**
    * Subscribes to channels. Incoming messages are delivered via
    * `DriverEvent.MESSAGE` as `(channel, message)`. The connection enters
-   * subscriber mode — use a DEDICATED connection for subscriptions.
+   * subscriber mode - use a DEDICATED connection for subscriptions.
    */
   subscribe(...channels: string[]): Promise<void>;
 

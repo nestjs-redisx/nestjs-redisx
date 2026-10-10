@@ -113,7 +113,7 @@ describe('InMemoryRateLimitStoreAdapter', () => {
       const key = 'rl:token-bucket:refill';
       await adapter.tokenBucket(key, 1, 1, 1); // drained
 
-      // When — 1s refills 1 token
+      // When - 1s refills 1 token
       vi.advanceTimersByTime(1000);
       const result = await adapter.tokenBucket(key, 1, 1, 1);
 
@@ -178,7 +178,7 @@ describe('InMemoryRateLimitStoreAdapter', () => {
     });
 
     it('should be a no-op for unknown keys', async () => {
-      // When/Then — must not throw
+      // When/Then - must not throw
       await expect(adapter.reset('never-seen')).resolves.toBeUndefined();
     });
   });
@@ -191,7 +191,7 @@ describe('InMemoryRateLimitStoreAdapter', () => {
       await small.fixedWindow('k2', 5, 60);
       await small.fixedWindow('k3', 5, 60);
 
-      // When — 4th distinct key evicts the oldest (k1)
+      // When - 4th distinct key evicts the oldest (k1)
       await small.fixedWindow('k4', 5, 60);
 
       // Then
@@ -229,7 +229,7 @@ describe('InMemoryRateLimitStoreAdapter', () => {
       await adapter.slidingWindow('sweep:2', 5, 1);
       expect(adapter.size).toBe(2);
 
-      // When — advance past expiry AND past the sweep interval
+      // When - advance past expiry AND past the sweep interval
       vi.advanceTimersByTime(31_000);
 
       // Then
@@ -254,7 +254,7 @@ describe('InMemoryRateLimitStoreAdapter', () => {
       // Given
       await adapter.slidingWindow('lazy', 1, 1);
 
-      // When — entry expired but sweep has not fired yet
+      // When - entry expired but sweep has not fired yet
       vi.advanceTimersByTime(1500);
       const result = await adapter.slidingWindow('lazy', 1, 1);
 

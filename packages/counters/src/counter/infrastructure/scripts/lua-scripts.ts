@@ -7,7 +7,7 @@
 
 /**
  * Increment with a first-write window TTL: the TTL is applied only when
- * this mutation CREATES the key (EXISTS check — NOT a PTTL probe, which
+ * this mutation CREATES the key (EXISTS check - NOT a PTTL probe, which
  * would retrofit a window onto a pre-existing permanent counter). Later
  * mutations never extend the window: the idiomatic daily/hourly counter.
  *
@@ -29,7 +29,7 @@ return value
  * Atomically read and delete a counter (flush-style consumption).
  *
  * Evidence-preserving: a value that is not numeric AT ALL is returned
- * WITHOUT deleting the key — destroying a poisoned value before anyone can
+ * WITHOUT deleting the key - destroying a poisoned value before anyone can
  * inspect it would turn the loud CounterValueError into an unprovable
  * mystery. (Numeric-looking garbage such as float strings still passes
  * tonumber and is consumed; the adapter's strict integer parse rejects it
@@ -53,7 +53,7 @@ return value
 /**
  * Set an absolute value while PRESERVING any existing TTL.
  *
- * A plain SET silently drops the key's TTL — correcting a window counter
+ * A plain SET silently drops the key's TTL - correcting a window counter
  * mid-window (`set('daily', 0)`) would make it permanent, and every later
  * windowed increment would see EXISTS=1 and never re-arm the window: the
  * "daily" counter never resets again. (SET KEEPTTL exists on real Redis,

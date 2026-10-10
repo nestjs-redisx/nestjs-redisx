@@ -8,7 +8,7 @@ import { ICircuitBreakerDecision } from '../../../shared/types';
  *
  * The store mirrors the {@link CircuitBreakerState} semantics one-to-one, but
  * atomically over Redis. The current time (`now`) is obtained by the adapter
- * (via Date.now()) and passed into the Lua scripts — never read inside Lua.
+ * (via Date.now()) and passed into the Lua scripts - never read inside Lua.
  */
 export interface ICircuitBreakerStore {
   /**

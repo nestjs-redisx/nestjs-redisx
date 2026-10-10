@@ -33,7 +33,7 @@ describe('MetricsService registry option', () => {
       svc.registerCounter('redisx_own_test_total', 'own test counter');
       svc.incrementCounter('redisx_own_test_total');
 
-      // Then — visible in the service output, absent from the global registry
+      // Then - visible in the service output, absent from the global registry
       await expect(svc.getMetrics()).resolves.toContain('redisx_own_test_total');
       expect(promClient.register.getSingleMetric('redisx_own_test_total')).toBeUndefined();
     });
@@ -62,13 +62,13 @@ describe('MetricsService registry option', () => {
       svc.registerCounter('redisx_global_test_total', 'global test counter');
       svc.incrementCounter('redisx_global_test_total', undefined, 3);
 
-      // Then — the app's own /metrics endpoint (global registry) sees it
+      // Then - the app's own /metrics endpoint (global registry) sees it
       expect(promClient.register.getSingleMetric('redisx_global_test_total')).toBeDefined();
       await expect(promClient.register.metrics()).resolves.toContain('redisx_global_test_total 3');
     });
 
     it('should remove ONLY its own metrics on destroy, leaving app metrics intact', async () => {
-      // Given — an application metric lives in the global registry
+      // Given - an application metric lives in the global registry
       const appCounter = new promClient.Counter({ name: 'app_requests_total', help: 'app metric', registers: [promClient.register] });
       appCounter.inc();
       const svc = build({ registry: 'default' });
@@ -87,7 +87,7 @@ describe('MetricsService registry option', () => {
       // Given
       const setLabelsSpy = vi.spyOn(promClient.register, 'setDefaultLabels');
 
-      // When — no defaultLabels configured
+      // When - no defaultLabels configured
       build({ registry: 'default' });
 
       // Then
@@ -108,11 +108,11 @@ describe('MetricsService registry option', () => {
     });
 
     it('should NOT collect default Node.js metrics on an external registry unless opted in', () => {
-      // Given / When — collectDefaultMetrics left at its default
+      // Given / When - collectDefaultMetrics left at its default
       service = new MetricsService({ registry: 'default', commandMetrics: false, pluginMetrics: false });
       service.onModuleInit();
 
-      // Then — the app almost certainly collects process metrics already
+      // Then - the app almost certainly collects process metrics already
       expect(promClient.register.getSingleMetric('redisx_process_cpu_user_seconds_total')).toBeUndefined();
     });
 
@@ -194,7 +194,7 @@ describe('MetricsPlugin registry defaults', () => {
     // Given/When
     const options = resolvedOptions(new MetricsPlugin({ registry: 'default' }));
 
-    // Then — the app already collects process metrics; duplicating is opt-in
+    // Then - the app already collects process metrics; duplicating is opt-in
     expect(options.registry).toBe('default');
     expect(options.collectDefaultMetrics).toBe(false);
   });

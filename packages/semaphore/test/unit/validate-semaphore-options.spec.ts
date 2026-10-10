@@ -47,7 +47,7 @@ describe('validateSemaphoreOptions', () => {
   });
 
   it('should render NaN truthfully instead of null (env-var accident)', () => {
-    // Number(unsetEnvVar) compiles clean and is NaN at runtime — the message
+    // Number(unsetEnvVar) compiles clean and is NaN at runtime - the message
     // must point at NaN, not at a null that never existed.
     expect(() => validateSemaphoreOptions({ defaultTtl: Number.NaN })).toThrow(/NaN/);
   });

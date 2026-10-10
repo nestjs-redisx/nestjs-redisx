@@ -4,7 +4,7 @@
  * A drop-in {@link IL2CacheStore} that keeps values in a local `Map` instead of
  * Redis, so the cache runs with NO Redis connection. Unlike the memory driver
  * (which serializes into a second byte copy), this store keeps the LIVE
- * `CacheEntry` / `SwrEntry` object — the very same instance L1 holds — so a
+ * `CacheEntry` / `SwrEntry` object - the very same instance L1 holds - so a
  * value is stored ONCE and merely referenced by both tiers (no duplication,
  * which matters for large values).
  *
@@ -29,7 +29,7 @@ import { CacheEntry } from '../../domain/value-objects/cache-entry.vo';
 const DEFAULT_BATCH_SIZE = 100;
 
 interface IMemoryNode {
-  /** Live entry — a `CacheEntry` (plain) or `SwrEntry` (SWR / stale-if-error). */
+  /** Live entry - a `CacheEntry` (plain) or `SwrEntry` (SWR / stale-if-error). */
   value: CacheEntry<unknown> | SwrEntry<unknown>;
   /** Absolute expiry in ms (for SWR: `keepUntil ?? expiresAt`). */
   expiresAt: number;
@@ -153,7 +153,7 @@ export class InMemoryL2StoreAdapter implements IL2CacheStore {
         keys.push(fullKey.startsWith(this.keyPrefix) ? fullKey.slice(this.keyPrefix.length) : fullKey);
       }
     }
-    // Full scan completed in one pass — cursor is always '0'.
+    // Full scan completed in one pass - cursor is always '0'.
     return { keys, cursor: '0' };
   }
 

@@ -17,7 +17,7 @@ export interface IDedupStore {
   markFirst(key: string, token: string, windowMs: number): Promise<boolean>;
 
   /**
-   * Releases the marker only if owned by the token (Lua CAS) — re-opens the
+   * Releases the marker only if owned by the token (Lua CAS) - re-opens the
    * window after a failed first execution without erasing a newer marker.
    *
    * @param key - Full marker key in Redis
@@ -50,8 +50,8 @@ export interface IDedupStore {
    *
    * @param key - Full debounce slot key in Redis
    * @param callId - This caller's id
-   * @returns 'claimed' — the caller must execute; 'superseded' — a newer
-   *   caller owns the round; 'expired' — the slot is gone (the round was
+   * @returns 'claimed' - the caller must execute; 'superseded' - a newer
+   *   caller owns the round; 'expired' - the slot is gone (the round was
    *   lost to expiry: the claimer stalled past the grace period)
    */
   claimLastCall(key: string, callId: string): Promise<'claimed' | 'superseded' | 'expired'>;

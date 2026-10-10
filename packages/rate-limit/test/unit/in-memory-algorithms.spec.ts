@@ -61,7 +61,7 @@ describe('in-memory-algorithms', () => {
       // When
       const { entry: after, result } = applyFixedWindow(entry, NOW, 2, 60);
 
-      // Then — Lua INCRs even on reject: current keeps growing
+      // Then - Lua INCRs even on reject: current keeps growing
       expect(result.allowed).toBe(false);
       expect(result.current).toBe(3);
       expect(result.remaining).toBe(0);
@@ -144,12 +144,12 @@ describe('in-memory-algorithms', () => {
     });
 
     it('should slide: expire old timestamps strictly older than now - duration', () => {
-      // Given — Lua ZREMRANGEBYSCORE -inf..window_start is inclusive: score == window_start is removed
+      // Given - Lua ZREMRANGEBYSCORE -inf..window_start is inclusive: score == window_start is removed
       let entry: IMemoryRateLimitEntry | undefined;
       entry = applySlidingWindow(entry, NOW, 2, 60).entry;
       entry = applySlidingWindow(entry, NOW + 1000, 2, 60).entry;
 
-      // When — exactly 60s after the first timestamp: NOW == boundary, gets pruned
+      // When - exactly 60s after the first timestamp: NOW == boundary, gets pruned
       const { result } = applySlidingWindow(entry, NOW + 60_000, 2, 60);
 
       // Then
@@ -209,7 +209,7 @@ describe('in-memory-algorithms', () => {
       // Given
       const { entry } = applyTokenBucket(undefined, NOW, 10, 2, 1); // 9 tokens left
 
-      // When — 3s later: 9 + 3*2 = 15 -> capped at 10, consume 1 => 9
+      // When - 3s later: 9 + 3*2 = 15 -> capped at 10, consume 1 => 9
       const { entry: next, result } = applyTokenBucket(entry, NOW + 3000, 10, 2, 1);
 
       // Then
@@ -222,12 +222,12 @@ describe('in-memory-algorithms', () => {
     });
 
     it('should reject without consuming but still persist the refilled state (Lua HMSET on both branches)', () => {
-      // Given — capacity 2, drain it
+      // Given - capacity 2, drain it
       let entry: IMemoryRateLimitEntry | undefined;
       entry = applyTokenBucket(entry, NOW, 2, 0.5, 1).entry;
       entry = applyTokenBucket(entry, NOW, 2, 0.5, 1).entry; // 0 tokens
 
-      // When — 1s later: 0 + 0.5 = 0.5 tokens, need 1 => reject
+      // When - 1s later: 0 + 0.5 = 0.5 tokens, need 1 => reject
       const { entry: after, result } = applyTokenBucket(entry, NOW + 1000, 2, 0.5, 1);
 
       // Then
@@ -247,7 +247,7 @@ describe('in-memory-algorithms', () => {
       let entry: IMemoryRateLimitEntry | undefined;
       entry = applyTokenBucket(entry, NOW, 5, 0.1, 1).entry; // 4 tokens
 
-      // When — 2500ms later: 4 + 0.25 = 4.25, consume 1 => 3.25
+      // When - 2500ms later: 4 + 0.25 = 4.25, consume 1 => 3.25
       const { entry: next } = applyTokenBucket(entry, NOW + 2500, 5, 0.1, 1);
 
       // Then
@@ -257,11 +257,11 @@ describe('in-memory-algorithms', () => {
     });
 
     it('should treat an expired entry as a fresh full bucket', () => {
-      // Given — drain bucket completely
+      // Given - drain bucket completely
       let entry: IMemoryRateLimitEntry | undefined;
       entry = applyTokenBucket(entry, NOW, 1, 1, 1).entry; // 0 tokens, expiresAt = NOW + 2000
 
-      // When — after expiry
+      // When - after expiry
       const later = NOW + 10_000;
       const { result } = applyTokenBucket(isEntryExpired(entry, later) ? undefined : entry, later, 1, 1, 1);
 
@@ -302,7 +302,7 @@ describe('in-memory-algorithms', () => {
       // When
       const result = peekFixedWindow(entry, NOW, 100, 60);
 
-      // Then — allowed uses strict < (Redis adapter peek parity)
+      // Then - allowed uses strict < (Redis adapter peek parity)
       expect(result.current).toBe(1);
       expect(result.remaining).toBe(99);
       expect(result.allowed).toBe(true);
@@ -383,7 +383,7 @@ describe('in-memory-algorithms', () => {
       let entry: IMemoryRateLimitEntry | undefined;
       entry = applyTokenBucket(entry, NOW, 10, 2, 1).entry; // 9 tokens
 
-      // When — 500ms later: 9 + 1 = 10 (capped)
+      // When - 500ms later: 9 + 1 = 10 (capped)
       const result = peekTokenBucket(entry, NOW + 500, 10, 2);
 
       // Then

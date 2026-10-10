@@ -46,7 +46,7 @@ describe('RedisDedupStoreAdapter', () => {
 
   describe('markFirst', () => {
     it('should SET NX PX and map OK/null', async () => {
-      // When/Then — first
+      // When/Then - first
       expect(await adapter.markFirst('_dedup:k', 'tok', 5_000)).toBe(true);
       expect(driver.set).toHaveBeenCalledWith('_dedup:k', 'tok', { nx: true, px: 5_000 });
 
@@ -72,7 +72,7 @@ describe('RedisDedupStoreAdapter', () => {
     });
 
     it('should fall back to EVAL on NOSCRIPT (message or cause)', async () => {
-      // Given — NOSCRIPT inside a wrapper's cause
+      // Given - NOSCRIPT inside a wrapper's cause
       const wrapped = new Error('Command EVALSHA failed');
       (wrapped as { cause?: Error }).cause = new Error('NOSCRIPT No matching script');
       driver.evalsha.mockRejectedValueOnce(wrapped);

@@ -6,7 +6,7 @@ import { MEMORY_DRIVER_TYPE } from '@nestjs-redisx/testing';
 import { CircuitBreakerPlugin, CIRCUIT_BREAKER_SERVICE, CircuitBreakerOpenError, type ICircuitBreakerService } from '../../src';
 
 /**
- * End-to-end validation on the in-memory driver — NO Redis. Exercises the full
+ * End-to-end validation on the in-memory driver - NO Redis. Exercises the full
  * stack (service -> Lua scripts -> memory Lua interpreter) through production
  * code, driving a complete closed -> open -> half-open -> closed cycle.
  *
@@ -125,8 +125,8 @@ describe('CircuitBreaker on the in-memory driver (no Redis)', () => {
     await wait(OPEN_MS + 40);
 
     // A deferred probe holds the single slot open while two more calls race in.
-    // `started` resolves only once fn runs — i.e. canRequest has already
-    // committed the slot — so no sleep-based synchronization is needed.
+    // `started` resolves only once fn runs - i.e. canRequest has already
+    // committed the slot - so no sleep-based synchronization is needed.
     let release!: () => void;
     let started!: () => void;
     const gate = new Promise<void>((resolve) => {
@@ -219,7 +219,7 @@ describe('CircuitBreaker on the in-memory driver (no Redis)', () => {
   });
 
   it('reclaims a zombie probe slot after probeTimeoutMs (over Lua)', async () => {
-    // Given — single probe slot; probes expire after 100ms
+    // Given - single probe slot; probes expire after 100ms
     const PROBE_TIMEOUT = 100;
     app = await Test.createTestingModule({
       imports: [
@@ -238,7 +238,7 @@ describe('CircuitBreaker on the in-memory driver (no Redis)', () => {
     await expect(cb.execute(key, () => Promise.reject(new Error('down')))).rejects.toThrow();
     await wait(OPEN_MS + 40);
 
-    // When — a zombie probe occupies the slot and NEVER records an outcome
+    // When - a zombie probe occupies the slot and NEVER records an outcome
     let started!: () => void;
     const startedPromise = new Promise<void>((resolve) => {
       started = resolve;
@@ -250,13 +250,13 @@ describe('CircuitBreaker on the in-memory driver (no Redis)', () => {
     });
     await startedPromise; // slot committed
 
-    // Then — while the zombie is fresh, further calls are rejected
+    // Then - while the zombie is fresh, further calls are rejected
     await expect(cb.execute(key, () => Promise.resolve('nope'))).rejects.toBeInstanceOf(CircuitBreakerOpenError);
 
-    // When — probeTimeoutMs elapses, the slot is auto-reclaimed
+    // When - probeTimeoutMs elapses, the slot is auto-reclaimed
     await wait(PROBE_TIMEOUT + 40);
 
-    // Then — a fresh probe is admitted and, on success, closes the breaker
+    // Then - a fresh probe is admitted and, on success, closes the breaker
     await expect(cb.execute(key, () => Promise.resolve('recovered'))).resolves.toBe('recovered');
     expect((await cb.getState(key)).state).toBe('closed');
   });

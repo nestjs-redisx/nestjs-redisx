@@ -12,7 +12,7 @@ describe('canonicalStringify', () => {
   });
 
   it('should sort keys RECURSIVELY (nested objects too)', () => {
-    // Given — same data, different nesting order
+    // Given - same data, different nesting order
     const a = { user: { name: 'Ann', id: 1 }, items: [{ qty: 2, sku: 'x' }] };
     const b = { items: [{ sku: 'x', qty: 2 }], user: { id: 1, name: 'Ann' } };
 
@@ -34,7 +34,7 @@ describe('canonicalStringify', () => {
   });
 
   it('should match JSON.stringify for already-sorted plain data (legacy parity)', () => {
-    // Given — keys already in sorted order: canonical output must equal plain
+    // Given - keys already in sorted order: canonical output must equal plain
     // JSON.stringify so pre-upgrade fingerprints of ordered bodies still match
     const value = { a: 1, b: 'x', c: [1, { d: true }] };
 
@@ -95,7 +95,7 @@ describe('canonicalStringify', () => {
   });
 
   it('should stay deterministic when distinct Map keys serialize identically', () => {
-    // Given — different references, identical canonical form (parity with the
+    // Given - different references, identical canonical form (parity with the
     // cache package's stableStringify fix)
     const k1 = { a: 1 };
     const k2 = { a: 1 };

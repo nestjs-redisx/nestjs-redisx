@@ -2,10 +2,10 @@
  * Anti-stampede protection using local singleflight + distributed Redis lock.
  *
  * Two layers of protection:
- * 1. Local singleflight — coalesces concurrent requests within the same
+ * 1. Local singleflight - coalesces concurrent requests within the same
  *    process; the flight is removed synchronously on completion so a finished
  *    flight can never serve stale (pre-invalidation) values to later calls.
- * 2. Distributed lock — the first instance to acquire the lock loads and
+ * 2. Distributed lock - the first instance to acquire the lock loads and
  *    writes the value (the caller's loader performs the cache write, so the
  *    write is covered by the lock); other instances wait for the lock to
  *    clear and recheck the cache instead of duplicating the load, falling
@@ -51,7 +51,7 @@ export class StampedeProtectionService implements IStampedeProtection {
   private readonly waitTimeout: number;
   /**
    * Whether the cross-instance (Layer 2) lock is used. Disabled in
-   * `mode: 'l1-only'`, where there is no Redis and a single process — the
+   * `mode: 'l1-only'`, where there is no Redis and a single process - the
    * local singleflight (Layer 1) is already the complete, correct protection.
    */
   private readonly distributed: boolean;
@@ -104,7 +104,7 @@ export class StampedeProtectionService implements IStampedeProtection {
 
     try {
       // Layer 2: distributed lock (cross-instance coordination). Skipped in
-      // l1-only mode — no Redis, single process, so Layer 1 already coalesces
+      // l1-only mode - no Redis, single process, so Layer 1 already coalesces
       // everything and there is nothing to coordinate across instances.
       if (this.distributed) {
         try {
@@ -117,14 +117,14 @@ export class StampedeProtectionService implements IStampedeProtection {
             lock = { lockKey, lockValue };
           }
         } catch {
-          // Lock acquisition failed — proceed without distributed lock
+          // Lock acquisition failed - proceed without distributed lock
         }
 
         // Lock held by ANOTHER instance: wait for it to finish (the lock is
         // released only after the leader wrote the value to the cache), then
         // recheck the cache instead of duplicating the load. Falls through to
         // our own loader if the leader failed, its lock expired, or the wait
-        // timed out — availability over strict coordination.
+        // timed out - availability over strict coordination.
         if (!lock && recheck) {
           const shared = await this.waitForDistributedLoad(lockKey, recheck, key);
           if (shared !== null) {
@@ -148,7 +148,7 @@ export class StampedeProtectionService implements IStampedeProtection {
       }
     } finally {
       // Delete the flight SYNCHRONOUSLY. Waiters that joined during the load
-      // already hold the promise reference, so a delayed cleanup buys nothing —
+      // already hold the promise reference, so a delayed cleanup buys nothing -
       // but a lingering resolved flight would serve stale (pre-invalidation)
       // values to later calls (mutation -> invalidateTags -> instant refetch),
       // and a lingering rejected-with-no-waiters flight would hang new callers

@@ -122,10 +122,10 @@ describe('WithCircuitBreaker decorator', () => {
       }
     }
 
-    // When — skip condition met
+    // When - skip condition met
     const result = await new Api().call({ internal: true });
 
-    // Then — original ran, breaker never consulted
+    // Then - original ran, breaker never consulted
     expect(result).toBe('ran');
     expect(fake.execute).not.toHaveBeenCalled();
   });
@@ -142,10 +142,10 @@ describe('WithCircuitBreaker decorator', () => {
       }
     }
 
-    // When — skip condition not met
+    // When - skip condition not met
     await new Api().call({ internal: false });
 
-    // Then — breaker consulted
+    // Then - breaker consulted
     expect(fake.execute).toHaveBeenCalledTimes(1);
   });
 
@@ -167,7 +167,7 @@ describe('WithCircuitBreaker decorator', () => {
   });
 
   it('should execute the method directly when no service is available', async () => {
-    // Given — getter returns null (service not ready)
+    // Given - getter returns null (service not ready)
     registerCircuitBreakerServiceGetter(() => null as unknown as FakeService);
 
     class Api {
@@ -185,7 +185,7 @@ describe('WithCircuitBreaker decorator', () => {
   });
 
   it('should execute the method directly when NO getter was ever registered', async () => {
-    // Given — simulate the pre-init state (no getter at all)
+    // Given - simulate the pre-init state (no getter at all)
     registerCircuitBreakerServiceGetter(null as unknown as () => FakeService);
 
     class Api {
@@ -195,7 +195,7 @@ describe('WithCircuitBreaker decorator', () => {
       }
     }
 
-    // When / Then — runs without the breaker, never throws
+    // When / Then - runs without the breaker, never throws
     await expect(new Api().call()).resolves.toBe('direct-no-getter');
   });
 
@@ -230,7 +230,7 @@ describe('WithCircuitBreaker decorator', () => {
       }
     }
 
-    // When — the first argument is a plain string, so {0.name} falls back to String(arg)
+    // When - the first argument is a plain string, so {0.name} falls back to String(arg)
     await new Api().run('plain');
 
     // Then
@@ -252,11 +252,11 @@ describe('WithCircuitBreaker decorator', () => {
   });
 
   describe('metadata carry-over', () => {
-    it('should carry metadata stamped by decorators applied before it — @Cron below @WithCircuitBreaker must not silently unregister the job', () => {
-      // Given — a method already stamped by an earlier decorator. Source order
+    it('should carry metadata stamped by decorators applied before it - @Cron below @WithCircuitBreaker must not silently unregister the job', () => {
+      // Given - a method already stamped by an earlier decorator. Source order
       // `@WithCircuitBreaker` above `@Cron()` applies @Cron FIRST, to the ORIGINAL method;
       // discovery-based consumers (the scheduler among them) read metadata off
-      // the prototype's method — which is the wrapper after @WithCircuitBreaker runs.
+      // the prototype's method - which is the wrapper after @WithCircuitBreaker runs.
       const CRON_METADATA = 'test:schedule-expression';
       class CarryOverHost {
         async job(): Promise<string> {
@@ -266,11 +266,11 @@ describe('WithCircuitBreaker decorator', () => {
       const descriptor = Object.getOwnPropertyDescriptor(CarryOverHost.prototype, 'job')!;
       Reflect.defineMetadata(CRON_METADATA, '0 3 * * *', descriptor.value);
 
-      // When — @WithCircuitBreaker wraps the already-stamped method
+      // When - @WithCircuitBreaker wraps the already-stamped method
       WithCircuitBreaker({ key: 'carry-circuit' })(CarryOverHost.prototype, 'job', descriptor);
       Object.defineProperty(CarryOverHost.prototype, 'job', descriptor);
 
-      // Then — the wrapper carries the earlier decorator's metadata (the cron
+      // Then - the wrapper carries the earlier decorator's metadata (the cron
       // stays discoverable) and still exposes its own options
       const wrapper = CarryOverHost.prototype.job;
       expect(Reflect.getMetadata(CRON_METADATA, wrapper)).toBe('0 3 * * *');

@@ -41,14 +41,14 @@ describe('SemaphoreService', () => {
       // When
       const permit = await service.acquire('renders', 3);
 
-      // Then — prefixed key, capacity and TTL forwarded, time injected
+      // Then - prefixed key, capacity and TTL forwarded, time injected
       expect(permit.key).toBe('_sem:renders');
       expect(store.acquire).toHaveBeenCalledWith('_sem:renders', expect.any(String), 3, 30_000);
       await permit.release();
     });
 
     it('should retry with backoff and succeed when a seat frees up', async () => {
-      // Given — full on the first two attempts
+      // Given - full on the first two attempts
       store.acquire.mockResolvedValueOnce(false).mockResolvedValueOnce(false).mockResolvedValueOnce(true);
 
       // When
@@ -69,7 +69,7 @@ describe('SemaphoreService', () => {
     });
 
     it('should stop early when the next sleep would blow the waitTimeout budget', async () => {
-      // Given — store always full, generous retries but a tiny wait budget
+      // Given - store always full, generous retries but a tiny wait budget
       store.acquire.mockResolvedValue(false);
       const generous = new SemaphoreService({ retry: { maxRetries: 50, initialDelay: 50, maxDelay: 50, multiplier: 1 }, autoRenew: { enabled: false } }, store);
 
@@ -77,7 +77,7 @@ describe('SemaphoreService', () => {
       const start = Date.now();
       await expect(generous.acquire('renders', 1, { waitTimeout: 30 })).rejects.toThrow(SemaphoreAcquisitionError);
 
-      // Then — gave up after the first attempt instead of 50 sleeps
+      // Then - gave up after the first attempt instead of 50 sleeps
       expect(Date.now() - start).toBeLessThan(1_000);
       expect(store.acquire).toHaveBeenCalledTimes(1);
     });
@@ -105,10 +105,10 @@ describe('SemaphoreService', () => {
       // Given
       store.acquire.mockResolvedValue(false);
 
-      // When/Then — retry cap (no waitTimeout)
+      // When/Then - retry cap (no waitTimeout)
       await expect(service.acquire('full', 1)).rejects.toMatchObject({ reason: 'exhausted' });
 
-      // And — wait budget
+      // And - wait budget
       const generous = new SemaphoreService({ retry: { maxRetries: 50, initialDelay: 50, maxDelay: 50, multiplier: 1 }, autoRenew: { enabled: false } }, store);
       await expect(generous.acquire('full', 1, { waitTimeout: 30 })).rejects.toMatchObject({ reason: 'timeout' });
     });
@@ -155,10 +155,10 @@ describe('SemaphoreService', () => {
     });
 
     it('should swallow a lost-seat release error (the work already ran)', async () => {
-      // Given — the permit expired while the function ran
+      // Given - the permit expired while the function ran
       store.release.mockResolvedValue(false);
 
-      // When — no throw out of withPermit
+      // When - no throw out of withPermit
       const result = await service.withPermit('renders', 2, async () => 42);
 
       // Then
@@ -198,7 +198,7 @@ describe('SemaphoreService', () => {
 
   describe('auto-renewal wiring', () => {
     it('should start auto-renew by default and honor the per-call opt-out', async () => {
-      // Given — plugin default: enabled
+      // Given - plugin default: enabled
       const renewing = new SemaphoreService({ retry: FAST_RETRY.retry }, store);
 
       // When
@@ -224,12 +224,12 @@ describe('SemaphoreService', () => {
       };
       const measured = new SemaphoreService(FAST_RETRY, store, metrics);
 
-      // When — direct acquire/release (NOT withPermit)
+      // When - direct acquire/release (NOT withPermit)
       const permit = await measured.acquire('renders', 2);
       await permit.release();
       await permit.release(); // idempotent repeat
 
-      // Then — one up, one down
+      // Then - one up, one down
       expect(metrics.incrementGauge).toHaveBeenCalledWith('redisx_semaphore_permits_active');
       expect(metrics.decrementGauge).toHaveBeenCalledTimes(1);
     });
@@ -237,13 +237,13 @@ describe('SemaphoreService', () => {
 
   describe('config resolution branches', () => {
     it('should use library defaults with an empty config', async () => {
-      // Given — nothing configured
+      // Given - nothing configured
       const bare = new SemaphoreService({ autoRenew: { enabled: false } }, store);
 
       // When
       const permit = await bare.acquire('k', 1);
 
-      // Then — default prefix and default TTL
+      // Then - default prefix and default TTL
       expect(store.acquire).toHaveBeenCalledWith('_sem:k', expect.any(String), 1, 30_000);
       await permit.release();
     });
@@ -253,7 +253,7 @@ describe('SemaphoreService', () => {
       store.acquire.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
       const custom = new SemaphoreService({ keyPrefix: 'sem!', defaultTtl: 7_000, maxTtl: 8_000, retry: { maxRetries: 0, initialDelay: 50, maxDelay: 60, multiplier: 3 }, autoRenew: { enabled: false } }, store);
 
-      // When — per-call retry override re-enables one retry with a tiny delay
+      // When - per-call retry override re-enables one retry with a tiny delay
       const permit = await custom.acquire('k', 2, { retry: { maxRetries: 1, initialDelay: 1 } });
 
       // Then
@@ -267,7 +267,7 @@ describe('SemaphoreService', () => {
       vi.useFakeTimers();
       const fraction = new SemaphoreService({ defaultTtl: 1_000, autoRenew: { enabled: true, intervalFraction: 0.1 } }, store);
 
-      // When — renewal every 100ms
+      // When - renewal every 100ms
       const permit = await fraction.acquire('k', 1);
       await vi.advanceTimersByTimeAsync(350);
 
@@ -293,7 +293,7 @@ describe('SemaphoreService', () => {
       const tracing = { startSpan: vi.fn().mockReturnValue(span) };
       const traced = new SemaphoreService(FAST_RETRY, store, undefined, tracing);
 
-      // When — one success, one exhaustion
+      // When - one success, one exhaustion
       const permit = await traced.acquire('ok', 1);
       await permit.release();
       store.acquire.mockResolvedValue(false);
@@ -322,7 +322,7 @@ describe('SemaphoreService', () => {
 
   describe('adversarial: hostile observability and per-call options', () => {
     it('should NOT leak the granted seat when a user metrics implementation throws on the success path', async () => {
-      // Given — the seat IS granted by the store, then metrics detonate
+      // Given - the seat IS granted by the store, then metrics detonate
       const metrics = {
         incrementCounter: vi.fn(() => {
           throw new Error('metrics backend down');
@@ -339,7 +339,7 @@ describe('SemaphoreService', () => {
       };
       const hostile = new SemaphoreService(FAST_RETRY, store, metrics);
 
-      // When — acquire must still hand the permit to the caller (otherwise
+      // When - acquire must still hand the permit to the caller (otherwise
       // the seat is held in Redis with nobody able to release it)
       const permit = await hostile.acquire('renders', 1);
 
@@ -350,7 +350,7 @@ describe('SemaphoreService', () => {
     });
 
     it('should survive a throwing tracing implementation on success and failure paths', async () => {
-      // Given — every span method throws
+      // Given - every span method throws
       const span = new Proxy(
         {},
         {
@@ -362,7 +362,7 @@ describe('SemaphoreService', () => {
       const tracing = { startSpan: vi.fn().mockReturnValue(span) };
       const hostile = new SemaphoreService(FAST_RETRY, store, undefined, tracing as never);
 
-      // When/Then — success path returns the permit
+      // When/Then - success path returns the permit
       const permit = await hostile.acquire('ok', 1);
       await permit.release();
 
@@ -404,8 +404,8 @@ describe('SemaphoreService', () => {
   });
 
   describe('onModuleDestroy (TTL-lapse shutdown semantics)', () => {
-    it('should NOT yank seats from under possibly-running work — only stop auto-renewal', async () => {
-      // Given — permits whose protected work may still be executing when the
+    it('should NOT yank seats from under possibly-running work - only stop auto-renewal', async () => {
+      // Given - permits whose protected work may still be executing when the
       // destroy hooks fire (Nest does not drain in-flight handlers first)
       const renewing = new SemaphoreService({ retry: FAST_RETRY.retry }, store);
       const a = await renewing.acquire('a', 1);
@@ -415,9 +415,9 @@ describe('SemaphoreService', () => {
       // When
       renewing.onModuleDestroy();
 
-      // Then — no release (yanking a seat would let another instance start
+      // Then - no release (yanking a seat would let another instance start
       // the same bounded work concurrently); renewal stopped so the seats
-      // lapse within their remaining TTL — the documented crash bound
+      // lapse within their remaining TTL - the documented crash bound
       expect(store.release).not.toHaveBeenCalled();
       expect(a.isAutoRenewing).toBe(false);
       expect(b.isAutoRenewing).toBe(false);
@@ -428,7 +428,7 @@ describe('SemaphoreService', () => {
       const permit = await service.acquire('a', 1);
       service.onModuleDestroy();
 
-      // When — the in-flight work finishes and releases its own seat
+      // When - the in-flight work finishes and releases its own seat
       await permit.release();
 
       // Then
@@ -436,7 +436,7 @@ describe('SemaphoreService', () => {
     });
 
     it("should abort an acquire that is still waiting when the service is destroyed (reason 'shutdown')", async () => {
-      // Given — saturated, so acquire sits in backoff
+      // Given - saturated, so acquire sits in backoff
       store.acquire.mockResolvedValue(false);
       const pending = service.acquire('full', 1);
       await Promise.resolve(); // let the first attempt land
@@ -449,13 +449,13 @@ describe('SemaphoreService', () => {
     });
 
     it('should quietly give back a seat WON on the wire while destroy ran', async () => {
-      // Given — the store grants the seat, but shutdown happened mid-flight
+      // Given - the store grants the seat, but shutdown happened mid-flight
       store.acquire.mockImplementationOnce(async () => {
         service.onModuleDestroy();
         return true;
       });
 
-      // When/Then — the caller gets 'shutdown', not a permit nobody releases
+      // When/Then - the caller gets 'shutdown', not a permit nobody releases
       await expect(service.acquire('race', 1)).rejects.toMatchObject({ reason: 'shutdown' });
       expect(store.release).toHaveBeenCalledTimes(1);
     });
@@ -476,7 +476,7 @@ describe('SemaphoreService', () => {
       const outage = new Error('READONLY replica');
       store.acquire.mockRejectedValue(outage);
 
-      // When/Then — typed for the decorator policy and withPermit callers
+      // When/Then - typed for the decorator policy and withPermit callers
       await expect(service.acquire('k', 1)).rejects.toMatchObject({ reason: 'error', cause: outage });
       await expect(service.tryAcquire('k', 1)).rejects.toMatchObject({ reason: 'error' });
     });
@@ -484,18 +484,18 @@ describe('SemaphoreService', () => {
 
   describe('concurrent release single-flight', () => {
     it('should issue ONE store release for two concurrent release() calls and share the outcome', async () => {
-      // Given — a slow store release
+      // Given - a slow store release
       let resolveRelease!: (v: boolean) => void;
       store.release.mockImplementationOnce(() => new Promise<boolean>((resolve) => (resolveRelease = resolve)));
       const permit = await service.acquire('a', 1);
 
-      // When — two racing releases (user finally + another path)
+      // When - two racing releases (user finally + another path)
       const first = permit.release();
       const second = permit.release();
       resolveRelease(true);
       await Promise.all([first, second]);
 
-      // Then — exactly one ZREM; the loser did NOT see a false
+      // Then - exactly one ZREM; the loser did NOT see a false
       // SemaphorePermitNotHeldError from a double-remove
       expect(store.release).toHaveBeenCalledTimes(1);
     });

@@ -51,7 +51,7 @@ async function flushRedis(): Promise<void> {
   await client.quit();
 }
 
-describeIntegration('StreamsPlugin — graceful shutdown', () => {
+describeIntegration('StreamsPlugin - graceful shutdown', () => {
   beforeAll(async () => {
     await flushRedis();
   });

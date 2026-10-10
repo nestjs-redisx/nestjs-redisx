@@ -491,7 +491,7 @@ describe('CacheService (Internal)', () => {
     });
 
     it('should write ONLY the SWR entry on an SWR miss (no plain CacheEntry double-write)', async () => {
-      // Given — SWR miss; the load goes through the stampede wrapper
+      // Given - SWR miss; the load goes through the stampede wrapper
       const swrService = new CacheService(mockDriver, mockL1Store, mockL2Store, mockStampede, mockTagIndex, mockSwrManager, { ...options, swr: { enabled: true } });
       mockL2Store.getSwr.mockResolvedValue(null);
       const loader = vi.fn().mockResolvedValue('fresh');
@@ -499,7 +499,7 @@ describe('CacheService (Internal)', () => {
       // When
       const value = await swrService.getOrSet('swr-key', loader, { swr: { enabled: true, staleTime: 60 } });
 
-      // Then — exactly one write, in the SWR format; the regular set path must
+      // Then - exactly one write, in the SWR format; the regular set path must
       // NOT also write a plain CacheEntry to the same key
       expect(value).toBe('fresh');
       expect(mockL2Store.setSwr).toHaveBeenCalledTimes(1);
@@ -1018,7 +1018,7 @@ describe('CacheService (Internal)', () => {
       // When
       await contextService.get('user:profile');
 
-      // Then — key should include context suffix (sorted alphabetically)
+      // Then - key should include context suffix (sorted alphabetically)
       expect(mockL1Store.get).toHaveBeenCalledWith('user:profile:_ctx_:locale.en_US:tenantId.tenant-abc');
     });
 
@@ -1062,7 +1062,7 @@ describe('CacheService (Internal)', () => {
         varyBy: { tenantId: 'override-tenant' },
       });
 
-      // Then — tenantId should be overridden by varyBy
+      // Then - tenantId should be overridden by varyBy
       expect(mockL2Store.set).toHaveBeenCalledWith('user:profile:_ctx_:locale.en_US:tenantId.override-tenant', expect.any(Object), expect.any(Number));
     });
 
@@ -1073,7 +1073,7 @@ describe('CacheService (Internal)', () => {
       // When
       await contextService.set('user:profile', 'value');
 
-      // Then — no context suffix added
+      // Then - no context suffix added
       expect(mockL2Store.set).toHaveBeenCalledWith('user:profile', expect.any(Object), expect.any(Number));
     });
 
@@ -1090,7 +1090,7 @@ describe('CacheService (Internal)', () => {
       // When
       await contextService.getOrSet('user:profile', loader);
 
-      // Then — both get and set should use the same enriched key
+      // Then - both get and set should use the same enriched key
       const enrichedKey = 'user:profile:_ctx_:tenantId.abc';
       expect(mockL1Store.get).toHaveBeenCalledWith(enrichedKey);
       expect(mockL2Store.get).toHaveBeenCalledWith(enrichedKey);
@@ -1174,33 +1174,33 @@ describe('CacheService (Internal)', () => {
       // When
       await contextService.get('user:profile');
 
-      // Then — @ and . replaced with _
+      // Then - @ and . replaced with _
       expect(mockL1Store.get).toHaveBeenCalledWith('user:profile:_ctx_:tenantId.tenant_example_com');
     });
 
     it('should not enrich keys when contextProvider is not configured', async () => {
-      // Given — use the default service (no contextProvider)
+      // Given - use the default service (no contextProvider)
       mockL1Store.get.mockResolvedValue(null);
 
       // When
       await service.get('user:profile');
 
-      // Then — key should not be enriched
+      // Then - key should not be enriched
       expect(mockL1Store.get).toHaveBeenCalledWith('user:profile');
     });
 
     it('should prevent double-enrichment via marker', async () => {
-      // Given — key already has context marker
+      // Given - key already has context marker
       mockContextProvider.get.mockReturnValue('abc');
       const alreadyEnrichedKey = 'user:profile:_ctx_:tenantId.abc';
       mockL1Store.get.mockResolvedValue(null);
       mockL2Store.get.mockResolvedValue(null);
       const loader = vi.fn().mockResolvedValue('value');
 
-      // When — getOrSet enriches key, then calls get() which tries to enrich again
+      // When - getOrSet enriches key, then calls get() which tries to enrich again
       await contextService.getOrSet('user:profile', loader);
 
-      // Then — get() inside getOrSet should use the same enriched key (not double-enriched)
+      // Then - get() inside getOrSet should use the same enriched key (not double-enriched)
       const calls = mockL1Store.get.mock.calls;
       for (const [calledKey] of calls) {
         // Should never see double marker
@@ -1230,7 +1230,7 @@ describe('CacheService (Internal)', () => {
     }
 
     it('should serve the retained value when the loader fails inside the keepUntil window', async () => {
-      // Given — entry is past expiresAt (load path) but inside keepUntil
+      // Given - entry is past expiresAt (load path) but inside keepUntil
       const sieService = buildSieService();
       const entry = retainedEntry();
       mockL2Store.getSwr.mockResolvedValueOnce(entry).mockResolvedValueOnce(entry);
@@ -1240,7 +1240,7 @@ describe('CacheService (Internal)', () => {
       // When
       const result = await sieService.getOrSet('calc:k1', loader);
 
-      // Then — the error is swallowed, the retained value is served, observably
+      // Then - the error is swallowed, the retained value is served, observably
       expect(result).toBe('last-known-good');
       expect(loader).toHaveBeenCalledTimes(1);
       expect(mockMetrics.incrementCounter).toHaveBeenCalledWith('redisx_cache_stale_if_error_served_total');
@@ -1268,13 +1268,13 @@ describe('CacheService (Internal)', () => {
     });
 
     it('should respect shouldServe: a disqualified error is rethrown (e.g. 404 = data is gone)', async () => {
-      // Given — predicate excludes "not found" errors
+      // Given - predicate excludes "not found" errors
       const sieService = buildSieService({ enabled: true, shouldServe: (error) => !error.message.includes('404') });
       const entry = retainedEntry();
       mockL2Store.getSwr.mockResolvedValue(entry);
       mockSwrManager.isExpired.mockReturnValue(true);
 
-      // When / Then — 404 is NOT served stale; 503 is
+      // When / Then - 404 is NOT served stale; 503 is
       await expect(sieService.getOrSet('calc:k4', vi.fn().mockRejectedValue(new Error('404 not found')))).rejects.toThrow('404');
       await expect(sieService.getOrSet('calc:k4', vi.fn().mockRejectedValue(new Error('503 unavailable')))).resolves.toBe('last-known-good');
     });
@@ -1290,12 +1290,12 @@ describe('CacheService (Internal)', () => {
       mockL2Store.getSwr.mockResolvedValue(retainedEntry());
       mockSwrManager.isExpired.mockReturnValue(true);
 
-      // When / Then — the predicate bug never masks the loader failure
+      // When / Then - the predicate bug never masks the loader failure
       await expect(sieService.getOrSet('calc:k5', vi.fn().mockRejectedValue(new Error('real outage')))).rejects.toThrow('real outage');
     });
 
     it('should write entries WITH keepUntil when enabled (retention window = TTL + SWR + sie window)', async () => {
-      // Given — SIE on, SWR off: staleTime must be 0 and window passed through
+      // Given - SIE on, SWR off: staleTime must be 0 and window passed through
       const sieService = buildSieService({ enabled: true, defaultWindow: 3600 });
       mockL2Store.getSwr.mockResolvedValue(null);
       const loader = vi.fn().mockResolvedValue('fresh');
@@ -1310,19 +1310,19 @@ describe('CacheService (Internal)', () => {
     });
 
     it('should NOT set keepUntil for SWR-only users (zero blast radius)', async () => {
-      // Given — SWR on, SIE off: entries and their TTL stay exactly as before
+      // Given - SWR on, SIE off: entries and their TTL stay exactly as before
       const swrOnly = new CacheService(mockDriver, mockL1Store, mockL2Store, mockStampede, mockTagIndex, mockSwrManager, { ...options, swr: { enabled: true, defaultStaleTime: 60 } });
       mockL2Store.getSwr.mockResolvedValue(null);
 
       // When
       await swrOnly.getOrSet('calc:k7', vi.fn().mockResolvedValue('v'));
 
-      // Then — keepSeconds argument is undefined
+      // Then - keepSeconds argument is undefined
       expect(mockSwrManager.createSwrEntry).toHaveBeenCalledWith('v', expect.any(Number), 60, undefined);
     });
 
     it('should support per-call enablement when the plugin default is off', async () => {
-      // Given — plugin SIE off; per-call opt-in with its own window
+      // Given - plugin SIE off; per-call opt-in with its own window
       const plainService = new CacheService(mockDriver, mockL1Store, mockL2Store, mockStampede, mockTagIndex, mockSwrManager, options);
       const entry = retainedEntry();
       mockL2Store.getSwr.mockResolvedValue(entry);
@@ -1354,7 +1354,7 @@ describe('CacheService (Internal)', () => {
       // When
       const deleted = await l1OnlyService.deleteMany(['a', 'b']);
 
-      // Then — per-key l2Store.delete, and the driver pipeline is NOT used
+      // Then - per-key l2Store.delete, and the driver pipeline is NOT used
       expect(deleted).toBe(2);
       expect(mockL2Store.delete).toHaveBeenCalledWith('a');
       expect(mockL2Store.delete).toHaveBeenCalledWith('b');

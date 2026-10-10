@@ -51,7 +51,7 @@ describe('RedisCircuitBreakerStoreAdapter', () => {
 
   describe('canRequest', () => {
     it('should parse the decision from the script result', async () => {
-      // Given — {allowed, stateCode, failuresInWindow, hoSucc, hoInflight}
+      // Given - {allowed, stateCode, failuresInWindow, hoSucc, hoInflight}
       await adapter.onModuleInit();
       driver.evalsha.mockResolvedValue([1, 2, 0, 0, 1]);
 
@@ -85,7 +85,7 @@ describe('RedisCircuitBreakerStoreAdapter', () => {
     });
 
     it('should use EVAL directly when scripts were never preloaded (sha null)', async () => {
-      // Given — no onModuleInit()
+      // Given - no onModuleInit()
       driver.eval.mockResolvedValue([1, 0, 0, 0, 0]);
 
       // When
@@ -202,19 +202,19 @@ describe('RedisCircuitBreakerStoreAdapter', () => {
     });
 
     it('canRequest should tolerate an empty script result (all fields default)', async () => {
-      // Given — a malformed/empty reply
+      // Given - a malformed/empty reply
       driver.evalsha.mockResolvedValue([]);
 
       // When
       const decision = await adapter.canRequest('cb:x', CONFIG);
 
-      // Then — denied, closed snapshot with zeros
+      // Then - denied, closed snapshot with zeros
       expect(decision.allowed).toBe(false);
       expect(decision.snapshot).toEqual({ state: 'closed', failuresInWindow: 0, halfOpenSuccesses: 0, halfOpenInFlight: 0 });
     });
 
     it('recordSuccess should tolerate a short script result', async () => {
-      // Given — only the state code is present
+      // Given - only the state code is present
       driver.evalsha.mockResolvedValue([2]);
 
       // When
@@ -225,7 +225,7 @@ describe('RedisCircuitBreakerStoreAdapter', () => {
     });
 
     it('should treat the "No matching script" message as a NOSCRIPT fallback', async () => {
-      // Given — node-redis style wording instead of ioredis NOSCRIPT
+      // Given - node-redis style wording instead of ioredis NOSCRIPT
       driver.evalsha.mockRejectedValue(new Error('No matching script. Please use EVAL.'));
       driver.eval.mockResolvedValue([1, 0, 0, 0, 0]);
 
@@ -238,7 +238,7 @@ describe('RedisCircuitBreakerStoreAdapter', () => {
     });
 
     it('should wrap errors without a message (no NOSCRIPT match possible)', async () => {
-      // Given — an error-like object with no message
+      // Given - an error-like object with no message
       driver.evalsha.mockRejectedValue({});
 
       // When / Then
@@ -256,7 +256,7 @@ describe('RedisCircuitBreakerStoreAdapter', () => {
 
   describe('EVAL-direct path (scripts never preloaded)', () => {
     it('recordSuccess and getState should use EVAL when sha is null', async () => {
-      // Given — no onModuleInit()
+      // Given - no onModuleInit()
       driver.eval.mockResolvedValue([0, 0, 0, 0]);
 
       // When
@@ -275,7 +275,7 @@ describe('RedisCircuitBreakerStoreAdapter', () => {
       // When
       await adapter.reset('cb:x');
 
-      // Then — one variadic DEL, all keys share a hash tag (same cluster slot)
+      // Then - one variadic DEL, all keys share a hash tag (same cluster slot)
       expect(driver.del).toHaveBeenCalledTimes(1);
       expect(driver.del).toHaveBeenCalledWith('{cb:x}', '{cb:x}:f', '{cb:x}:p');
     });

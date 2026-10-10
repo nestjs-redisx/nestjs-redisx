@@ -55,7 +55,7 @@ export function validateCounterTtl(ttl: number | undefined, source: string): voi
  */
 export function validateCountersOptions(options: ICountersPluginOptions, source = 'CountersPlugin'): void {
   if (options.keyPrefix !== undefined && (typeof options.keyPrefix !== 'string' || options.keyPrefix.length === 0)) {
-    // An empty prefix would make a counter key a bare user string — the
+    // An empty prefix would make a counter key a bare user string - the
     // same self-collision hazard the leader plugin guards against.
     throw new InvalidCounterConfigError(`${source}: keyPrefix must be a non-empty string, got ${describe(options.keyPrefix)}.`);
   }

@@ -71,7 +71,7 @@ describe('PubSubDiscovery', () => {
     // When
     await discoveryFor([instance]).onModuleInit();
 
-    // Then — both registered, non-decorated ignored
+    // Then - both registered, non-decorated ignored
     expect(service.subscribe).toHaveBeenCalledTimes(1);
     expect(service.subscribe).toHaveBeenCalledWith('user.created', expect.any(Function));
     expect(service.psubscribe).toHaveBeenCalledWith('order.*', expect.any(Function));
@@ -83,10 +83,10 @@ describe('PubSubDiscovery', () => {
   });
 
   it('should skip providers without instances and warn when DiscoveryService is absent', async () => {
-    // Given — no DiscoveryService at all
+    // Given - no DiscoveryService at all
     const discovery = new PubSubDiscovery(null, service as unknown as IPubSubService, new Reflector());
 
-    // When / Then — no throw, nothing registered
+    // When / Then - no throw, nothing registered
     await discovery.onModuleInit();
     expect(service.subscribe).not.toHaveBeenCalled();
 

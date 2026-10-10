@@ -8,7 +8,7 @@
  *
  * TIME IS OWNED BY THE STORE: every expiry decision uses the Redis server
  * clock (fetched via TIME and cached as a local offset), never the calling
- * instance's clock — a replica with a skewed clock must not be able to
+ * instance's clock - a replica with a skewed clock must not be able to
  * sweep other instances' live permits or misjudge its own.
  */
 export interface ISemaphoreStore {
@@ -29,7 +29,7 @@ export interface ISemaphoreStore {
   /**
    * Releases a permit. The member is removed either way; "was held" is
    * reported only when the permit was still LIVE (an expired seat was not
-   * protected — the caller must hear about it).
+   * protected - the caller must hear about it).
    *
    * @param key - Full semaphore key in Redis
    * @param permitId - Permit id to remove

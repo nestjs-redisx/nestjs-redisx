@@ -37,7 +37,7 @@ describe('MetricsService edge cases', () => {
       // Given
       const svc = buildDisabled();
 
-      // When / Then — nothing throws, nothing recorded
+      // When / Then - nothing throws, nothing recorded
       svc.incrementCounter('any', { a: 'b' });
       svc.observeHistogram('any', 1, { a: 'b' });
       svc.setGauge('any', 1, { a: 'b' });

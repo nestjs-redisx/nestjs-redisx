@@ -336,7 +336,7 @@ describe('@WithLock Decorator', () => {
       // When
       const result = await service.doWork();
 
-      // Then — should not throw, method result returned
+      // Then - should not throw, method result returned
       expect(result).toBe('ok');
     });
 
@@ -457,11 +457,11 @@ describe('@WithLock Decorator', () => {
   });
 
   describe('metadata carry-over', () => {
-    it('should carry metadata stamped by decorators applied before it — @Cron below @WithLock must not silently unregister the job', () => {
-      // Given — a method already stamped by an earlier decorator. Source order
+    it('should carry metadata stamped by decorators applied before it - @Cron below @WithLock must not silently unregister the job', () => {
+      // Given - a method already stamped by an earlier decorator. Source order
       // `@WithLock` above `@Cron()` applies @Cron FIRST, to the ORIGINAL method;
       // discovery-based consumers (the scheduler among them) read metadata off
-      // the prototype's method — which is the wrapper after @WithLock runs.
+      // the prototype's method - which is the wrapper after @WithLock runs.
       const CRON_METADATA = 'test:schedule-expression';
       class CarryOverHost {
         async job(): Promise<string> {
@@ -471,11 +471,11 @@ describe('@WithLock Decorator', () => {
       const descriptor = Object.getOwnPropertyDescriptor(CarryOverHost.prototype, 'job')!;
       Reflect.defineMetadata(CRON_METADATA, '0 3 * * *', descriptor.value);
 
-      // When — @WithLock wraps the already-stamped method
+      // When - @WithLock wraps the already-stamped method
       WithLock({ key: 'carry:lock' })(CarryOverHost.prototype, 'job', descriptor);
       Object.defineProperty(CarryOverHost.prototype, 'job', descriptor);
 
-      // Then — the wrapper carries the earlier decorator's metadata (the cron
+      // Then - the wrapper carries the earlier decorator's metadata (the cron
       // stays discoverable) and still exposes its own options
       const wrapper = CarryOverHost.prototype.job;
       expect(Reflect.getMetadata(CRON_METADATA, wrapper)).toBe('0 3 * * *');
@@ -483,7 +483,7 @@ describe('@WithLock Decorator', () => {
     });
 
     it('should carry metadata through a STACK of proxy decorators (two wrappers above @Cron)', () => {
-      // Given — cron metadata on the original, then TWO proxy wrappers on top
+      // Given - cron metadata on the original, then TWO proxy wrappers on top
       const CRON_METADATA = 'test:schedule-expression';
       class StackedHost {
         async job(): Promise<string> {
@@ -493,12 +493,12 @@ describe('@WithLock Decorator', () => {
       const descriptor = Object.getOwnPropertyDescriptor(StackedHost.prototype, 'job')!;
       Reflect.defineMetadata(CRON_METADATA, '*/5 * * * *', descriptor.value);
 
-      // When — inner wrapper, then outer wrapper (source order: outer above inner above @Cron)
+      // When - inner wrapper, then outer wrapper (source order: outer above inner above @Cron)
       WithLock({ key: 'inner' })(StackedHost.prototype, 'job', descriptor);
       WithLock({ key: 'outer' })(StackedHost.prototype, 'job', descriptor);
       Object.defineProperty(StackedHost.prototype, 'job', descriptor);
 
-      // Then — the OUTERMOST wrapper still carries the cron metadata, and its
+      // Then - the OUTERMOST wrapper still carries the cron metadata, and its
       // own options won over the inner wrapper's copied ones
       const wrapper = StackedHost.prototype.job;
       expect(Reflect.getMetadata(CRON_METADATA, wrapper)).toBe('*/5 * * * *');

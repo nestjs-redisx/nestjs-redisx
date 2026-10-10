@@ -13,7 +13,7 @@ function describe(value: unknown): string {
 }
 
 /**
- * Validates a key and window at the call site — every public entry point
+ * Validates a key and window at the call site - every public entry point
  * calls this (fail-fast, never subject to the errorPolicy).
  */
 export function validateDedupCall(key: unknown, window: number | undefined, source: string): void {
@@ -21,7 +21,7 @@ export function validateDedupCall(key: unknown, window: number | undefined, sour
     throw new InvalidDedupConfigError(`${source}: key must be a non-empty string, got ${describe(key)}.`);
   }
   if (key.includes('\u0000')) {
-    // U+0000 delimits the plugin's internal namespaces (the debounce slot) —
+    // U+0000 delimits the plugin's internal namespaces (the debounce slot) -
     // a user key containing it could collide with internal keys.
     throw new InvalidDedupConfigError(`${source}: key must not contain the NUL character (reserved for internal namespacing).`);
   }
@@ -36,7 +36,7 @@ export function validateDedupCall(key: unknown, window: number | undefined, sour
  */
 export function validateDedupOptions(options: IDedupPluginOptions, source = 'DedupPlugin'): void {
   if (options.keyPrefix !== undefined && (typeof options.keyPrefix !== 'string' || options.keyPrefix.length === 0)) {
-    // An empty prefix would make a marker key a bare user string — the same
+    // An empty prefix would make a marker key a bare user string - the same
     // self-collision hazard the leader plugin guards against.
     throw new InvalidDedupConfigError(`${source}: keyPrefix must be a non-empty string, got ${describe(options.keyPrefix)}.`);
   }

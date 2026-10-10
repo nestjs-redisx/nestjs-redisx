@@ -2,7 +2,7 @@ import { ISessionActivity, ISessionInfo } from '../../../shared/types';
 
 /**
  * Session service port: the Redis-native capabilities the middleware Store
- * contract cannot offer — introspection ("device page"), revocation
+ * contract cannot offer - introspection ("device page"), revocation
  * ("log out everywhere"), and counting.
  *
  * @template T - Application session payload shape (compile-time contract only;
@@ -25,7 +25,7 @@ export interface ISessionService<T = unknown> {
   getSession(sessionId: string): Promise<ISessionInfo<T> | null>;
 
   /**
-   * List a user's live sessions with metadata — the GitHub-style
+   * List a user's live sessions with metadata - the GitHub-style
    * "Chrome on Mac, last active 2h ago" device page.
    *
    * @param userId - Owning user
@@ -74,7 +74,7 @@ export interface ISessionService<T = unknown> {
   revokeAll(userId: string): Promise<number>;
 
   /**
-   * Revoke every session of a user except the current one — the
+   * Revoke every session of a user except the current one - the
    * "log out everywhere else" button (plain revokeAll would log out the
    * clicker too).
    *

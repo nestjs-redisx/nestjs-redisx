@@ -6,7 +6,7 @@ import { LeaderLostReason } from '../../../shared/types';
  */
 export interface ILeaderService {
   /**
-   * This process's identity — the value stored in the election key while it
+   * This process's identity - the value stored in the election key while it
    * leads, and what `getLeaderId()` returns on other instances.
    */
   readonly instanceId: string;

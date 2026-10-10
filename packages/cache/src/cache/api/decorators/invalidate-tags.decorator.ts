@@ -60,7 +60,7 @@ export function InvalidateTags(options: IInvalidateTagsOptions): MethodDecorator
 
       // Resolve tags. Static tags interpolate {n} placeholders exactly like
       // @Cached, so the tag written on read (@Cached) and the tag invalidated
-      // here match — otherwise invalidation silently no-ops.
+      // here match - otherwise invalidation silently no-ops.
       const tags = typeof options.tags === 'function' ? options.tags(...args) : interpolateTags(options.tags, args);
 
       // Invalidate BEFORE if configured
@@ -94,7 +94,7 @@ export function InvalidateTags(options: IInvalidateTagsOptions): MethodDecorator
     });
 
     // Carry over metadata stamped by decorators applied BEFORE this one
-    // (written below @InvalidateTags in source order — e.g. @Cron). Discovery-based
+    // (written below @InvalidateTags in source order - e.g. @Cron). Discovery-based
     // consumers (the scheduler among them) read metadata off the prototype's
     // method, which is now the wrapper; without the copy, `@InvalidateTags` above
     // `@Cron()` silently unregisters the job on every instance.

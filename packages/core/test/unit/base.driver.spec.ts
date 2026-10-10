@@ -3461,7 +3461,7 @@ describe('BaseRedisDriver', () => {
         }
       });
 
-      // When / Then — the failure propagates AND the hook saw it
+      // When / Then - the failure propagates AND the hook saw it
       await expect(driver.set('k', 'v')).rejects.toThrow();
       expect(seen).toEqual(['SET:READONLY']);
     });
@@ -3477,7 +3477,7 @@ describe('BaseRedisDriver', () => {
       driver.setCommandHook(second);
       await driver.get('k');
 
-      // Then — only the latest hook runs, exactly once
+      // Then - only the latest hook runs, exactly once
       expect(first).not.toHaveBeenCalled();
       expect(second).toHaveBeenCalledTimes(1);
     });

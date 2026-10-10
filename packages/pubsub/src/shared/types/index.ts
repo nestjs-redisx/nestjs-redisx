@@ -44,7 +44,7 @@ export interface IPubSubMessage<T = unknown> {
 }
 
 /**
- * Subscription message handler. Errors thrown here are caught and logged —
+ * Subscription message handler. Errors thrown here are caught and logged -
  * they never break the dispatch loop for other handlers.
  */
 export type PubSubMessageHandler<T = unknown> = (message: IPubSubMessage<T>) => void | Promise<void>;

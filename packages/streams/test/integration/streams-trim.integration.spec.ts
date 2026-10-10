@@ -48,7 +48,7 @@ async function createProducer(trim: { enabled?: boolean; maxLen?: number; approx
   return { module, producer: module.get<IStreamProducer>(STREAM_PRODUCER) };
 }
 
-describeIntegration('StreamsPlugin — trim configuration', () => {
+describeIntegration('StreamsPlugin - trim configuration', () => {
   beforeEach(async () => {
     await withRawClient((c) => c.flushdb());
   });

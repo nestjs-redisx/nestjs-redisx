@@ -1,7 +1,7 @@
 import { ICounterOptions } from '../../../shared/types';
 
 /**
- * Counter service interface — fleet-wide atomic counters and sequences.
+ * Counter service interface - fleet-wide atomic counters and sequences.
  *
  * Every mutation is a single atomic Redis operation: concurrent increments
  * from any number of instances never lose updates. Values are 64-bit
@@ -13,7 +13,7 @@ export interface ICounterService {
    * Atomically adds `by` (default 1) and returns the new value.
    *
    * With `options.ttl`, the TTL is applied only when this increment CREATES
-   * the key — the idiomatic window counter (`stats:2026-10-09` style keys
+   * the key - the idiomatic window counter (`stats:2026-10-09` style keys
    * expire on their own; later increments never extend the window).
    *
    * @param key - Counter key (prefixed with the plugin keyPrefix)
@@ -31,7 +31,7 @@ export interface ICounterService {
 
   /**
    * Atomically subtracts `by` (default 1) and returns the new value.
-   * Counters go negative freely — clamp in domain code if needed.
+   * Counters go negative freely - clamp in domain code if needed.
    *
    * @param key - Counter key
    * @param by - Amount to subtract (non-zero safe integer)
@@ -66,7 +66,7 @@ export interface ICounterService {
   reset(key: string): Promise<boolean>;
 
   /**
-   * Atomically reads and deletes the counter — flush-style consumption for
+   * Atomically reads and deletes the counter - flush-style consumption for
    * periodic aggregation (read the batch total exactly once).
    *
    * @param key - Counter key
@@ -81,7 +81,7 @@ export interface ICounterService {
   getAndReset(key: string): Promise<number>;
 
   /**
-   * Returns the next value of a monotonic sequence (INCR, no TTL) — safe
+   * Returns the next value of a monotonic sequence (INCR, no TTL) - safe
    * fleet-wide ID generation.
    *
    * @param sequence - Sequence name

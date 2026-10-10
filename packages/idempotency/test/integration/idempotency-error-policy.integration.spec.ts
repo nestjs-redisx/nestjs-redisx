@@ -66,7 +66,7 @@ async function createApp(errorPolicy: 'fail-open' | 'fail-closed'): Promise<INes
   return app;
 }
 
-describeIntegration('IdempotencyPlugin — errorPolicy when the store is unavailable', () => {
+describeIntegration('IdempotencyPlugin - errorPolicy when the store is unavailable', () => {
   let failOpenApp: INestApplication;
   let failClosedApp: INestApplication;
 

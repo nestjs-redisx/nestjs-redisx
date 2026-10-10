@@ -95,7 +95,7 @@ describe('ConsumerInstance', () => {
       driver.xgroupCreate.mockRejectedValue(new Error('BUSYGROUP Consumer Group name already exists'));
       const instance = new ConsumerInstance(driver, dlqService, config, metrics);
 
-      // When/Then — should not throw
+      // When/Then - should not throw
       await expect((instance as any).ensureGroup()).resolves.toBeUndefined();
     });
 
@@ -189,7 +189,7 @@ describe('ConsumerInstance', () => {
       // When
       await (instance as any).processMessage('1700000000000-0', { data: JSON.stringify({ x: 1 }) });
 
-      // Then — the failure path is skipped so no retry / DLQ work hits a torn-down driver
+      // Then - the failure path is skipped so no retry / DLQ work hits a torn-down driver
       expect(spy).not.toHaveBeenCalled();
     });
 
@@ -199,7 +199,7 @@ describe('ConsumerInstance', () => {
       config.handler = handler;
       const instance = new ConsumerInstance(driver, dlqService, config);
 
-      // When/Then — should not throw
+      // When/Then - should not throw
       await expect((instance as any).processMessage('1700000000000-0', { data: JSON.stringify('ok') })).resolves.toBeUndefined();
     });
 
@@ -260,7 +260,7 @@ describe('ConsumerInstance', () => {
       config.retryMaxDelay = 5000;
       const instance = new ConsumerInstance(driver, dlqService, config, metrics);
 
-      // When — attempt 5: delay = min(1000 * 10^4, 5000) = 5000
+      // When - attempt 5: delay = min(1000 * 10^4, 5000) = 5000
       const promise = (instance as any).handleFailure('id-1', 'data', 5);
       await vi.advanceTimersByTimeAsync(5000);
       await promise;
@@ -274,7 +274,7 @@ describe('ConsumerInstance', () => {
       config.maxRetries = 1;
       const instance = new ConsumerInstance(driver, dlqService, config);
 
-      // When/Then — should not throw
+      // When/Then - should not throw
       await expect((instance as any).handleFailure('id-1', 'data', 1)).resolves.toBeUndefined();
       expect(dlqService.add).toHaveBeenCalled();
     });
@@ -378,7 +378,7 @@ describe('ConsumerInstance', () => {
       expect(driver.xgroupCreate).toHaveBeenCalled();
       expect((instance as any).running).toBe(true);
 
-      // Cleanup — stop the poll loop
+      // Cleanup - stop the poll loop
       await instance.stop();
     });
 
@@ -412,13 +412,13 @@ describe('ConsumerInstance', () => {
     });
 
     it('should be a no-op when stop() is called before start()', async () => {
-      // Given — a consumer that has never been started
+      // Given - a consumer that has never been started
       const instance = new ConsumerInstance(driver, dlqService, config, metrics);
 
       // When
       await expect(instance.stop()).resolves.toBeUndefined();
 
-      // Then — no group created, no polling, nothing to tear down
+      // Then - no group created, no polling, nothing to tear down
       expect((instance as any).running).toBe(false);
       expect((instance as any).pollPromise).toBeUndefined();
       expect(driver.xgroupCreate).not.toHaveBeenCalled();
@@ -433,7 +433,7 @@ describe('ConsumerInstance', () => {
       await instance.stop();
       const secondStop = instance.stop();
 
-      // Then — the second stop returns immediately because running=false and
+      // Then - the second stop returns immediately because running=false and
       // pollPromise has already been cleared by the first stop.
       await expect(secondStop).resolves.toBeUndefined();
       expect((instance as any).running).toBe(false);
@@ -455,7 +455,7 @@ describe('ConsumerInstance', () => {
       // When
       await (instance as any).processMessage('1700000000000-0', { data: JSON.stringify({ x: 1 }) });
 
-      // Then — no retry / DLQ work kicked off, because the driver is tearing down
+      // Then - no retry / DLQ work kicked off, because the driver is tearing down
       expect(spy).not.toHaveBeenCalled();
     });
 
@@ -470,7 +470,7 @@ describe('ConsumerInstance', () => {
       // When
       await (instance as any).processMessage('1700000000000-0', { data: JSON.stringify({ x: 1 }), _attempt: '1' });
 
-      // Then — a plain error is not a shutdown signal, so handleFailure runs
+      // Then - a plain error is not a shutdown signal, so handleFailure runs
       expect(spy).toHaveBeenCalledWith('1700000000000-0', { x: 1 }, 1, expect.any(Error));
     });
 
@@ -480,13 +480,13 @@ describe('ConsumerInstance', () => {
       driver.xreadgroup.mockRejectedValueOnce(new Error(`xreadgroup failed: ${hint}`));
       (instance as any).running = true;
       (instance as any).shutdownSignal = new Promise(() => {
-        // never resolves — forces the loop to terminate via the shutdown-hint path
+        // never resolves - forces the loop to terminate via the shutdown-hint path
       });
 
       // When
       await (instance as any).poll();
 
-      // Then — only the single rejecting call happened; no 1s retry delay was taken
+      // Then - only the single rejecting call happened; no 1s retry delay was taken
       expect(driver.xreadgroup).toHaveBeenCalledTimes(1);
     });
   });

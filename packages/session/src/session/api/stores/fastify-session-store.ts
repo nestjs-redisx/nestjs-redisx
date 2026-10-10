@@ -25,7 +25,7 @@ export interface IFastifySessionPayload {
 
 /**
  * The callback store contract expected by `@fastify/session`.
- * Structural — no dependency on the `@fastify/session` package is needed.
+ * Structural - no dependency on the `@fastify/session` package is needed.
  */
 export interface IFastifySessionStore {
   get(sessionId: string, callback: (err: unknown, session?: IFastifySessionPayload | null) => void): void;
@@ -64,7 +64,7 @@ export function toFastifyStore(store: ISessionStore, options: IFastifySessionSto
     set(sessionId, session, callback): void {
       const ttlMs = ttlMsFromSession(session, Date.now(), options.ttlMs);
       if (ttlMs !== undefined && ttlMs <= 0) {
-        // The cookie already expired — an expired session must not be written back.
+        // The cookie already expired - an expired session must not be written back.
         store.destroy(sessionId).then(
           () => invokeCallback(callback, null),
           (error: unknown) => invokeCallback(callback, error),

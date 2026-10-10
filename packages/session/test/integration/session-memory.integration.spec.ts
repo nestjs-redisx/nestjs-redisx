@@ -7,7 +7,7 @@ import { SessionPlugin, SESSION_SERVICE, SESSION_STORE, SessionLimitExceededErro
 import { GET_SESSION_SCRIPT } from '../../src/session/infrastructure/scripts/lua-scripts';
 
 /**
- * End-to-end validation on the in-memory driver — NO Redis. Exercises the full
+ * End-to-end validation on the in-memory driver - NO Redis. Exercises the full
  * stack (service -> store adapter -> Lua scripts -> memory Lua interpreter)
  * through production code.
  *
@@ -311,7 +311,7 @@ describe('Session on the in-memory driver (no Redis)', () => {
     // When: the session dies by the cap without ever being read again
     await wait(220);
 
-    // Then: a fresh login must succeed — the index entry's score is clamped
+    // Then: a fresh login must succeed - the index entry's score is clamped
     // to the capped expiry, so the seat frees together with the session
     await expect(store.set('sid-2', userSession('user-1'))).resolves.toBeUndefined();
     expect(await store.get('sid-2')).not.toBeNull();
@@ -336,7 +336,7 @@ describe('Session on the in-memory driver (no Redis)', () => {
   });
 
   it('treats a missing session as a plain miss on the memory driver (no corrupt-payload destroy)', async () => {
-    // Given: parity with real Redis — nil bulk replies must reach Lua as false
+    // Given: parity with real Redis - nil bulk replies must reach Lua as false
     const { store } = await boot();
     const manager = app!.get<{ getClient(name: string): Promise<{ eval(script: string, keys: string[], args: Array<string | number>): Promise<unknown> }> }>(CLIENT_MANAGER);
     const driver = await manager.getClient('default');
@@ -395,7 +395,7 @@ describe('Session on the in-memory driver (no Redis)', () => {
     // When: the user logs out (destroy re-derives the owner from the payload)
     expect(await store.destroy('sid-1')).toBe(true);
 
-    // Then: the seat is free — no lockout
+    // Then: the seat is free - no lockout
     expect(await store.countByUser('user-1')).toBe(0);
     await expect(store.set('sid-2', userSession('user-1'))).resolves.toBeUndefined();
   });

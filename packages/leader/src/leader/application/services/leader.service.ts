@@ -23,32 +23,32 @@ interface IElection {
   /**
    * Incremented whenever the election's intent changes out-of-band
    * (stepDown, shutdown). A tick captures the epoch before awaiting the
-   * store; a stale result — one that raced a supersession — must not mutate
+   * store; a stale result - one that raced a supersession - must not mutate
    * state, fire events, or claim a lease nobody local acknowledges.
    */
   epoch: number;
   /**
    * Barrier over every own-lease release still on the wire (stale-sweep,
    * stepDown, shutdown). The store port guarantees no call ordering, so a
-   * fresh acquire must wait for ALL of them — any release landing AFTER a
+   * fresh acquire must wait for ALL of them - any release landing AFTER a
    * legitimate re-acquire would delete the new lease (same instance id) and
    * split-brain the group. The barrier covers SETTLEMENT ordering: a
    * release REJECTED client-side leaves the barrier even though a
-   * transport replay may still land it — that residual is the documented
+   * transport replay may still land it - that residual is the documented
    * bounded-overlap tradeoff (self-heals within one heartbeat via CAS).
    */
   pendingRelease: Promise<void> | null;
   /**
    * The tick currently executing for this group, if any. Shutdown
    * rendezvouses with it (bounded): an acquire/renewal already on the wire
-   * may WIN, and the win must be observed — and released — while the Redis
+   * may WIN, and the win must be observed - and released - while the Redis
    * clients are still open, or a dead instance's lease blocks the group for
    * a full ttl.
    */
   inFlight: Promise<void> | null;
   /**
    * Fires when the confirmed lease reaches its deadline with no tick
-   * observing it — the heartbeat is stuck on a store call (hung socket,
+   * observing it - the heartbeat is stuck on a store call (hung socket,
    * driver without a command timeout). The overdue onLost('expired') must
    * not wait minutes for that call to settle.
    */
@@ -61,7 +61,7 @@ interface IElection {
  * Runs one background election loop per group: while leader, the lease is
  * renewed every `renewIntervalMs` via a CAS script; while follower, an
  * acquire is attempted every `retryIntervalMs`. All store errors in the loop
- * are contained (logged; an unconfirmed lease simply demotes this instance) —
+ * are contained (logged; an unconfirmed lease simply demotes this instance) -
  * a background timer must never crash the application.
  */
 @Injectable()
@@ -75,7 +75,7 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
   /** True once onModuleInit snapshotted the group registry and started elections. */
   private initialized = false;
 
-  /** True once onModuleDestroy ran — a destroyed service never elects again. */
+  /** True once onModuleDestroy ran - a destroyed service never elects again. */
   private destroyed = false;
 
   readonly instanceId: string;
@@ -95,7 +95,7 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
     private readonly metrics?: IMetricsService,
   ) {
     // The plugin validates too, but the service is exported for direct
-    // construction (tests, custom wiring) — an invalid config like
+    // construction (tests, custom wiring) - an invalid config like
     // renewIntervalMs >= ttlMs must fail fast on every path.
     validateLeaderOptions(options, 'LeaderService');
     this.instanceId = options.instanceId ?? generateInstanceId();
@@ -115,7 +115,7 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
     const groups = new Set<string>([DEFAULT_LEADER_GROUP, ...(this.options.groups ?? []), ...getRegisteredLeaderGroups()]);
     for (const group of groups) {
       if (this.destroyed) {
-        // A destroy raced this init (aborted bootstrap, lifecycle misuse) —
+        // A destroy raced this init (aborted bootstrap, lifecycle misuse) -
         // a destroyed service must never start fresh election loops.
         return;
       }
@@ -128,15 +128,15 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
   }
 
   /**
-   * Stop all loops and release every lease this instance holds — or may
-   * still hold after a fail-safe local demotion — so failover is instant.
+   * Stop all loops and release every lease this instance holds - or may
+   * still hold after a fail-safe local demotion - so failover is instant.
    */
   async onModuleDestroy(): Promise<void> {
     this.destroyed = true;
     // First pass, fully synchronous: every loop is stopped and superseded
     // BEFORE the per-group teardown below yields to the event loop. Without
     // it, a not-yet-processed group's timer (or in-flight tick) could still
-    // elect — and invoke the user's onElected — DURING shutdown.
+    // elect - and invoke the user's onElected - DURING shutdown.
     for (const election of this.elections.values()) {
       election.stopped = true;
       election.epoch += 1;
@@ -144,7 +144,7 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
     }
     // Groups tear down CONCURRENTLY. Each one can burn up to three bounded
     // awaits (rendezvous, release, barrier), so draining them in sequence
-    // would multiply the shutdown bound by the number of groups — with a
+    // would multiply the shutdown bound by the number of groups - with a
     // black-holed connection, a handful of groups is enough to outlast a
     // container's termination grace period and get the process SIGKILLed
     // mid-cleanup, which is exactly the wedge the bound exists to prevent.
@@ -160,7 +160,7 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
     try {
       if (election.inFlight) {
         // Rendezvous (bounded): an acquire/renewal already on the wire may
-        // WIN; observing the result here — clients still open — lets the
+        // WIN; observing the result here - clients still open - lets the
         // release below clear it. A store call outliving the bound forfeits:
         // proceeding matches the pre-rendezvous best effort (quiet release
         // when it finally settles, ttl-bounded residue at worst).
@@ -174,20 +174,20 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
       }
       if (wasLeader || election.state.mayHoldLease()) {
         // The key may still carry our id even when locally demoted (a
-        // renewal ERROR demotes without confirming the seat is gone) — a
+        // renewal ERROR demotes without confirming the seat is gone) - a
         // dead process's residue would block the group for the remaining
         // ttl. The release is CAS on our own id, so it can never touch a
         // seat somebody else already took. Bounded like the rendezvous
         // above: a release that cannot land on a hung connection must not
         // wedge the whole application shutdown chain behind it (the lease
-        // then expires by ttl — the crash bound).
+        // then expires by ttl - the crash bound).
         await this.awaitBounded(this.trackRelease(group, election, `leadership of "${group}" on shutdown`));
       }
       if (wasLeader) {
         this.emitLost(group, 'shutdown');
       }
       if (election.pendingRelease) {
-        // Every release — including quiet ones a stale tick fired — should
+        // Every release - including quiet ones a stale tick fired - should
         // LAND before shutdown proceeds to closing the Redis clients: a
         // release still on the wire when they close is a lease nobody will
         // ever clear. Same bound, same forfeit.
@@ -196,7 +196,7 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
     } catch (error) {
       // Unreachable through the shipped store (every await here is bounded
       // and contained), but one group must never abort the teardown of the
-      // others — that would strand their leases for a full ttl.
+      // others - that would strand their leases for a full ttl.
       this.logger.warn(`Shutdown teardown of "${group}" failed: ${this.describeFailure(error)}`);
     }
   }
@@ -246,16 +246,16 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
 
     if (wasLeader) {
       election.state.lost();
-      // Emit at demotion time, like the 'expired' and 'shutdown' paths — NOT
+      // Emit at demotion time, like the 'expired' and 'shutdown' paths - NOT
       // after the release await: a release hanging on the wire while
       // onModuleDestroy supersedes this stepDown would otherwise fire the
       // user's onLost on a fully torn-down application (destroy stays silent
-      // for this group — it reads wasLeader === false after lost() above).
+      // for this group - it reads wasLeader === false after lost() above).
       this.emitLost(group, 'stepdown');
     }
     if (wasLeader || election.state.mayHoldLease()) {
       // Also clears the residue of a fail-safe demotion (key still carrying
-      // our id after a renewal error) — stepping down must actually free the
+      // our id after a renewal error) - stepping down must actually free the
       // seat for the rest of the fleet. CAS on our own id: cannot touch a
       // seat held by another instance. Tracked: if this release outlives the
       // cooldown on the wire, the post-cooldown re-acquire must wait for it
@@ -296,7 +296,7 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
 
     // A lease that expired without any tick observing it (event-loop stall,
     // clock jump, store latency beyond ttl - renewInterval) must still report
-    // its loss — otherwise the follow-up re-election fires a second
+    // its loss - otherwise the follow-up re-election fires a second
     // `onElected` with no `onLost` in between, and consumers that pair the
     // events to start/stop singleton workers double-start.
     this.reconcileLapse(group, election, now);
@@ -315,7 +315,7 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
       }
       if (this.isStale(election, epoch)) {
         // A stepDown/shutdown superseded this round while the renewal was in
-        // flight. If it still extended the remote lease, drop the key —
+        // flight. If it still extended the remote lease, drop the key -
         // nobody local acknowledges it, and a held-but-unclaimed seat would
         // block failover for a full ttl. The wire result confirmed our id is
         // on the key, so record it: if the quiet release fails, a later
@@ -357,7 +357,7 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
         settled = true;
       } catch (error) {
         this.logger.warn(`Leadership acquisition for "${group}" failed: ${(error as Error).message}`);
-        // The rejection is client-side only — the SET NX may still have
+        // The rejection is client-side only - the SET NX may still have
         // been written and WON server-side. Without this pessimistic mark,
         // a stepDown/shutdown inside the retry window would skip its
         // release and a dead instance's zombie win would block the group
@@ -368,7 +368,7 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
         if (acquired || !settled) {
           // Same residue tracking as the stale renewal above: a confirmed
           // win means the key carries our id until the quiet release
-          // confirms otherwise — and an ERRORED acquire may have landed
+          // confirms otherwise - and an ERRORED acquire may have landed
           // and won too (possiblyHolder marked it in the catch), so
           // release that possible win as well instead of leaving it for
           // the fleet to wait out (a no-op CAS when nothing landed;
@@ -408,12 +408,12 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
 
   /**
    * (Re)armed on every confirmed lease. Fires only when the deadline passes
-   * with NO further confirmation — i.e. the heartbeat tick is stuck on a
+   * with NO further confirmation - i.e. the heartbeat tick is stuck on a
    * store call (hung socket, driver without a command timeout). Consumers
    * pair elected/lost to start/stop singleton workers, so the overdue
    * onLost('expired') must fire on time even while that call dangles; the
    * stuck tick is superseded (epoch) so a late success cannot resurrect the
-   * lease locally — if it still extended the key on the wire, the stale
+   * lease locally - if it still extended the key on the wire, the stale
    * sweep releases it.
    */
   private armLapseWatchdog(group: string, election: IElection): void {
@@ -440,7 +440,7 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
           // Spurious wake: timers run on the monotonic clock while the lease
           // deadline is wall-clock, so a clock stepped BACKWARD makes this
           // fire "early". Re-arm from the SAME clock read that said "not
-          // lapsed" — a fresh read could already sit past the deadline (ms
+          // lapsed" - a fresh read could already sit past the deadline (ms
           // boundary, GC pause between the two reads) and silently drop the
           // watchdog while the heartbeat is still hung, exactly what this
           // timer exists to cover.
@@ -451,7 +451,7 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
         this.reconcileLapse(group, election, now);
         // Delay clamped: at the exact validation cap (ttl === MAX),
         // remaining + 1 would exceed Node's timer range and be set to 1 ms.
-        // Firing at the deadline instead of 1 ms after is safe — the
+        // Firing at the deadline instead of 1 ms after is safe - the
         // callback acts only when hasLapsed() confirms.
       },
       Math.min(remaining + 1, MAX_LEADER_TTL_MS),
@@ -476,7 +476,7 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
 
   /**
    * Await a shutdown-path promise for at most one `retryIntervalMs`.
-   * The bound timer is cancelled either way — shutdown must leave no timer
+   * The bound timer is cancelled either way - shutdown must leave no timer
    * behind. A never-rejecting input is assumed (all callers pass contained
    * promises).
    */
@@ -484,7 +484,7 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
     let timer: NodeJS.Timeout | undefined;
     const bound = new Promise<void>((resolve) => {
       // Deliberately NOT unref'd: this timer IS what guarantees shutdown
-      // completes — with a dangling store promise and nothing else keeping
+      // completes - with a dangling store promise and nothing else keeping
       // the event loop alive, an unref'd bound lets the process exit
       // mid-teardown before the forfeit fires. The finally below clears it,
       // so it can never outlive the await.
@@ -500,24 +500,24 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
   }
 
   /**
-   * A group with no running election answers `isLeader` with false FOREVER —
+   * A group with no running election answers `isLeader` with false FOREVER -
    * silently skipped singleton work is the worst failure mode of this plugin,
    * so make it loud (once per group). Typical cause: a `@LeaderOnly({ group })`
-   * class loaded lazily AFTER bootstrap — its group missed the onModuleInit
+   * class loaded lazily AFTER bootstrap - its group missed the onModuleInit
    * registry snapshot. Suppressed before initialization (elections simply have
-   * not started yet) — the scheduler only fires after init anyway.
+   * not started yet) - the scheduler only fires after init anyway.
    */
   private warnUnknownGroup(group: string): void {
     if (!this.initialized || this.warnedUnknownGroups.has(group)) {
       return;
     }
     this.warnedUnknownGroups.add(group);
-    this.logger.warn(`isLeader("${group}"): no election is running for this group on this instance — always false. ` + `Add it to plugin options ("groups") or reference it from a @LeaderOnly decorator loaded before bootstrap; ` + `groups registered after startup (e.g. in a lazily loaded module) do not start an election. ` + `(Expected only if the application is shutting down.)`);
+    this.logger.warn(`isLeader("${group}"): no election is running for this group on this instance - always false. ` + `Add it to plugin options ("groups") or reference it from a @LeaderOnly decorator loaded before bootstrap; ` + `groups registered after startup (e.g. in a lazily loaded module) do not start an election. ` + `(Expected only if the application is shutting down.)`);
   }
 
   /**
    * True when the election was superseded (stepDown/shutdown) after the
-   * given epoch was captured — results of awaits started before the
+   * given epoch was captured - results of awaits started before the
    * supersession must be discarded.
    */
   private isStale(election: IElection, epoch: number): boolean {
@@ -536,7 +536,7 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
   /**
    * Release this instance's (possible) lease, contained and tracked.
    *
-   * - A settled call — deleted (true) or not-ours (false) — confirms the key
+   * - A settled call - deleted (true) or not-ours (false) - confirms the key
    *   no longer carried our id AS OF THE HOLD IT WAS ISSUED AGAINST
    *   (generation-guarded: a newer confirmed hold survives an older
    *   release's out-of-order settlement); a FAILED call keeps
@@ -627,10 +627,10 @@ export class LeaderService implements ILeaderService, OnModuleInit, OnModuleDest
   }
 
   /**
-   * User callbacks (and injected sinks) can fail with ANYTHING — a bare
+   * User callbacks (and injected sinks) can fail with ANYTHING - a bare
    * `reject()` yields `undefined`. The containment handlers above must be
    * total: dereferencing `.message` here would mint a TypeError inside the
-   * very guard that promises no rejection ever escapes — an
+   * very guard that promises no rejection ever escapes - an
    * unhandledRejection crash on the async path, a dead election chain on
    * the sync one.
    */

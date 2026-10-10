@@ -18,7 +18,7 @@ export interface ICookieCarryingSession {
  * adapter's configured fallback (and `undefined` lets the store default apply).
  *
  * An unparseable `cookie.expires` (foreign serializer, corrupt payload) falls
- * back too — `NaN` must never reach the store, where it would defeat the
+ * back too - `NaN` must never reach the store, where it would defeat the
  * `ttl <= 0` guard and leave a persisted session key on real Redis.
  *
  * @param session - Raw middleware session payload

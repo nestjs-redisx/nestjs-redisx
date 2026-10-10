@@ -1,7 +1,7 @@
 {
   "name": "@nestjs-redisx/demo",
   "version": "0.0.7",
-  "description": "Demo app — source of all documentation code snippets",
+  "description": "Demo app - source of all documentation code snippets",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {

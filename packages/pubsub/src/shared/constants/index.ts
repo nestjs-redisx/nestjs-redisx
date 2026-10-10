@@ -20,7 +20,7 @@ export const PUBSUB_SERVICE = Symbol.for('PUBSUB_SERVICE');
 export const PUBSUB_PUBLISHER_DRIVER = Symbol.for('PUBSUB_PUBLISHER_DRIVER');
 
 /**
- * Subscriber Redis driver token — a DEDICATED connection, because a Redis
+ * Subscriber Redis driver token - a DEDICATED connection, because a Redis
  * connection in subscriber mode cannot execute regular commands.
  */
 export const PUBSUB_SUBSCRIBER_DRIVER = Symbol.for('PUBSUB_SUBSCRIBER_DRIVER');

@@ -78,7 +78,7 @@ describe('RedisCounterStoreAdapter', () => {
 
   describe('adversarial: non-canonical numeric values', () => {
     it('should throw CounterValueError (carrying the ACTUAL raw value) for empty/whitespace/float/garbage strings', async () => {
-      // Number('') === 0 and Number(' ') === 0 — a poisoned key must NOT
+      // Number('') === 0 and Number(' ') === 0 - a poisoned key must NOT
       // read as a legitimate zero, and the error must carry the evidence.
       for (const raw of ['', '  ', '3.14', '1e3', 'abc']) {
         driver.get.mockResolvedValue(raw);
@@ -115,7 +115,7 @@ describe('RedisCounterStoreAdapter', () => {
     });
 
     it('should set preserving an existing TTL (Lua) and with an explicit PX', async () => {
-      // Without ttl: through the keep-ttl script — a plain SET would drop a
+      // Without ttl: through the keep-ttl script - a plain SET would drop a
       // window counter's TTL and make the key permanent forever
       await adapter.set('_ctr:k', 5);
       expect(driver.evalsha).toHaveBeenCalledWith(expect.any(String), ['_ctr:k'], [5]);

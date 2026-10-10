@@ -176,7 +176,7 @@ describe('toExpressStore', () => {
     });
 
     it('should end the session instead of touching it when the cookie already expired', async () => {
-      // Given: cookie.maxAge 0 / sub-millisecond — a throwing touch would turn
+      // Given: cookie.maxAge 0 / sub-millisecond - a throwing touch would turn
       // into a 500 inside express-session's response end path
       const expressStore = await toExpressStore(store);
       const session = { cookie: { expires: new Date(NOW - 5) } };

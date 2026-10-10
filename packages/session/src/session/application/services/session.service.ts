@@ -7,7 +7,7 @@ import { ISessionStore } from '../ports/session-store.port';
 
 /**
  * Session service: introspection ("device page"), revocation
- * ("log out everywhere"), counting, and activity stamping — built on the
+ * ("log out everywhere"), counting, and activity stamping - built on the
  * promise-based session store, over the SAME keys the middleware uses.
  */
 @Injectable()
@@ -27,7 +27,7 @@ export class SessionService<T = unknown> implements ISessionService<T> {
     const ids = await this.store.getUserSessionIds(userId);
     const sessions = await Promise.all(ids.map((id) => this.getSession(id)));
     // Ownership check: a stale index entry may point at a sid that was since
-    // re-saved under another user (account switch without sid regeneration) —
+    // re-saved under another user (account switch without sid regeneration) -
     // it must never leak onto this user's device page.
     return sessions.filter((session): session is ISessionInfo<T> => session !== null && (session.metadata?.userId === undefined || session.metadata.userId === userId));
   }
@@ -61,7 +61,7 @@ export class SessionService<T = unknown> implements ISessionService<T> {
    * Session IDs this user may revoke: everything in their index except entries
    * whose metadata now names a DIFFERENT owner (a sid re-saved under another
    * account must never be destroyed from here). Entries whose session is gone
-   * are kept in the list on purpose — destroying them is what cleans a dirty
+   * are kept in the list on purpose - destroying them is what cleans a dirty
    * index (phantom seats).
    */
   private async revocableIds(userId: string): Promise<string[]> {

@@ -1,7 +1,7 @@
 /**
  * Shared validation for circuit breaker configuration.
  *
- * Used by the pure state machine (constructor), the plugin (mergeDefaults —
+ * Used by the pure state machine (constructor), the plugin (mergeDefaults -
  * fail-fast at bootstrap) and the service (per-call overrides), so an invalid
  * config can never silently reach the Lua scripts.
  */

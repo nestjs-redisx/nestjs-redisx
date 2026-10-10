@@ -14,12 +14,12 @@ const CLOCK_SYNC_INTERVAL_MS = 30_000;
  * Every operation is a single atomic Lua script over one sorted set
  * (member = permit id, score = expiry): expired permits are swept inside the
  * acquire script, so crashed holders free their seats after the TTL without
- * any background job. One key per semaphore — cluster-safe without hash tags.
+ * any background job. One key per semaphore - cluster-safe without hash tags.
  *
  * TIME: all expiry decisions use the REDIS SERVER clock, approximated as a
  * cached offset against the local clock (re-synced every 30s via TIME). An
  * instance with a skewed clock must not be able to sweep OTHER instances'
- * live permits — with local clocks, a node skewed forward by more than
+ * live permits - with local clocks, a node skewed forward by more than
  * `ttl - age(freshest renewal)` would evict live holders and over-admit.
  */
 @Injectable()
@@ -34,7 +34,7 @@ export class RedisSemaphoreStoreAdapter implements ISemaphoreStore, OnModuleInit
   /**
    * Pre-loads the Lua scripts and caches their SHA hashes. Best-effort: a
    * transient hiccup during bootstrap (LOADING after a Redis restart, a
-   * failover mid-deploy) must not crash the application — every runtime
+   * failover mid-deploy) must not crash the application - every runtime
    * path lazily re-loads on demand.
    */
   async onModuleInit(): Promise<void> {
@@ -85,7 +85,7 @@ export class RedisSemaphoreStoreAdapter implements ISemaphoreStore, OnModuleInit
    * Server-approximated "now": local clock + cached TIME offset.
    *
    * The offset is refreshed at most every 30s; a failed sync keeps the last
-   * known offset (0 initially — identical to the previous local-clock
+   * known offset (0 initially - identical to the previous local-clock
    * behavior, which is also the correct value on the in-memory driver where
    * no cross-instance skew can exist).
    */
@@ -101,7 +101,7 @@ export class RedisSemaphoreStoreAdapter implements ISemaphoreStore, OnModuleInit
           this.clockOffsetMs = serverMs - Date.now();
         }
       } catch {
-        // Keep the previous offset — a sync hiccup must not fail the
+        // Keep the previous offset - a sync hiccup must not fail the
         // operation that triggered it.
       }
     }

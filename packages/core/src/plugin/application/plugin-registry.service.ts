@@ -160,14 +160,14 @@ export class PluginRegistryService implements OnModuleInit, OnModuleDestroy {
       }
     }
 
-    // Kahn's algorithm — use original order for plugins with same in-degree
+    // Kahn's algorithm - use original order for plugins with same in-degree
     const originalIndex = new Map<string, number>();
     plugins.forEach((p, i) => originalIndex.set(p.name, i));
 
     const queue: string[] = [];
     // Iterate the (name-deduplicated) map, not the raw array: duplicate
-    // plugin names — rejected by RedisModule, but this service is usable
-    // directly — would enqueue the surviving instance once per duplicate
+    // plugin names - rejected by RedisModule, but this service is usable
+    // directly - would enqueue the surviving instance once per duplicate
     // and run its lifecycle hooks that many times.
     for (const plugin of pluginMap.values()) {
       if (inDegree.get(plugin.name) === 0) {

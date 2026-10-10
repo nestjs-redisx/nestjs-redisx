@@ -7,7 +7,7 @@ import { ICommandExecutor } from '../../application/ports/command-executor.port'
 
 /**
  * Buffers commands and replays them sequentially over the in-memory executor.
- * (Plugins use Lua, not pipelines, for atomicity — this exists for API parity.)
+ * (Plugins use Lua, not pipelines, for atomicity - this exists for API parity.)
  */
 class MemoryPipeline implements IPipeline {
   protected queue: Array<{ cmd: string; args: unknown[] }> = [];
@@ -162,12 +162,12 @@ export class MemoryRedisAdapter extends BaseRedisDriver {
   }
 
   protected doConnect(): Promise<void> {
-    // No real connection — in-memory.
+    // No real connection - in-memory.
     return Promise.resolve();
   }
 
   protected doDisconnect(): Promise<void> {
-    // No real connection — keep data; a fresh adapter starts empty.
+    // No real connection - keep data; a fresh adapter starts empty.
     memoryPubSubBus.removeSubscriber(this.pubSubSubscriber);
     return Promise.resolve();
   }

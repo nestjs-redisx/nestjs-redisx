@@ -47,7 +47,7 @@ export class SemaphoreService implements ISemaphoreService, OnModuleDestroy {
   /**
    * Terminal flag: an acquire sleeping in backoff when the service is
    * destroyed must not win a seat afterwards (nothing would ever release it
-   * — on a still-alive process its unref'd auto-renew would keep the seat
+   * - on a still-alive process its unref'd auto-renew would keep the seat
    * forever).
    */
   private destroyed = false;
@@ -58,7 +58,7 @@ export class SemaphoreService implements ISemaphoreService, OnModuleDestroy {
     @Optional() @Inject(METRICS_SERVICE) private readonly metrics?: IMetricsService,
     @Optional() @Inject(TRACING_SERVICE) private readonly tracing?: ITracingService,
   ) {
-    // The service is exported for direct wiring too — validate here as well
+    // The service is exported for direct wiring too - validate here as well
     // as in the plugin, so a hand-constructed service fails fast (leader
     // lesson: plugin-only validation let invalid hand-wired configs through).
     validateSemaphoreOptions(config, 'SemaphoreService');
@@ -68,10 +68,10 @@ export class SemaphoreService implements ISemaphoreService, OnModuleDestroy {
    * Lifecycle hook. Deliberately does NOT release still-held permits: a
    * permit guards work that may STILL BE RUNNING when Nest fires the destroy
    * hooks (in-flight handlers are not drained first), and yanking the seat
-   * would let another instance start the same bounded work concurrently — a
+   * would let another instance start the same bounded work concurrently - a
    * silent violation of the one invariant this package sells. Instead:
    * auto-renewal stops, so every seat of this instance lapses within its
-   * remaining TTL — exactly the documented crash bound. Work that finishes
+   * remaining TTL - exactly the documented crash bound. Work that finishes
    * before the process exits still releases instantly through its own
    * finally; an acquire still sleeping in backoff is aborted by the
    * `destroyed` flag.
@@ -128,7 +128,7 @@ export class SemaphoreService implements ISemaphoreService, OnModuleDestroy {
 
         if (acquired && this.destroyed) {
           // Won on the wire while shutdown ran: nothing would ever release
-          // this seat — give it back quietly and abort.
+          // this seat - give it back quietly and abort.
           await Promise.resolve(this.store.release(fullKey, permitId)).catch(() => undefined);
           throw new SemaphoreAcquisitionError(key, 'shutdown');
         }
@@ -275,7 +275,7 @@ export class SemaphoreService implements ISemaphoreService, OnModuleDestroy {
 
   /**
    * Containment for user-extensible observability (metrics, tracing): a
-   * throwing implementation must never break semaphore semantics — on the
+   * throwing implementation must never break semaphore semantics - on the
    * success path it would otherwise leak a seat already granted in Redis
    * with no permit handed to the caller (nobody can release it until the
    * TTL). Same total-containment bar the leader plugin hardened to.

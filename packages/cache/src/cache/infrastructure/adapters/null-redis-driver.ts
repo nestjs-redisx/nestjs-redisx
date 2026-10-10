@@ -5,7 +5,7 @@
  * l1-only) the stampede layer are swapped for in-memory implementations that
  * never touch a driver, so this object exists only to satisfy the remaining
  * `CACHE_REDIS_DRIVER` injections (CacheService, EventInvalidationService)
- * WITHOUT ever opening a connection — which is what fixes the boot crash.
+ * WITHOUT ever opening a connection - which is what fixes the boot crash.
  *
  * It never connects and every command degrades to a benign miss / no-op, so an
  * accidentally-reachable path (e.g. the fail-open event-dedup check) behaves as
@@ -39,7 +39,7 @@ function createNoopPipeline(): IMulti {
  * falls through to a benign async `null` via the Proxy below.
  */
 const NULL_DRIVER_METHODS: Partial<Record<keyof IRedisDriver, unknown>> = {
-  // Connection lifecycle — never actually connects.
+  // Connection lifecycle - never actually connects.
   isConnected: () => false,
   connect: async () => undefined,
   disconnect: async () => undefined,

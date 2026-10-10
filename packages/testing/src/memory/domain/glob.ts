@@ -1,6 +1,6 @@
 /**
  * Redis glob pattern matching, shared by KEYS / SCAN MATCH and the Pub/Sub
- * bus (PSUBSCRIBE patterns) — one implementation so they cannot diverge.
+ * bus (PSUBSCRIBE patterns) - one implementation so they cannot diverge.
  */
 
 /** Converts a Redis glob pattern (*, ?, [..]) to a RegExp. */

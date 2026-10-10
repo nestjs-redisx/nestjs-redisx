@@ -135,7 +135,7 @@ describe('IdempotencyService', () => {
     });
 
     it('should TAKE OVER when the processing record vanishes (first attempt died)', async () => {
-      // Given — initial check sees 'processing'; the record then expires
+      // Given - initial check sees 'processing'; the record then expires
       // (crash between checkAndLock and complete); the takeover retry wins.
       mockStore.checkAndLock.mockResolvedValueOnce({ status: 'processing' }).mockResolvedValueOnce({ status: 'new' });
       mockStore.get.mockResolvedValue(null);
@@ -143,13 +143,13 @@ describe('IdempotencyService', () => {
       // When
       const result = await service.checkAndLock('key7', 'fp7');
 
-      // Then — the caller now owns the key and must execute the handler
+      // Then - the caller now owns the key and must execute the handler
       expect(result).toEqual({ isNew: true });
       expect(mockStore.checkAndLock).toHaveBeenCalledTimes(2);
     });
 
     it('should TAKE OVER a STALE processing record (lock exceeded, record still retained)', async () => {
-      // Given — the record still EXISTS (retention = 2x lockTimeout) but its
+      // Given - the record still EXISTS (retention = 2x lockTimeout) but its
       // lock is stale: the original attempt exceeded lockTimeout without
       // completing. The takeover goes through checkAndLock, where the Lua
       // stale branch resolves it atomically.
@@ -162,13 +162,13 @@ describe('IdempotencyService', () => {
       // When
       const result = await service.checkAndLock('key-stale', 'fp-stale');
 
-      // Then — this caller owns the key now and must execute the handler
+      // Then - this caller owns the key now and must execute the handler
       expect(result).toEqual({ isNew: true });
       expect(mockStore.checkAndLock).toHaveBeenCalledTimes(2);
     });
 
     it('should NOT attempt takeover while the processing record is FRESH', async () => {
-      // Given — startedAt is recent; the lock holder is presumed alive
+      // Given - startedAt is recent; the lock holder is presumed alive
       config.lockTimeout = 30000;
       service = new IdempotencyService(config, mockStore);
       const fresh: IIdempotencyRecord = { key: 'idempotency:key-fresh', fingerprint: 'fp-fresh', status: 'processing', startedAt: Date.now() };
@@ -179,14 +179,14 @@ describe('IdempotencyService', () => {
       // When
       const result = await service.checkAndLock('key-fresh', 'fp-fresh');
 
-      // Then — no takeover attempt (checkAndLock called only once), replay
+      // Then - no takeover attempt (checkAndLock called only once), replay
       expect(mockStore.checkAndLock).toHaveBeenCalledTimes(1);
       expect(result.isNew).toBe(false);
       expect(result.record).toEqual(completed);
     });
 
     it('should keep waiting when another waiter wins the takeover, then replay its result', async () => {
-      // Given — record vanished; our retry loses ('processing' again); the
+      // Given - record vanished; our retry loses ('processing' again); the
       // winner then completes and we replay its record.
       const completed: IIdempotencyRecord = { key: 'idempotency:key8', fingerprint: 'fp8', status: 'completed', statusCode: 201, response: '{"id":1}', startedAt: 1 };
       mockStore.checkAndLock.mockResolvedValueOnce({ status: 'processing' }).mockResolvedValueOnce({ status: 'processing' });
@@ -201,7 +201,7 @@ describe('IdempotencyService', () => {
     });
 
     it('should replay directly when the takeover retry finds a completed record', async () => {
-      // Given — between our get(null) and the retry, the winner already completed
+      // Given - between our get(null) and the retry, the winner already completed
       const completed: IIdempotencyRecord = { key: 'idempotency:key9', fingerprint: 'fp9', status: 'completed', statusCode: 200, response: '"ok"', startedAt: 1 };
       mockStore.checkAndLock.mockResolvedValueOnce({ status: 'processing' }).mockResolvedValueOnce({ status: 'completed', record: completed });
       mockStore.get.mockResolvedValue(null);

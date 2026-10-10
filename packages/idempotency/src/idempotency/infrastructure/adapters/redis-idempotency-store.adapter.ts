@@ -70,7 +70,7 @@ export class RedisIdempotencyStoreAdapter implements IIdempotencyStore, OnModule
       completedAt: String(data.completedAt),
     };
     // Persist the fingerprint too: if the record expired mid-handler (handler
-    // ran longer than lockTimeout), the write re-creates the key — without the
+    // ran longer than lockTimeout), the write re-creates the key - without the
     // fingerprint every later replay would be misread as a mismatch (422).
     if (data.fingerprint) {
       fields.fingerprint = data.fingerprint;
