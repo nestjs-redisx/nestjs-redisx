@@ -1,5 +1,5 @@
 ---
-title: 'RedisModule Configuration — Core Module | NestJS RedisX'
+title: 'RedisModule Configuration - Core Module | NestJS RedisX'
 description: 'Configure RedisModule.forRoot and forRootAsync options, including IRedisModuleOptions, named clients, plugins array, retries, and ConfigService factories.'
 ---
 
@@ -114,7 +114,7 @@ interface ISentinelConnectionConfig extends IBaseConnectionConfig {
     enableTLSForSentinelMode?: boolean;  // TLS for the SENTINEL hops; default: false. Requires the `tls` block (it supplies the certificates). Data-node TLS follows `tls.enabled` regardless.
     sentinelPassword?: string;
     sentinelRetryStrategy?: (times: number) => number | null;  // ioredis only (node-redis rotates sentinels instead of retrying one)
-    // Driver-specific options — see examples below
+    // Driver-specific options - see examples below
   };
 }
 ```
@@ -202,10 +202,10 @@ interface IGlobalConfig {
   debug?: boolean;                  // Enable debug logging
   defaultTtl?: number;              // Default TTL (seconds), default: 3600
   keyPrefix?: string;               // Global key prefix
-  gracefulShutdown?: boolean;       // Reserved — not currently consumed by core
-  gracefulShutdownTimeout?: number; // Reserved — not currently consumed by core
-  enableHealthChecks?: boolean;     // Reserved — health checks are on-demand via healthCheck()
-  healthCheckInterval?: number;     // Reserved — no periodic health loop exists
+  gracefulShutdown?: boolean;       // Reserved - not currently consumed by core
+  gracefulShutdownTimeout?: number; // Reserved - not currently consumed by core
+  enableHealthChecks?: boolean;     // Reserved - health checks are on-demand via healthCheck()
+  healthCheckInterval?: number;     // Reserved - no periodic health loop exists
 }
 ```
 
@@ -263,12 +263,12 @@ RedisModule.forRootAsync({
 
 ### With Plugins (Async)
 
-Plugins are provided **outside** `useFactory` — they must be available at module construction time:
+Plugins are provided **outside** `useFactory` - they must be available at module construction time:
 
 <<< @/apps/demo/src/core/plugins-async.setup.ts{typescript}
 
 ::: tip Why plugins are outside useFactory?
-Plugins must be available at module construction time for NestJS DI to register their providers. This is a standard NestJS pattern — similar to how `@nestjs/typeorm` handles entities or `@nestjs/graphql` handles resolvers.
+Plugins must be available at module construction time for NestJS DI to register their providers. This is a standard NestJS pattern - similar to how `@nestjs/typeorm` handles entities or `@nestjs/graphql` handles resolvers.
 :::
 
 ### Plugin Async Configuration (registerAsync)
@@ -414,6 +414,6 @@ RedisModule.forRoot({
 
 ## Next Steps
 
-- [RedisService](./redis-service) — Service API reference
-- [Multiple Clients](./multiple-clients) — Named client management
-- [Connection Types](./connection-types) — Single, Cluster, Sentinel details
+- [RedisService](./redis-service) - Service API reference
+- [Multiple Clients](./multiple-clients) - Named client management
+- [Connection Types](./connection-types) - Single, Cluster, Sentinel details

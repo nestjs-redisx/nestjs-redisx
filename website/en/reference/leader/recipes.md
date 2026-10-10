@@ -1,5 +1,5 @@
 ---
-title: 'Recipes — Leader Election Plugin | NestJS RedisX'
+title: 'Recipes - Leader Election Plugin | NestJS RedisX'
 description: 'Leader election patterns: singleton crons, run-once startup work, maintenance drains, spreading singleton workloads across groups, and fencing with locks.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Leader election patterns: singleton crons, run-once startup work, 
 
 ## Singleton Cron Across the Fleet
 
-The canonical use case — schedule everywhere, execute once:
+The canonical use case - schedule everywhere, execute once:
 
 <<< @/apps/demo/src/plugins/leader/leader-only-cron.usage.ts{typescript}
 
@@ -32,8 +32,8 @@ export class StartupTasks implements OnApplicationBootstrap {
 }
 ```
 
-::: warning At most once — and usually ZERO times in a rolling update
-`onApplicationBootstrap` fires once per process, and during a rolling update the lease is normally still held by an old pod when each new pod boots — every new pod evaluates `runIfLeader` as a follower and skips, and when the old leader finally exits, the seat goes to an instance whose hook already ran. For work that must run **once per rollout/version**, don't gate it on leadership: make it idempotent and key it by version (e.g. `@WithLock` + a `done:{version}` marker), or run it in your deploy/migration step. "Leader runs the migration" is a scheduling convenience, not a safety proof — during rollouts old and new versions briefly coexist; make the migration itself idempotent, or wrap it with [@WithLock](../locks/) / track applied versions.
+::: warning At most once - and usually ZERO times in a rolling update
+`onApplicationBootstrap` fires once per process, and during a rolling update the lease is normally still held by an old pod when each new pod boots - every new pod evaluates `runIfLeader` as a follower and skips, and when the old leader finally exits, the seat goes to an instance whose hook already ran. For work that must run **once per rollout/version**, don't gate it on leadership: make it idempotent and key it by version (e.g. `@WithLock` + a `done:{version}` marker), or run it in your deploy/migration step. "Leader runs the migration" is a scheduling convenience, not a safety proof - during rollouts old and new versions briefly coexist; make the migration itself idempotent, or wrap it with [@WithLock](../locks/) / track applied versions.
 :::
 
 ## Maintenance Drain
@@ -44,7 +44,7 @@ Hand leadership over before restarting a node:
 
 ## Spreading Singleton Workloads
 
-Different groups elect independently — heavy singleton jobs can land on different instances:
+Different groups elect independently - heavy singleton jobs can land on different instances:
 
 ```typescript
 @Cron(CronExpression.EVERY_HOUR)
@@ -77,5 +77,5 @@ Expose who leads for dashboards and on-call debugging:
 
 ## Next Steps
 
-- [Failover](./failover) — what happens during handovers
-- [Troubleshooting](./troubleshooting) — when a job doesn't run
+- [Failover](./failover) - what happens during handovers
+- [Troubleshooting](./troubleshooting) - when a job doesn't run

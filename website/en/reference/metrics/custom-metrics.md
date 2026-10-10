@@ -1,6 +1,6 @@
 ---
-title: 'Custom Metrics — @nestjs-redisx/metrics | NestJS RedisX'
-description: 'Instrument NestJS services with custom counters, gauges, and histograms via IMetricsService — register metrics, add labels, and observe Redis workloads.'
+title: 'Custom Metrics - @nestjs-redisx/metrics | NestJS RedisX'
+description: 'Instrument NestJS services with custom counters, gauges, and histograms via IMetricsService - register metrics, add labels, and observe Redis workloads.'
 ---
 
 # Custom Metrics
@@ -156,7 +156,7 @@ Track distribution of values (latency, sizes).
 ### Histogram Methods
 
 ```typescript
-// Start timer — returns a function that stops and records duration
+// Start timer - returns a function that stops and records duration
 const stopTimer = this.metrics.startTimer('payment_duration_seconds', {
   provider: 'stripe',
 });
@@ -286,6 +286,6 @@ stopTimer();
 
 ## Next Steps
 
-- [Grafana](./grafana) — Visualize custom metrics
-- [Alerting](./alerting) — Alert on custom metrics
-- [Troubleshooting](./troubleshooting) — Debug metrics
+- [Grafana](./grafana) - Visualize custom metrics
+- [Alerting](./alerting) - Alert on custom metrics
+- [Troubleshooting](./troubleshooting) - Debug metrics

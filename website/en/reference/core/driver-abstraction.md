@@ -1,5 +1,5 @@
 ---
-title: 'ioredis vs node-redis Driver Abstraction — Core | NestJS RedisX'
+title: 'ioredis vs node-redis Driver Abstraction - Core | NestJS RedisX'
 description: 'Compare ioredis and node-redis drivers behind the REDIS_DRIVER token, swap IRedisDriver implementations, and keep NestJS application code unchanged.'
 ---
 
@@ -336,14 +336,14 @@ abstract class BaseRedisDriver implements IRedisDriver {
   protected readonly config: ConnectionConfig;
   protected connected: boolean = false;
 
-  // Abstract methods — implemented by IoRedisAdapter / NodeRedisAdapter
+  // Abstract methods - implemented by IoRedisAdapter / NodeRedisAdapter
   protected abstract doConnect(): Promise<void>;
   protected abstract doDisconnect(): Promise<void>;
   protected abstract executeCommand(command: string, ...args: unknown[]): Promise<unknown>;
   protected abstract createPipeline(): IPipeline;
   protected abstract createMulti(): IMulti;
 
-  // Implemented in base class — calls doConnect() / doDisconnect()
+  // Implemented in base class - calls doConnect() / doDisconnect()
   async connect(): Promise<void> {
     this.emit(DriverEvent.CONNECT);
     await this.doConnect();
@@ -358,7 +358,7 @@ abstract class BaseRedisDriver implements IRedisDriver {
     this.emit(DriverEvent.CLOSE);
   }
 
-  // Common command implementations — delegates to executeCommand()
+  // Common command implementations - delegates to executeCommand()
   async get(key: string): Promise<string | null> {
     return this.executeCommand('GET', key);
   }
@@ -439,6 +439,6 @@ if (result !== null) {
 
 ## Next Steps
 
-- [Configuration](./configuration) — Module configuration
-- [RedisService](./redis-service) — High-level API
-- [Troubleshooting](./troubleshooting) — Common issues
+- [Configuration](./configuration) - Module configuration
+- [RedisService](./redis-service) - High-level API
+- [Troubleshooting](./troubleshooting) - Common issues

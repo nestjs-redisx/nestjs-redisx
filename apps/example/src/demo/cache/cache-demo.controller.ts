@@ -258,7 +258,7 @@ export class CacheDemoController {
   /**
    * Stampede protection verification.
    *
-   * Has a 2-second slow loader. Fire 10 concurrent requests —
+   * Has a 2-second slow loader. Fire 10 concurrent requests -
    * loader should execute exactly ONCE.
    *
    * @example
@@ -272,7 +272,7 @@ export class CacheDemoController {
    * done
    * wait
    *
-   * # Check count — should be 1
+   * # Check count - should be 1
    * curl http://localhost:3000/demo/cache/verify/stampede/count
    * ```
    */
@@ -319,7 +319,7 @@ export class CacheDemoController {
    * # 5) Should return FRESH data from revalidation (loader call #2)
    * curl http://localhost:3000/demo/cache/verify/swr
    *
-   * # Check count — should be 2 (initial + 1 revalidation)
+   * # Check count - should be 2 (initial + 1 revalidation)
    * curl http://localhost:3000/demo/cache/verify/swr/count
    * ```
    */

@@ -1,5 +1,5 @@
 ---
-title: 'Production Recipes — Streams Plugin | NestJS RedisX'
+title: 'Production Recipes - Streams Plugin | NestJS RedisX'
 description: 'Reference for Redis Streams recipes in NestJS: order pipelines, notification fan-out, analytics projections, audit logs, webhook delivery, and image queues.'
 ---
 
@@ -57,5 +57,5 @@ Long-running export jobs:
 
 ## Next Steps
 
-- [Troubleshooting](./troubleshooting) — Debug common issues
-- [Overview](./index) — Back to overview
+- [Troubleshooting](./troubleshooting) - Debug common issues
+- [Overview](./index) - Back to overview

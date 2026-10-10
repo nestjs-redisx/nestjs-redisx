@@ -260,6 +260,6 @@ Run these commands to diagnose common issues:
 
 ## Next Steps
 
-- [Cache Issues](./cache-issues) — Cache-specific problems
-- [Lock Issues](./lock-issues) — Lock-specific problems
-- [Performance Issues](./performance-issues) — Latency problems
+- [Cache Issues](./cache-issues) - Cache-specific problems
+- [Lock Issues](./lock-issues) - Lock-specific problems
+- [Performance Issues](./performance-issues) - Latency problems

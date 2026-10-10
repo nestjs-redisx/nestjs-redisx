@@ -291,8 +291,8 @@ async getDashboardStats(): Promise<DashboardStats> {
 
 ## Next Steps
 
-- [Core Module](/en/reference/core/) — RedisModule, RedisService, and connection management
-- [Cache Plugin](/en/reference/cache/) — Complete caching guide
-- [Locks Plugin](/en/reference/locks/) — Distributed locking
-- [Rate Limit Plugin](/en/reference/rate-limit/) — API protection
-- [Plugins Overview](/en/reference/plugins/) — All available plugins
+- [Core Module](/en/reference/core/) - RedisModule, RedisService, and connection management
+- [Cache Plugin](/en/reference/cache/) - Complete caching guide
+- [Locks Plugin](/en/reference/locks/) - Distributed locking
+- [Rate Limit Plugin](/en/reference/rate-limit/) - API protection
+- [Plugins Overview](/en/reference/plugins/) - All available plugins

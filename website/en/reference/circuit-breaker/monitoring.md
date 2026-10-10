@@ -1,5 +1,5 @@
 ---
-title: 'Monitoring — Circuit Breaker Plugin | NestJS RedisX'
+title: 'Monitoring - Circuit Breaker Plugin | NestJS RedisX'
 description: 'Observe NestJS RedisX circuit breaker state with getState: build health checks and dashboards without mutating the breaker.'
 ---
 
@@ -22,9 +22,9 @@ interface ICircuitSnapshot {
 
 ## Ideas
 
-- **Health check** — report `degraded` when any circuit is not `closed`.
-- **Dashboards** — expose per-circuit `state` as a gauge (0 = closed, 1 = half-open, 2 = open).
-- **Alerts** — page when a critical circuit stays OPEN longer than expected.
+- **Health check** - report `degraded` when any circuit is not `closed`.
+- **Dashboards** - expose per-circuit `state` as a gauge (0 = closed, 1 = half-open, 2 = open).
+- **Alerts** - page when a critical circuit stays OPEN longer than expected.
 
 ::: tip
 Pair this with the [Metrics plugin](../metrics/) to publish circuit state as Prometheus gauges alongside your other application metrics.

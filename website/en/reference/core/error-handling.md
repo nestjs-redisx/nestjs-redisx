@@ -1,5 +1,5 @@
 ---
-title: 'RedisXError Handling — Core Module | NestJS RedisX'
+title: 'RedisXError Handling - Core Module | NestJS RedisX'
 description: 'Reference for RedisXError, ErrorCode enum, is()/isAnyOf() helpers, cause chaining, and JSON serialization for structured NestJS Redis error handling.'
 ---
 
@@ -124,10 +124,10 @@ import {
 |-------|------|------------------|
 | `RedisConnectionError` | `CONN_FAILED` | `host?`, `port?` |
 | `RedisTimeoutError` | `CONN_TIMEOUT` | `operation`, `timeoutMs` |
-| `RedisClusterError` | `CONN_CLUSTER_*` | — |
+| `RedisClusterError` | `CONN_CLUSTER_*` | - |
 | `RedisSentinelError` | `CONN_SENTINEL_*` | `masterName?` |
-| `RedisAuthError` | `CONN_AUTH_FAILED` | — |
-| `RedisTLSError` | `CONN_TLS_ERROR` | — |
+| `RedisAuthError` | `CONN_AUTH_FAILED` | - |
+| `RedisTLSError` | `CONN_TLS_ERROR` | - |
 | `RedisMaxRetriesError` | `CONN_MAX_RETRIES` | `maxRetries` |
 | `RedisPoolExhaustedError` | `CONN_POOL_EXHAUSTED` | `poolSize`, `waitingClients` |
 
@@ -193,13 +193,13 @@ import {
 | `RedisKeyNotFoundError` | `OP_KEY_NOT_FOUND` | `key` |
 | `RedisTypeMismatchError` | `OP_TYPE_MISMATCH` | `key`, `expected`, `actual` |
 | `RedisScriptError` | `OP_SCRIPT_ERROR` | `scriptSha?` |
-| `RedisTransactionError` | `OP_TRANSACTION_FAILED` | — |
+| `RedisTransactionError` | `OP_TRANSACTION_FAILED` | - |
 | `RedisPipelineError` | `OP_PIPELINE_FAILED` | `totalCommands`, `failedCommands` |
 | `RedisInvalidArgsError` | `OP_INVALID_ARGS` | `args?` |
 | `RedisOutOfMemoryError` | `OP_OUT_OF_MEMORY` | `key?` |
 | `RedisReadOnlyError` | `OP_READONLY` | `key?` |
 | `RedisNotSupportedError` | `OP_NOT_SUPPORTED` | `reason` |
-| `RedisNotConnectedError` | `OP_NOT_CONNECTED` | — |
+| `RedisNotConnectedError` | `OP_NOT_CONNECTED` | - |
 
 ### Static Factory Methods
 
@@ -233,7 +233,7 @@ import {
 
 | Error | Code | Extra Properties |
 |-------|------|------------------|
-| `RedisConfigError` | `CFG_*` | — |
+| `RedisConfigError` | `CFG_*` | - |
 | `RedisValidationError` | `CFG_VALIDATION_FAILED` | `field`, `errors` |
 
 ### Static Factory Methods
@@ -300,7 +300,7 @@ import { isErrorCode, getErrorDomain, isErrorDomain } from '@nestjs-redisx/core'
 ```
 
 ```typescript
-// Type guard — check if string is a valid ErrorCode
+// Type guard - check if string is a valid ErrorCode
 isErrorCode('CONN_FAILED');     // true
 isErrorCode('INVALID_CODE');    // false
 
@@ -352,10 +352,10 @@ Error codes are organized by domain. Naming convention: `{DOMAIN}_{SPECIFIC_ERRO
 | `OP_PIPELINE_FAILED` | Pipeline failed |
 | `OP_INVALID_ARGS` | Invalid arguments |
 | `OP_OUT_OF_MEMORY` | Out of memory |
-| `OP_NO_AUTH` | NOAUTH — authentication required |
-| `OP_WRONG_PASS` | WRONGPASS — invalid password |
+| `OP_NO_AUTH` | NOAUTH - authentication required |
+| `OP_WRONG_PASS` | WRONGPASS - invalid password |
 | `OP_READONLY` | Read-only mode |
-| `OP_BUSY_KEY` | BUSYKEY — target key exists |
+| `OP_BUSY_KEY` | BUSYKEY - target key exists |
 | `OP_NOT_SUPPORTED` | Not supported |
 | `OP_NOT_CONNECTED` | Not connected |
 
@@ -471,6 +471,6 @@ Defined in core for use by plugin packages.
 
 ## Next Steps
 
-- [Plugin System](./plugin-system) — Plugin error codes
-- [Troubleshooting](./troubleshooting) — Common issues and solutions
-- [Configuration](./configuration) — Module configuration
+- [Plugin System](./plugin-system) - Plugin error codes
+- [Troubleshooting](./troubleshooting) - Common issues and solutions
+- [Configuration](./configuration) - Module configuration

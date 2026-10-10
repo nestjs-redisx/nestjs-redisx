@@ -396,5 +396,5 @@ export class OrdersController {
 
 ## Next Steps
 
-- [Testing Strategy](./testing-strategy) — Test these patterns
-- [Guards Reference](https://docs.nestjs.com/guards) — NestJS Guards documentation
+- [Testing Strategy](./testing-strategy) - Test these patterns
+- [Guards Reference](https://docs.nestjs.com/guards) - NestJS Guards documentation

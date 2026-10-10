@@ -19,9 +19,9 @@ export class ErrorPatternsService {
       return await this.redis.get(key);
     } catch (error) {
       if (error instanceof RedisConnectionError) {
-        // Connection issue — retry or fallback
+        // Connection issue - retry or fallback
       } else if (error instanceof RedisOperationError) {
-        // Command issue — log and rethrow
+        // Command issue - log and rethrow
       }
       throw error;
     }

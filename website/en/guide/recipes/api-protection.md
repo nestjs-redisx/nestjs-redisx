@@ -102,5 +102,5 @@ X-RateLimit-Reset: 1706123456
 
 ## Next Steps
 
-- [Login Throttling](./login-throttling) — Auth endpoint protection
-- [Rate Limit Reference](../../reference/rate-limit/) — Full API
+- [Login Throttling](./login-throttling) - Auth endpoint protection
+- [Rate Limit Reference](../../reference/rate-limit/) - Full API

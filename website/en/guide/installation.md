@@ -65,12 +65,12 @@ pnpm add @nestjs-redisx/core redis
 ::: info Supported Redis Clients
 NestJS RedisX supports both major Node.js Redis clients:
 
-**ioredis** — Battle-tested client used by Alibaba and others
+**ioredis** - Battle-tested client used by Alibaba and others
 - Redis Cluster and Sentinel support
 - Automatic reconnection and failover
 - Lua scripting with type safety
 
-**node-redis** — Official Redis client, actively maintained
+**node-redis** - Official Redis client, actively maintained
 - Redis Stack and Redis 8 features
 - Modern async/await API
 - Recommended by Redis team for new projects
@@ -292,6 +292,6 @@ bootstrap().catch(console.error);
 
 ## Next Steps
 
-- [Quick Start](/en/guide/quick-start) — Create your first cached endpoint
-- [Core Module](/en/reference/core/) — RedisModule and RedisService
-- [Plugins Overview](/en/reference/plugins/) — Explore available plugins
+- [Quick Start](/en/guide/quick-start) - Create your first cached endpoint
+- [Core Module](/en/reference/core/) - RedisModule and RedisService
+- [Plugins Overview](/en/reference/plugins/) - Explore available plugins

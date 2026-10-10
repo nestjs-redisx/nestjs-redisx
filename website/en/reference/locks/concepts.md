@@ -1,5 +1,5 @@
 ---
-title: 'Core Concepts — Locks Plugin | NestJS RedisX'
+title: 'Core Concepts - Locks Plugin | NestJS RedisX'
 description: 'Understand distributed locks in Redis: ownership tokens, TTL semantics, lease expiry, safety guarantees, and key naming for NestJS services.'
 ---
 
@@ -132,29 +132,29 @@ end
 
 ### Guaranteed (normal network, live lease)
 
-- **Mutual exclusion while TTL is valid** — if your operation completes within TTL (or auto-renewal keeps it alive), no other process holds the lock
-- **Ownership verification** — only the holder can release or extend (Lua-atomic token check)
-- **Deadlock freedom** — TTL ensures every lock eventually expires
+- **Mutual exclusion while TTL is valid** - if your operation completes within TTL (or auto-renewal keeps it alive), no other process holds the lock
+- **Ownership verification** - only the holder can release or extend (Lua-atomic token check)
+- **Deadlock freedom** - TTL ensures every lock eventually expires
 
 ### NOT Guaranteed
 
-- **Consensus-level safety** — this is a single-Redis lock, not Raft/Paxos. Network partition or Redis failover can violate mutual exclusion
-- **Fencing semantics** — no monotonic token that downstream can verify. If your process holds a stale lock (TTL expired, then re-acquired by another), nothing prevents the stale holder from writing
-- **Exactly-once execution** — a crash mid-operation leaves partial state. Lock only serializes access, it doesn't make operations atomic
+- **Consensus-level safety** - this is a single-Redis lock, not Raft/Paxos. Network partition or Redis failover can violate mutual exclusion
+- **Fencing semantics** - no monotonic token that downstream can verify. If your process holds a stale lock (TTL expired, then re-acquired by another), nothing prevents the stale holder from writing
+- **Exactly-once execution** - a crash mid-operation leaves partial state. Lock only serializes access, it doesn't make operations atomic
 
 ### What to Do for Payments, DB Writes, and Critical Paths
 
 Locks alone are **not enough** for financial operations. Use defense-in-depth:
 
 ```typescript
-// Layer 1: Idempotency — detect duplicate requests
+// Layer 1: Idempotency - detect duplicate requests
 @Idempotent({ key: 'payment:{orderId}' })
 
-// Layer 2: Lock — serialize concurrent attempts
+// Layer 2: Lock - serialize concurrent attempts
 @WithLock({ key: 'order:{orderId}', ttl: 30 })
 
 async processPayment(orderId: string) {
-  // Layer 3: DB constraint — final safety net
+  // Layer 3: DB constraint - final safety net
   // INSERT ... ON CONFLICT (idempotency_key) DO NOTHING
   await this.db.insertPayment({
     orderId,
@@ -165,20 +165,20 @@ async processPayment(orderId: string) {
 
 | Layer | Protects Against | Alone Sufficient? |
 |-------|-----------------|--------------------|
-| Lock | Concurrent execution | No — TTL expiry, Redis failover |
-| Idempotency | Duplicate requests | No — doesn't prevent concurrent first attempts |
+| Lock | Concurrent execution | No - TTL expiry, Redis failover |
+| Idempotency | Duplicate requests | No - doesn't prevent concurrent first attempts |
 | DB constraint | Everything above | Yes, but poor UX (errors instead of dedup) |
 | **All three** | **Most real-world failure modes** | **Yes** |
 
 ::: warning Idempotency key must be business-meaningful
-Use a stable business identifier (`orderId`, `paymentIntentId`, `requestId`) — not a random hash or UUID generated per request. A random key defeats the purpose: every retry looks like a new operation.
+Use a stable business identifier (`orderId`, `paymentIntentId`, `requestId`) - not a random hash or UUID generated per request. A random key defeats the purpose: every retry looks like a new operation.
 :::
 
 ::: tip Rule of thumb
-If losing the lock mid-operation would cost money or corrupt data — add idempotency + DB constraints. If it would just cause a retry or a slow response — lock alone is fine.
+If losing the lock mid-operation would cost money or corrupt data - add idempotency + DB constraints. If it would just cause a retry or a slow response - lock alone is fine.
 :::
 
 ## Next Steps
 
-- [Configuration](./configuration) — Full configuration reference
-- [Decorator](./decorator) — Learn @WithLock decorator
+- [Configuration](./configuration) - Full configuration reference
+- [Decorator](./decorator) - Learn @WithLock decorator

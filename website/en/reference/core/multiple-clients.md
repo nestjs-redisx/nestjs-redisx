@@ -1,5 +1,5 @@
 ---
-title: 'Managing Multiple Named Clients — Core | NestJS RedisX'
+title: 'Managing Multiple Named Clients - Core | NestJS RedisX'
 description: 'Register multiple named Redis clients in NestJS with RedisModule, resolve them through ClientManager, and isolate cache, session, and queue workloads.'
 ---
 
@@ -11,10 +11,10 @@ Manage multiple Redis connections for different purposes.
 
 Common use cases for multiple Redis connections:
 
-- **Separation of concerns** — Cache, sessions, queues on different instances
-- **Different databases** — Use Redis DB 0 for cache, DB 1 for sessions
-- **Performance isolation** — Heavy operations on dedicated connections
-- **Different servers** — Primary for writes, replicas for reads
+- **Separation of concerns** - Cache, sessions, queues on different instances
+- **Different databases** - Use Redis DB 0 for cache, DB 1 for sessions
+- **Performance isolation** - Heavy operations on dedicated connections
+- **Different servers** - Primary for writes, replicas for reads
 
 ## Configuration
 
@@ -58,7 +58,7 @@ RedisModule.forRootAsync({
 
 ## Per-Plugin Client Selection
 
-Any plugin that uses Redis can target a specific named client via the `client` option. This enables connection isolation between plugins — especially important for `StreamsPlugin`, which uses blocking `XREADGROUP` commands that can hold a connection for seconds at a time.
+Any plugin that uses Redis can target a specific named client via the `client` option. This enables connection isolation between plugins - especially important for `StreamsPlugin`, which uses blocking `XREADGROUP` commands that can hold a connection for seconds at a time.
 
 <<< @/apps/demo/src/core/multiple-clients/plugin-clients.setup.ts{typescript}
 
@@ -71,8 +71,8 @@ All plugins that connect to Redis support the `client` option:
 | RateLimitPlugin | `RATE_LIMIT_REDIS_DRIVER` | `'default'` |
 | IdempotencyPlugin | `IDEMPOTENCY_REDIS_DRIVER` | `'default'` |
 | StreamsPlugin | `STREAMS_REDIS_DRIVER` | `'default'` |
-| MetricsPlugin | — | No Redis connection |
-| TracingPlugin | — | No Redis connection |
+| MetricsPlugin | - | No Redis connection |
+| TracingPlugin | - | No Redis connection |
 
 ::: tip
 If `client` is not specified, plugins use the `'default'` client. Existing configurations work without changes.
@@ -242,6 +242,6 @@ async safeGetClient(name: string): Promise<IRedisDriver | null> {
 
 ## Next Steps
 
-- [Connection Types](./connection-types) — Single, Cluster, Sentinel details
-- [Health Monitoring](./health-monitoring) — Monitor client health
-- [Decorators](./decorators) — @InjectRedis usage
+- [Connection Types](./connection-types) - Single, Cluster, Sentinel details
+- [Health Monitoring](./health-monitoring) - Monitor client health
+- [Decorators](./decorators) - @InjectRedis usage

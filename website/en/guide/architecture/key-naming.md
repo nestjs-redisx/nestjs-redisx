@@ -1,5 +1,5 @@
 ---
-title: 'Key Naming — NestJS RedisX Architecture | NestJS RedisX'
+title: 'Key Naming - NestJS RedisX Architecture | NestJS RedisX'
 description: 'Design consistent Redis key naming conventions for NestJS RedisX apps: service, tenant, entity, and id segments with TTL tagging and namespace patterns.'
 ---
 
@@ -191,5 +191,5 @@ When changing key structure:
 
 ## Next Steps
 
-- [Multi-Tenancy](./multi-tenancy) — Tenant-specific key patterns
-- [Security](./security) — Key injection prevention
+- [Multi-Tenancy](./multi-tenancy) - Tenant-specific key patterns
+- [Security](./security) - Key injection prevention

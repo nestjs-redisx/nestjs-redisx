@@ -20,7 +20,7 @@ if (used > plan.dailyLimit) {
 }
 ```
 
-For token-bucket / sliding-window *enforcement* with guards and headers, use the [rate limiter](/en/reference/rate-limit/) — quotas here are domain accounting.
+For token-bucket / sliding-window *enforcement* with guards and headers, use the [rate limiter](/en/reference/rate-limit/) - quotas here are domain accounting.
 
 ## Batch Flush Aggregation
 

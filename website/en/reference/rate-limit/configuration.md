@@ -1,5 +1,5 @@
 ---
-title: 'Configuration Reference — Rate Limit Plugin | NestJS RedisX'
+title: 'Configuration Reference - Rate Limit Plugin | NestJS RedisX'
 description: 'Configure RateLimitPlugin: defaultAlgorithm, defaultPoints, defaultDuration, keyPrefix, custom extractors, and includeHeaders in NestJS Redis apps.'
 ---
 
@@ -38,9 +38,9 @@ new RateLimitPlugin({
   defaultDuration: 60,
 
   // Store Backend. 'redis' (default) keeps limits exact and shared by all
-  // instances. 'memory' counts per instance in process memory — zero Redis
+  // instances. 'memory' counts per instance in process memory - zero Redis
   // round-trip on the request path, approximate global limit. Routes can
-  // override per check via @RateLimit({ store }) — see the Stores page.
+  // override per check via @RateLimit({ store }) - see the Stores page.
   store: 'redis', // 'redis' | 'memory'
 
   // Sizing for the in-memory store: cap on tracked keys (oldest evicted)
@@ -63,7 +63,7 @@ new RateLimitPlugin({
     retryAfter: 'Retry-After',
   },
 
-  // Error Handling. 'fail-closed' rejects when the store is unavailable —
+  // Error Handling. 'fail-closed' rejects when the store is unavailable -
   // surfaced as a clean 503 Service Unavailable by the built-in filter (not a
   // 500). 'fail-open' allows the request instead.
   errorPolicy: 'fail-closed', // 'fail-closed' | 'fail-open'
@@ -71,7 +71,7 @@ new RateLimitPlugin({
   // Trust proxy-forwarded IP headers when the key is derived from the client
   // IP. Default false (secure): the IP comes from the framework (request.ip),
   // which cannot be spoofed by a client header. Enable ONLY behind a trusted
-  // proxy that overwrites X-Forwarded-For — otherwise a client can spoof the
+  // proxy that overwrites X-Forwarded-For - otherwise a client can spoof the
   // header and mint a fresh bucket per request, bypassing the limit.
   trustProxy: false,
 
@@ -206,5 +206,5 @@ RATE_LIMIT_FAIL_OPEN=false
 
 ## Next Steps
 
-- [Decorator](./decorator) — Learn @RateLimit decorator
-- [Algorithms](./algorithms) — Deep dive into algorithms
+- [Decorator](./decorator) - Learn @RateLimit decorator
+- [Algorithms](./algorithms) - Deep dive into algorithms

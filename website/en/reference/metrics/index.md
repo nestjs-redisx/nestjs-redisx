@@ -1,6 +1,6 @@
 ---
-title: 'Overview — @nestjs-redisx/metrics | NestJS RedisX'
-description: 'Collect Prometheus-format metrics for Redis operations in NestJS — automatic plugin instrumentation, /metrics endpoint, histograms, counters, and gauges.'
+title: 'Overview - @nestjs-redisx/metrics | NestJS RedisX'
+description: 'Collect Prometheus-format metrics for Redis operations in NestJS - automatic plugin instrumentation, /metrics endpoint, histograms, counters, and gauges.'
 ---
 
 # Metrics Plugin
@@ -20,12 +20,12 @@ The Metrics Plugin provides observability into your Redis operations with Promet
 
 ## Key Features
 
-- **Prometheus Format** — Standard metrics format compatible with Prometheus-based systems
-- **Automatic Instrumentation** — Plugins emit metrics when enabled
-- **Built-in Endpoint** — HTTP endpoint for Prometheus scraping
-- **Custom Metrics** — API for adding application-specific metrics
-- **Grafana Dashboards** — Example dashboards for visualizations
-- **Alert Templates** — Example AlertManager configurations
+- **Prometheus Format** - Standard metrics format compatible with Prometheus-based systems
+- **Automatic Instrumentation** - Plugins emit metrics when enabled
+- **Built-in Endpoint** - HTTP endpoint for Prometheus scraping
+- **Custom Metrics** - API for adding application-specific metrics
+- **Grafana Dashboards** - Example dashboards for visualizations
+- **Alert Templates** - Example AlertManager configurations
 
 ## Installation
 
@@ -85,16 +85,16 @@ redisx_command_duration_seconds_bucket{command="GET",client="default",le="0.005"
 | `cache_misses_total` | Counter | layer | Cache misses |
 | `cache_hit_ratio` | Gauge | layer | Hit ratio (0-1) |
 | `cache_size` | Gauge | layer | Current cache size |
-| `cache_stampede_prevented_total` | Counter | — | Stampede preventions |
+| `cache_stampede_prevented_total` | Counter | - | Stampede preventions |
 
 ### Lock Metrics
 
 | Metric | Type | Labels | Description |
 |--------|------|--------|-------------|
 | `lock_acquisitions_total` | Counter | status | Lock attempts |
-| `lock_wait_duration_seconds` | Histogram | — | Wait time |
-| `lock_hold_duration_seconds` | Histogram | — | Hold time |
-| `locks_active` | Gauge | — | Active lock count |
+| `lock_wait_duration_seconds` | Histogram | - | Wait time |
+| `lock_hold_duration_seconds` | Histogram | - | Hold time |
+| `locks_active` | Gauge | - | Active lock count |
 
 ### Rate Limit Metrics
 
@@ -120,7 +120,7 @@ redisx_command_duration_seconds_bucket{command="GET",client="default",le="0.005"
 | `session_created_total` | Counter | - | Sessions created |
 | `session_destroyed_total` | Counter | reason | Sessions removed (destroyed/revoked/expired-by-cap) |
 | `session_limit_rejections_total` | Counter | - | Logins refused by the seat limit |
-| `idempotency_duration_seconds` | Histogram | — | Check duration |
+| `idempotency_duration_seconds` | Histogram | - | Check duration |
 
 ## Architecture
 

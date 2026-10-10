@@ -1,5 +1,5 @@
 ---
-title: 'IRedisXPlugin Architecture — Core Module | NestJS RedisX'
+title: 'IRedisXPlugin Architecture - Core Module | NestJS RedisX'
 description: 'A deep dive into the IRedisXPlugin contract, PluginRegistryService, onRegister/onModuleInit/onModuleDestroy hooks, and dependency-ordered plugin loading.'
 ---
 
@@ -58,13 +58,13 @@ interface IRedisXPlugin {
 
 ### Asynchronous
 
-Plugins are provided **outside** `useFactory` — they must be available at module construction time:
+Plugins are provided **outside** `useFactory` - they must be available at module construction time:
 
 <<< @/apps/demo/src/core/plugins-async.setup.ts{typescript}
 
 ### Plugin Async Configuration (registerAsync)
 
-By default, plugins receive static options at instantiation. With `registerAsync()`, plugins can read configuration from NestJS DI — for example, `ConfigService`:
+By default, plugins receive static options at instantiation. With `registerAsync()`, plugins can read configuration from NestJS DI - for example, `ConfigService`:
 
 <<< @/apps/demo/src/core/plugins-register-async.setup.ts{typescript}
 
@@ -89,10 +89,10 @@ Hooks are managed by `PluginRegistryService` and called in dependency order.
 ### Execution Order
 
 ```
-1. onRegister()      — all plugins, in dependency order
-2. onModuleInit()    — all plugins, in dependency order
+1. onRegister()      - all plugins, in dependency order
+2. onModuleInit()    - all plugins, in dependency order
 3. (runtime)
-4. onModuleDestroy() — all plugins, in REVERSE dependency order
+4. onModuleDestroy() - all plugins, in REVERSE dependency order
 ```
 
 All hooks are **optional**. Plugins without hooks are silently skipped.
@@ -239,6 +239,6 @@ import { PluginRegistryService, REGISTERED_PLUGINS } from '@nestjs-redisx/core';
 
 ## Next Steps
 
-- [Configuration](./configuration) — Module configuration with plugins
-- [Error Handling](./error-handling) — Error system reference
-- [Troubleshooting](./troubleshooting) — Common issues
+- [Configuration](./configuration) - Module configuration with plugins
+- [Error Handling](./error-handling) - Error system reference
+- [Troubleshooting](./troubleshooting) - Common issues

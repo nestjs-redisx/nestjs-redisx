@@ -285,7 +285,7 @@ export class CacheDemoService {
     const callNum = this.stampedeLoaderCallCount;
     console.log(`[STAMPEDE-TEST] Loader executing (call #${callNum})...`);
 
-    // Slow loader — 2 seconds to simulate DB
+    // Slow loader - 2 seconds to simulate DB
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
     console.log(`[STAMPEDE-TEST] Loader finished (call #${callNum})`);

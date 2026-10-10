@@ -1,5 +1,5 @@
 ---
-title: 'Troubleshooting — Tracing Plugin | NestJS RedisX'
+title: 'Troubleshooting - Tracing Plugin | NestJS RedisX'
 description: 'Troubleshoot missing spans, broken context propagation, failing OTLP exports, and sampler misconfiguration in NestJS Redis OpenTelemetry pipelines.'
 ---
 
@@ -572,8 +572,8 @@ validateTracing();
 
 ## Next Steps
 
-- [Testing](./testing) — Test traced services
-- [Recipes](./recipes) — Real-world patterns
-- [Configuration](./configuration) — Review configuration
-- [Spans](./spans) — Check span creation
-- [Visualization](./visualization) — Analyze traces
+- [Testing](./testing) - Test traced services
+- [Recipes](./recipes) - Real-world patterns
+- [Configuration](./configuration) - Review configuration
+- [Spans](./spans) - Check span creation
+- [Visualization](./visualization) - Analyze traces

@@ -7,7 +7,7 @@ export class CalculationService {
   constructor(private readonly cache: CacheService) {}
 
   async calculate(body: CalculateRequestDto): Promise<unknown> {
-    // hashKey: stable hash of the whole DTO — {a:1,b:2} and {b:2,a:1}
+    // hashKey: stable hash of the whole DTO - {a:1,b:2} and {b:2,a:1}
     // produce the SAME key (object keys are sorted recursively).
     const key = `calc:${hashKey(body)}`;
 
@@ -16,7 +16,7 @@ export class CalculationService {
 
   async invalidate(body: CalculateRequestDto): Promise<void> {
     // The hash is deterministic, so the same body always maps to the
-    // same key — usable for targeted deletes too.
+    // same key - usable for targeted deletes too.
     await this.cache.del(`calc:${hashKey(body)}`);
   }
 

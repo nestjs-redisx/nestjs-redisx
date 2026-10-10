@@ -1,5 +1,5 @@
 ---
-title: 'Testing Overview — NestJS RedisX Operations | NestJS RedisX'
+title: 'Testing Overview - NestJS RedisX Operations | NestJS RedisX'
 description: 'Understand the unit, integration, and E2E test suite, Vitest coverage targets, CI workflow, and quality gates across all eight NestJS RedisX packages.'
 ---
 
@@ -34,7 +34,7 @@ End-to-end tests boot a full NestJS application with all plugins registered. The
 | metrics | 100+ | 90% | 87% |
 | tracing | 100+ | 90% | 86% |
 
-Streams coverage is lower due to consumer-group scenarios and cluster routing paths that are E2E-heavy — improving.
+Streams coverage is lower due to consumer-group scenarios and cluster routing paths that are E2E-heavy - improving.
 
 Coverage is tracked via [Codecov](https://codecov.io/gh/nestjs-redisx/nestjs-redisx) and enforced in CI via vitest coverage thresholds at 89% lines, 90% functions, and 87% branches.
 
@@ -52,8 +52,8 @@ Pack-test validates that published packages work correctly when installed from t
 
 **Two levels:**
 
-- **pack-smoke** (every PR) — Import verification and DI bootstrap. Compiles TestingModule with all plugins (DI wiring only, no Redis I/O).
-- **pack-e2e** (manual trigger) — Full functional test against a live Redis instance. 13 test suites covering cache, locks, rate limiting, idempotency, streams, metrics, and tracing.
+- **pack-smoke** (every PR) - Import verification and DI bootstrap. Compiles TestingModule with all plugins (DI wiring only, no Redis I/O).
+- **pack-e2e** (manual trigger) - Full functional test against a live Redis instance. 13 test suites covering cache, locks, rate limiting, idempotency, streams, metrics, and tracing.
 
 ## CI Pipeline
 

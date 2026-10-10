@@ -18,7 +18,7 @@ Step-by-step guide to migrate from `@nestjs/cache-manager` to NestJS RedisX.
 | Distributed locks | ❌ | ✅ |
 | Rate limiting | ❌ | ✅ |
 
-…plus the rest of the plugin ecosystem — circuit breaker, sessions, leader election, distributed semaphore, deduplication/debounce, atomic counters, streams, Prometheus metrics, and OpenTelemetry tracing. Full matrix: [feature comparison](/en/#comparison).
+…plus the rest of the plugin ecosystem - circuit breaker, sessions, leader election, distributed semaphore, deduplication/debounce, atomic counters, streams, Prometheus metrics, and OpenTelemetry tracing. Full matrix: [feature comparison](/en/#comparison).
 
 ## Migration Steps
 
@@ -271,5 +271,5 @@ const module = await Test.createTestingModule({
 
 ## Next Steps
 
-- [Two-Tier Caching](../concepts/two-tier-caching) — Understand L1/L2
-- [Cache Reference](../../reference/cache/) — Full API documentation
+- [Two-Tier Caching](../concepts/two-tier-caching) - Understand L1/L2
+- [Cache Reference](../../reference/cache/) - Full API documentation

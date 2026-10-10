@@ -1,5 +1,5 @@
 ---
-title: 'Operations Overview — NestJS RedisX Operations | NestJS RedisX'
+title: 'Operations Overview - NestJS RedisX Operations | NestJS RedisX'
 description: 'Guide to production operations for SRE and DevOps teams running NestJS RedisX, covering monitoring, alerting, capacity planning, and incident runbooks.'
 ---
 
@@ -109,6 +109,6 @@ When paged:
 
 ## Next Steps
 
-- [Monitoring](./monitoring) — Detailed metrics setup
-- [Alerting](./alerting) — Alert configuration
-- [Runbooks](./runbooks) — Incident response procedures
+- [Monitoring](./monitoring) - Detailed metrics setup
+- [Alerting](./alerting) - Alert configuration
+- [Runbooks](./runbooks) - Incident response procedures

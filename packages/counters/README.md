@@ -1,16 +1,16 @@
 # @nestjs-redisx/counters
 
-Atomic counters and sequences plugin for [NestJS RedisX](https://nestjs-redisx.dev) — fleet-wide increments that never lose updates, window counters that expire on their own, and monotonic ID sequences.
+Atomic counters and sequences plugin for [NestJS RedisX](https://nestjs-redisx.dev) - fleet-wide increments that never lose updates, window counters that expire on their own, and monotonic ID sequences.
 
 ## Why
 
-`this.views++` loses updates the moment you run two replicas. Redis INCR is the canonical fix — this plugin wraps it with validated inputs, window TTL semantics that actually behave (first write opens the window, later writes never extend it), atomic read-and-reset for batch flushes, and loud failures on poisoned keys instead of silent `NaN`.
+`this.views++` loses updates the moment you run two replicas. Redis INCR is the canonical fix - this plugin wraps it with validated inputs, window TTL semantics that actually behave (first write opens the window, later writes never extend it), atomic read-and-reset for batch flushes, and loud failures on poisoned keys instead of silent `NaN`.
 
-- **Atomic everywhere** — every mutation is one Redis operation; concurrent increments from any number of instances all count.
-- **Window counters** — `increment(key, 1, { ttl })` applies the TTL only when the increment creates the key: `api:${userId}:${today}` cleans up after itself.
-- **`getAndReset`** — read the accumulated total and zero it in one atomic step (periodic aggregation without double counting).
-- **Sequences** — `next('seq:invoices')` issues 1, 2, 3… across the whole fleet.
-- **Strict by design** — amounts must be non-zero safe integers; a counter key holding a non-numeric value throws `CounterValueError` instead of propagating `NaN` into your aggregates.
+- **Atomic everywhere** - every mutation is one Redis operation; concurrent increments from any number of instances all count.
+- **Window counters** - `increment(key, 1, { ttl })` applies the TTL only when the increment creates the key: `api:${userId}:${today}` cleans up after itself.
+- **`getAndReset`** - read the accumulated total and zero it in one atomic step (periodic aggregation without double counting).
+- **Sequences** - `next('seq:invoices')` issues 1, 2, 3… across the whole fleet.
+- **Strict by design** - amounts must be non-zero safe integers; a counter key holding a non-numeric value throws `CounterValueError` instead of propagating `NaN` into your aggregates.
 
 ## Install
 
@@ -51,7 +51,7 @@ export class StatsService {
   }
 
   async flushEmailBatchTotal() {
-    // read and zero atomically — periodic aggregation without double counting
+    // read and zero atomically - periodic aggregation without double counting
     return this.counters.getAndReset('emails:batch');
   }
 

@@ -4,7 +4,7 @@ import type { ISessionService } from '@nestjs-redisx/session';
 
 import { AppSession } from './types';
 
-// req.session typing stays middleware-owned — extend it via declaration
+// req.session typing stays middleware-owned - extend it via declaration
 // merging (compile-time only; session contents are not validated at runtime):
 //
 // declare module 'express-session' {

@@ -213,5 +213,5 @@ await fetch('/api/payments', {
 
 ## Next Steps
 
-- [Webhook Delivery](./webhook-delivery) — Receiving webhooks
-- [Idempotency Reference](../../reference/idempotency/) — Full API
+- [Webhook Delivery](./webhook-delivery) - Receiving webhooks
+- [Idempotency Reference](../../reference/idempotency/) - Full API

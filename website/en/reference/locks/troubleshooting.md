@@ -1,5 +1,5 @@
 ---
-title: 'Troubleshooting Guide — Locks Plugin | NestJS RedisX'
+title: 'Troubleshooting Guide - Locks Plugin | NestJS RedisX'
 description: 'Troubleshoot stuck Redis locks, LockAcquisitionError, premature expiry, renewal loops, and token mismatches when using @nestjs-redisx/locks.'
 ---
 
@@ -127,5 +127,5 @@ if (!lock) return;  // Skip if busy
 
 ## Next Steps
 
-- [Monitoring](./monitoring) — Track lock performance
-- [Overview](./index) — Back to overview
+- [Monitoring](./monitoring) - Track lock performance
+- [Overview](./index) - Back to overview

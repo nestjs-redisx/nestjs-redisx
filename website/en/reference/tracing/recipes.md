@@ -1,6 +1,6 @@
 ---
-title: 'Recipes — Tracing Plugin | NestJS RedisX'
-description: 'Practical tracing recipes for NestJS Redis — order processing workflows, user registration flows, and batch jobs with nested spans and recordException.'
+title: 'Recipes - Tracing Plugin | NestJS RedisX'
+description: 'Practical tracing recipes for NestJS Redis - order processing workflows, user registration flows, and batch jobs with nested spans and recordException.'
 ---
 
 # Recipes
@@ -27,5 +27,5 @@ Wrap a batch operation in a parent span with per-item child spans. Tracks succes
 
 ## Next Steps
 
-- [Troubleshooting](./troubleshooting) — Debug common issues
-- [Overview](./index) — Back to overview
+- [Troubleshooting](./troubleshooting) - Debug common issues
+- [Overview](./index) - Back to overview

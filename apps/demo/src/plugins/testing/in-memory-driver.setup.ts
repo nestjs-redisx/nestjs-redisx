@@ -8,7 +8,7 @@ import '@nestjs-redisx/testing';
 
 /**
  * A test module that runs the real plugins against the in-memory driver.
- * Setting `global.driver = 'memory'` swaps the transport — no Redis required.
+ * Setting `global.driver = 'memory'` swaps the transport - no Redis required.
  * The `clients` block is still required but its host/port are ignored.
  */
 @Module({

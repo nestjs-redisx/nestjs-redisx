@@ -1,5 +1,5 @@
 ---
-title: 'Testing Guide — Pub/Sub Plugin | NestJS RedisX'
+title: 'Testing Guide - Pub/Sub Plugin | NestJS RedisX'
 description: 'Test NestJS Pub/Sub code without Redis: the in-memory driver ships a process-wide Pub/Sub bus spanning publisher and subscriber clients.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Test NestJS Pub/Sub code without Redis: the in-memory driver ships
 
 ## In-memory driver (no Redis)
 
-`@nestjs-redisx/testing` implements Pub/Sub on a process-wide in-memory bus, so the REAL plugin — including its dedicated subscriber connection — round-trips messages hermetically:
+`@nestjs-redisx/testing` implements Pub/Sub on a process-wide in-memory bus, so the REAL plugin - including its dedicated subscriber connection - round-trips messages hermetically:
 
 ```typescript
 import { Test } from '@nestjs/testing';

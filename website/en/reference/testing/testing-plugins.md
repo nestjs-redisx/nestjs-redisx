@@ -1,5 +1,5 @@
 ---
-title: 'Testing Plugins — Testing Utilities | NestJS RedisX'
+title: 'Testing Plugins - Testing Utilities | NestJS RedisX'
 description: 'Patterns for unit-testing the cache, locks, rate-limit, circuit-breaker, pubsub, session, leader, semaphore, dedup, counters, and idempotency plugins against the in-memory Redis driver, plus seeding and inspecting keyspace state.'
 ---
 
@@ -46,7 +46,7 @@ describe('cache (in-memory)', () => {
 ## Locks
 
 The lock release path uses an owner-checked Lua script, which the interpreter
-runs faithfully — a second `tryAcquire` while held returns `null`:
+runs faithfully - a second `tryAcquire` while held returns `null`:
 
 ```typescript
 const app = await Test.createTestingModule({
@@ -105,8 +105,8 @@ expect((await cb.getState('dep')).state).toBe('open');
 
 ## Pub/Sub
 
-The in-memory driver ships a process-wide Pub/Sub bus, so the real plugin —
-including its dedicated subscriber client — round-trips messages hermetically:
+The in-memory driver ships a process-wide Pub/Sub bus, so the real plugin -
+including its dedicated subscriber client - round-trips messages hermetically:
 
 ```typescript
 const app = await Test.createTestingModule({
@@ -145,7 +145,7 @@ expect(await store.get('sid-laptop')).toBeNull();
 
 ## Leader Election
 
-Elections run for real on the memory driver — CAS Lua renewal and release
+Elections run for real on the memory driver - CAS Lua renewal and release
 included. A single instance leads right after `app.init()`:
 
 ```typescript
@@ -163,11 +163,11 @@ expect(await leader.getLeaderId()).toBeNull();
 ```
 
 Simulate a second instance by constructing another `LeaderService` over the
-same `LEADER_STORE` — see the [leader testing guide](../leader/testing).
+same `LEADER_STORE` - see the [leader testing guide](../leader/testing).
 
 ## Semaphore
 
-Permit leases run for real — the acquire/extend sweep Lua included:
+Permit leases run for real - the acquire/extend sweep Lua included:
 
 ```typescript
 import { SemaphorePlugin, SEMAPHORE_SERVICE, type ISemaphoreService } from '@nestjs-redisx/semaphore';
@@ -183,7 +183,7 @@ expect(await semaphore.tryAcquire('jobs', 1)).toBeNull(); // capacity enforced
 await permit.release();
 ```
 
-Crash recovery is testable with a short TTL and `autoRenew: false` — the seat
+Crash recovery is testable with a short TTL and `autoRenew: false` - the seat
 frees itself. See the [semaphore testing guide](../semaphore/testing).
 
 ## Dedup
@@ -276,5 +276,5 @@ the injected driver to `MemoryRedisAdapter` and use `getStore()`:
 <<< @/apps/demo/src/plugins/testing/seed-and-inspect.usage.ts{typescript}
 
 `getStore()` returns the in-memory `MemoryStore`, which exposes `writeString`,
-`read`, `flush`, `keys`, and TTL helpers — handy for arranging and resetting
+`read`, `flush`, `keys`, and TTL helpers - handy for arranging and resetting
 state between cases.

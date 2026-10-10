@@ -32,7 +32,7 @@ export class ReportService {
   async fetchIfCapacity(tenantId: string): Promise<unknown | undefined> {
     const permit = await this.semaphore.tryAcquire('legacy-api', 5);
     if (!permit) {
-      return undefined; // at capacity — caller decides what to do
+      return undefined; // at capacity - caller decides what to do
     }
     try {
       return await this.legacyApi.fetchReport(tenantId);

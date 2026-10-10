@@ -1,5 +1,5 @@
 ---
-title: 'Overview — Streams Plugin | NestJS RedisX'
+title: 'Overview - Streams Plugin | NestJS RedisX'
 description: 'Build event-driven NestJS apps on Redis Streams with @nestjs-redisx/streams: consumer groups, @StreamConsumer, producer API, retries, and dead letter queues.'
 ---
 
@@ -22,12 +22,12 @@ The Streams Plugin provides Redis Streams support for NestJS, enabling event-dri
 
 ## Key Features
 
-- **Producer API** — Publish single or batch messages
-- **Consumer Groups** — Load-balanced message distribution with pending message tracking
-- **Declarative Consumers** — `@StreamConsumer` decorator for consumer definitions
-- **Automatic Retry** — Configurable exponential backoff for failed messages
-- **Dead Letter Queue** — Failed messages isolated after max retries
-- **Backpressure Handling** — Configurable concurrency and batch sizes
+- **Producer API** - Publish single or batch messages
+- **Consumer Groups** - Load-balanced message distribution with pending message tracking
+- **Declarative Consumers** - `@StreamConsumer` decorator for consumer definitions
+- **Automatic Retry** - Configurable exponential backoff for failed messages
+- **Dead Letter Queue** - Failed messages isolated after max retries
+- **Backpressure Handling** - Configurable concurrency and batch sizes
 
 ## Installation
 

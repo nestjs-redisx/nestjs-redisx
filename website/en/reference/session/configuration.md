@@ -1,5 +1,5 @@
 ---
-title: 'Configuration — Session Plugin | NestJS RedisX'
+title: 'Configuration - Session Plugin | NestJS RedisX'
 description: 'All @nestjs-redisx/session options: keyPrefix, defaultTtlMs, userIdExtractor, absoluteLifetimeMs, maxSessionsPerUser, policies, and lifecycle events.'
 ---
 
@@ -14,10 +14,10 @@ description: 'All @nestjs-redisx/session options: keyPrefix, defaultTtlMs, userI
 | `keyPrefix` | `string` | `'sess:'` | Redis key namespace |
 | `defaultTtlMs` | `number` | `86_400_000` (1 day) | TTL used when the middleware provides no cookie expiry |
 | `userIdExtractor` | `(session: unknown) => string \| undefined` | reads `session.passport.user` | Extracts the owning user's ID from the raw payload; sessions without an ID are stored but not indexed per-user |
-| `absoluteLifetimeMs` | `number` | `undefined` (off) | Absolute lifetime cap — see [Security Policies](/en/reference/session/security-policies) |
+| `absoluteLifetimeMs` | `number` | `undefined` (off) | Absolute lifetime cap - see [Security Policies](/en/reference/session/security-policies) |
 | `maxSessionsPerUser` | `number` | `undefined` (off) | Per-user seat limit |
 | `maxSessionsPolicy` | `'reject' \| 'evict-oldest'` | `'evict-oldest'` | What happens at the seat limit |
-| `events` | `ISessionEvents` | `undefined` | Lifecycle callbacks — see [Monitoring](/en/reference/session/monitoring) |
+| `events` | `ISessionEvents` | `undefined` | Lifecycle callbacks - see [Monitoring](/en/reference/session/monitoring) |
 
 Configuration is validated fail-fast at bootstrap: an invalid knob throws `InvalidSessionConfigError` before the store is ever used.
 
@@ -27,7 +27,7 @@ Configuration is validated fail-fast at bootstrap: an invalid knob throws `Inval
 
 ## Async Configuration
 
-`SessionPlugin.registerAsync()` follows the standard NestJS RedisX pattern — the plugin instance stays outside `useFactory`, the factory produces plugin options:
+`SessionPlugin.registerAsync()` follows the standard NestJS RedisX pattern - the plugin instance stays outside `useFactory`, the factory produces plugin options:
 
 <<< @/apps/demo/src/plugins/session/async-config.setup.ts{typescript}
 
@@ -62,10 +62,10 @@ RedisModule.forRoot({
 | Key | Type | Contents |
 |-----|------|----------|
 | `sess:{<sid>}` | STRING | Middleware payload as JSON, `PX` = session TTL |
-| `sess:{<sid>}:meta` | HASH | `userId`, `ip`, `userAgent`, `createdAt`, `lastSeenAt`, `expiresAt` — same TTL, same cluster slot (hash tag) |
+| `sess:{<sid>}:meta` | HASH | `userId`, `ip`, `userAgent`, `createdAt`, `lastSeenAt`, `expiresAt` - same TTL, same cluster slot (hash tag) |
 | `sess:user:<userId>` | ZSET | `sid -> expiresAtMs`, expired members swept lazily by score |
 | `sess:index` | ZSET | Global `sid -> expiresAtMs` index behind `count()` |
 
 ::: warning Migration from connect-redis
-The payload key includes a hash tag (`sess:{abc123}` rather than `sess:abc123`) so payload+metadata operations stay atomic on Redis Cluster. Existing `connect-redis` keys are therefore not picked up — users sign in again once at cutover.
+The payload key includes a hash tag (`sess:{abc123}` rather than `sess:abc123`) so payload+metadata operations stay atomic on Redis Cluster. Existing `connect-redis` keys are therefore not picked up - users sign in again once at cutover.
 :::

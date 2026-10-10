@@ -304,6 +304,6 @@ describe('UserService', () => {
 
 ## Next Steps
 
-- [Cache Reference](../../reference/cache/) — Full caching API
-- [Locks Reference](../../reference/locks/) — Full locks API
-- [Two-Tier Caching](../concepts/two-tier-caching) — L1/L2 benefits
+- [Cache Reference](../../reference/cache/) - Full caching API
+- [Locks Reference](../../reference/locks/) - Full locks API
+- [Two-Tier Caching](../concepts/two-tier-caching) - L1/L2 benefits

@@ -1,5 +1,5 @@
 ---
-title: 'Production Recipes — Idempotency Plugin | NestJS RedisX'
+title: 'Production Recipes - Idempotency Plugin | NestJS RedisX'
 description: 'Reference for idempotent payments, order creation, webhook handlers, subscription flows, and money transfers using @Idempotent on NestJS Redis stacks.'
 ---
 
@@ -41,5 +41,5 @@ Common use cases and production patterns.
 
 ## Next Steps
 
-- [Troubleshooting](./troubleshooting) — Debug issues
-- [Overview](./index) — Back to overview
+- [Troubleshooting](./troubleshooting) - Debug issues
+- [Overview](./index) - Back to overview

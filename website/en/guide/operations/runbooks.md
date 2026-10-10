@@ -1,5 +1,5 @@
 ---
-title: 'Incident Runbooks — NestJS RedisX Operations | NestJS RedisX'
+title: 'Incident Runbooks - NestJS RedisX Operations | NestJS RedisX'
 description: 'Step-by-step on-call runbooks for Redis connection loss, cache stampede, lock contention, stream lag, and memory pressure incidents in NestJS RedisX.'
 ---
 
@@ -186,10 +186,10 @@ redis-cli XRANGE jobs:dlq - + COUNT 10
 
 ### Resolution
 
-1. **Analyze failures** — Check error messages in DLQ
-2. **Fix root cause** — Code bug, external service down, etc.
-3. **Replay messages** — Move from DLQ back to main stream
-4. **Clear DLQ** — After messages processed
+1. **Analyze failures** - Check error messages in DLQ
+2. **Fix root cause** - Code bug, external service down, etc.
+3. **Replay messages** - Move from DLQ back to main stream
+4. **Clear DLQ** - After messages processed
 
 ### Replay DLQ Messages
 

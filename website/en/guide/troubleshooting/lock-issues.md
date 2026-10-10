@@ -265,5 +265,5 @@ Wait for TTL expiration or restart the holding process.
 
 ## Next Steps
 
-- [Cache Issues](./cache-issues) — Cache troubleshooting
-- [Performance Issues](./performance-issues) — Latency problems
+- [Cache Issues](./cache-issues) - Cache troubleshooting
+- [Performance Issues](./performance-issues) - Latency problems

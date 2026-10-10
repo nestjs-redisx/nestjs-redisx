@@ -8,9 +8,9 @@
 [![npm downloads](https://img.shields.io/npm/dm/@nestjs-redisx/circuit-breaker)](https://www.npmjs.com/package/@nestjs-redisx/circuit-breaker)
 [![license](https://img.shields.io/npm/l/@nestjs-redisx/circuit-breaker)](https://opensource.org/licenses/MIT)
 
-Distributed circuit breaker plugin for NestJS RedisX. Implements the classic `closed` / `open` / `half-open` state machine with a rolling failure window, an open cooldown, and capped half-open probes — with state shared across all application instances via Redis (atomic Lua scripts), a proxy-based `@WithCircuitBreaker` decorator that works on any Injectable method, and per-call fallbacks.
+Distributed circuit breaker plugin for NestJS RedisX. Implements the classic `closed` / `open` / `half-open` state machine with a rolling failure window, an open cooldown, and capped half-open probes - with state shared across all application instances via Redis (atomic Lua scripts), a proxy-based `@WithCircuitBreaker` decorator that works on any Injectable method, and per-call fallbacks.
 
-At its core sits a pure, time-injected finite state machine (`CircuitBreakerState`): no I/O, no `Date.now()` — every time-dependent method takes an explicit `now` (epoch ms), so the policy is deterministic and hermetically testable.
+At its core sits a pure, time-injected finite state machine (`CircuitBreakerState`): no I/O, no `Date.now()` - every time-dependent method takes an explicit `now` (epoch ms), so the policy is deterministic and hermetically testable.
 
 ## Installation
 
@@ -52,13 +52,13 @@ export class PaymentsService {
 
 ## Features
 
-- **Distributed state** — all instances share one circuit via Redis; transitions are atomic Lua scripts (Cluster-safe: state keys share a hash tag).
-- **`@WithCircuitBreaker`** — proxy-based decorator for any Injectable method: key interpolation (`'user:{0}'`), per-method overrides, `fallback`, `onOpen: 'skip'`, and `skip()` bypass.
-- **`CircuitBreakerService`** — programmatic `execute(key, fn, { fallback })`, manual `recordSuccess` / `recordFailure`, non-mutating `getState`, `reset`.
-- **fail-open / fail-closed** — choose availability or strictness when the state store itself is unavailable.
-- **Zombie-probe reclaim** — a half-open probe whose outcome is never recorded loses its slot after `probeTimeoutMs`, so recovery is never blocked by a crashed prober.
-- **Pure core** — `CircuitBreakerState` is exported for hermetic unit tests of your breaker policy (explicit `now`, no fake timers).
-- **Testable without Redis** — runs on the `@nestjs-redisx/testing` in-memory driver, Lua included.
+- **Distributed state** - all instances share one circuit via Redis; transitions are atomic Lua scripts (Cluster-safe: state keys share a hash tag).
+- **`@WithCircuitBreaker`** - proxy-based decorator for any Injectable method: key interpolation (`'user:{0}'`), per-method overrides, `fallback`, `onOpen: 'skip'`, and `skip()` bypass.
+- **`CircuitBreakerService`** - programmatic `execute(key, fn, { fallback })`, manual `recordSuccess` / `recordFailure`, non-mutating `getState`, `reset`.
+- **fail-open / fail-closed** - choose availability or strictness when the state store itself is unavailable.
+- **Zombie-probe reclaim** - a half-open probe whose outcome is never recorded loses its slot after `probeTimeoutMs`, so recovery is never blocked by a crashed prober.
+- **Pure core** - `CircuitBreakerState` is exported for hermetic unit tests of your breaker policy (explicit `now`, no fake timers).
+- **Testable without Redis** - runs on the `@nestjs-redisx/testing` in-memory driver, Lua included.
 
 ## Documentation
 

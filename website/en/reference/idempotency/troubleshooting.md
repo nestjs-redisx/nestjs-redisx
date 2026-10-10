@@ -1,5 +1,5 @@
 ---
-title: 'Troubleshooting Guide — Idempotency Plugin | NestJS RedisX'
+title: 'Troubleshooting Guide - Idempotency Plugin | NestJS RedisX'
 description: 'Troubleshoot idempotency fingerprint mismatches, lock wait timeouts, failed-key retries, Idempotency-Key header handling, and stuck records in the NestJS Redis idempotency plugin.'
 ---
 
@@ -95,7 +95,7 @@ fingerprintGenerator: (ctx) => {
 
 **Symptoms:**
 - Requests are NOT deduplicated (the interceptor skips them when no key is present)
-- No error is thrown for a missing key — duplicate operations may occur
+- No error is thrown for a missing key - duplicate operations may occur
 
 **Solutions:**
 
@@ -129,7 +129,7 @@ fetch('/api/payments', {
 
 3. **Idempotency is already optional per request:**
 
-Requests that arrive **without** an idempotency key are passed straight through — the
+Requests that arrive **without** an idempotency key are passed straight through - the
 interceptor skips deduplication when no key is present. There is no "require key" enforcement
 to disable, and `errorPolicy` does not affect this (it governs store-unavailable behavior, not
 key presence; see [Configuration](./configuration)). If you want a missing key to be an error,
@@ -262,7 +262,7 @@ cached for the full `defaultTtl`.)
 
 **Implications:**
 - A client that retries immediately after a failure will receive HTTP 409 until the
-  `lockTimeout` window passes — it cannot retry successfully right away.
+  `lockTimeout` window passes - it cannot retry successfully right away.
 - To allow an immediate clean retry, use a **new** idempotency key for the retry, or explicitly
   delete the failed key (see [Inspect Redis Keys](#debugging-tools)).
 
@@ -300,7 +300,7 @@ RedisModule.forRoot({
 
 ::: tip Choose fail-open vs fail-closed
 By default (`errorPolicy: 'fail-closed'`) an unreachable store causes the request to be
-rejected — the store error propagates and surfaces as a server error. If availability matters
+rejected - the store error propagates and surfaces as a server error. If availability matters
 more than deduplication, set `errorPolicy: 'fail-open'` so the request proceeds without
 idempotency protection (a warning is logged) while Redis is down. See
 [Configuration](./configuration).
@@ -378,7 +378,7 @@ redis-cli --scan --pattern 'idempotency:*'
 ## Common Errors
 
 All idempotency errors extend `RedisXError` (a plain `Error`), but the plugin registers a
-built-in exception filter that maps them to meaningful HTTP statuses out of the box — fingerprint
+built-in exception filter that maps them to meaningful HTTP statuses out of the box - fingerprint
 mismatch to **422**, previously-failed and timeout to **409**, and a missing key passes through
 with no error. You only need your own filter if you want different statuses or a custom payload.
 
@@ -449,7 +449,7 @@ curl -i -X POST http://localhost:3000/payments \
   -H "Content-Type: application/json" \
   -d '{"amount": 100}'
 
-# Mismatch (same key, different body) — returns HTTP 422
+# Mismatch (same key, different body) - returns HTTP 422
 # (IdempotencyFingerprintMismatchError, mapped by the built-in exception filter)
 curl -i -X POST http://localhost:3000/payments \
   -H "Idempotency-Key: $KEY" \
@@ -470,5 +470,5 @@ If still stuck:
 
 ## Next Steps
 
-- [Monitoring](./monitoring) — Track operations
-- [Overview](./index) — Back to overview
+- [Monitoring](./monitoring) - Track operations
+- [Overview](./index) - Back to overview

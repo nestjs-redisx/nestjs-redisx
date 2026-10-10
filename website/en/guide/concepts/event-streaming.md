@@ -1,5 +1,5 @@
 ---
-title: 'Event Streaming Patterns — NestJS RedisX Concepts | NestJS RedisX'
+title: 'Event Streaming Patterns - NestJS RedisX Concepts | NestJS RedisX'
 description: 'A deep dive into Redis Streams with NestJS RedisX: compare streams with pub/sub and brokers, design consumer groups, and handle replay, DLQ, and backpressure.'
 ---
 
@@ -210,5 +210,5 @@ For strict ordering across producers, use a single stream with sequence numbers.
 
 ## Next Steps
 
-- [Background Jobs Recipe](../recipes/background-jobs) — Practical implementation
-- [Streams Reference](../../reference/streams/) — Full API documentation
+- [Background Jobs Recipe](../recipes/background-jobs) - Practical implementation
+- [Streams Reference](../../reference/streams/) - Full API documentation

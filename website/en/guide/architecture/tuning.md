@@ -1,5 +1,5 @@
 ---
-title: 'Tuning Profiles — NestJS RedisX Architecture | NestJS RedisX'
+title: 'Tuning Profiles - NestJS RedisX Architecture | NestJS RedisX'
 description: 'Tune NestJS RedisX for your workload with baseline, low-latency, high-throughput, and memory-constrained profiles covering cache, locks, and rate limits.'
 ---
 
@@ -198,5 +198,5 @@ RedisModule.forRoot({
 
 ## Next Steps
 
-- [Monitoring](../operations/monitoring) — Track tuning effectiveness
-- [Connection Management](./connection-management) — Connection-level tuning
+- [Monitoring](../operations/monitoring) - Track tuning effectiveness
+- [Connection Management](./connection-management) - Connection-level tuning

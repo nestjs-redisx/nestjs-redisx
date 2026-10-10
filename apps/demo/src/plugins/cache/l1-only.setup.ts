@@ -3,7 +3,7 @@ import { RedisModule } from '@nestjs-redisx/core';
 import { CachePlugin } from '@nestjs-redisx/cache';
 
 /**
- * Run the cache entirely in local process memory — NO Redis.
+ * Run the cache entirely in local process memory - NO Redis.
  *
  * With `mode: 'l1-only'` the app boots even when no Redis is reachable. Tags,
  * SWR, stale-if-error and singleflight all keep working, but SINGLE-INSTANCE

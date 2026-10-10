@@ -1,5 +1,5 @@
 ---
-title: 'Alerting Rules — NestJS RedisX Operations | NestJS RedisX'
+title: 'Alerting Rules - NestJS RedisX Operations | NestJS RedisX'
 description: 'Configure Prometheus alert rules for Redis connection loss, cache hit rate, lock contention, and stream consumer lag in NestJS RedisX deployments.'
 ---
 
@@ -9,9 +9,9 @@ Configure alerts to catch issues before they impact users.
 
 ## Alert Philosophy
 
-1. **Alert on symptoms, not causes** — Page for user impact
-2. **Avoid alert fatigue** — Only alert on actionable items
-3. **Include runbook links** — Make alerts actionable
+1. **Alert on symptoms, not causes** - Page for user impact
+2. **Avoid alert fatigue** - Only alert on actionable items
+3. **Include runbook links** - Make alerts actionable
 
 ## Prometheus Alert Rules
 
@@ -156,5 +156,5 @@ curl -X POST http://alertmanager:9093/api/v1/alerts \
 
 ## Next Steps
 
-- [Monitoring](./monitoring) — Metrics setup
-- [Runbooks](./runbooks) — Incident response
+- [Monitoring](./monitoring) - Metrics setup
+- [Runbooks](./runbooks) - Incident response

@@ -1,5 +1,5 @@
 ---
-title: 'IdempotencyService API — Idempotency Plugin | NestJS RedisX'
+title: 'IdempotencyService API - Idempotency Plugin | NestJS RedisX'
 description: 'Reference for IDEMPOTENCY_SERVICE programmatic control: checkAndLock, complete, fail, get, and delete methods for custom idempotent flows in NestJS.'
 ---
 
@@ -216,5 +216,5 @@ describe('PaymentService', () => {
 
 ## Next Steps
 
-- [Fingerprinting](./fingerprinting) — Deep dive into fingerprints
-- [Testing](./testing) — Test idempotent code
+- [Fingerprinting](./fingerprinting) - Deep dive into fingerprints
+- [Testing](./testing) - Test idempotent code

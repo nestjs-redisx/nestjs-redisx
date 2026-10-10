@@ -1,5 +1,5 @@
 ---
-title: 'Configuration Reference — Streams Plugin | NestJS RedisX'
+title: 'Configuration Reference - Streams Plugin | NestJS RedisX'
 description: 'Configure StreamsPlugin client, keyPrefix, consumer batchSize, blockTimeout, dedicated Redis connections, and DLQ options in NestJS forRootAsync setups.'
 ---
 
@@ -75,8 +75,8 @@ interface ConsumerOptions {
    *
    * Drives the background auto-claim loop: every `claimIdleTimeout` ms each
    * consumer scans the group's pending entries (XPENDING) and reclaims (XCLAIM)
-   * any message idle for at least this long — e.g. messages left pending by a
-   * crashed consumer — then processes them through the normal handler/retry/DLQ
+   * any message idle for at least this long - e.g. messages left pending by a
+   * crashed consumer - then processes them through the normal handler/retry/DLQ
    * path. Set to 0 to disable auto-claim. The `claimIdle()` method remains
    * available for on-demand claiming.
    * @default 30000
@@ -107,14 +107,14 @@ interface ProducerOptions {
 
 ::: tip Disabling trimming (keep-all)
 To retain every entry (for example for event sourcing), set `trim: { enabled:
-false }` at the plugin level — no `MAXLEN` is then applied on publish. To cap the
+false }` at the plugin level - no `MAXLEN` is then applied on publish. To cap the
 stream, use the `trim` block (see below) or `producer.maxLen`. A per-publish
 `maxLen` always overrides the configured trimming for that call.
 
 The `autoCreate` option controls implicit stream creation on publish. When
 `true` (default), the first `XADD` creates the stream as usual. When `false`,
 publishes set `NOMKSTREAM`, so a publish to a non-existent stream does **not**
-create it — the publish becomes a no-op returning `null` instead.
+create it - the publish becomes a no-op returning `null` instead.
 :::
 
 ### Dead Letter Queue Options
@@ -348,5 +348,5 @@ STREAMS_DLQ_ENABLED=true
 
 ## Next Steps
 
-- [Producer](./producer) — Publishing messages
-- [Consumer](./consumer) — Consuming messages
+- [Producer](./producer) - Publishing messages
+- [Consumer](./consumer) - Consuming messages

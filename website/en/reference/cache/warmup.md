@@ -1,5 +1,5 @@
 ---
-title: 'Cache Warmup on Startup — Cache Plugin | NestJS RedisX'
+title: 'Cache Warmup on Startup - Cache Plugin | NestJS RedisX'
 description: 'Pre-warm Redis caches during NestJS OnModuleInit with WarmupService, chunked Promise.allSettled loaders, per-key TTLs, tags, and SWR-aware metadata.'
 ---
 
@@ -17,11 +17,11 @@ Pre-load frequently accessed data into cache before traffic arrives.
 
 ## How It Works
 
-Warmup runs automatically during NestJS `OnModuleInit` lifecycle — before the application starts accepting traffic.
+Warmup runs automatically during NestJS `OnModuleInit` lifecycle - before the application starts accepting traffic.
 
 1. `WarmupService.onModuleInit()` checks if warmup is enabled and keys are configured
 2. Keys are split into **chunks** of size `concurrency` (default: 10)
-3. Each chunk is processed via `Promise.allSettled()` — individual failures don't stop the batch
+3. Each chunk is processed via `Promise.allSettled()` - individual failures don't stop the batch
 4. For each key, `getOrSet()` is called with the configured loader, TTL, and tags
 5. After all chunks complete, a summary is logged: `N succeeded, M failed (Xms)`
 
@@ -33,7 +33,7 @@ Chunk 2: [key11, key12, ..., key20] → Promise.allSettled() → next chunk
 
 ::: info Warmup uses getOrSet() internally
 Each warmup key is loaded via `getOrSet()`, which means:
-- **Stampede protection** applies by default — concurrent warmup of the same key won't hit DB multiple times
+- **Stampede protection** applies by default - concurrent warmup of the same key won't hit DB multiple times
 - **SWR metadata** is created if SWR is enabled globally
 - Data is stored in both **L1 and L2** (unless strategy overrides)
 :::
@@ -104,7 +104,7 @@ new CachePlugin({
 ```
 
 ::: warning Loader DI limitation
-Loaders in plugin config are defined at **plugin construction time** — before the NestJS DI container is initialized. This means you **cannot inject services** (repositories, ConfigService, etc.) into these loaders. For data that requires DI services, use Strategy 2.
+Loaders in plugin config are defined at **plugin construction time** - before the NestJS DI container is initialized. This means you **cannot inject services** (repositories, ConfigService, etc.) into these loaders. For data that requires DI services, use Strategy 2.
 :::
 
 ### Strategy 2: Service-Based (Custom)
@@ -114,7 +114,7 @@ Best for data that requires injected services (database queries, external APIs).
 <<< @/apps/demo/src/plugins/cache/warmup-service-based.usage.ts{typescript}
 
 ::: info getOrSet vs set for warmup
-Use `getOrSet()` instead of `set()` for warmup — it provides stampede protection and SWR integration. If you use `set()`, you lose these benefits.
+Use `getOrSet()` instead of `set()` for warmup - it provides stampede protection and SWR integration. If you use `set()`, you lose these benefits.
 :::
 
 ## Logging
@@ -138,7 +138,7 @@ Use `getOrSet()` instead of `set()` for warmup — it provides stampede protecti
 | Redis unavailable | Each `getOrSet()` fails. Errors logged, app starts. |
 | Warmup disabled or no keys | `onModuleInit()` returns immediately (no-op). |
 
-Warmup uses `Promise.allSettled()` — failures never prevent application startup.
+Warmup uses `Promise.allSettled()` - failures never prevent application startup.
 
 ```typescript
 warmup: {
@@ -181,5 +181,5 @@ warmup: { concurrency: 1000 }  // Will overload DB
 
 ## Next Steps
 
-- [Serializers](./serializers) — Data serialization options
-- [Monitoring](./monitoring) — Track cache performance
+- [Serializers](./serializers) - Data serialization options
+- [Monitoring](./monitoring) - Track cache performance

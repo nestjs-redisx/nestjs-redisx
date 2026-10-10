@@ -1,5 +1,5 @@
 ---
-title: 'Multi-Tenancy — NestJS RedisX Architecture | NestJS RedisX'
+title: 'Multi-Tenancy - NestJS RedisX Architecture | NestJS RedisX'
 description: 'Compare Redis multi-tenant isolation strategies in NestJS RedisX, from key prefixes and database numbers to dedicated Redis instances and quota enforcement.'
 ---
 
@@ -257,5 +257,5 @@ topk(10, sum by (tenant) (rate(redis_commands_total[5m])))
 
 ## Next Steps
 
-- [Key Naming](./key-naming) — Naming conventions
-- [Security](./security) — Data protection
+- [Key Naming](./key-naming) - Naming conventions
+- [Security](./security) - Data protection

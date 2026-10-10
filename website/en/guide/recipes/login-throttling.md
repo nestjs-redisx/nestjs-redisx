@@ -116,5 +116,5 @@ async login(@Body() dto: LoginDto, @Ip() ip: string) {
 
 ## Next Steps
 
-- [API Protection](./api-protection) — General API rate limiting
-- [Rate Limit Reference](../../reference/rate-limit/) — Full API
+- [API Protection](./api-protection) - General API rate limiting
+- [Rate Limit Reference](../../reference/rate-limit/) - Full API

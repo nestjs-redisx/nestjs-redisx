@@ -1,6 +1,6 @@
 ---
-title: 'Recipes — Metrics Plugin | NestJS RedisX'
-description: 'Practical metrics recipes for NestJS Redis — HTTP request histograms, e-commerce order counters, inventory gauges, and background job queue depth tracking.'
+title: 'Recipes - Metrics Plugin | NestJS RedisX'
+description: 'Practical metrics recipes for NestJS Redis - HTTP request histograms, e-commerce order counters, inventory gauges, and background job queue depth tracking.'
 ---
 
 # Recipes
@@ -27,5 +27,5 @@ Track job execution across your worker fleet. Registers counters for processed j
 
 ## Next Steps
 
-- [Troubleshooting](./troubleshooting) — Debug common issues
-- [Overview](./index) — Back to overview
+- [Troubleshooting](./troubleshooting) - Debug common issues
+- [Overview](./index) - Back to overview

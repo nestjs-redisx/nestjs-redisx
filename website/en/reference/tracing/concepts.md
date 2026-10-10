@@ -1,5 +1,5 @@
 ---
-title: 'Core Concepts — Tracing Plugin | NestJS RedisX'
+title: 'Core Concepts - Tracing Plugin | NestJS RedisX'
 description: 'Understand traces, spans, context propagation, attributes, and events in OpenTelemetry for diagnosing Redis latency across NestJS microservices.'
 ---
 
@@ -335,6 +335,6 @@ sampling: { strategy: 'always' }
 
 ## Next Steps
 
-- [Configuration](./configuration) — Configure tracing
-- [Spans](./spans) — Create custom spans
-- [OpenTelemetry](./opentelemetry) — OTel integration
+- [Configuration](./configuration) - Configure tracing
+- [Spans](./spans) - Create custom spans
+- [OpenTelemetry](./opentelemetry) - OTel integration

@@ -1,5 +1,5 @@
 ---
-title: 'Configuration Reference — Idempotency Plugin | NestJS RedisX'
+title: 'Configuration Reference - Idempotency Plugin | NestJS RedisX'
 description: 'Reference for IdempotencyPlugin options: defaultTtl, keyPrefix, headerName, lockTimeout, waitTimeout, fingerprintFields, and custom generators in NestJS.'
 ---
 
@@ -58,19 +58,19 @@ new IdempotencyPlugin({
 The `errorPolicy` option decides what happens if the idempotency store (Redis) cannot be
 reached on the gating `checkAndLock` call:
 
-- `'fail-closed'` (default) — the request is **rejected** (the store error propagates). Use this
+- `'fail-closed'` (default) - the request is **rejected** (the store error propagates). Use this
   when correctness matters more than availability (e.g. payments).
-- `'fail-open'` — the request **proceeds without idempotency protection** (a warning is logged).
-  Use this when availability matters more than deduplication during an outage — and understand
+- `'fail-open'` - the request **proceeds without idempotency protection** (a warning is logged).
+  Use this when availability matters more than deduplication during an outage - and understand
   the trade: while the store is down, **retries execute again** (duplicates are possible by
   design). For money movement keep the default `'fail-closed'`.
 :::
 
-::: warning `defaultTtl` is the deduplication window — not a permanent guarantee
+::: warning `defaultTtl` is the deduplication window - not a permanent guarantee
 Idempotency records expire after `defaultTtl` (24h by default). A client that retries the
 same `Idempotency-Key` **after** the record expired is indistinguishable from a new request:
 the handler executes again, silently. Size `defaultTtl` to comfortably exceed your clients'
-longest retry horizon, and for payments treat this plugin as the first line of defense — the
+longest retry horizon, and for payments treat this plugin as the first line of defense - the
 durable source of truth for "was this operation performed" belongs in your database
 (e.g. a unique constraint or a ledger), not in a TTL-bound cache.
 :::
@@ -109,7 +109,7 @@ new IdempotencyPlugin({
 })
 
 // Note: requests without an idempotency key are simply passed through
-// (the interceptor skips them) — there is no "require key" enforcement.
+// (the interceptor skips them) - there is no "require key" enforcement.
 // errorPolicy: 'fail-open' can be added here to keep webhooks flowing
 // even if Redis is temporarily unavailable.
 ```
@@ -185,5 +185,5 @@ Recommended: waitTimeout = lockTimeout * 2
 
 ## Next Steps
 
-- [Decorator](./decorator) — Learn @Idempotent decorator
-- [Fingerprinting](./fingerprinting) — Deep dive into fingerprints
+- [Decorator](./decorator) - Learn @Idempotent decorator
+- [Fingerprinting](./fingerprinting) - Deep dive into fingerprints

@@ -258,5 +258,5 @@ Verify these items for optimal Redis performance:
 
 ## Next Steps
 
-- [Debugging](./debugging) — Debugging tools
-- [Tuning](../architecture/tuning) — Performance optimization
+- [Debugging](./debugging) - Debugging tools
+- [Tuning](../architecture/tuning) - Performance optimization

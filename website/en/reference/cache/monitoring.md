@@ -1,5 +1,5 @@
 ---
-title: 'Monitoring Cache Performance — Cache Plugin | NestJS RedisX'
+title: 'Monitoring Cache Performance - Cache Plugin | NestJS RedisX'
 description: 'Monitor hit ratios, stampede prevention, and L1/L2 sizes with CacheService.getStats(), structured logs, and Prometheus metrics from MetricsPlugin.'
 ---
 
@@ -31,7 +31,7 @@ const stats = await cache.getStats();
 ```
 
 ::: info Counters are cumulative
-`hits`, `misses`, and `stampedePrevented` are **cumulative counters** — they grow from zero at application startup and never reset. To calculate rates, take the delta between two snapshots over time.
+`hits`, `misses`, and `stampedePrevented` are **cumulative counters** - they grow from zero at application startup and never reset. To calculate rates, take the delta between two snapshots over time.
 :::
 
 ### Available Metrics
@@ -62,7 +62,7 @@ The public `getStats()` returns `CacheStats` which is a subset of all available 
 
 ## Built-in Metrics & Tracing Integration
 
-The internal cache service has **optional** integration with `MetricsPlugin` and `TracingPlugin`. When these plugins are registered, metrics and traces are collected automatically — no custom code needed.
+The internal cache service has **optional** integration with `MetricsPlugin` and `TracingPlugin`. When these plugins are registered, metrics and traces are collected automatically - no custom code needed.
 
 ### MetricsPlugin (automatic)
 
@@ -74,7 +74,7 @@ If `MetricsPlugin` is registered, the cache service automatically increments the
 | `redisx_cache_misses_total` | `layer: 'l1'` | L1 cache miss |
 | `redisx_cache_hits_total` | `layer: 'l2'` | L2 cache hit |
 | `redisx_cache_misses_total` | `layer: 'l2'` | L2 cache miss |
-| `redisx_cache_stampede_prevented_total` | — | Stampede prevention event |
+| `redisx_cache_stampede_prevented_total` | - | Stampede prevention event |
 
 <<< @/apps/demo/src/plugins/cache/metrics-plugin.setup.ts{typescript}
 
@@ -95,7 +95,7 @@ plugins: [
 ```
 
 ::: info Optional injection
-Both integrations use `@Optional() @Inject()` — if the plugin is not registered, the cache works normally without metrics or traces.
+Both integrations use `@Optional() @Inject()` - if the plugin is not registered, the cache works normally without metrics or traces.
 :::
 
 ## Custom Prometheus (without MetricsPlugin)
@@ -105,7 +105,7 @@ If you prefer manual Prometheus integration with `prom-client` instead of `Metri
 <<< @/apps/demo/src/plugins/cache/cache-metrics-service.usage.ts{typescript}
 
 ::: warning Gauges, not Counters
-Use `Gauge` for hit rates and sizes derived from cumulative stats. If you need `Counter` for hits/misses, calculate the **delta** between snapshots — don't pass cumulative values to `Counter.inc()`.
+Use `Gauge` for hit rates and sizes derived from cumulative stats. If you need `Counter` for hits/misses, calculate the **delta** between snapshots - don't pass cumulative values to `Counter.inc()`.
 :::
 
 ## Grafana Queries
@@ -148,5 +148,5 @@ const app = await NestFactory.create(AppModule, {
 
 ## Next Steps
 
-- [Testing](./testing) — Test cached services
-- [Troubleshooting](./troubleshooting) — Debug common issues
+- [Testing](./testing) - Test cached services
+- [Troubleshooting](./troubleshooting) - Debug common issues

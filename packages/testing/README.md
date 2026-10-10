@@ -8,7 +8,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/@nestjs-redisx/testing)](https://www.npmjs.com/package/@nestjs-redisx/testing)
 [![license](https://img.shields.io/npm/l/@nestjs-redisx/testing)](https://opensource.org/licenses/MIT)
 
-Testing utilities for NestJS RedisX: an **in-memory Redis driver** that runs the real cache, locks, rate-limit, and idempotency plugins — including their Lua scripts — with no Redis required. Fast, deterministic, isolated unit tests.
+Testing utilities for NestJS RedisX: an **in-memory Redis driver** that runs the real cache, locks, rate-limit, and idempotency plugins - including their Lua scripts - with no Redis required. Fast, deterministic, isolated unit tests.
 
 ## Installation
 
@@ -34,7 +34,7 @@ let calls = 0;
 const loader = async () => (calls++, { id: 1 });
 await cache.getOrSet('user:1', loader, { ttl: 60 });
 await cache.getOrSet('user:1', loader, { ttl: 60 });
-// calls === 1 — real cache code, no Redis
+// calls === 1 - real cache code, no Redis
 ```
 
 Prefer to configure `RedisModule` directly? Import the package (to register the
@@ -57,7 +57,7 @@ Supports the data structures and scripting used by the cache, locks, rate-limit,
 pubsub, idempotency, and streams plugins: strings, hashes, sets, sorted sets,
 lists, streams (with consumer groups, PEL, `XACK`/`XCLAIM`/`XPENDING`), keys/TTL,
 Pub/Sub (via a process-wide bus with glob pattern matching), and a bounded Lua
-interpreter. Single-node semantics only — no cluster cross-slot or cross-process
+interpreter. Single-node semantics only - no cluster cross-slot or cross-process
 delivery, and blocking reads return promptly rather than waiting.
 
 ## Documentation

@@ -1,6 +1,6 @@
 ---
-title: 'Core Concepts — Metrics Plugin | NestJS RedisX'
-description: 'Understand Prometheus metric types — counter, gauge, histogram, summary — labels, cardinality, and naming conventions for Redis observability in NestJS.'
+title: 'Core Concepts - Metrics Plugin | NestJS RedisX'
+description: 'Understand Prometheus metric types - counter, gauge, histogram, summary - labels, cardinality, and naming conventions for Redis observability in NestJS.'
 ---
 
 # Core Concepts
@@ -375,6 +375,6 @@ max(redis_connections_active)
 
 ## Next Steps
 
-- [Configuration](./configuration) — Configure metrics
-- [Prometheus](./prometheus) — Set up Prometheus
-- [Custom Metrics](./custom-metrics) — Create your own metrics
+- [Configuration](./configuration) - Configure metrics
+- [Prometheus](./prometheus) - Set up Prometheus
+- [Custom Metrics](./custom-metrics) - Create your own metrics

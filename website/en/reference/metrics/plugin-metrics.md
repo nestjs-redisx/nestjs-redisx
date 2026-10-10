@@ -1,6 +1,6 @@
 ---
-title: 'Built-in Plugin Metrics — Metrics Plugin | NestJS RedisX'
-description: 'Reference for metrics auto-emitted by the Cache, Locks, Rate Limit, Streams, Idempotency, Session, and Leader plugins — names, labels, and PromQL queries for NestJS Redis.'
+title: 'Built-in Plugin Metrics - Metrics Plugin | NestJS RedisX'
+description: 'Reference for metrics auto-emitted by the Cache, Locks, Rate Limit, Streams, Idempotency, Session, and Leader plugins - names, labels, and PromQL queries for NestJS Redis.'
 ---
 
 # Plugin Metrics
@@ -283,7 +283,7 @@ redisx_leader_lost_total{group="default",reason="shutdown"} 1
 sum by (group) (rate(redisx_leader_lost_total{reason="expired"}[15m]))
 ```
 
-Counters cannot answer "who leads right now" — use the leader status endpoint (`getLeaderId()`) from the [leader monitoring page](../leader/monitoring).
+Counters cannot answer "who leads right now" - use the leader status endpoint (`getLeaderId()`) from the [leader monitoring page](../leader/monitoring).
 
 ## Dashboards by Plugin
 
@@ -412,6 +412,6 @@ Counters cannot answer "who leads right now" — use the leader status endpoint 
 
 ## Next Steps
 
-- [Custom Metrics](./custom-metrics) — Add your own metrics
-- [Grafana](./grafana) — Visualize plugin metrics
-- [Alerting](./alerting) — Set up alerts
+- [Custom Metrics](./custom-metrics) - Add your own metrics
+- [Grafana](./grafana) - Visualize plugin metrics
+- [Alerting](./alerting) - Set up alerts

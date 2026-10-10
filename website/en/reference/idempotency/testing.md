@@ -1,5 +1,5 @@
 ---
-title: 'Testing Strategies — Idempotency Plugin | NestJS RedisX'
+title: 'Testing Strategies - Idempotency Plugin | NestJS RedisX'
 description: 'Test NestJS idempotent endpoints with Vitest, mocking IDEMPOTENCY_SERVICE checkAndLock and complete, plus ioredis-mock for integration coverage.'
 ---
 
@@ -441,5 +441,5 @@ const record = await IdempotencyTestUtils.getRecord(redis, 'payment-123');
 
 ## Next Steps
 
-- [Recipes](./recipes) — Real-world examples
-- [Troubleshooting](./troubleshooting) — Debug test failures
+- [Recipes](./recipes) - Real-world examples
+- [Troubleshooting](./troubleshooting) - Debug test failures

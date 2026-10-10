@@ -1,5 +1,5 @@
 ---
-title: 'Cache Serializers Reference — Cache Plugin | NestJS RedisX'
+title: 'Cache Serializers Reference - Cache Plugin | NestJS RedisX'
 description: 'Serialize L2 Redis values with JsonSerializer or MsgpackSerializer, implement ISerializer, and override the SERIALIZER provider for binary-safe caching.'
 ---
 
@@ -8,12 +8,12 @@ description: 'Serialize L2 Redis values with JsonSerializer or MsgpackSerializer
 How data is serialized for storage in Redis (L2 cache).
 
 ::: info L2 only
-Serialization applies only to **L2 (Redis)**. L1 (memory) stores JavaScript objects directly — no serialization overhead.
+Serialization applies only to **L2 (Redis)**. L1 (memory) stores JavaScript objects directly - no serialization overhead.
 :::
 
 ## Default Behavior
 
-The cache plugin uses **JSON serialization** internally via the `Serializer` domain service. This is hardcoded in the plugin — there is no `serializer` option in `CachePlugin` config.
+The cache plugin uses **JSON serialization** internally via the `Serializer` domain service. This is hardcoded in the plugin - there is no `serializer` option in `CachePlugin` config.
 
 ```typescript
 // This is what the plugin registers internally
@@ -24,7 +24,7 @@ All `set()`, `get()`, `getOrSet()`, and SWR operations use `JSON.stringify()` / 
 
 ## Available Serializers
 
-The package exports serializer classes implementing the `ISerializer` interface. These are **standalone utilities** — they can be used independently or as a replacement for the internal serializer via manual provider override.
+The package exports serializer classes implementing the `ISerializer` interface. These are **standalone utilities** - they can be used independently or as a replacement for the internal serializer via manual provider override.
 
 | Serializer | Output | Types Supported | Best For |
 |------------|--------|-----------------|----------|
@@ -41,7 +41,7 @@ import { type ISerializer } from '@nestjs-redisx/cache';
 |--------|-----------|-------------|
 | `serialize` | `<T>(value: T) => string \| Buffer` | Converts value to storage format |
 | `deserialize` | `<T>(data: string \| Buffer) => T` | Restores value from storage format. Throws `SerializationError` on failure. |
-| `tryDeserialize` | `<T>(data: string \| Buffer) => T \| null` | Safe version — returns `null` on error instead of throwing |
+| `tryDeserialize` | `<T>(data: string \| Buffer) => T \| null` | Safe version - returns `null` on error instead of throwing |
 | `getContentType` | `() => string` | Content type identifier (e.g. `'application/json'`, `'application/msgpack'`) |
 
 ## JsonSerializer
@@ -154,7 +154,7 @@ The internal `Serializer` domain service handles `string` only. `JsonSerializer`
 ### Dates
 
 ```typescript
-// JSON — dates become strings
+// JSON - dates become strings
 const user = { created: new Date('2025-01-28') };
 // Stored: { "created": "2025-01-28T00:00:00.000Z" }
 // On read: user.created is a string, not Date
@@ -176,8 +176,8 @@ const user = new User('123', 'John');
 await cache.set('user:123', user);
 
 const cached = await cache.get<User>('user:123');
-// cached.id, cached.name — work fine
-// cached.getDisplayName() — TypeError: not a function
+// cached.id, cached.name - work fine
+// cached.getDisplayName() - TypeError: not a function
 
 // Solution: reconstruct
 const restored = Object.assign(new User('', ''), cached);
@@ -203,5 +203,5 @@ const restored = Object.assign(new User('', ''), cached);
 
 ## Next Steps
 
-- [Eviction Strategies](./strategies) — Memory management
-- [Monitoring](./monitoring) — Track cache performance
+- [Eviction Strategies](./strategies) - Memory management
+- [Monitoring](./monitoring) - Track cache performance

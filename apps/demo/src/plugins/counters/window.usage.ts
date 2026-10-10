@@ -9,7 +9,7 @@ export class UsageService {
   ) {}
 
   // Window counter: the TTL applies only when the increment CREATES the
-  // key — later increments never extend the window, so daily keys expire
+  // key - later increments never extend the window, so daily keys expire
   // on their own without a cleanup job.
   async onApiCall(userId: string): Promise<number> {
     const today = new Date().toISOString().slice(0, 10);
@@ -17,7 +17,7 @@ export class UsageService {
   }
 
   // Flush-style consumption: read the accumulated total and zero it in ONE
-  // atomic step — periodic aggregation without double counting.
+  // atomic step - periodic aggregation without double counting.
   async flushEmailBatch(): Promise<number> {
     return this.counters.getAndReset('emails:batch');
   }

@@ -1,5 +1,5 @@
 ---
-title: 'Prometheus Scraping — Metrics Plugin | NestJS RedisX'
+title: 'Prometheus Scraping - Metrics Plugin | NestJS RedisX'
 description: 'Expose the /metrics endpoint and configure Prometheus scrape_configs, relabeling, and service discovery for NestJS Redis instances in production.'
 ---
 
@@ -404,6 +404,6 @@ topk(10, count by (__name__)({__name__=~".+"}))
 
 ## Next Steps
 
-- [Grafana](./grafana) — Visualize metrics
-- [Alerting](./alerting) — Set up alerts
-- [Troubleshooting](./troubleshooting) — Debug issues
+- [Grafana](./grafana) - Visualize metrics
+- [Alerting](./alerting) - Set up alerts
+- [Troubleshooting](./troubleshooting) - Debug issues

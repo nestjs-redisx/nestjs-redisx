@@ -49,7 +49,7 @@ NestJS RedisX is designed for production NestJS applications that need Redis bey
 - [@RateLimit Decorator](https://nestjs-redisx.dev/en/reference/rate-limit/decorator): Route-level rate limiting with per-endpoint configuration.
 - [Guard](https://nestjs-redisx.dev/en/reference/rate-limit/guard): RateLimitGuard usage, global registration, and skip behavior.
 - [Service API](https://nestjs-redisx.dev/en/reference/rate-limit/service-api): Programmatic check/peek/reset/getState with IRateLimitService.
-- [Algorithms](https://nestjs-redisx.dev/en/reference/rate-limit/algorithms): Fixed window, sliding window, and token bucket — all atomic Lua scripts.
+- [Algorithms](https://nestjs-redisx.dev/en/reference/rate-limit/algorithms): Fixed window, sliding window, and token bucket - all atomic Lua scripts.
 - [Key Extraction](https://nestjs-redisx.dev/en/reference/rate-limit/key-extraction): Custom key strategies for IP, user, tenant, or custom identifiers.
 
 ## Circuit Breaker Plugin
@@ -58,7 +58,7 @@ NestJS RedisX is designed for production NestJS applications that need Redis bey
 - [Configuration](https://nestjs-redisx.dev/en/reference/circuit-breaker/configuration): CircuitBreakerPlugin configuration for failure threshold, rolling window, open cooldown, and half-open probes.
 - [@WithCircuitBreaker Decorator](https://nestjs-redisx.dev/en/reference/circuit-breaker/decorator): Proxy-based decorator for any Injectable method with fallbacks and skip.
 - [Service API](https://nestjs-redisx.dev/en/reference/circuit-breaker/service-api): Programmatic execute/recordSuccess/recordFailure/getState/reset with ICircuitBreakerService.
-- [Algorithm](https://nestjs-redisx.dev/en/reference/circuit-breaker/algorithm): State transitions, rolling failure window, cooldown, and probe rules — atomic Lua scripts.
+- [Algorithm](https://nestjs-redisx.dev/en/reference/circuit-breaker/algorithm): State transitions, rolling failure window, cooldown, and probe rules - atomic Lua scripts.
 - [Testing](https://nestjs-redisx.dev/en/reference/circuit-breaker/testing): Unit-test the pure state machine or run the real plugin on the in-memory driver.
 
 ## Pub/Sub Plugin
@@ -95,7 +95,7 @@ NestJS RedisX is designed for production NestJS applications that need Redis bey
 
 ## Semaphore Plugin
 
-- [Semaphore Overview](https://nestjs-redisx.dev/en/reference/semaphore/): Bound concurrency across instances — at most N concurrent executions fleet-wide with leased permits.
+- [Semaphore Overview](https://nestjs-redisx.dev/en/reference/semaphore/): Bound concurrency across instances - at most N concurrent executions fleet-wide with leased permits.
 - [Configuration](https://nestjs-redisx.dev/en/reference/semaphore/configuration): defaultTtl/maxTtl, retry backoff, auto-renewal interval fraction, key prefix, async registration.
 - [Service API](https://nestjs-redisx.dev/en/reference/semaphore/service-api): acquire/tryAcquire/withPermit, permit lifecycle (release/extend/isHeld), usedPermits/availablePermits/forceReleaseAll.
 - [@WithSemaphore Decorator](https://nestjs-redisx.dev/en/reference/semaphore/decorator): {n} key templates, waitTimeout, and the onUnavailable policy (throw | skip | custom error).
@@ -105,9 +105,9 @@ NestJS RedisX is designed for production NestJS applications that need Redis bey
 
 ## Dedup Plugin
 
-- [Dedup Overview](https://nestjs-redisx.dev/en/reference/dedup/): Run webhooks, queue messages, and user actions once per window across the fleet — first-wins TTL markers.
+- [Dedup Overview](https://nestjs-redisx.dev/en/reference/dedup/): Run webhooks, queue messages, and user actions once per window across the fleet - first-wins TTL markers.
 - [Configuration](https://nestjs-redisx.dev/en/reference/dedup/configuration): defaultWindow, errorPolicy fail-open vs fail-closed, key prefix.
-- [Service API](https://nestjs-redisx.dev/en/reference/dedup/service-api): isFirst/dedupe/debounce/release — strict manual APIs vs policy-driven gates; failure re-admission semantics.
+- [Service API](https://nestjs-redisx.dev/en/reference/dedup/service-api): isFirst/dedupe/debounce/release - strict manual APIs vs policy-driven gates; failure re-admission semantics.
 - [@Dedupe Decorator](https://nestjs-redisx.dev/en/reference/dedup/decorator): {n} key templates, window override, fail-open without the plugin.
 - [Recipes](https://nestjs-redisx.dev/en/reference/dedup/recipes): Webhook redelivery, at-least-once queue consumers, double-click guards, collapsing bursts with distributed debounce.
 - [Testing](https://nestjs-redisx.dev/en/reference/dedup/testing): Concurrent duplicates admit exactly one on the in-memory driver.
@@ -157,7 +157,7 @@ NestJS RedisX is designed for production NestJS applications that need Redis bey
 
 ## Testing Utilities
 
-- [Testing Overview](https://nestjs-redisx.dev/en/reference/testing/): In-memory Redis driver for unit tests — run the real cache/locks/rate-limit/circuit-breaker/pubsub/session/leader/semaphore/dedup/counters/idempotency/streams plugins (Lua scripts, consumer groups, and Pub/Sub) with no Redis.
+- [Testing Overview](https://nestjs-redisx.dev/en/reference/testing/): In-memory Redis driver for unit tests - run the real cache/locks/rate-limit/circuit-breaker/pubsub/session/leader/semaphore/dedup/counters/idempotency/streams plugins (Lua scripts, consumer groups, and Pub/Sub) with no Redis.
 - [Configuration](https://nestjs-redisx.dev/en/reference/testing/configuration): RedisTestingModule wrapper, the global.driver='memory' option, registerMemoryDriver, and IMemoryDriverOptions.
 - [In-Memory Driver](https://nestjs-redisx.dev/en/reference/testing/memory-driver): Supported commands (strings/hash/set/zset/list/streams/keys/TTL/scripting), stream consumer groups, the bounded Lua subset, and limitations.
 - [Testing Plugins](https://nestjs-redisx.dev/en/reference/testing/testing-plugins): Patterns for cache, locks, rate-limit, circuit-breaker, pubsub, session, leader, semaphore, dedup, counters, idempotency, streams; seeding and inspecting state via getStore().
@@ -167,7 +167,7 @@ NestJS RedisX is designed for production NestJS applications that need Redis bey
 
 - [Two-Tier Caching](https://nestjs-redisx.dev/en/guide/concepts/two-tier-caching): How L1 memory + L2 Redis caching works, when to use SWR, and cache coherence.
 - [Distributed Coordination](https://nestjs-redisx.dev/en/guide/concepts/distributed-coordination): Distributed locks, leader election, and coordination patterns.
-- [Rate Limiting Strategies](https://nestjs-redisx.dev/en/guide/concepts/rate-limiting-strategies): Fixed window vs sliding window vs token bucket — choosing the right algorithm.
+- [Rate Limiting Strategies](https://nestjs-redisx.dev/en/guide/concepts/rate-limiting-strategies): Fixed window vs sliding window vs token bucket - choosing the right algorithm.
 - [Event Streaming](https://nestjs-redisx.dev/en/guide/concepts/event-streaming): Redis Streams vs Pub/Sub, consumer groups, and event-driven architecture.
 - [Observability Strategy](https://nestjs-redisx.dev/en/guide/concepts/observability-strategy): Metrics + tracing strategy for production Redis monitoring.
 
@@ -175,7 +175,7 @@ NestJS RedisX is designed for production NestJS applications that need Redis bey
 
 - [Key Naming](https://nestjs-redisx.dev/en/guide/architecture/key-naming): Key naming conventions and namespace management.
 - [Multi-Tenancy](https://nestjs-redisx.dev/en/guide/architecture/multi-tenancy): Tenant isolation with vary-by and key prefixes.
-- [Deployment](https://nestjs-redisx.dev/en/guide/architecture/deployment): Redis topologies — Single, Sentinel, Cluster — and cloud managed options.
+- [Deployment](https://nestjs-redisx.dev/en/guide/architecture/deployment): Redis topologies - Single, Sentinel, Cluster - and cloud managed options.
 - [Failure Modes](https://nestjs-redisx.dev/en/guide/architecture/failure-modes): How each plugin behaves when Redis is unavailable.
 - [Tuning](https://nestjs-redisx.dev/en/guide/architecture/tuning): Performance optimization for connection pooling, pipelining, and memory.
 

@@ -1,16 +1,16 @@
 # @nestjs-redisx/semaphore
 
-Distributed counting semaphore plugin for [NestJS RedisX](https://nestjs-redisx.dev) — bound concurrency **across instances**: at most N concurrent executions fleet-wide, with permit leases, auto-renewal, and a one-line decorator.
+Distributed counting semaphore plugin for [NestJS RedisX](https://nestjs-redisx.dev) - bound concurrency **across instances**: at most N concurrent executions fleet-wide, with permit leases, auto-renewal, and a one-line decorator.
 
 ## Why
 
 A local `p-limit` bounds one process. In a 10-replica deployment "at most 3 concurrent PDF renders" or "at most 5 open connections to the legacy API" needs a shared ceiling. This plugin keeps the count in Redis: every holder owns a leased permit that expires if the holder crashes, so seats never leak.
 
-- **Permit leases** — a crashed holder frees its seat after the TTL; no background sweeper (expired permits are swept atomically inside acquire).
-- **Auto-renewal** — long-running work keeps its seat; renewal stops the moment the permit is lost.
-- **`@WithSemaphore`** — proxy-based decorator for any `@Injectable` method, with `{n}` key templates and an `onUnavailable` policy (`throw` | `skip` | custom error).
-- **Honest shutdown** — `app.close()` never yanks a seat from under still-running work: renewal stops and seats lapse within their remaining TTL (the crash bound); work that finishes in time still releases instantly.
-- **Cluster-safe** — one key per semaphore, no hash tags needed; works on the in-memory testing driver (real Lua, no Redis in unit CI).
+- **Permit leases** - a crashed holder frees its seat after the TTL; no background sweeper (expired permits are swept atomically inside acquire).
+- **Auto-renewal** - long-running work keeps its seat; renewal stops the moment the permit is lost.
+- **`@WithSemaphore`** - proxy-based decorator for any `@Injectable` method, with `{n}` key templates and an `onUnavailable` policy (`throw` | `skip` | custom error).
+- **Honest shutdown** - `app.close()` never yanks a seat from under still-running work: renewal stops and seats lapse within their remaining TTL (the crash bound); work that finishes in time still releases instantly.
+- **Cluster-safe** - one key per semaphore, no hash tags needed; works on the in-memory testing driver (real Lua, no Redis in unit CI).
 
 ## Install
 

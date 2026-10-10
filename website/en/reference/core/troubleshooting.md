@@ -127,10 +127,10 @@ RedisModule.forRoot({
   },
 })
 
-// Usage — via RedisService
+// Usage - via RedisService
 const client = await this.redis.getClient('cache');  // Must match
 
-// Usage — via @InjectRedis decorator
+// Usage - via @InjectRedis decorator
 @Injectable()
 export class MyService {
   constructor(
@@ -360,7 +360,7 @@ RedisModule.forRoot({
 ```
 
 ::: tip
-Plugin order in the array doesn't matter — the system automatically sorts by dependencies using topological sort. Just make sure all dependencies are present.
+Plugin order in the array doesn't matter - the system automatically sorts by dependencies using topological sort. Just make sure all dependencies are present.
 :::
 
 ### Circular Plugin Dependency
@@ -381,7 +381,7 @@ class PluginB implements IRedisXPlugin {
   readonly dependencies = ['plugin-a'];  // Circular!
 }
 
-// ✅ Break the cycle — use moduleRef for optional cross-plugin access
+// ✅ Break the cycle - use moduleRef for optional cross-plugin access
 class PluginA implements IRedisXPlugin {
   readonly dependencies = [];  // No hard dependency
 
@@ -590,8 +590,8 @@ If you're still stuck:
 
 ## Next Steps
 
-- [Configuration](./configuration) — Review configuration options
-- [Plugin System](./plugin-system) — Plugin architecture and lifecycle
-- [Error Handling](./error-handling) — Error codes and hierarchy
-- [Health Monitoring](./health-monitoring) — Monitor connections
-- [Connection Types](./connection-types) — Connection type details
+- [Configuration](./configuration) - Review configuration options
+- [Plugin System](./plugin-system) - Plugin architecture and lifecycle
+- [Error Handling](./error-handling) - Error codes and hierarchy
+- [Health Monitoring](./health-monitoring) - Monitor connections
+- [Connection Types](./connection-types) - Connection type details

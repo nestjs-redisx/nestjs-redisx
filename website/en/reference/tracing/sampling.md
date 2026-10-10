@@ -1,5 +1,5 @@
 ---
-title: 'Sampling Strategies — Tracing Plugin | NestJS RedisX'
+title: 'Sampling Strategies - Tracing Plugin | NestJS RedisX'
 description: 'Sample traces with AlwaysOn, AlwaysOff, TraceIdRatioBased, and ParentBased samplers to control volume and cost in NestJS Redis OpenTelemetry setups.'
 ---
 
@@ -38,7 +38,7 @@ graph LR
 
 ### Always Sample
 
-Collect 100% of traces — including Redis spans for requests whose own trace was NOT sampled upstream, which produces orphaned spans. Prefer the default `'parent'` strategy in instrumented apps.
+Collect 100% of traces - including Redis spans for requests whose own trace was NOT sampled upstream, which produces orphaned spans. Prefer the default `'parent'` strategy in instrumented apps.
 
 ```typescript
 {
@@ -603,7 +603,7 @@ Ensures complete distributed traces.
 
 ## Keeping Errors and Slow Traces (Tail Sampling)
 
-Head-based sampling decides at the START of a request, so it cannot "always keep errors" — the outcome isn't known yet. That policy belongs in the OpenTelemetry Collector's [`tail_sampling` processor](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/tailsamplingprocessor), which buffers complete traces and decides after the fact. RedisX spans carry `ERROR` status and recorded exceptions, so an error policy picks them up with no extra wiring:
+Head-based sampling decides at the START of a request, so it cannot "always keep errors" - the outcome isn't known yet. That policy belongs in the OpenTelemetry Collector's [`tail_sampling` processor](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/tailsamplingprocessor), which buffers complete traces and decides after the fact. RedisX spans carry `ERROR` status and recorded exceptions, so an error policy picks them up with no extra wiring:
 
 ```yaml
 # otel-collector config
@@ -626,6 +626,6 @@ A production baseline that composes well: `strategy: 'parent'` in the app (Redis
 
 ## Next Steps
 
-- [Configuration](./configuration) — Sampling config
-- [Visualization](./visualization) — Analyze traces
-- [Troubleshooting](./troubleshooting) — Debug sampling
+- [Configuration](./configuration) - Sampling config
+- [Visualization](./visualization) - Analyze traces
+- [Troubleshooting](./troubleshooting) - Debug sampling

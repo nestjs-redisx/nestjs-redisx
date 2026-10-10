@@ -1,5 +1,5 @@
 ---
-title: 'Consumer Groups — Streams Plugin | NestJS RedisX'
+title: 'Consumer Groups - Streams Plugin | NestJS RedisX'
 description: 'Manage Redis consumer groups with @StreamConsumer: XGROUP CREATE, starting offsets, load balancing, pending entry lists, and horizontal scaling in NestJS.'
 ---
 
@@ -186,7 +186,7 @@ Each consumer runs a background auto-claim loop driven by the
 `claimIdleTimeout` option (default `30000` ms). Every `claimIdleTimeout`
 milliseconds the consumer scans the group's pending entries (`XPENDING`) and
 reclaims (`XCLAIM`) any message that has been idle for at least
-`claimIdleTimeout` — for example messages left pending by a crashed or stuck
+`claimIdleTimeout` - for example messages left pending by a crashed or stuck
 consumer. Reclaimed messages flow through the normal handler / retry / DLQ
 path, so orphaned messages are recovered automatically without any cron job.
 
@@ -203,7 +203,7 @@ async handle(message: IStreamMessage<Order>) {
 ```
 
 Set `claimIdleTimeout: 0` to disable the background auto-claim. The manual
-`claimIdle()` method (below) is still available for on-demand claiming — for
+`claimIdle()` method (below) is still available for on-demand claiming - for
 example to reclaim with a different idle threshold or from an admin task.
 
 ### Manual Claim
@@ -341,5 +341,5 @@ redis-cli XGROUP DELCONSUMER orders processors dead-worker
 
 ## Next Steps
 
-- [Dead Letter Queue](./dead-letter-queue) — Handle failed messages
-- [Monitoring](./monitoring) — Track consumer groups
+- [Dead Letter Queue](./dead-letter-queue) - Handle failed messages
+- [Monitoring](./monitoring) - Track consumer groups

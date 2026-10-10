@@ -1,5 +1,5 @@
 ---
-title: 'Core Concepts — Rate Limit Plugin | NestJS RedisX'
+title: 'Core Concepts - Rate Limit Plugin | NestJS RedisX'
 description: 'Understand throttling fundamentals: rate limit keys, points, durations, refill rates, and window semantics behind NestJS Redis rate limiting.'
 ---
 
@@ -245,13 +245,13 @@ new RateLimitPlugin({ store: 'memory' }) // plugin default
 ```
 
 Per-instance limiting is standard practice for anti-abuse (nginx `limit_req`,
-Envoy's local rate limit filter work exactly this way) — but keep
+Envoy's local rate limit filter work exactly this way) - but keep
 auth-sensitive routes (login, OTP, password reset) and billing quotas on the
 `redis` store, where exact shared counts matter. See
 [Stores](./stores) for the full trade-off guide.
 
 ## Next Steps
 
-- [Stores](./stores) — Redis vs in-memory store selection
-- [Algorithms](./algorithms) — Deep dive into each algorithm
-- [Configuration](./configuration) — Full configuration reference
+- [Stores](./stores) - Redis vs in-memory store selection
+- [Algorithms](./algorithms) - Deep dive into each algorithm
+- [Configuration](./configuration) - Full configuration reference

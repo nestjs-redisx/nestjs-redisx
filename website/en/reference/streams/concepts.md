@@ -1,5 +1,5 @@
 ---
-title: 'Core Concepts — Streams Plugin | NestJS RedisX'
+title: 'Core Concepts - Streams Plugin | NestJS RedisX'
 description: 'Understand Redis Streams fundamentals: message IDs, append-only logs, XADD, XREADGROUP, consumer groups, PEL, and at-least-once delivery in NestJS.'
 ---
 
@@ -23,16 +23,16 @@ Stream: orders
 
 ### Key Properties
 
-- **Ordered** — Messages maintain insertion order
-- **Durable** — Persist in Redis memory/disk
-- **Replayable** — Read from any point in history
-- **Partitionable** — Consumer groups distribute work
+- **Ordered** - Messages maintain insertion order
+- **Durable** - Persist in Redis memory/disk
+- **Replayable** - Read from any point in history
+- **Partitionable** - Consumer groups distribute work
 
 ## Message Structure
 
 Each message has:
 
-**Message ID** — Unique identifier with format `timestamp-sequence`:
+**Message ID** - Unique identifier with format `timestamp-sequence`:
 
 ```
 1706123456789-0
@@ -41,7 +41,7 @@ Each message has:
      └───────── Unix timestamp (milliseconds)
 ```
 
-**Data** — Key-value pairs (stored as Redis hash):
+**Data** - Key-value pairs (stored as Redis hash):
 
 ```typescript
 {
@@ -192,16 +192,16 @@ Messages delivered to a consumer but not acknowledged.
 
 ### Why Messages Become Pending
 
-1. **Consumer processing** — Normal state while processing
-2. **Consumer crashed** — Consumer died before ACK
-3. **Processing error** — Exception thrown, not yet retried
-4. **Stuck message** — Bug in handler code
+1. **Consumer processing** - Normal state while processing
+2. **Consumer crashed** - Consumer died before ACK
+3. **Processing error** - Exception thrown, not yet retried
+4. **Stuck message** - Bug in handler code
 
 ### Claiming Idle Messages
 
 Each consumer runs a background auto-claim loop (interval = `claimIdleTimeout`,
 default `30000` ms) that reclaims messages left pending by dead consumers and
-reprocesses them automatically — set `claimIdleTimeout: 0` to disable it. You
+reprocesses them automatically - set `claimIdleTimeout: 0` to disable it. You
 can also claim on demand with `claimIdle()`:
 
 ```typescript
@@ -308,6 +308,6 @@ How long to wait for new messages:
 
 ## Next Steps
 
-- [Configuration](./configuration) — Configure streams
-- [Producer](./producer) — Publish messages
-- [Consumer](./consumer) — Consume messages
+- [Configuration](./configuration) - Configure streams
+- [Producer](./producer) - Publish messages
+- [Consumer](./consumer) - Consume messages

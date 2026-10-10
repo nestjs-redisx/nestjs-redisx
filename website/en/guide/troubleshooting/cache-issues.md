@@ -142,7 +142,7 @@ sum(rate(redisx_cache_hits_total[5m])) /
 
 ### Solutions
 
-Stampede protection is enabled by default for both `@Cached` and `getOrSet()`. No extra configuration needed on the decorator — it's controlled at the plugin level:
+Stampede protection is enabled by default for both `@Cached` and `getOrSet()`. No extra configuration needed on the decorator - it's controlled at the plugin level:
 
 ```typescript
 new CachePlugin({
@@ -230,19 +230,19 @@ redis-cli GET "cache:user:123"
 | Pub/sub not working | Check Redis pub/sub |
 
 ```typescript
-// Setting tags — use function form for dynamic values
+// Setting tags - use function form for dynamic values
 @Cached({
   key: 'user:{0}',
   tags: (id) => ['users', `user:${id}`],
 })
 async getUser(id: string) { }
 
-// Invalidating — tags must match exactly
+// Invalidating - tags must match exactly
 await cache.invalidateTags(['users']);  // Clears all users
 await cache.invalidateTags(['user:123']);  // Clears specific user
 ```
 
 ## Next Steps
 
-- [Lock Issues](./lock-issues) — Lock troubleshooting
-- [Debugging](./debugging) — Debugging techniques
+- [Lock Issues](./lock-issues) - Lock troubleshooting
+- [Debugging](./debugging) - Debugging techniques

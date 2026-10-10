@@ -1,6 +1,6 @@
 ---
-title: 'Trace Exporters — Tracing Plugin | NestJS RedisX'
-description: 'Export spans from NestJS Redis apps to Jaeger, Zipkin, Grafana Tempo, and OTLP collectors — compare HTTP versus gRPC transports and console output.'
+title: 'Trace Exporters - Tracing Plugin | NestJS RedisX'
+description: 'Export spans from NestJS Redis apps to Jaeger, Zipkin, Grafana Tempo, and OTLP collectors - compare HTTP versus gRPC transports and console output.'
 ---
 
 # Exporters
@@ -123,7 +123,7 @@ spec:
 
 ## Jaeger Exporter
 
-Export to Jaeger via OTLP. Internally uses the same OTLP exporter — point to your Jaeger OTLP endpoint.
+Export to Jaeger via OTLP. Internally uses the same OTLP exporter - point to your Jaeger OTLP endpoint.
 
 ### Configuration
 
@@ -445,7 +445,7 @@ npm install @opentelemetry/exporter-trace-otlp-http
 | **Console** | Debugging | No infrastructure needed | Not for production |
 
 ::: info
-All exporter types except `'console'` use `OTLPTraceExporter` internally. The `type` field mainly serves as semantic labeling — you must configure the appropriate `endpoint` for your backend.
+All exporter types except `'console'` use `OTLPTraceExporter` internally. The `type` field mainly serves as semantic labeling - you must configure the appropriate `endpoint` for your backend.
 :::
 
 ## Performance Considerations
@@ -498,6 +498,6 @@ docker logs <container-id>
 
 ## Next Steps
 
-- [Configuration](./configuration) — Full config options
-- [Visualization](./visualization) — Analyze traces
-- [Troubleshooting](./troubleshooting) — Debug issues
+- [Configuration](./configuration) - Full config options
+- [Visualization](./visualization) - Analyze traces
+- [Troubleshooting](./troubleshooting) - Debug issues

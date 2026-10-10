@@ -11,13 +11,13 @@ Complete API reference for NestJS RedisX core module and plugins.
 
 `@nestjs-redisx/core` is the foundation package that provides:
 
-- **RedisModule** — NestJS module for Redis integration
-- **RedisService** — High-level Redis operations wrapper
-- **Driver Abstraction** — Switch between ioredis and node-redis
-- **Multi-Client Support** — Manage multiple Redis connections
-- **Connection Types** — Single, Cluster, and Sentinel configurations
-- **Health Monitoring** — Automatic reconnection and health checks
-- **Plugin System** — Extensible architecture for plugins
+- **RedisModule** - NestJS module for Redis integration
+- **RedisService** - High-level Redis operations wrapper
+- **Driver Abstraction** - Switch between ioredis and node-redis
+- **Multi-Client Support** - Manage multiple Redis connections
+- **Connection Types** - Single, Cluster, and Sentinel configurations
+- **Health Monitoring** - Automatic reconnection and health checks
+- **Plugin System** - Extensible architecture for plugins
 
 ### Installation
 
@@ -77,9 +77,9 @@ Self-contained feature modules for common Redis use cases.
 | [Circuit Breaker](./circuit-breaker/) | Distributed closed/open/half-open breaker with fallbacks |
 | [Pub/Sub](./pubsub/) | Typed publish/subscribe with @Subscribe auto-discovery |
 | [Session](./session/) | Session store for express/fastify with device page, revocation, seat limits |
-| [Leader](./leader/) | Leader election — run cron/singleton work on exactly one instance |
-| [Semaphore](./semaphore/) | Distributed counting semaphore — at most N concurrent executions fleet-wide |
-| [Dedup](./dedup/) | Event deduplication and distributed debounce — once per window across instances |
+| [Leader](./leader/) | Leader election - run cron/singleton work on exactly one instance |
+| [Semaphore](./semaphore/) | Distributed counting semaphore - at most N concurrent executions fleet-wide |
+| [Dedup](./dedup/) | Event deduplication and distributed debounce - once per window across instances |
 | [Counters](./counters/) | Atomic counters, window counters, and monotonic sequences |
 | [Idempotency](./idempotency/) | Request deduplication with response replay |
 | [Streams](./streams/) | Redis Streams with consumer groups |
@@ -90,7 +90,7 @@ Self-contained feature modules for common Redis use cases.
 
 | Package | Description |
 |---------|-------------|
-| [Testing Utilities](./testing/) | In-memory Redis driver for unit tests — no Redis required |
+| [Testing Utilities](./testing/) | In-memory Redis driver for unit tests - no Redis required |
 
 ## Architecture
 

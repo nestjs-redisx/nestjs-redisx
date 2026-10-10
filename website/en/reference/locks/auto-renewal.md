@@ -1,5 +1,5 @@
 ---
-title: 'Auto-Renewal — Locks Plugin | NestJS RedisX'
+title: 'Auto-Renewal - Locks Plugin | NestJS RedisX'
 description: 'Renew Redis lock TTL automatically during long-running NestJS jobs with configurable intervalFraction; renewal is best-effort and logs a warning when it stops on failure.'
 ---
 
@@ -145,11 +145,11 @@ down, or the lock was already lost), the auto-renew timer stops. The failure is
 - **no callback** is invoked.
 
 `LockExpiredError` exists in the public API but is **not thrown by auto-renewal**
-— do not write `catch` logic expecting it. The running operation continues; the
+- do not write `catch` logic expecting it. The running operation continues; the
 lock simply expires naturally in Redis once renewals stop.
 
 ::: warning
-After the lock expires, another process may acquire it — potentially causing
+After the lock expires, another process may acquire it - potentially causing
 concurrent access. Besides the logged warning, you can detect a lost lock
 programmatically by checking `lock.isAutoRenewing` (it flips to `false` once
 renewal stops) or by polling `lock.isHeld()` yourself (see below). For critical
@@ -169,7 +169,7 @@ try {
 
   // Check if we still hold the lock before continuing
   if (!(await lock.isHeld())) {
-    throw new Error('Lock lost during operation — aborting');
+    throw new Error('Lock lost during operation - aborting');
   }
 
   await this.step2();
@@ -180,5 +180,5 @@ try {
 
 ## Next Steps
 
-- [Retry Strategies](./retry-strategies) — Retry configuration
-- [Patterns](./patterns) — Common lock patterns
+- [Retry Strategies](./retry-strategies) - Retry configuration
+- [Patterns](./patterns) - Common lock patterns

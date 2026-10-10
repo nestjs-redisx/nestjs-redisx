@@ -1,5 +1,5 @@
 ---
-title: 'Concurrent Request Handling — Idempotency Plugin | NestJS RedisX'
+title: 'Concurrent Request Handling - Idempotency Plugin | NestJS RedisX'
 description: 'Handle simultaneous requests sharing one Idempotency-Key with Redis locks, poll-and-wait semantics, lockTimeout, and waitTimeout options in NestJS.'
 ---
 
@@ -122,7 +122,7 @@ async function waitForCompletion(key: string, timeout: number): Promise<void> {
 ```
 
 ::: info
-You do not call `waitForCompletion()` directly — `checkAndLock()` handles it automatically.
+You do not call `waitForCompletion()` directly - `checkAndLock()` handles it automatically.
 :::
 
 ### Timeline
@@ -151,14 +151,14 @@ new IdempotencyPlugin({
 ```
 Request starts: t=0
 Lock acquired: t=0
-Lock stale:   t=30000 (holder presumed dead — the next contender TAKES OVER)
+Lock stale:   t=30000 (holder presumed dead - the next contender TAKES OVER)
 Record kept:  until t=60000 (2x lockTimeout retention)
 ```
 
 `lockTimeout` is a **staleness threshold**, not the record's lifetime. The
 processing record is retained for **2x lockTimeout**: once the original attempt
 exceeds `lockTimeout` without completing (it crashed between locking and
-storing its response), the record still exists — so the next request or waiter
+storing its response), the record still exists - so the next request or waiter
 takes the lock over **atomically inside the Lua script**. Exactly one
 contender wins and executes the handler; everyone else keeps waiting on the
 new owner's record. The takeover never fires while the holder is within its
@@ -214,7 +214,7 @@ try {
 
 By default the plugin's built-in exception filter already maps `IdempotencyTimeoutError` to
 **HTTP 409 Conflict** (the original request is still in progress). Register your own filter only
-if you want a different status or response shape — the example below customizes the payload while
+if you want a different status or response shape - the example below customizes the payload while
 keeping the 409 status:
 
 ```typescript
@@ -374,8 +374,8 @@ if (record.status === 'processing') {
 
 ## Next Steps
 
-- [Configuration](./configuration) — Timeout settings
-- [Troubleshooting](./troubleshooting) — Debug concurrency issues
+- [Configuration](./configuration) - Timeout settings
+- [Troubleshooting](./troubleshooting) - Debug concurrency issues
 
 
 ## When the first request dies mid-flight

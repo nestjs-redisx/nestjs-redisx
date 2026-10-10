@@ -9,7 +9,7 @@ import { LocksPlugin } from '@nestjs-redisx/locks';
     RedisModule.forRoot({
       clients: { host: 'localhost', port: 6379 },
       plugins: [
-        // Async plugin config — reads values from ConfigService
+        // Async plugin config - reads values from ConfigService
         CachePlugin.registerAsync({
           imports: [ConfigModule],
           inject: [ConfigService],
@@ -19,7 +19,7 @@ import { LocksPlugin } from '@nestjs-redisx/locks';
           }),
         }),
 
-        // Sync plugin config — works as before
+        // Sync plugin config - works as before
         new LocksPlugin({ defaultTtl: 30000 }),
       ],
     }),

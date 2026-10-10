@@ -1,5 +1,5 @@
 ---
-title: 'Troubleshooting — Metrics Plugin | NestJS RedisX'
+title: 'Troubleshooting - Metrics Plugin | NestJS RedisX'
 description: 'Troubleshoot empty /metrics endpoints, missing Prometheus scrapes, high cardinality labels, and counter drift in NestJS Redis deployments.'
 ---
 
@@ -181,7 +181,7 @@ setInterval(async () => {
 console.log('Incrementing counter');
 this.metrics.incrementCounter('my_counter_total');
 
-// Check for typos in metric name — must match registered name exactly
+// Check for typos in metric name - must match registered name exactly
 this.metrics.incrementCounter('my_conter_total');  // ❌ Typo!
 ```
 
@@ -455,8 +455,8 @@ curl 'http://localhost:9090/api/v1/query?query=up'
 
 ## Next Steps
 
-- [Testing](./testing) — Test metrics collection
-- [Recipes](./recipes) — Real-world patterns
-- [Configuration](./configuration) — Review config
-- [Prometheus](./prometheus) — Check Prometheus setup
-- [Grafana](./grafana) — Fix visualization issues
+- [Testing](./testing) - Test metrics collection
+- [Recipes](./recipes) - Real-world patterns
+- [Configuration](./configuration) - Review config
+- [Prometheus](./prometheus) - Check Prometheus setup
+- [Grafana](./grafana) - Fix visualization issues

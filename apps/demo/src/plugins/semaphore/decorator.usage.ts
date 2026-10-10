@@ -6,7 +6,7 @@ import { VideoEncoder } from './types';
 export class EncodingService {
   constructor(private readonly encoder: VideoEncoder) {}
 
-  // At most 2 encodes at a time ACROSS EVERY INSTANCE — the fleet-wide
+  // At most 2 encodes at a time ACROSS EVERY INSTANCE - the fleet-wide
   // analogue of a bounded worker pool.
   @WithSemaphore({ key: 'video:encode', permits: 2, ttl: 600_000 })
   async encode(videoId: string): Promise<void> {

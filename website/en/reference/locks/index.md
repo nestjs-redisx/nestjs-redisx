@@ -1,5 +1,5 @@
 ---
-title: 'Introduction — Locks Plugin | NestJS RedisX'
+title: 'Introduction - Locks Plugin | NestJS RedisX'
 description: 'Coordinate critical sections across NestJS instances with @nestjs-redisx/locks: Redis-backed mutexes, @WithLock, auto-renewal, and retry logic.'
 ---
 
@@ -20,12 +20,12 @@ The Locks Plugin provides Redis-based distributed locking with automatic renewal
 
 ## Key Features
 
-- **Redis-Based Locking** — Atomic lock acquisition using Lua scripts
-- **Automatic Renewal** — Configurable TTL extension for long-running operations
-- **Ownership Validation** — Unique tokens prevent accidental release by other processes
-- **Retry Strategies** — Exponential backoff with configurable multiplier and delay caps
-- **Graceful Shutdown** — Automatic lock release on application termination
-- **Decorator API** — `@WithLock` decorator for declarative locking
+- **Redis-Based Locking** - Atomic lock acquisition using Lua scripts
+- **Automatic Renewal** - Configurable TTL extension for long-running operations
+- **Ownership Validation** - Unique tokens prevent accidental release by other processes
+- **Retry Strategies** - Exponential backoff with configurable multiplier and delay caps
+- **Graceful Shutdown** - Automatic lock release on application termination
+- **Decorator API** - `@WithLock` decorator for declarative locking
 
 ## Installation
 

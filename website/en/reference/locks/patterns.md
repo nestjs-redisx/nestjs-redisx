@@ -1,5 +1,5 @@
 ---
-title: 'Lock Patterns — Locks Plugin | NestJS RedisX'
+title: 'Lock Patterns - Locks Plugin | NestJS RedisX'
 description: 'Implement mutex, leader election, resource pool, and distributed semaphore patterns with @WithLock and LockService in NestJS Redis apps.'
 ---
 
@@ -122,12 +122,12 @@ new LocksPlugin({
 ```
 
 ::: tip
-`waitTimeout` is the simplest way to bound waiting — the service stops retrying
+`waitTimeout` is the simplest way to bound waiting - the service stops retrying
 once the next backoff sleep would exceed it. Combine it with the retry settings,
 or rely on the retry settings alone if you do not set `waitTimeout`.
 :::
 
 ## Next Steps
 
-- [Monitoring](./monitoring) — Track lock performance
-- [Recipes](./recipes) — Real-world examples
+- [Monitoring](./monitoring) - Track lock performance
+- [Recipes](./recipes) - Real-world examples

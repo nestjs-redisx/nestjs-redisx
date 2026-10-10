@@ -1,5 +1,5 @@
 ---
-title: 'Troubleshooting Guide — Streams Plugin | NestJS RedisX'
+title: 'Troubleshooting Guide - Streams Plugin | NestJS RedisX'
 description: 'Troubleshoot Redis Streams in NestJS: missing XGROUP, XREADGROUP blocking timeouts, pending entries, duplicate deliveries, and DLQ overflow investigation.'
 ---
 
@@ -259,7 +259,7 @@ manual recovery when you need a different idle threshold or auto-claim is off.
 **1. Manual claim via the service:**
 
 ```typescript
-// On-demand recovery — e.g. with a custom idle threshold, or when
+// On-demand recovery - e.g. with a custom idle threshold, or when
 // claimIdleTimeout is set to 0 (auto-claim disabled)
 const claimed = await this.consumer.claimIdle(
   'orders',
@@ -578,5 +578,5 @@ redis-cli DEL orders
 
 ## Next Steps
 
-- [Monitoring](./monitoring) — Track metrics to prevent issues
-- [Overview](./index) — Back to overview
+- [Monitoring](./monitoring) - Track metrics to prevent issues
+- [Overview](./index) - Back to overview

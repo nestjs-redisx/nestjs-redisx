@@ -1,5 +1,5 @@
 ---
-title: 'Configuration — Pub/Sub Plugin | NestJS RedisX'
+title: 'Configuration - Pub/Sub Plugin | NestJS RedisX'
 description: 'Configure @nestjs-redisx/pubsub: named client, channel prefix, and the automatically managed dedicated subscriber connection.'
 ---
 
@@ -27,6 +27,6 @@ A Redis connection in subscriber mode cannot execute regular commands. The plugi
 | Driver | Single | Cluster | Sentinel |
 |--------|--------|---------|----------|
 | ioredis | ✓ | ✓ | ✓ |
-| node-redis | ✓ | — | — |
+| node-redis | ✓ | - | - |
 
 With `node-redis`, Pub/Sub uses the v4 listener API and is supported on single-node connections; use `ioredis` for Pub/Sub over Cluster/Sentinel topologies.

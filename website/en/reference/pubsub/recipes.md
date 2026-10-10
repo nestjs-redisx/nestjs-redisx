@@ -1,5 +1,5 @@
 ---
-title: 'Recipes — Pub/Sub Plugin | NestJS RedisX'
+title: 'Recipes - Pub/Sub Plugin | NestJS RedisX'
 description: 'Practical Redis Pub/Sub patterns for NestJS: cluster-wide WebSocket broadcasting and cross-service domain events.'
 ---
 

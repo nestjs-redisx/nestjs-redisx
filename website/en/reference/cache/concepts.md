@@ -1,5 +1,5 @@
 ---
-title: 'L1 and L2 Cache Concepts — Cache Plugin | NestJS RedisX'
+title: 'L1 and L2 Cache Concepts - Cache Plugin | NestJS RedisX'
 description: 'Understand L1 memory plus L2 Redis layers, TTLs, key formatting, read/write flow, and strategy selection inside the @nestjs-redisx/cache plugin.'
 ---
 
@@ -63,20 +63,20 @@ await cache.set('key', value, { strategy: 'l2-only' });
 
 ## Deployment Mode (`mode`)
 
-`mode` sets the cache **topology** for the whole plugin — distinct from the
+`mode` sets the cache **topology** for the whole plugin - distinct from the
 per-call `strategy` above (which only chooses tiers for a single operation):
 
 | Mode | Redis | Description |
 |------|-------|-------------|
 | `'l1-l2'` (default) | Required | L1 in front of a Redis L2; cross-instance sharing and invalidation. |
-| `'l1-only'` | **None** | The entire cache runs in local process memory — the app boots with no Redis. Single-instance. |
+| `'l1-only'` | **None** | The entire cache runs in local process memory - the app boots with no Redis. Single-instance. |
 
 ::: warning `mode: 'l1-only'` is NOT `strategy: 'l1-only'`
-- **`mode: 'l1-only'`** (plugin option) — no Redis at all, app-wide; the L2 tier is served from memory and nothing ever connects to Redis.
-- **`strategy: 'l1-only'`** (per-call / per-decorator) — write this ONE value to L1 only, in a normal `l1-l2` app that still has Redis.
+- **`mode: 'l1-only'`** (plugin option) - no Redis at all, app-wide; the L2 tier is served from memory and nothing ever connects to Redis.
+- **`strategy: 'l1-only'`** (per-call / per-decorator) - write this ONE value to L1 only, in a normal `l1-l2` app that still has Redis.
 :::
 
-In `l1-only`, tags, SWR, stale-if-error and singleflight all keep working —
+In `l1-only`, tags, SWR, stale-if-error and singleflight all keep working -
 single-instance, in memory. See [Configuration → Running without Redis](./configuration#running-without-redis-l1-only).
 
 ## Cache Keys
@@ -92,7 +92,7 @@ The final key stored in Redis is composed of:
 | Part | Default | Example | Description |
 |------|---------|---------|-------------|
 | `l2.keyPrefix` | `cache:` | `cache:` | Configurable prefix for all cache keys |
-| Raw key | — | `user:123` | The key you specify in code |
+| Raw key | - | `user:123` | The key you specify in code |
 
 Full example: `cache:user:123`
 
@@ -100,20 +100,20 @@ Full example: `cache:user:123`
 
 There are two key interpolation styles depending on the decorator:
 
-**@Cached** — positional `{0}`, `{1}`:
+**@Cached** - positional `{0}`, `{1}`:
 
 ```typescript
 @Cached({ key: 'user:{0}' })
 async getUser(id: string) { }
 // Result key: "user:123"
 
-// Without key option — auto-generated:
+// Without key option - auto-generated:
 @Cached({ ttl: 300 })
 async getUser(id: string) { }
 // Result key: "UserService:getUser:123"
 ```
 
-**@Cacheable** — named `{paramName}`:
+**@Cacheable** - named `{paramName}`:
 
 ```typescript
 @Cacheable({ key: 'user:{id}' })
@@ -165,7 +165,7 @@ L1 TTL is automatically capped to the configured `l1.ttl` (default: 60s). If a v
 | User session | 5m | 30m | Frequently accessed |
 | Product catalog | 1m | 1h | Changes rarely |
 | Search results | 30s | 10m | Stale OK briefly |
-| Real-time data | — | 30s | Use `l2-only` strategy |
+| Real-time data | - | 30s | Use `l2-only` strategy |
 | Static config | 10m | 24h | Almost never changes |
 
 ## L1 Eviction Policy
@@ -205,7 +205,7 @@ See [Tag Invalidation](./tags) for details.
 
 ## Stampede Protection
 
-When a popular cache entry expires, many requests may try to reload it simultaneously — overloading the database. Stampede protection ensures only **one** request loads the data while others wait.
+When a popular cache entry expires, many requests may try to reload it simultaneously - overloading the database. Stampede protection ensures only **one** request loads the data while others wait.
 
 Enabled by default. Uses local singleflight + distributed Redis lock.
 
@@ -270,6 +270,6 @@ See [Configuration](./configuration) for full context provider setup.
 
 ## Next Steps
 
-- [Configuration](./configuration) — Full configuration reference
-- [Decorators](./decorators) — Learn @Cached, @Cacheable, @CacheEvict, @CachePut
-- [Service API](./service-api) — Programmatic cache access
+- [Configuration](./configuration) - Full configuration reference
+- [Decorators](./decorators) - Learn @Cached, @Cacheable, @CacheEvict, @CachePut
+- [Service API](./service-api) - Programmatic cache access

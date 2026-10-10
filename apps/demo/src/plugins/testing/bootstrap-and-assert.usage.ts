@@ -4,7 +4,7 @@ import { RedisTestingModule } from '@nestjs-redisx/testing';
 
 /**
  * Boots a Nest context backed by the in-memory driver and exercises the real
- * CacheService. No Redis runs — `getOrSet` invokes the loader once and serves
+ * CacheService. No Redis runs - `getOrSet` invokes the loader once and serves
  * the cached value on the second call. Returns the loader call count (1).
  */
 export async function cacheLoadsOnce(): Promise<number> {

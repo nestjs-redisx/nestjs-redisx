@@ -1,5 +1,5 @@
 ---
-title: 'Compatibility Matrix — NestJS RedisX Operations | NestJS RedisX'
+title: 'Compatibility Matrix - NestJS RedisX Operations | NestJS RedisX'
 description: 'Reference for supported Node.js, NestJS, and Redis versions plus ioredis and node-redis driver compatibility across standalone, Sentinel, and Cluster.'
 ---
 
@@ -7,9 +7,9 @@ description: 'Reference for supported Node.js, NestJS, and Redis versions plus i
 
 ## Support Tiers
 
-- **Supported** — Tested in CI matrix, bugs are treated as high priority
-- **Best effort** — May work, not tested in CI, community PRs accepted
-- **Not supported** — Known incompatibilities, not planned
+- **Supported** - Tested in CI matrix, bugs are treated as high priority
+- **Best effort** - May work, not tested in CI, community PRs accepted
+- **Not supported** - Known incompatibilities, not planned
 
 ## Runtime Compatibility
 
@@ -26,7 +26,7 @@ NestJS 9 is EOL and not covered by CI. It may work but is best-effort only.
 
 ### NestJS 12 and ESM
 
-NestJS 12 is published as native ESM. All RedisX packages ship a dual build: `import` resolves the ESM bundle (`dist/index.mjs`), `require` the CommonJS one (`dist/index.js`), each with matching type declarations. An ESM application (`"type": "module"`) works out of the box; a CommonJS application on Nest 12 relies on Node's `require(esm)` support (Node 20.19+ / 22.12+). Jest users on Nest 12 should run Jest in ESM mode — its CJS module registry cannot `require()` the ESM Nest internals.
+NestJS 12 is published as native ESM. All RedisX packages ship a dual build: `import` resolves the ESM bundle (`dist/index.mjs`), `require` the CommonJS one (`dist/index.js`), each with matching type declarations. An ESM application (`"type": "module"`) works out of the box; a CommonJS application on Nest 12 relies on Node's `require(esm)` support (Node 20.19+ / 22.12+). Jest users on Nest 12 should run Jest in ESM mode - its CJS module registry cannot `require()` the ESM Nest internals.
 
 ## Redis Compatibility
 

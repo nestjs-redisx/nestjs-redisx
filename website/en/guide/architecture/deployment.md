@@ -1,5 +1,5 @@
 ---
-title: 'Deployment — NestJS RedisX Architecture | NestJS RedisX'
+title: 'Deployment - NestJS RedisX Architecture | NestJS RedisX'
 description: 'Compare single-node, Sentinel, and Cluster Redis topologies for NestJS RedisX, with failover behavior, capacity planning, and Kubernetes guidance.'
 ---
 
@@ -195,5 +195,5 @@ appendfsync everysec
 
 ## Next Steps
 
-- [Tuning](./tuning) — Performance optimization
-- [Connection Management](./connection-management) — Connection config
+- [Tuning](./tuning) - Performance optimization
+- [Connection Management](./connection-management) - Connection config

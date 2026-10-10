@@ -1,5 +1,5 @@
 ---
-title: 'Testing Cached Services — Cache Plugin | NestJS RedisX'
+title: 'Testing Cached Services - Cache Plugin | NestJS RedisX'
 description: 'Test NestJS services that use CacheService and CACHE_SERVICE with Vitest MockedObject, Given-When-Then specs, and stub loaders for deterministic behavior.'
 ---
 
@@ -192,7 +192,7 @@ describe('ProductService', () => {
 
 ## Testing @Cached Decorator
 
-`@Cached` is proxy-based — it intercepts the method at the class level. To test it properly, you need the real decorator behavior:
+`@Cached` is proxy-based - it intercepts the method at the class level. To test it properly, you need the real decorator behavior:
 
 ### Unit test: verify decorator metadata
 
@@ -243,7 +243,7 @@ describe('@Cached behavior', () => {
     await service.getUser('123');
     await service.getUser('123');
 
-    // Then — repository called once, second call served from cache
+    // Then - repository called once, second call served from cache
     expect(repositorySpy).toHaveBeenCalledTimes(1);
   });
 
@@ -284,19 +284,19 @@ describe('UserService.updateUser', () => {
 
 ### @InvalidateTags decorator
 
-`@InvalidateTags` is proxy-based — it calls `invalidateTags()` through the interceptor internally. To test, verify the **effect** rather than the interceptor call:
+`@InvalidateTags` is proxy-based - it calls `invalidateTags()` through the interceptor internally. To test, verify the **effect** rather than the interceptor call:
 
 ```typescript
 describe('@InvalidateTags', () => {
   it('should invalidate cache when method succeeds', async () => {
-    // Given — cache a user first
+    // Given - cache a user first
     cache.getOrSet.mockResolvedValue({ id: '123', name: 'John' });
     await service.getUser('123');
 
-    // When — update triggers @InvalidateTags
+    // When - update triggers @InvalidateTags
     await service.updateUser('123', { name: 'Jane' });
 
-    // Then — next get should miss cache (re-load from DB)
+    // Then - next get should miss cache (re-load from DB)
     cache.getOrSet.mockImplementation(async (_key, loader) => loader());
     const result = await service.getUser('123');
     expect(result.name).toBe('Jane');
@@ -409,19 +409,19 @@ Integration tests need a running Redis instance. Use `docker-compose up -d` from
 ## Best Practices
 
 ### Do
-- Mock `CacheService` or `ICacheService` — don't test cache internals
+- Mock `CacheService` or `ICacheService` - don't test cache internals
 - Test **behavior** (method called N times, correct key) not **implementation**
 - Use `mockImplementation` on `getOrSet` to test loader logic
 - Use Given-When-Then comments in every test
 - Clear cache in `beforeEach` for integration tests
 
 ### Don't
-- Don't mock L1/L2 stores directly in service tests — mock the facade
+- Don't mock L1/L2 stores directly in service tests - mock the facade
 - Don't test decorator metadata as a substitute for behavior tests
-- Don't use `jest.fn()` — use `vi.fn()` (Vitest)
-- Don't assume cache state between tests — always set up fresh state
+- Don't use `jest.fn()` - use `vi.fn()` (Vitest)
+- Don't assume cache state between tests - always set up fresh state
 
 ## Next Steps
 
-- [Recipes](./recipes) — Common caching patterns
-- [Troubleshooting](./troubleshooting) — Debug issues
+- [Recipes](./recipes) - Common caching patterns
+- [Troubleshooting](./troubleshooting) - Debug issues

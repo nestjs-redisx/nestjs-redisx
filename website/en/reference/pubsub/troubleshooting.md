@@ -1,5 +1,5 @@
 ---
-title: 'Troubleshooting — Pub/Sub Plugin | NestJS RedisX'
+title: 'Troubleshooting - Pub/Sub Plugin | NestJS RedisX'
 description: 'Fix common NestJS Redis Pub/Sub issues: missed messages, zero receivers, driver/topology limits, and handler errors.'
 ---
 
@@ -15,9 +15,9 @@ Nobody was subscribed to that channel on the Redis server at that moment. Check 
 
 ## Handlers never fire
 
-- Ensure the handler class is a **provider** (registered in a module) — `@Subscribe` discovery scans providers only.
+- Ensure the handler class is a **provider** (registered in a module) - `@Subscribe` discovery scans providers only.
 - The plugin logs `Subscribed X.y to channel "…"` on startup for every discovered handler; if the line is missing, the metadata was not found.
-- Verify the channel names match exactly on both sides — `channelPrefix` is applied by the plugin, so publishers outside RedisX must include the prefix themselves.
+- Verify the channel names match exactly on both sides - `channelPrefix` is applied by the plugin, so publishers outside RedisX must include the prefix themselves.
 
 ## node-redis + Cluster/Sentinel
 
@@ -25,4 +25,4 @@ The node-redis adapter supports Pub/Sub on single-node connections only; SUBSCRI
 
 ## One bad handler
 
-Handler exceptions (sync and async) are caught, logged, and counted (`redisx_pubsub_handler_errors_total` when the Metrics plugin is present) — they never affect other handlers or the subscriber connection.
+Handler exceptions (sync and async) are caught, logged, and counted (`redisx_pubsub_handler_errors_total` when the Metrics plugin is present) - they never affect other handlers or the subscriber connection.

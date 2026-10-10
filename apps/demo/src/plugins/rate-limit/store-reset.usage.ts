@@ -36,7 +36,7 @@ export class AdminService {
 
     return {
       distributed: distributed.current,
-      // NOTE: per-instance value — only this node's view of the counter
+      // NOTE: per-instance value - only this node's view of the counter
       localOnThisInstance: local.current,
     };
   }

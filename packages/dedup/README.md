@@ -1,18 +1,18 @@
 # @nestjs-redisx/dedup
 
-Event deduplication and distributed debounce plugin for [NestJS RedisX](https://nestjs-redisx.dev) — run webhooks, queue messages, and user actions **once per window across the fleet**, with first-wins TTL markers and a trailing debounce.
+Event deduplication and distributed debounce plugin for [NestJS RedisX](https://nestjs-redisx.dev) - run webhooks, queue messages, and user actions **once per window across the fleet**, with first-wins TTL markers and a trailing debounce.
 
 ## Why
 
-Webhook providers redeliver. Queues are at-least-once. Users double-click. A lightweight "have I seen this key in the last N seconds?" check — atomic across every instance — removes the whole class of duplicate side effects without the weight of full request idempotency.
+Webhook providers redeliver. Queues are at-least-once. Users double-click. A lightweight "have I seen this key in the last N seconds?" check - atomic across every instance - removes the whole class of duplicate side effects without the weight of full request idempotency.
 
-- **First-wins markers** — `SET NX PX` under the hood: exactly one winner per key per window, fleet-wide.
-- **Failures don't burn the window** — when the first execution throws, its marker is released (CAS on the owner token), so a retry isn't locked out until the TTL.
-- **Distributed trailing debounce** — the function runs once the key goes quiet, on the instance that made the LAST call.
-- **`@Dedupe`** — proxy-based decorator for any `@Injectable` method with `{n}` key templates.
-- **`errorPolicy`** — gates fail open (default, duplicates possible during an outage) or closed (skip + throw); manual APIs are always strict.
+- **First-wins markers** - `SET NX PX` under the hood: exactly one winner per key per window, fleet-wide.
+- **Failures don't burn the window** - when the first execution throws, its marker is released (CAS on the owner token), so a retry isn't locked out until the TTL.
+- **Distributed trailing debounce** - the function runs once the key goes quiet, on the instance that made the LAST call.
+- **`@Dedupe`** - proxy-based decorator for any `@Injectable` method with `{n}` key templates.
+- **`errorPolicy`** - gates fail open (default, duplicates possible during an outage) or closed (skip + throw); manual APIs are always strict.
 
-Deduplication here is a lightweight marker — nothing is stored or replayed. For request-grade idempotency with fingerprints and response replay, use [`@nestjs-redisx/idempotency`](https://nestjs-redisx.dev/en/reference/idempotency/).
+Deduplication here is a lightweight marker - nothing is stored or replayed. For request-grade idempotency with fingerprints and response replay, use [`@nestjs-redisx/idempotency`](https://nestjs-redisx.dev/en/reference/idempotency/).
 
 ## Install
 

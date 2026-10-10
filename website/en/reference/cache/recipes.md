@@ -1,5 +1,5 @@
 ---
-title: 'Cache Recipes and Patterns — Cache Plugin | NestJS RedisX'
+title: 'Cache Recipes and Patterns - Cache Plugin | NestJS RedisX'
 description: 'Implement cache-aside with getOrSet, cache.wrap helpers, @Cached patterns, tag invalidation, and multi-tenant keys for real-world NestJS Redis caching.'
 ---
 
@@ -14,17 +14,17 @@ The most common pattern. `getOrSet()` handles cache lookup, stampede protection,
 <<< @/apps/demo/src/plugins/cache/recipes/cache-aside.usage.ts{typescript}
 
 **Why `getOrSet` over `get`/`set`:**
-- Anti-stampede protection — only one loader runs for concurrent requests with the same key
-- Atomic — no window between "cache miss" and "cache write" where duplicates can occur
-- Less code — single call instead of get → check → load → set
+- Anti-stampede protection - only one loader runs for concurrent requests with the same key
+- Atomic - no window between "cache miss" and "cache write" where duplicates can occur
+- Less code - single call instead of get → check → load → set
 
 ::: tip Tag invalidation cost
-`invalidateTags()` deletes all keys linked to the given tags. Cost is O(number of keys per tag). Avoid tagging high-cardinality hot keys with a single broad tag — prefer specific tags like `user:123` over just `users` when possible.
+`invalidateTags()` deletes all keys linked to the given tags. Cost is O(number of keys per tag). Avoid tagging high-cardinality hot keys with a single broad tag - prefer specific tags like `user:123` over just `users` when possible.
 :::
 
 ## 2. Reusable Cached Functions with wrap
 
-`cache.wrap()` creates a reusable cached function — useful when the same loader is called from multiple places.
+`cache.wrap()` creates a reusable cached function - useful when the same loader is called from multiple places.
 
 <<< @/apps/demo/src/plugins/cache/recipes/wrap.usage.ts{typescript}
 
@@ -63,7 +63,7 @@ Skip caching based on input or result.
 | `unless` | After method | If `true`, don't store result in cache |
 
 ::: tip Cache key is based on id only
-The `options` argument is intentionally **not** part of the cache key (`key: 'order:{0}'` uses only `{0}` = id). The `fresh` flag bypasses caching entirely via `condition` — it doesn't create a separate cache entry. All callers share the same cached value for a given id.
+The `options` argument is intentionally **not** part of the cache key (`key: 'order:{0}'` uses only `{0}` = id). The `fresh` flag bypasses caching entirely via `condition` - it doesn't create a separate cache entry. All callers share the same cached value for a given id.
 :::
 
 ## 5. Pagination
@@ -103,7 +103,7 @@ Use `varyBy` for per-method additions on top of global `contextKeys`.
 In the example above, `tags: ['data:item-5']` is shared across **all tenants**. Invalidating that tag clears `data:item-5` for every tenant. This is correct when the underlying data is the same for all tenants. If data differs per tenant and you need per-tenant invalidation, include tenant in the tag:
 
 ```typescript
-// Per-tenant tags — requires tenantId as method argument
+// Per-tenant tags - requires tenantId as method argument
 tags: (tenantId: string, dataId: string) => [`data:${tenantId}:${dataId}`],
 ```
 :::
@@ -130,7 +130,7 @@ async getCategories(): Promise<Category[]> {
 
 <<< @/apps/demo/src/plugins/cache/recipes/swr.usage.ts{typescript}
 
-`staleTime` is an **additional window after TTL** — not absolute age since write.
+`staleTime` is an **additional window after TTL** - not absolute age since write.
 
 **Timeline** (ttl: 300, staleTime: 120):
 - 0–300s: Fresh data served from cache
@@ -139,7 +139,7 @@ async getCategories(): Promise<Category[]> {
 
 ## 9. Batch Operations
 
-Load multiple items efficiently — fetch from cache first, load missing from DB, backfill cache. `getMany()` returns `Array<T | null>` — missing keys are strictly `null`, never `undefined`.
+Load multiple items efficiently - fetch from cache first, load missing from DB, backfill cache. `getMany()` returns `Array<T | null>` - missing keys are strictly `null`, never `undefined`.
 
 <<< @/apps/demo/src/plugins/cache/recipes/batch.usage.ts{typescript}
 
@@ -155,7 +155,7 @@ Load multiple items efficiently — fetch from cache first, load missing from DB
 
 | Pattern | When to use |
 |---------|-------------|
-| `getOrSet()` | Default choice — cache-aside with stampede protection |
+| `getOrSet()` | Default choice - cache-aside with stampede protection |
 | `wrap()` | Same loader reused in multiple places |
 | `@Cached` | Simple methods with primitive arguments |
 | `get()` / `set()` | Fine-grained control, conditional logic |
@@ -163,5 +163,5 @@ Load multiple items efficiently — fetch from cache first, load missing from DB
 
 ## Next Steps
 
-- [Troubleshooting](./troubleshooting) — Debug common issues
-- [Overview](./index) — Back to overview
+- [Troubleshooting](./troubleshooting) - Debug common issues
+- [Overview](./index) - Back to overview

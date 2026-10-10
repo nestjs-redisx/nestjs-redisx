@@ -33,7 +33,7 @@ export class SessionDemoService {
   }
 
   /**
-   * "Log out everywhere else" — revokes all sessions except the current one.
+   * "Log out everywhere else" - revokes all sessions except the current one.
    */
   logoutOtherDevices(userId: string, currentSessionId: string) {
     return this.sessions.revokeAllExcept(userId, currentSessionId);

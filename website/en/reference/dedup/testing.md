@@ -1,11 +1,11 @@
 ---
 title: 'Testing Dedup | NestJS RedisX'
-description: 'Exercise first-wins markers, failure re-admission, and distributed debounce on the in-memory driver — no Redis.'
+description: 'Exercise first-wins markers, failure re-admission, and distributed debounce on the in-memory driver - no Redis.'
 ---
 
 # Testing
 
-The plugin runs unchanged on the [in-memory testing driver](/en/reference/testing/) — `SET NX PX` and the CAS Lua scripts execute through production code with **no Redis**.
+The plugin runs unchanged on the [in-memory testing driver](/en/reference/testing/) - `SET NX PX` and the CAS Lua scripts execute through production code with **no Redis**.
 
 ```typescript
 import { Test } from '@nestjs/testing';
@@ -40,7 +40,7 @@ await expect(
   dedup.dedupe('evt:2', async () => { throw new Error('transient'); }),
 ).rejects.toThrow('transient');
 
-// the failed first released its marker — the retry runs
+// the failed first released its marker - the retry runs
 expect(await dedup.dedupe('evt:2', async () => 'retried')).toBe('retried');
 ```
 

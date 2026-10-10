@@ -1,11 +1,11 @@
 ---
 title: 'Testing Semaphores | NestJS RedisX'
-description: 'Run real semaphore elections on the in-memory driver — Lua scripts included, no Redis required.'
+description: 'Run real semaphore elections on the in-memory driver - Lua scripts included, no Redis required.'
 ---
 
 # Testing
 
-The plugin runs unchanged on the [in-memory testing driver](/en/reference/testing/) — the acquire/extend/release Lua scripts execute on the interpreter byte-for-byte, so your tests exercise production code paths with **no Redis**.
+The plugin runs unchanged on the [in-memory testing driver](/en/reference/testing/) - the acquire/extend/release Lua scripts execute on the interpreter byte-for-byte, so your tests exercise production code paths with **no Redis**.
 
 ```typescript
 import { Test } from '@nestjs/testing';
@@ -51,7 +51,7 @@ expect(await nodeB.tryAcquire('jobs', 1)).toBeNull(); // the other replica is bl
 
 ## Testing Crash Recovery
 
-Acquire with a short TTL and auto-renewal off, never release, and wait the TTL out — the seat frees itself:
+Acquire with a short TTL and auto-renewal off, never release, and wait the TTL out - the seat frees itself:
 
 ```typescript
 await semaphore.acquire('crashy', 1, { ttl: 100, autoRenew: false });

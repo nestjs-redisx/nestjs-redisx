@@ -1,5 +1,5 @@
 ---
-title: 'Recipes and Examples — Locks Plugin | NestJS RedisX'
+title: 'Recipes and Examples - Locks Plugin | NestJS RedisX'
 description: 'Practical NestJS Redis lock recipes: payment idempotency, inventory updates, data sync, leader election, job scheduling, and rate-limited access.'
 ---
 
@@ -33,5 +33,5 @@ Common use cases and real-world examples.
 
 ## Next Steps
 
-- [Troubleshooting](./troubleshooting) — Debug common issues
-- [Overview](./index) — Back to overview
+- [Troubleshooting](./troubleshooting) - Debug common issues
+- [Overview](./index) - Back to overview

@@ -1,5 +1,5 @@
 ---
-title: 'Capacity Planning — NestJS RedisX Operations | NestJS RedisX'
+title: 'Capacity Planning - NestJS RedisX Operations | NestJS RedisX'
 description: 'Plan Redis memory, key cardinality, throughput, and connection pool sizing for cache, locks, and streams workloads in NestJS RedisX production clusters.'
 ---
 
@@ -170,5 +170,5 @@ predict_linear(rate(redis_commands_total[1h])[7d:1h], 30*24*3600)
 
 ## Next Steps
 
-- [Deployment](../architecture/deployment) — Topology options
-- [Tuning](../architecture/tuning) — Performance optimization
+- [Deployment](../architecture/deployment) - Topology options
+- [Tuning](../architecture/tuning) - Performance optimization

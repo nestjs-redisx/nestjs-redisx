@@ -101,5 +101,5 @@ async handlePaymentSucceeded(payment: PaymentIntent): Promise<void> {
 
 ## Next Steps
 
-- [Payment Processing](./payment-processing) — Outbound payments
-- [Background Jobs](./background-jobs) — Async processing
+- [Payment Processing](./payment-processing) - Outbound payments
+- [Background Jobs](./background-jobs) - Async processing

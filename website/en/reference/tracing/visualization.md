@@ -1,6 +1,6 @@
 ---
-title: 'Trace Visualization — Tracing Plugin | NestJS RedisX'
-description: 'Visualize Redis traces with Jaeger UI and Grafana Tempo — analyze span timelines, service dependencies, and latency distributions from NestJS apps.'
+title: 'Trace Visualization - Tracing Plugin | NestJS RedisX'
+description: 'Visualize Redis traces with Jaeger UI and Grafana Tempo - analyze span timelines, service dependencies, and latency distributions from NestJS apps.'
 ---
 
 # Visualization
@@ -617,6 +617,6 @@ span.addEvent('email.sent');
 
 ## Next Steps
 
-- [Configuration](./configuration) — Configure tracing
-- [Spans](./spans) — Create custom spans
-- [Troubleshooting](./troubleshooting) — Debug tracing
+- [Configuration](./configuration) - Configure tracing
+- [Spans](./spans) - Create custom spans
+- [Troubleshooting](./troubleshooting) - Debug tracing

@@ -70,5 +70,5 @@ T3: Next trigger, Instance B acquires lock
 
 ## Next Steps
 
-- [Background Jobs](./background-jobs) — Event-driven processing
-- [Locks Reference](../../reference/locks/) — Full API
+- [Background Jobs](./background-jobs) - Event-driven processing
+- [Locks Reference](../../reference/locks/) - Full API

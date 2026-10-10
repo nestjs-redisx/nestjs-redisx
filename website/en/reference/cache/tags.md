@@ -1,5 +1,5 @@
 ---
-title: 'Tag-Based Invalidation — Cache Plugin | NestJS RedisX'
+title: 'Tag-Based Invalidation - Cache Plugin | NestJS RedisX'
 description: 'Invalidate groups of Redis cache entries with tag SETs, SMEMBERS lookups, and the @InvalidateTags decorator or CacheService.invalidateTags() method.'
 ---
 
@@ -9,7 +9,7 @@ Invalidate related cache entries without knowing their keys.
 
 ## The Problem
 
-Without tags, you need to track every key that contains user data — easy to miss some.
+Without tags, you need to track every key that contains user data - easy to miss some.
 
 ## The Solution
 
@@ -20,7 +20,7 @@ Tag keys when caching, invalidate by tag later.
 Tags are stored as **Redis SETs**. Each tag maintains a set of cache keys that belong to it.
 
 ::: tip In `mode: 'l1-only'`
-The tag index is kept in an **in-memory map** instead of Redis SETs — tag invalidation works the same, single-instance (per process).
+The tag index is kept in an **in-memory map** instead of Redis SETs - tag invalidation works the same, single-instance (per process).
 :::
 
 ```
@@ -53,7 +53,7 @@ Tags are validated through the `Tag` value object. Invalid tags throw `CacheErro
 | Max tags per key | 10 (default, configurable via `tags.maxTagsPerKey`) |
 
 ::: warning
-Tags are **lowercased automatically**. `User:123` becomes `user:123`. Keep this in mind when invalidating — always use lowercase tag names.
+Tags are **lowercased automatically**. `User:123` becomes `user:123`. Keep this in mind when invalidating - always use lowercase tag names.
 :::
 
 ## Basic Usage
@@ -96,7 +96,7 @@ async deleteUser(id: string): Promise<void> {
 
 ### With @Cacheable/@CacheEvict Decorators
 
-Requires `DeclarativeCacheInterceptor` — works in controller context only.
+Requires `DeclarativeCacheInterceptor` - works in controller context only.
 
 <<< @/apps/demo/src/plugins/cache/tags-cacheable-evict.usage.ts{typescript}
 
@@ -161,7 +161,7 @@ Use hierarchical tags when entities have parent-child relationships. This allows
 })
 async getUser(id: string, orgId: string, teamId: string) { }
 
-// Invalidate whole org — clears all users/teams in that org
+// Invalidate whole org - clears all users/teams in that org
 @InvalidateTags({
   tags: (orgId: string) => [`org:${orgId}`],
   when: 'after',
@@ -185,7 +185,7 @@ new CachePlugin({
 ```
 
 ::: warning Tag index TTL
-Tag index SETs have their own TTL (default: 24 hours). If a tag SET expires before the cached keys it tracks, those keys become **orphans** — they won't be found by `invalidate()` or `getKeysByTag()`. Set `tags.ttl` >= your longest cache TTL.
+Tag index SETs have their own TTL (default: 24 hours). If a tag SET expires before the cached keys it tracks, those keys become **orphans** - they won't be found by `invalidate()` or `getKeysByTag()`. Set `tags.ttl` >= your longest cache TTL.
 :::
 
 See [Configuration](./configuration) for the full options reference.
@@ -219,11 +219,11 @@ tags: [`user:${JSON.stringify(user)}`]  // Never!
 tags: [`user:${Date.now()}`]  // Can't invalidate later
 
 // Don't use uppercase (lowercased automatically, but be consistent)
-tags: ['Users']  // Becomes 'users' — use 'users' directly
+tags: ['Users']  // Becomes 'users' - use 'users' directly
 ```
 
 ## Next Steps
 
-- [Anti-Stampede](./stampede) — Prevent thundering herd
-- [Stale-While-Revalidate](./swr) — Serve stale data while refreshing
-- [Configuration](./configuration) — Full plugin options reference
+- [Anti-Stampede](./stampede) - Prevent thundering herd
+- [Stale-While-Revalidate](./swr) - Serve stale data while refreshing
+- [Configuration](./configuration) - Full plugin options reference

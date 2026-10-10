@@ -1,5 +1,5 @@
 ---
-title: 'Service API — Pub/Sub Plugin | NestJS RedisX'
+title: 'Service API - Pub/Sub Plugin | NestJS RedisX'
 description: 'Programmatic Redis Pub/Sub with IPubSubService: publish, subscribe, psubscribe, subscription handles, unsubscribeAll, and getSubscriptions.'
 ---
 
@@ -11,11 +11,11 @@ Inject `PUBSUB_SERVICE` for programmatic control.
 
 ## `IPubSubService`
 
-- `publish<T>(channel, data): Promise<number>` — JSON-serializes and publishes; returns the number of subscribers that received the message. Throws `PubSubPublishError` on serialization or transport failure.
-- `subscribe<T>(channel, handler): Promise<IPubSubSubscription>` — registers a handler; the Redis subscription is created for the first handler and shared by the rest. Throws `PubSubSubscribeError` when SUBSCRIBE fails (no phantom handler is left behind).
-- `psubscribe<T>(pattern, handler): Promise<IPubSubSubscription>` — pattern subscription (`*`, `?`, `[..]`); messages carry both `pattern` and the concrete `channel`.
-- `unsubscribeAll(): Promise<void>` — removes every handler and releases all Redis subscriptions (called automatically on module destroy).
-- `getSubscriptions(): { channels, patterns }` — non-mutating snapshot of logical names for monitoring/health.
+- `publish<T>(channel, data): Promise<number>` - JSON-serializes and publishes; returns the number of subscribers that received the message. Throws `PubSubPublishError` on serialization or transport failure.
+- `subscribe<T>(channel, handler): Promise<IPubSubSubscription>` - registers a handler; the Redis subscription is created for the first handler and shared by the rest. Throws `PubSubSubscribeError` when SUBSCRIBE fails (no phantom handler is left behind).
+- `psubscribe<T>(pattern, handler): Promise<IPubSubSubscription>` - pattern subscription (`*`, `?`, `[..]`); messages carry both `pattern` and the concrete `channel`.
+- `unsubscribeAll(): Promise<void>` - removes every handler and releases all Redis subscriptions (called automatically on module destroy).
+- `getSubscriptions(): { channels, patterns }` - non-mutating snapshot of logical names for monitoring/health.
 
 ### Subscription handles
 

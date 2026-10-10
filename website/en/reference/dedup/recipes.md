@@ -13,7 +13,7 @@ Providers (Stripe, GitHub, Shopify) redeliver on timeouts. Key by the provider's
 
 ## At-Least-Once Queue Consumers
 
-SQS/RabbitMQ redeliveries carry the same message id — gate the handler:
+SQS/RabbitMQ redeliveries carry the same message id - gate the handler:
 
 ```typescript
 async handleMessage(msg: QueueMessage) {
@@ -36,7 +36,7 @@ For *response replay* on retried HTTP requests, use [idempotency](/en/reference/
 
 ## Collapsing Bursts (Distributed Debounce)
 
-A hundred product updates in a minute should trigger one index rebuild — after the burst, wherever the last update landed:
+A hundred product updates in a minute should trigger one index rebuild - after the burst, wherever the last update landed:
 
 <<< @/apps/demo/src/plugins/dedup/debounce.usage.ts{typescript}
 

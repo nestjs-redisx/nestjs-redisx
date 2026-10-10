@@ -1,12 +1,12 @@
 ---
-title: "@Idempotent Decorator API — Idempotency Plugin | NestJS RedisX"
+title: "@Idempotent Decorator API - Idempotency Plugin | NestJS RedisX"
 description: 'Implement declarative idempotency with @Idempotent, controlling ttl, cacheHeaders, keyExtractor, fingerprintFields, and skip options on NestJS controllers.'
 ---
 
 # @Idempotent Decorator
 
 ::: warning Do not register the interceptor manually
-`@Idempotent()` already bundles `IdempotencyInterceptor` — adding your own `@UseInterceptors(IdempotencyInterceptor)` is unnecessary. Duplicate bindings (including a global `APP_INTERCEPTOR` combined with `@Idempotent`) are safe: idempotency engages at most once per request.
+`@Idempotent()` already bundles `IdempotencyInterceptor` - adding your own `@UseInterceptors(IdempotencyInterceptor)` is unnecessary. Duplicate bindings (including a global `APP_INTERCEPTOR` combined with `@Idempotent`) are safe: idempotency engages at most once per request.
 :::
 
 Make any endpoint idempotent with a single decorator.
@@ -70,7 +70,7 @@ consequences:
   `ClassSerializerInterceptor` with `@Exclude`/`@Transform`) apply their
   transforms only if they run *deeper* than idempotency. Register idempotency
   as the **outermost** interceptor (global `APP_INTERCEPTOR` or first in the
-  chain) so the captured body is the already-transformed shape — then the
+  chain) so the captured body is the already-transformed shape - then the
   replayed response matches the original.
 - **It is a JSON round-trip, not a byte copy.** `Date` instances become ISO
   strings at capture (and stay strings on replay), `undefined` fields are
@@ -277,5 +277,5 @@ async handleStripeWebhook(@Body() event: StripeEvent) {
 
 ## Next Steps
 
-- [Service API](./service-api) — Programmatic access
-- [Fingerprinting](./fingerprinting) — Deep dive
+- [Service API](./service-api) - Programmatic access
+- [Fingerprinting](./fingerprinting) - Deep dive

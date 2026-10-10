@@ -1,11 +1,11 @@
 ---
 title: 'Testing Counters | NestJS RedisX'
-description: 'Exercise atomic counters, window TTLs, and sequences on the in-memory driver — no Redis required.'
+description: 'Exercise atomic counters, window TTLs, and sequences on the in-memory driver - no Redis required.'
 ---
 
 # Testing
 
-The plugin runs unchanged on the [in-memory testing driver](/en/reference/testing/) — including the window-TTL and read-and-reset Lua scripts.
+The plugin runs unchanged on the [in-memory testing driver](/en/reference/testing/) - including the window-TTL and read-and-reset Lua scripts.
 
 ```typescript
 import { Test } from '@nestjs/testing';

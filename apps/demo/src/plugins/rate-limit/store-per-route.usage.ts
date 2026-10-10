@@ -2,7 +2,7 @@ import { Controller, Get, Post } from '@nestjs/common';
 import { RateLimit } from '@nestjs-redisx/rate-limit';
 
 /**
- * Plugin default is `store: 'memory'` — bulk traffic pays zero Redis
+ * Plugin default is `store: 'memory'` - bulk traffic pays zero Redis
  * round-trip. Sensitive routes override back to the exact, distributed
  * Redis store per route. The override works in either direction.
  */

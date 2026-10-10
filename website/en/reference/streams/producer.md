@@ -1,5 +1,5 @@
 ---
-title: 'Producer API Reference — Streams Plugin | NestJS RedisX'
+title: 'Producer API Reference - Streams Plugin | NestJS RedisX'
 description: 'Publish Redis Stream messages in NestJS via STREAM_PRODUCER: use publish, publishBatch, XADD options, maxLen trimming, and getStreamInfo metadata calls.'
 ---
 
@@ -113,7 +113,7 @@ console.log(messageIds);
 ### Performance
 
 `publishBatch()` issues one `XADD` per message **sequentially** (there is no
-pipelining yet — stream commands are not batched into a single round trip). Its
+pipelining yet - stream commands are not batched into a single round trip). Its
 value over calling `publish()` in a loop is convenience and a single error
 boundary, not fewer network round trips: publishing N messages still costs N
 round trips.
@@ -206,5 +206,5 @@ try {
 
 ## Next Steps
 
-- [Consumer](./consumer) — Consuming messages
-- [Consumer Groups](./consumer-groups) — Group coordination
+- [Consumer](./consumer) - Consuming messages
+- [Consumer Groups](./consumer-groups) - Group coordination

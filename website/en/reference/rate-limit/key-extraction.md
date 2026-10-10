@@ -1,5 +1,5 @@
 ---
-title: 'Key Extraction — Rate Limit Plugin | NestJS RedisX'
+title: 'Key Extraction - Rate Limit Plugin | NestJS RedisX'
 description: 'Extract rate limit keys from IP, user ID, API key, headers, or custom functions and honor X-Forwarded-For in NestJS Redis throttling setups.'
 ---
 
@@ -40,7 +40,7 @@ from client-supplied headers. This is secure: a client cannot spoof
 limit on login/password-reset endpoints).
 
 When you run behind a proxy or load balancer, tell the **framework** to trust
-it — then `request.ip` becomes the real, un-spoofable client IP:
+it - then `request.ip` becomes the real, un-spoofable client IP:
 
 ```typescript
 // Express
@@ -279,5 +279,5 @@ key: (ctx) => req.user.id  // Fails if not authenticated
 
 ## Next Steps
 
-- [Headers](./headers) — Response headers
-- [Recipes](./recipes) — Common patterns
+- [Headers](./headers) - Response headers
+- [Recipes](./recipes) - Common patterns

@@ -4,7 +4,7 @@ import { RedisTestingModule } from '@nestjs-redisx/testing';
 
 /**
  * Round-trips a Streams message through the real producer and a consumer group
- * on the in-memory driver — no Redis. The consumer reads via XREADGROUP, the
+ * on the in-memory driver - no Redis. The consumer reads via XREADGROUP, the
  * handler runs, and the message is auto-acked. Returns the payloads received.
  */
 export async function streamRoundTrip(): Promise<Array<{ n: number }>> {

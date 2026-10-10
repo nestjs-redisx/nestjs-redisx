@@ -1,5 +1,5 @@
 ---
-title: 'Monitoring and Metrics — Locks Plugin | NestJS RedisX'
+title: 'Monitoring and Metrics - Locks Plugin | NestJS RedisX'
 description: 'Monitor Redis lock acquisitions, wait time, hold duration, and active counts via Prometheus redisx_lock_* metrics and LockService logging hooks.'
 ---
 
@@ -14,9 +14,9 @@ When the `MetricsPlugin` is registered alongside `LocksPlugin`, the following Pr
 | Metric | Type | Labels | Description |
 |--------|------|--------|-------------|
 | `redisx_lock_acquisitions_total` | Counter | `status` (`acquired` \| `failed`) | Lock acquisition attempts |
-| `redisx_lock_wait_duration_seconds` | Histogram | — | Time waiting to acquire a lock |
-| `redisx_lock_hold_duration_seconds` | Histogram | — | How long a lock was held |
-| `redisx_locks_active` | Gauge | — | Currently held locks |
+| `redisx_lock_wait_duration_seconds` | Histogram | - | Time waiting to acquire a lock |
+| `redisx_lock_hold_duration_seconds` | Histogram | - | How long a lock was held |
+| `redisx_locks_active` | Gauge | - | Currently held locks |
 
 ### Prometheus Queries
 
@@ -42,5 +42,5 @@ For custom logging, wrap the `LockService`:
 
 ## Next Steps
 
-- [Testing](./testing) — Test locked services
-- [Troubleshooting](./troubleshooting) — Debug issues
+- [Testing](./testing) - Test locked services
+- [Troubleshooting](./troubleshooting) - Debug issues

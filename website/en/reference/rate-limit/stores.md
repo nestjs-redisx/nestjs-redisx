@@ -1,5 +1,5 @@
 ---
-title: 'Stores — Rate Limit Plugin | NestJS RedisX'
+title: 'Stores - Rate Limit Plugin | NestJS RedisX'
 description: 'Redis vs in-memory rate limit stores in @nestjs-redisx/rate-limit: per-route selection, latency vs exactness trade-offs, memory sizing, and reset semantics.'
 ---
 
@@ -20,8 +20,8 @@ an exact distributed limit and a zero-latency per-instance one.
 
 ## When the Memory Store Shines
 
-If your Redis deployment adds latency to the hot path — a far cluster node,
-cross-AZ hops — the memory store removes the rate-limit round-trip from every
+If your Redis deployment adds latency to the hot path - a far cluster node,
+cross-AZ hops - the memory store removes the rate-limit round-trip from every
 request. Note the cluster detail: a given key hashes deterministically to one
 shard, so with a far node **some users always pay the slow path** on every
 request; the memory store eliminates that entirely.
@@ -37,7 +37,7 @@ abuse ceiling, not an exact quota.
 ::: warning Keep security-sensitive routes on `redis`
 A distributed brute force divides its attempts across your nodes, so a
 per-node threshold on login, OTP, or password-reset routes is effectively
-multiplied by the node count. Pin those routes to the exact store — they are
+multiplied by the node count. Pin those routes to the exact store - they are
 low-QPS, the Redis round-trip does not hurt there. The same applies to billing
 quotas and monetized plan enforcement.
 :::
@@ -69,17 +69,17 @@ await rateLimitService.check(`login:${email}`, {
 ## Reset and Inspection Semantics
 
 `reset(key)` with no arguments sweeps **both** stores across all algorithm
-variants — the service cannot know where a key was counted. Pass
+variants - the service cannot know where a key was counted. Pass
 `{ store }` to target one:
 
 <<< @/apps/demo/src/plugins/rate-limit/store-reset.usage.ts{typescript}
 
 Semantics to keep in mind:
 
-- **Redis keys reset globally** — one call clears the counter for every
+- **Redis keys reset globally** - one call clears the counter for every
   instance at once. This is exactly the store your admin "unblock user"
   flows should target.
-- **Memory keys reset per instance** — the call clears the counter only on
+- **Memory keys reset per instance** - the call clears the counter only on
   the node that served it. Other nodes self-heal when the short window
   expires. If a route genuinely needs admin reset or precise inspection,
   that is the signal it belongs on `store: 'redis'`.
@@ -93,11 +93,11 @@ Semantics to keep in mind:
 
 Redis bounds its keyspace with `EXPIRE`; the memory store bounds itself:
 
-- `memory.maxKeys` (default `100000`) — cap on tracked keys. When exceeded,
+- `memory.maxKeys` (default `100000`) - cap on tracked keys. When exceeded,
   the oldest entries are evicted (approximate FIFO). This is the defense
   against key spray: random IPs or spoofed API keys cannot grow the map
   without bound.
-- `memory.sweepIntervalMs` (default `30000`) — how often expired entries are
+- `memory.sweepIntervalMs` (default `30000`) - how often expired entries are
   swept. Entries are also lazily discarded on access, so the sweep only
   controls how quickly idle garbage is reclaimed.
 
@@ -111,11 +111,11 @@ Both adapters register regardless of the `store` default, so per-route
 overrides work without extra configuration. The Redis connection remains
 required (the core module owns it); the memory store removes Redis from the
 request path, not from the deployment. Counters for the same logical key in
-the two stores are fully independent — they never synchronize.
+the two stores are fully independent - they never synchronize.
 
 ## Next Steps
 
-- [Configuration](./configuration) — All plugin options
-- [Decorator](./decorator) — `@RateLimit` reference
-- [Service API](./service-api) — Programmatic checks, peek, reset
-- [Monitoring](./monitoring) — Metrics for allowed/rejected requests
+- [Configuration](./configuration) - All plugin options
+- [Decorator](./decorator) - `@RateLimit` reference
+- [Service API](./service-api) - Programmatic checks, peek, reset
+- [Monitoring](./monitoring) - Metrics for allowed/rejected requests

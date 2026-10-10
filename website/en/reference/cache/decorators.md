@@ -1,5 +1,5 @@
 ---
-title: 'Cache Decorators Reference — Cache Plugin | NestJS RedisX'
+title: 'Cache Decorators Reference - Cache Plugin | NestJS RedisX'
 description: 'Reference for @Cached, @Cacheable, @CacheEvict, @CachePut, @InvalidateTags, and @InvalidateOn decorators with proxy-based and Spring-style metadata flows.'
 ---
 
@@ -13,7 +13,7 @@ The cache module provides two decorator families:
 
 ### Proxy-Based (Recommended)
 
-Work on **any Injectable** class (services, repositories, etc.) — not limited to HTTP controllers.
+Work on **any Injectable** class (services, repositories, etc.) - not limited to HTTP controllers.
 
 | Decorator | Purpose | When Runs |
 |-----------|---------|-----------|
@@ -36,21 +36,21 @@ Require `DeclarativeCacheInterceptor` in the request pipeline. Only work in **co
 <<< @/apps/demo/src/plugins/cache/decorators/interceptor-setup.setup.ts{typescript}
 
 ::: tip Why two families?
-`@Cached` is the recommended, full-featured approach — it works everywhere and supports SWR, varyBy, contextKeys, and unless. The Spring-style decorators (`@Cacheable`/`@CacheEvict`/`@CachePut`) exist for developers who prefer the familiar Spring Cache pattern with separated concerns (read / write / evict).
+`@Cached` is the recommended, full-featured approach - it works everywhere and supports SWR, varyBy, contextKeys, and unless. The Spring-style decorators (`@Cacheable`/`@CacheEvict`/`@CachePut`) exist for developers who prefer the familiar Spring Cache pattern with separated concerns (read / write / evict).
 :::
 
 ## Why @Cached Works Inside Services (Self-Invocation)
 
-`@Cached` replaces method descriptors directly on the class prototype — no proxy objects wrapping the instance. Internal calls like `this.method()` go through caching automatically, because the prototype already contains the wrapped version before NestJS creates any instance.
+`@Cached` replaces method descriptors directly on the class prototype - no proxy objects wrapping the instance. Internal calls like `this.method()` go through caching automatically, because the prototype already contains the wrapped version before NestJS creates any instance.
 
 | Edge Case | Status | Why |
 |-----------|--------|-----|
 | Self-invocation (`this.method()`) | ✅ Works | Descriptor replacement on prototype, not proxy object |
 | Background jobs / cron / RMQ | ✅ Works | No dependency on HTTP pipeline or `ExecutionContext` |
-| Callback extraction (`const fn = svc.method`) | ⚠️ Standard JS caveat | `this` lost — use arrow wrapper or `.bind()` |
+| Callback extraction (`const fn = svc.method`) | ⚠️ Standard JS caveat | `this` lost - use arrow wrapper or `.bind()` |
 | Inheritance without override | ✅ Works | Prototype chain preserved |
 | Inheritance with override | ⚠️ Re-apply decorator | Override creates new descriptor |
-| Object args in key template | ⚠️ Documented | `JSON.stringify` — order-dependent keys |
+| Object args in key template | ⚠️ Documented | `JSON.stringify` - order-dependent keys |
 
 ## Edge Cases & Gotchas
 
@@ -61,8 +61,8 @@ Details on each item from the table above.
 `@Cached` distinguishes the two. If the decorated method itself throws (e.g. a
 `NotFoundException` from a "find or throw 404" method), the **original error
 propagates unchanged**, the method runs **once** (no double DB hit), and it is
-**not** logged as a cache error. Fail-open — re-running the method without the
-cache — happens only on a genuine cache-infrastructure error (Redis
+**not** logged as a cache error. Fail-open - re-running the method without the
+cache - happens only on a genuine cache-infrastructure error (Redis
 unreachable, serialization failure). So you can wrap a throwing method directly:
 
 ```typescript
@@ -74,12 +74,12 @@ async getUser(id: string): Promise<User> {
 }
 ```
 
-### Callback Extraction — Standard JS Caveat
+### Callback Extraction - Standard JS Caveat
 
 Extracting a method as a standalone function loses `this` context. This is standard JavaScript behavior, not specific to RedisX:
 
 ```typescript
-// ❌ this is undefined — will throw
+// ❌ this is undefined - will throw
 const fn = service.getUser;
 await fn('123');
 
@@ -93,9 +93,9 @@ ids.map(id => service.getUser(id));
 ids.map(service.getUser.bind(service));
 ```
 
-### Inheritance — Works with Caveat
+### Inheritance - Works with Caveat
 
-Decorated methods are inherited normally. However, if you override a decorated method, the override **does not inherit the decorator** — you must re-apply it:
+Decorated methods are inherited normally. However, if you override a decorated method, the override **does not inherit the decorator** - you must re-apply it:
 
 ```typescript
 class BaseService {
@@ -108,7 +108,7 @@ class ExtendedService extends BaseService {
 }
 
 class OverrideService extends BaseService {
-  // ⚠️ Override creates new descriptor — @Cached is lost
+  // ⚠️ Override creates new descriptor - @Cached is lost
   async getItem(id: string) {
     const item = await super.getItem(id); // ✅ super still cached
     return { ...item, extra: true };
@@ -166,7 +166,7 @@ Understanding the key pipeline helps debug "why is my key different?" issues.
 2. Context enrichment (if contextProvider configured and skipContext !== true)
    ├─ contextKeys (per-decorator or global) resolved from contextProvider
    ├─ varyBy keys resolved from contextProvider (added to contextKeys)
-   └─ All context keys sorted alphabetically — order is deterministic
+   └─ All context keys sorted alphabetically - order is deterministic
    Result: "user:123:_ctx_:locale.en:tenantId.acme"
 
 3. L2 prefix (added by Redis store, not visible in decorator)
@@ -177,7 +177,7 @@ Understanding the key pipeline helps debug "why is my key different?" issues.
 |--------|-------|--------|--------|
 | `contextKeys` | Per-decorator (overrides global) | `contextProvider` | Replaces global contextKeys for this method |
 | `varyBy` | Per-decorator (additive) | `contextProvider` | Adds extra context keys on top of contextKeys |
-| `skipContext` | Per-decorator | — | Disables all context enrichment |
+| `skipContext` | Per-decorator | - | Disables all context enrichment |
 | `namespace` | `@Cacheable` only | Static string | Prepends `namespace:` to key |
 
 ::: warning
@@ -186,7 +186,7 @@ Understanding the key pipeline helps debug "why is my key different?" issues.
 
 ## @Cached (Recommended)
 
-Proxy-based decorator — works on any Injectable class.
+Proxy-based decorator - works on any Injectable class.
 
 ### Basic Usage
 
@@ -277,7 +277,7 @@ async searchUsers(query: string): Promise<User[]> { }
 
 ### VaryBy
 
-Adds additional context keys to the cache key, resolved from `contextProvider`. This is **not** HTTP headers — values come from CLS / AsyncLocalStorage / custom context provider.
+Adds additional context keys to the cache key, resolved from `contextProvider`. This is **not** HTTP headers - values come from CLS / AsyncLocalStorage / custom context provider.
 
 Requires `contextProvider` to be configured in plugin options. Ignored if no contextProvider.
 
@@ -296,14 +296,14 @@ async getProducts(): Promise<Product[]> { }
 `contextKeys` **overrides** global contextKeys for this specific method. `varyBy` **adds** to them.
 
 ```typescript
-// Override global context — only use tenantId for this method
+// Override global context - only use tenantId for this method
 @Cached({
   key: 'products:{0}',
   contextKeys: ['tenantId'],
 })
 async getProducts(category: string) { }
 
-// No context at all — shared across all tenants
+// No context at all - shared across all tenants
 @Cached({
   key: 'config:app',
   skipContext: true,
@@ -325,7 +325,7 @@ async getAppConfig() { }
 
 ## @InvalidateTags
 
-Proxy-based — works on any Injectable class.
+Proxy-based - works on any Injectable class.
 
 <<< @/apps/demo/src/plugins/cache/decorators/invalidate-tags.usage.ts{typescript}
 
@@ -333,7 +333,7 @@ Proxy-based — works on any Injectable class.
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `tags` | `string[] \| ((...args) => string[])` | — | Tags to invalidate (required) |
+| `tags` | `string[] \| ((...args) => string[])` | - | Tags to invalidate (required) |
 | `when` | `'before' \| 'after'` | `'after'` | When to invalidate |
 
 ### Default Behaviors
@@ -341,13 +341,13 @@ Proxy-based — works on any Injectable class.
 | Scenario | Behavior |
 |----------|----------|
 | `when: 'after'` and method throws | **Invalidation does NOT run.** The error propagates before invalidation is reached. |
-| `when: 'after'` and invalidation fails | Error caught and logged, method result still returned. No race condition — invalidation is `await`ed. |
+| `when: 'after'` and invalidation fails | Error caught and logged, method result still returned. No race condition - invalidation is `await`ed. |
 | `when: 'before'` and invalidation fails | Error caught and logged, method still executes. |
 | Tags function throws | Error caught, method still executes. |
 
 ## @InvalidateOn
 
-Proxy-based — works on any Injectable class. Invalidates cache after method execution and **optionally publishes named events** for distributed invalidation across service instances.
+Proxy-based - works on any Injectable class. Invalidates cache after method execution and **optionally publishes named events** for distributed invalidation across service instances.
 
 ::: info How it works
 `@InvalidateOn` always runs **after** the method. The `events` field defines **event names to publish** (not external triggers). The decorator:
@@ -362,10 +362,10 @@ Proxy-based — works on any Injectable class. Invalidates cache after method ex
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `events` | `string[]` | — | Event names to categorize/publish this invalidation (required) |
-| `tags` | `string[] \| ((result, args) => string[])` | — | Tags to invalidate |
-| `keys` | `string[] \| ((result, args) => string[])` | — | Keys to invalidate directly |
-| `condition` | `(result, args) => boolean` | — | Only invalidate if returns true |
+| `events` | `string[]` | - | Event names to categorize/publish this invalidation (required) |
+| `tags` | `string[] \| ((result, args) => string[])` | - | Tags to invalidate |
+| `keys` | `string[] \| ((result, args) => string[])` | - | Keys to invalidate directly |
+| `condition` | `(result, args) => boolean` | - | Only invalidate if returns true |
 | `publish` | `boolean` | `false` | Publish events for distributed invalidation (requires `invalidation.source: 'amqp'` or `'custom'` in plugin config) |
 
 ### Default Behaviors
@@ -373,7 +373,7 @@ Proxy-based — works on any Injectable class. Invalidates cache after method ex
 | Scenario | Behavior |
 |----------|----------|
 | Method throws | **Invalidation does NOT run.** The error propagates before invalidation is reached. |
-| Invalidation fails | Error caught and logged, method result still returned. No race condition — invalidation is `await`ed. |
+| Invalidation fails | Error caught and logged, method result still returned. No race condition - invalidation is `await`ed. |
 | Tags/keys function throws | Error caught and logged, method result still returned. |
 | `condition` returns false | Invalidation skipped, method result returned as-is. |
 | `publish: true` but no event service | Invalidation runs locally, publishing silently skipped. |
@@ -418,7 +418,7 @@ Metadata-based decorator using `{paramName}` interpolation. **Requires `Declarat
 
 Metadata-based decorator for cache invalidation. **Requires `DeclarativeCacheInterceptor`.**
 
-Uses `beforeInvocation` (boolean) instead of `when` ('before'/'after') — consistent with Spring Cache convention.
+Uses `beforeInvocation` (boolean) instead of `when` ('before'/'after') - consistent with Spring Cache convention.
 
 ### Basic Usage
 
@@ -481,7 +481,7 @@ Always execute method and update cache with result. **Requires `DeclarativeCache
 <<< @/apps/demo/src/plugins/cache/decorators/combining-metadata.usage.ts{typescript}
 
 ::: warning @CacheEvict after timing
-When `beforeInvocation: false` (default), eviction runs as fire-and-forget — the Promise is **not awaited**. For awaited invalidation, use `@InvalidateTags` (proxy-based) instead.
+When `beforeInvocation: false` (default), eviction runs as fire-and-forget - the Promise is **not awaited**. For awaited invalidation, use `@InvalidateTags` (proxy-based) instead.
 :::
 
 ## @Cached vs @Cacheable
@@ -504,5 +504,5 @@ When `beforeInvocation: false` (default), eviction runs as fire-and-forget — t
 
 ## Next Steps
 
-- [Service API](./service-api) — Programmatic cache access
-- [Tag Invalidation](./tags) — Advanced tag patterns
+- [Service API](./service-api) - Programmatic cache access
+- [Tag Invalidation](./tags) - Advanced tag patterns

@@ -1,12 +1,12 @@
 ---
 layout: home
-title: 'NestJS RedisX — Modular Redis Toolkit for NestJS'
+title: 'NestJS RedisX - Modular Redis Toolkit for NestJS'
 description: 'Production Redis toolkit for NestJS: L1+L2 cache, distributed locks, rate limiting, circuit breaker, Pub/Sub, sessions, leader election, semaphores, deduplication, atomic counters, idempotency, streams, metrics, and OpenTelemetry tracing plugins.'
 
 hero:
   name: "NestJS RedisX"
   text: "Redis Toolkit for NestJS"
-  tagline: "Caching, distributed locks, rate limiting, and observability — with modular plugin architecture"
+  tagline: "Caching, distributed locks, rate limiting, and observability - with modular plugin architecture"
   actions:
     - theme: brand
       text: Get Started
@@ -19,7 +19,7 @@ features:
   - icon:
       src: /icons/blocks.svg
     title: Plugin Architecture
-    details: Modular design — import only the features you need. Each plugin is self-contained with its own providers and exports.
+    details: Modular design - import only the features you need. Each plugin is self-contained with its own providers and exports.
     link: /en/reference/plugins/
 
   - icon:
@@ -61,25 +61,25 @@ features:
   - icon:
       src: /icons/activity.svg
     title: Leader Election
-    details: Run cron jobs, migrations, and cleanup on exactly one instance — @LeaderOnly decorator, lease heartbeats, automatic failover.
+    details: Run cron jobs, migrations, and cleanup on exactly one instance - @LeaderOnly decorator, lease heartbeats, automatic failover.
     link: /en/reference/leader/
 
   - icon:
       src: /icons/layers.svg
     title: Distributed Semaphore
-    details: At most N concurrent executions fleet-wide — permit leases, auto-renewal, and the @WithSemaphore decorator with key templates.
+    details: At most N concurrent executions fleet-wide - permit leases, auto-renewal, and the @WithSemaphore decorator with key templates.
     link: /en/reference/semaphore/
 
   - icon:
       src: /icons/blocks.svg
     title: Deduplication & Debounce
-    details: Run webhooks and queue messages once per window across instances — first-wins markers, @Dedupe, and a distributed trailing debounce.
+    details: Run webhooks and queue messages once per window across instances - first-wins markers, @Dedupe, and a distributed trailing debounce.
     link: /en/reference/dedup/
 
   - icon:
       src: /icons/gauge.svg
     title: Atomic Counters
-    details: Fleet-wide counters that never lose updates — window counters with first-write TTL, atomic read-and-reset, monotonic ID sequences.
+    details: Fleet-wide counters that never lose updates - window counters with first-write TTL, atomic read-and-reset, monotonic ID sequences.
     link: /en/reference/counters/
 
   - icon:
@@ -99,12 +99,12 @@ features:
 
 NestJS RedisX provides comprehensive Redis integration for NestJS applications. It implements well-known patterns for caching, locking, and rate limiting with a focus on correctness and developer experience.
 
-- **Production Focused** — Implements proven patterns for distributed systems
-- **Type Safe** — Complete TypeScript support with strict typing and IntelliSense
-- **Tested** — Comprehensive test suite covering core functionality
-- **Documented** — Detailed guides, API reference, and examples
-- **Performant** — Optimized for low latency Redis operations
-- **Configurable** — Sensible defaults with full customization options
+- **Production Focused** - Implements proven patterns for distributed systems
+- **Type Safe** - Complete TypeScript support with strict typing and IntelliSense
+- **Tested** - Comprehensive test suite covering core functionality
+- **Documented** - Detailed guides, API reference, and examples
+- **Performant** - Optimized for low latency Redis operations
+- **Configurable** - Sensible defaults with full customization options
 
 ## Ecosystem Comparison
 
@@ -113,40 +113,40 @@ The NestJS ecosystem offers several Redis integration options. This table helps 
 |  | RedisX | @nestjs/cache-manager | @liaoliaots/nestjs-redis | @nestjs-redis/kit | ioredis |
 |--|:------:|:---------------------:|:------------------------:|:-----------------:|:-------:|
 | **Type** | Plugin Framework | Cache Module | Client Wrapper | Integrations Bundle | Client Library |
-| **Underlying Client** | ioredis / node-redis | cache-manager | ioredis | node-redis | — |
+| **Underlying Client** | ioredis / node-redis | cache-manager | ioredis | node-redis | - |
 | **Actively Maintained** | ✓ | ✓ | ✓ | ✓ | Best-effort |
 | | | | | | |
 | **Infrastructure** | | | | | |
-| Cluster / Sentinel | ✓ | — | ✓ | ✓ | ✓ |
-| Multiple Connections | ✓ | — | ✓ | ✓ | Manual |
-| Health Checks | ✓ | — | ✓ | ✓ | Manual |
+| Cluster / Sentinel | ✓ | - | ✓ | ✓ | ✓ |
+| Multiple Connections | ✓ | - | ✓ | ✓ | Manual |
+| Health Checks | ✓ | - | ✓ | ✓ | Manual |
 | | | | | | |
 | **Caching** | | | | | |
 | Basic Cache | ✓ | ✓ | Manual | Manual | Manual |
-| L1 + L2 (Memory + Redis) | ✓ | — | — | — | — |
-| Stampede Protection | ✓ | — | — | — | — |
-| Stale-While-Revalidate | ✓ | — | — | — | — |
-| Tag-based Invalidation | ✓ | — | — | — | — |
+| L1 + L2 (Memory + Redis) | ✓ | - | - | - | - |
+| Stampede Protection | ✓ | - | - | - | - |
+| Stale-While-Revalidate | ✓ | - | - | - | - |
+| Tag-based Invalidation | ✓ | - | - | - | - |
 | | | | | | |
 | **Enterprise Patterns** | | | | | |
-| Distributed Locks | ✓ | — | — | ✓ | Manual |
-| Lock Auto-renewal | ✓ | — | — | — | — |
-| Rate Limiting | ✓ | — | — | ~¹ | — |
-| Circuit Breaker | ✓ | — | — | — | — |
-| Pub/Sub Messaging | ✓ | — | — | — | Manual |
-| Session Management | ✓ | — | — | — | — |
-| Leader Election (cron singletons) | ✓ | — | — | — | — |
-| Distributed Semaphore (N concurrent) | ✓ | — | — | — | — |
-| Event Deduplication / Debounce | ✓ | — | — | — | — |
-| Atomic Counters & Sequences | ✓ | — | — | — | — |
-| Request Idempotency | ✓ | — | — | — | — |
-| Streams + Consumer Groups | ✓ | — | — | — | Manual |
+| Distributed Locks | ✓ | - | - | ✓ | Manual |
+| Lock Auto-renewal | ✓ | - | - | - | - |
+| Rate Limiting | ✓ | - | - | ~¹ | - |
+| Circuit Breaker | ✓ | - | - | - | - |
+| Pub/Sub Messaging | ✓ | - | - | - | Manual |
+| Session Management | ✓ | - | - | - | - |
+| Leader Election (cron singletons) | ✓ | - | - | - | - |
+| Distributed Semaphore (N concurrent) | ✓ | - | - | - | - |
+| Event Deduplication / Debounce | ✓ | - | - | - | - |
+| Atomic Counters & Sequences | ✓ | - | - | - | - |
+| Request Idempotency | ✓ | - | - | - | - |
+| Streams + Consumer Groups | ✓ | - | - | - | Manual |
 | | | | | | |
 | **Observability** | | | | | |
-| Prometheus Metrics | ✓ | — | — | — | — |
-| OpenTelemetry Tracing | ✓ | — | — | — | — |
+| Prometheus Metrics | ✓ | - | - | - | - |
+| OpenTelemetry Tracing | ✓ | - | - | - | - |
 
-<small>¹ Throttler storage adapter only — not standalone rate limiting with multiple algorithms</small>
+<small>¹ Throttler storage adapter only - not standalone rate limiting with multiple algorithms</small>
 
 ## Quick Example
 
@@ -191,12 +191,12 @@ export class UserService {
 
 The foundation of NestJS RedisX providing:
 
-- **RedisModule** — NestJS module with sync/async configuration
-- **RedisService** — High-level wrapper for Redis operations
-- **Multiple Clients** — Named connections for different purposes
-- **Connection Types** — Single, Cluster, and Sentinel support
-- **Health Monitoring** — Auto-reconnection and statistics
-- **Driver Abstraction** — Switch between ioredis and node-redis
+- **RedisModule** - NestJS module with sync/async configuration
+- **RedisService** - High-level wrapper for Redis operations
+- **Multiple Clients** - Named connections for different purposes
+- **Connection Types** - Single, Cluster, and Sentinel support
+- **Health Monitoring** - Auto-reconnection and statistics
+- **Driver Abstraction** - Switch between ioredis and node-redis
 
 [Learn more about Core Module](/en/reference/core/)
 
@@ -221,9 +221,9 @@ The foundation of NestJS RedisX providing:
 
 ## Resources
 
-- [GitHub Repository](https://github.com/nestjs-redisx/nestjs-redisx) — Source code, issues, and contributions
-- [GitHub Discussions](https://github.com/nestjs-redisx/nestjs-redisx/discussions) — Questions, ideas, and community support
-- [npm Package](https://www.npmjs.com/package/@nestjs-redisx/core) — Installation and package details
+- [GitHub Repository](https://github.com/nestjs-redisx/nestjs-redisx) - Source code, issues, and contributions
+- [GitHub Discussions](https://github.com/nestjs-redisx/nestjs-redisx/discussions) - Questions, ideas, and community support
+- [npm Package](https://www.npmjs.com/package/@nestjs-redisx/core) - Installation and package details
 
 ## Sponsors
 

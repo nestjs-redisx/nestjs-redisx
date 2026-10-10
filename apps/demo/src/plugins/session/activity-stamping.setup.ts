@@ -16,7 +16,7 @@ async function bootstrap(): Promise<void> {
   const sessions = app.get<ISessionService>(SESSION_SERVICE);
 
   // Opt-in metadata stamping AFTER the session middleware: gives the device
-  // page its IP and user-agent columns. Fire-and-forget — never blocks.
+  // page its IP and user-agent columns. Fire-and-forget - never blocks.
   app.use((req: SessionRequest, _res: unknown, next: () => void) => {
     if (req.session?.passport?.user) {
       void sessions.recordActivity(req.sessionID, { ip: req.ip, userAgent: req.get('user-agent') }).catch(() => undefined);

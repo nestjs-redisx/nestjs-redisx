@@ -1,5 +1,5 @@
 ---
-title: 'Dead Letter Queue Setup — Streams Plugin | NestJS RedisX'
+title: 'Dead Letter Queue Setup - Streams Plugin | NestJS RedisX'
 description: 'Set up DLQ for Redis Streams in NestJS: enable dlq streamSuffix, maxLen, maxRetries, inspect failed messages, and replay DLQ entries back to the main stream.'
 ---
 
@@ -63,7 +63,7 @@ async handle(message: IStreamMessage<Order>): Promise<void> {
 **Flow:** with `maxRetries: 3`, a message is DLQ'd once its attempt counter
 **reaches** `maxRetries` (the failure path runs `if (attempt >= maxRetries)`).
 So there are 3 processing attempts total, and the message goes to the DLQ on the
-3rd failure — not the 4th:
+3rd failure - not the 4th:
 
 ```
 Attempt 1: Fail (1 < 3) → re-add as attempt 2
@@ -217,14 +217,14 @@ exposed on the shared consumed counter as
 `redisx_stream_messages_consumed_total{status="dead_letter"}`. The example below
 shows how to register your **own** custom `prom-client` counters/gauges
 (`redisx_stream_dlq_total` / `redisx_stream_dlq_size`) if you want a dedicated
-DLQ metric — those names are defined by your code, not by the plugin.
+DLQ metric - those names are defined by your code, not by the plugin.
 
 <<< @/apps/demo/src/plugins/streams/monitoring-dlq-metrics.usage.ts{typescript}
 
 ### Grafana Dashboard
 
 ```yaml
-# DLQ message rate — messages moved to the DLQ are counted on the shared
+# DLQ message rate - messages moved to the DLQ are counted on the shared
 # consumed counter with status="dead_letter" (there is no dedicated
 # redisx_stream_dlq_total / _size metric).
 rate(redisx_stream_messages_consumed_total{status="dead_letter"}[5m])
@@ -278,5 +278,5 @@ async moveToDLQ(message: any, error: Error) {
 
 ## Next Steps
 
-- [Message Handling](./message-handling) — ACK/NACK details
-- [Monitoring](./monitoring) — Track DLQ metrics
+- [Message Handling](./message-handling) - ACK/NACK details
+- [Monitoring](./monitoring) - Track DLQ metrics

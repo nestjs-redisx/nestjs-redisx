@@ -1,5 +1,5 @@
 ---
-title: 'Rate Limiting Algorithms — NestJS RedisX Concepts | NestJS RedisX'
+title: 'Rate Limiting Algorithms - NestJS RedisX Concepts | NestJS RedisX'
 description: 'Compare fixed window, sliding window, token bucket, and leaky bucket rate limiting algorithms in NestJS RedisX and match each to API and billing scenarios.'
 ---
 
@@ -230,6 +230,6 @@ X-RateLimit-Reset: 1706123456
 
 ## Next Steps
 
-- [Login Throttling Recipe](../recipes/login-throttling) — Practical implementation
-- [API Protection Recipe](../recipes/api-protection) — Multi-tier protection
-- [Rate Limit Reference](../../reference/rate-limit/) — Full API documentation
+- [Login Throttling Recipe](../recipes/login-throttling) - Practical implementation
+- [API Protection Recipe](../recipes/api-protection) - Multi-tier protection
+- [Rate Limit Reference](../../reference/rate-limit/) - Full API documentation

@@ -1,5 +1,5 @@
 ---
-title: 'Guarantees — NestJS RedisX Architecture | NestJS RedisX'
+title: 'Guarantees - NestJS RedisX Architecture | NestJS RedisX'
 description: 'Reference for NestJS RedisX formal semantics: at-least-once delivery, lease ownership, bounded cache staleness, and atomicity across locks and streams.'
 ---
 
@@ -91,17 +91,17 @@ Locks alone are not enough for payments, financial writes, or any operation wher
 
 | Layer | Protects Against | Alone Sufficient? |
 |-------|-----------------|--------------------|
-| Lock | Concurrent execution | No — TTL expiry, Redis failover |
-| Idempotency | Duplicate requests | No — doesn't prevent concurrent first attempts |
+| Lock | Concurrent execution | No - TTL expiry, Redis failover |
+| Idempotency | Duplicate requests | No - doesn't prevent concurrent first attempts |
 | DB constraint (UNIQUE) | Everything above | Yes, but poor UX |
 | **All three combined** | **Most real-world failure modes** | **Yes** |
 
 ::: warning Idempotency key must be business-meaningful
-Use a stable business identifier (`orderId`, `paymentIntentId`, `requestId`) — not a random hash or UUID generated per request. A random key defeats the purpose: every retry looks like a new operation.
+Use a stable business identifier (`orderId`, `paymentIntentId`, `requestId`) - not a random hash or UUID generated per request. A random key defeats the purpose: every retry looks like a new operation.
 :::
 
 ::: tip Rule of thumb
-If losing the lock mid-operation would cost money or corrupt data — add `@Idempotent` + DB constraints. If it would just cause a retry — lock alone is fine. See [Locks → Concepts](../../reference/locks/concepts#what-to-do-for-payments-db-writes-and-critical-paths) for code example.
+If losing the lock mid-operation would cost money or corrupt data - add `@Idempotent` + DB constraints. If it would just cause a retry - lock alone is fine. See [Locks → Concepts](../../reference/locks/concepts#what-to-do-for-payments-db-writes-and-critical-paths) for code example.
 :::
 
 ## Idempotency Guarantees
@@ -257,5 +257,5 @@ async process(id: string) {
 
 ## Next Steps
 
-- [Failure Modes](./failure-modes) — Handling failures gracefully
-- [Distributed Coordination](../concepts/distributed-coordination) — Choosing mechanisms
+- [Failure Modes](./failure-modes) - Handling failures gracefully
+- [Distributed Coordination](../concepts/distributed-coordination) - Choosing mechanisms

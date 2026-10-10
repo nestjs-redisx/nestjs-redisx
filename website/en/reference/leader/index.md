@@ -5,7 +5,7 @@ description: 'Leader election for NestJS over Redis: run cron jobs, migrations, 
 
 # Leader Election Plugin
 
-Run singleton work — cron jobs, migrations, cleanup — on **exactly one instance** of your fleet.
+Run singleton work - cron jobs, migrations, cleanup - on **exactly one instance** of your fleet.
 
 ## Overview
 
@@ -13,12 +13,12 @@ Every multi-instance NestJS deployment hits the same problem: `@Cron` fires on e
 
 ## Key Features
 
-- **`@LeaderOnly()` decorator** — proxy-based, works on any regular `@Injectable` method (generators excluded); composes with `@nestjs/schedule` (`@Cron` fires everywhere, the body runs only on the leader)
-- **Lease-based election** — atomic acquire (`SET NX PX`, re-claiming a still-held own lease), CAS Lua heartbeat, CAS release; single-key and cluster-safe
-- **Automatic failover** — instant on graceful shutdown (lease released), bounded by `ttlMs + retryIntervalMs` on a crash
-- **Fail-safe local view** — `isLeader()` is true only while the last confirmed lease is unexpired
-- **Independent groups** — separate elections per concern; decorator-referenced groups start automatically
-- **Observability** — `onElected` / `onLost` callbacks and `redisx_leader_*` counters with the Metrics plugin
+- **`@LeaderOnly()` decorator** - proxy-based, works on any regular `@Injectable` method (generators excluded); composes with `@nestjs/schedule` (`@Cron` fires everywhere, the body runs only on the leader)
+- **Lease-based election** - atomic acquire (`SET NX PX`, re-claiming a still-held own lease), CAS Lua heartbeat, CAS release; single-key and cluster-safe
+- **Automatic failover** - instant on graceful shutdown (lease released), bounded by `ttlMs + retryIntervalMs` on a crash
+- **Fail-safe local view** - `isLeader()` is true only while the last confirmed lease is unexpired
+- **Independent groups** - separate elections per concern; decorator-referenced groups start automatically
+- **Observability** - `onElected` / `onLost` callbacks and `redisx_leader_*` counters with the Metrics plugin
 
 ## Installation
 

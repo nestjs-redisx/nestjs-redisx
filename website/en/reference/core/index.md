@@ -11,13 +11,13 @@ The foundation of NestJS RedisX providing Redis client management with driver ab
 
 `@nestjs-redisx/core` is the foundation package that provides:
 
-- **RedisModule** — NestJS module for Redis integration
-- **RedisService** — High-level Redis operations wrapper
-- **Driver Abstraction** — Switch between ioredis and node-redis
-- **Multi-Client Support** — Manage multiple Redis connections
-- **Connection Types** — Single, Cluster, and Sentinel configurations
-- **Health Monitoring** — Automatic reconnection and health checks
-- **Plugin System** — Extensible architecture for plugins
+- **RedisModule** - NestJS module for Redis integration
+- **RedisService** - High-level Redis operations wrapper
+- **Driver Abstraction** - Switch between ioredis and node-redis
+- **Multi-Client Support** - Manage multiple Redis connections
+- **Connection Types** - Single, Cluster, and Sentinel configurations
+- **Health Monitoring** - Automatic reconnection and health checks
+- **Plugin System** - Extensible architecture for plugins
 
 ## Installation
 
@@ -180,13 +180,13 @@ RedisModule.forRoot({
 
 ## Documentation
 
-- [Configuration](./configuration) — Complete configuration reference
-- [RedisService](./redis-service) — Service API documentation
-- [Multiple Clients](./multiple-clients) — Named client management
-- [Connection Types](./connection-types) — Single, Cluster, Sentinel
-- [Health Monitoring](./health-monitoring) — Health checks and reconnection
-- [Decorators](./decorators) — @InjectRedis usage
-- [Driver Abstraction](./driver-abstraction) — ioredis vs node-redis
-- [Plugin System](./plugin-system) — Plugin architecture with lifecycle hooks
-- [Error Handling](./error-handling) — Structured error system with error codes
-- [Troubleshooting](./troubleshooting) — Common issues and solutions
+- [Configuration](./configuration) - Complete configuration reference
+- [RedisService](./redis-service) - Service API documentation
+- [Multiple Clients](./multiple-clients) - Named client management
+- [Connection Types](./connection-types) - Single, Cluster, Sentinel
+- [Health Monitoring](./health-monitoring) - Health checks and reconnection
+- [Decorators](./decorators) - @InjectRedis usage
+- [Driver Abstraction](./driver-abstraction) - ioredis vs node-redis
+- [Plugin System](./plugin-system) - Plugin architecture with lifecycle hooks
+- [Error Handling](./error-handling) - Structured error system with error codes
+- [Troubleshooting](./troubleshooting) - Common issues and solutions

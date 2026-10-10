@@ -1,5 +1,5 @@
 ---
-title: 'Testing Guide — Rate Limit Plugin | NestJS RedisX'
+title: 'Testing Guide - Rate Limit Plugin | NestJS RedisX'
 description: 'Test rate-limited NestJS controllers by mocking RATE_LIMIT_SERVICE with Vitest, stubbing check results, and asserting 429 throttling behavior.'
 ---
 
@@ -390,5 +390,5 @@ describe('Rate limit performance', () => {
 
 ## Next Steps
 
-- [Recipes](./recipes) — Real-world examples
-- [Troubleshooting](./troubleshooting) — Debug issues
+- [Recipes](./recipes) - Real-world examples
+- [Troubleshooting](./troubleshooting) - Debug issues

@@ -115,5 +115,5 @@ spec:
 
 ## Next Steps
 
-- [Scheduled Tasks](./scheduled-tasks) — Prevent duplicate cron
-- [Streams Reference](../../reference/streams/) — Full API
+- [Scheduled Tasks](./scheduled-tasks) - Prevent duplicate cron
+- [Streams Reference](../../reference/streams/) - Full API

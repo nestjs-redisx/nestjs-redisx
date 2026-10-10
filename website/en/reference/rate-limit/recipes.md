@@ -1,5 +1,5 @@
 ---
-title: 'Recipes and Examples — Rate Limit Plugin | NestJS RedisX'
+title: 'Recipes and Examples - Rate Limit Plugin | NestJS RedisX'
 description: 'Throttle real NestJS endpoints with @RateLimit: login brute-force protection, password reset, tiered API quotas, and bot mitigation recipes.'
 ---
 
@@ -220,5 +220,5 @@ Limit entire organizations:
 
 ## Next Steps
 
-- [Troubleshooting](./troubleshooting) — Debug issues
-- [Overview](./index) — Back to overview
+- [Troubleshooting](./troubleshooting) - Debug issues
+- [Overview](./index) - Back to overview

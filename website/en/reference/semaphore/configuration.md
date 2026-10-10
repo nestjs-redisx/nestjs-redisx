@@ -11,7 +11,7 @@ description: 'SemaphorePlugin options: permit TTLs, retry backoff, auto-renewal,
 |--------|------|---------|-------------|
 | `client` | `string` | `'default'` | Named Redis client to use |
 | `keyPrefix` | `string` | `'_sem:'` | Prefix for semaphore keys (must be non-empty) |
-| `defaultTtl` | `number` | `30000` | Permit lease in ms — a crashed holder frees its seat after this |
+| `defaultTtl` | `number` | `30000` | Permit lease in ms - a crashed holder frees its seat after this |
 | `maxTtl` | `number` | `300000` | Hard cap for `defaultTtl` and per-call `ttl` |
 | `retry.maxRetries` | `number` | `3` | Retries after the initial acquire attempt |
 | `retry.initialDelay` | `number` | `100` | First backoff delay in ms |
@@ -39,7 +39,7 @@ Every acquisition can override the plugin defaults:
 | Option | Description |
 |--------|-------------|
 | `ttl` | Permit TTL for this acquisition (capped at `maxTtl`) |
-| `waitTimeout` | Total wait budget in ms — stop retrying once sleeping again would exceed it |
+| `waitTimeout` | Total wait budget in ms - stop retrying once sleeping again would exceed it |
 | `autoRenew` | Enable/disable renewal for this permit |
 | `retry.maxRetries`, `retry.initialDelay` | Per-call retry overrides |
 
@@ -49,7 +49,7 @@ The TTL is the **crash-recovery bound**: a holder that dies without releasing bl
 
 ## Capacity Discipline
 
-`permits` is passed per call and must be **the same for every caller of a key**. The store enforces the capacity the acquiring call provides — two callers using different numbers for one key will observe the larger caller's view win whenever it acquires. Define the capacity once next to the key:
+`permits` is passed per call and must be **the same for every caller of a key**. The store enforces the capacity the acquiring call provides - two callers using different numbers for one key will observe the larger caller's view win whenever it acquires. Define the capacity once next to the key:
 
 ```typescript
 export const RENDER_SEMAPHORE = { key: 'reports:render', permits: 3 } as const;

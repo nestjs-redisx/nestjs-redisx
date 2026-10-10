@@ -16,7 +16,7 @@ export class BreakerOpsService {
   async degradedBanner(): Promise<string | null> {
     const { state, failuresInWindow } = await this.breaker.getState('stripe');
     if (state === 'open') {
-      return 'Payments are temporarily degraded — orders are queued.';
+      return 'Payments are temporarily degraded - orders are queued.';
     }
     if (state === 'half-open') {
       return 'Payments are recovering.';

@@ -13,7 +13,7 @@ import { CachePlugin } from '@nestjs-redisx/cache';
             enabled: true,
             // Availability policy: keep serving the last known value for up
             // to 7 days while the loader keeps FAILING. Always a finite
-            // number — an explicit value keeps Redis memory bounded.
+            // number - an explicit value keeps Redis memory bounded.
             defaultWindow: 7 * 24 * 3600,
             // Which errors qualify: exclude "data is gone for good" cases so
             // a deleted resource is not served stale forever.

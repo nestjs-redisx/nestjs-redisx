@@ -35,10 +35,10 @@
 - 3,700+ tests across unit, integration, and E2E
 - Coverage tracked via [Codecov](https://codecov.io/gh/nestjs-redisx/nestjs-redisx)
 - Pack-test validates every package installs and works from tarball
-- Compatibility tested across Node 18/20/22/24, NestJS 10/11/12, Redis 6.2/7.x — dual CJS + ESM build (native-ESM NestJS 12 works out of the box)
+- Compatibility tested across Node 18/20/22/24, NestJS 10/11/12, Redis 6.2/7.x - dual CJS + ESM build (native-ESM NestJS 12 works out of the box)
 - Works with both Express and Fastify adapters
 
-> **Node.js support:** the published packages run on **Node >= 18** (declared in each package's `engines` and exercised in CI on 18/20/22/24). The root `package.json` of this monorepo requires **Node >= 20** — that constraint applies only to *developing this repository* (build tooling), not to using the packages.
+> **Node.js support:** the published packages run on **Node >= 18** (declared in each package's `engines` and exercised in CI on 18/20/22/24). The root `package.json` of this monorepo requires **Node >= 20** - that constraint applies only to *developing this repository* (build tooling), not to using the packages.
 
 [Testing details](https://nestjs-redisx.dev/en/guide/operations/testing-overview/) | [Compatibility matrix](https://nestjs-redisx.dev/en/guide/operations/compatibility/)
 
@@ -52,9 +52,9 @@
 | **Circuit Breaker** | Distributed Circuit Breaker | Closed/open/half-open breaker with fail-fast rejection and fallbacks |
 | **Pub/Sub** | Typed Pub/Sub | Publish/subscribe with pattern subscriptions and `@Subscribe` auto-discovery |
 | **Session** | Session Management | express-session/@fastify/session store with device page, revoke-everywhere, seat limits |
-| **Leader** | Leader Election | Run cron/singleton work on exactly one instance — @LeaderOnly, lease heartbeats, automatic failover |
-| **Semaphore** | Bounded Concurrency | At most N concurrent executions fleet-wide — permit leases, auto-renewal, @WithSemaphore |
-| **Dedup** | Deduplication / Debounce | Run webhooks and events once per window across instances — @Dedupe, distributed trailing debounce |
+| **Leader** | Leader Election | Run cron/singleton work on exactly one instance - @LeaderOnly, lease heartbeats, automatic failover |
+| **Semaphore** | Bounded Concurrency | At most N concurrent executions fleet-wide - permit leases, auto-renewal, @WithSemaphore |
+| **Dedup** | Deduplication / Debounce | Run webhooks and events once per window across instances - @Dedupe, distributed trailing debounce |
 | **Counters** | Atomic Counters | Fleet-wide counters, window TTLs, atomic read-and-reset, monotonic sequences |
 | **Idempotency** | Request Idempotency | Deduplication with fingerprinting and response replay |
 | **Streams** | Redis Streams | Consumer groups, dead-letter queues, and backpressure |

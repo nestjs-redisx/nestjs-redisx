@@ -99,5 +99,5 @@ export class SessionGuard implements CanActivate {
 
 ## Next Steps
 
-- [Security](../architecture/security) — Session security
-- [Cache Reference](../../reference/cache/) — Full API
+- [Security](../architecture/security) - Session security
+- [Cache Reference](../../reference/cache/) - Full API

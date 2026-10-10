@@ -474,5 +474,5 @@ export class RedisTestHelper {
 
 ## Next Steps
 
-- [NestJS Patterns](./nestjs-patterns) — Guards and interceptors
-- [Troubleshooting](../troubleshooting/) — Debug test failures
+- [NestJS Patterns](./nestjs-patterns) - Guards and interceptors
+- [Troubleshooting](../troubleshooting/) - Debug test failures

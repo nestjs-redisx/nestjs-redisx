@@ -1,5 +1,5 @@
 ---
-title: 'Configuration Reference — Locks Plugin | NestJS RedisX'
+title: 'Configuration Reference - Locks Plugin | NestJS RedisX'
 description: 'Configure LocksPlugin options including defaultTtl, maxTtl, keyPrefix, autoRenew, retry backoff, and onLockFailed strategy in NestJS Redis apps.'
 ---
 
@@ -114,5 +114,5 @@ For type-safe configuration via NestJS DI:
 
 ## Next Steps
 
-- [Decorator](./decorator) — Learn @WithLock decorator
-- [Service API](./service-api) — Programmatic lock access
+- [Decorator](./decorator) - Learn @WithLock decorator
+- [Service API](./service-api) - Programmatic lock access

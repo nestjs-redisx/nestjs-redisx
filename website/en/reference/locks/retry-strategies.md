@@ -1,5 +1,5 @@
 ---
-title: 'Retry Strategies — Locks Plugin | NestJS RedisX'
+title: 'Retry Strategies - Locks Plugin | NestJS RedisX'
 description: 'Tune Redis lock acquisition retries: exponential backoff, initialDelay, multiplier, maxDelay caps, jitter, and maxRetries on NestJS services.'
 ---
 
@@ -145,5 +145,5 @@ retry: { maxDelay: Infinity }
 
 ## Next Steps
 
-- [Patterns](./patterns) — Common lock patterns
-- [Monitoring](./monitoring) — Track lock metrics
+- [Patterns](./patterns) - Common lock patterns
+- [Monitoring](./monitoring) - Track lock metrics

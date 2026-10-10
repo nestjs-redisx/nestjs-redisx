@@ -1,5 +1,5 @@
 ---
-title: 'Available Plugins — NestJS RedisX Ecosystem | NestJS RedisX'
+title: 'Available Plugins - NestJS RedisX Ecosystem | NestJS RedisX'
 description: 'Catalogue of NestJS RedisX plugins: CachePlugin, LocksPlugin, RateLimitPlugin, IdempotencyPlugin, StreamsPlugin, MetricsPlugin, and TracingPlugin for Redis.'
 ---
 
@@ -239,7 +239,7 @@ export class AppModule {}
 ```
 
 ::: tip Modular Design
-Each plugin is self-contained. You only pay for what you use — unused plugins are not loaded.
+Each plugin is self-contained. You only pay for what you use - unused plugins are not loaded.
 :::
 
 All plugins support `registerAsync()` for DI-based configuration. You can mix sync and async plugins freely:
@@ -301,8 +301,8 @@ graph TB
 
 ## Next Steps
 
-- [Core Module](../core/) — RedisModule, RedisService, and connection management
-- [Cache Plugin](../cache/) — Caching documentation
-- [Locks Plugin](../locks/) — Distributed locking patterns
-- [Rate Limit Plugin](../rate-limit/) — API protection strategies
-- [Installation Guide](/en/guide/installation) — Get started
+- [Core Module](../core/) - RedisModule, RedisService, and connection management
+- [Cache Plugin](../cache/) - Caching documentation
+- [Locks Plugin](../locks/) - Distributed locking patterns
+- [Rate Limit Plugin](../rate-limit/) - API protection strategies
+- [Installation Guide](/en/guide/installation) - Get started

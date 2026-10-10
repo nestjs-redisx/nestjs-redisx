@@ -1,5 +1,5 @@
 ---
-title: 'Coordination Patterns — NestJS RedisX Concepts | NestJS RedisX'
+title: 'Coordination Patterns - NestJS RedisX Concepts | NestJS RedisX'
 description: 'Understand when to reach for Redis distributed locks, idempotency keys, or database constraints in NestJS RedisX to prevent race conditions and double writes.'
 ---
 
@@ -11,9 +11,9 @@ Choosing the right coordination mechanism is critical. This guide helps you deci
 
 In distributed systems, concurrent operations can cause:
 
-- **Double processing** — Same request processed twice
-- **Race conditions** — Interleaved operations corrupt state
-- **Lost updates** — Concurrent writes overwrite each other
+- **Double processing** - Same request processed twice
+- **Race conditions** - Interleaved operations corrupt state
+- **Lost updates** - Concurrent writes overwrite each other
 
 ## Three Solutions
 
@@ -217,6 +217,6 @@ async createPayment(/*...*/) {
 
 ## Next Steps
 
-- [Payment Processing Recipe](../recipes/payment-processing) — Complete implementation
-- [Locks Reference](../../reference/locks/) — Lock API details
-- [Idempotency Reference](../../reference/idempotency/) — Idempotency API details
+- [Payment Processing Recipe](../recipes/payment-processing) - Complete implementation
+- [Locks Reference](../../reference/locks/) - Lock API details
+- [Idempotency Reference](../../reference/idempotency/) - Idempotency API details

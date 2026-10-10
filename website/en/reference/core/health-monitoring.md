@@ -1,5 +1,5 @@
 ---
-title: 'Health Checks and Reconnection — Core | NestJS RedisX'
+title: 'Health Checks and Reconnection - Core | NestJS RedisX'
 description: 'Monitor Redis connections with ConnectionStatus, IHealthStatus, Terminus indicators, Prometheus counters, and auto-reconnection in NestJS applications.'
 ---
 
@@ -291,6 +291,6 @@ this.clientManager.on(ManagerEvent.DISCONNECTED, (data) => {
 
 ## Next Steps
 
-- [Decorators](./decorators) — @InjectRedis usage
-- [Driver Abstraction](./driver-abstraction) — ioredis vs node-redis
-- [Troubleshooting](./troubleshooting) — Common issues
+- [Decorators](./decorators) - @InjectRedis usage
+- [Driver Abstraction](./driver-abstraction) - ioredis vs node-redis
+- [Troubleshooting](./troubleshooting) - Common issues

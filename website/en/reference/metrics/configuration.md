@@ -1,6 +1,6 @@
 ---
-title: 'Configuration Reference — Metrics Plugin | NestJS RedisX'
-description: 'Reference for MetricsPlugin options — prefix, default labels, histogram buckets, endpoint path, and Prometheus registry setup for NestJS Redis apps.'
+title: 'Configuration Reference - Metrics Plugin | NestJS RedisX'
+description: 'Reference for MetricsPlugin options - prefix, default labels, histogram buckets, endpoint path, and Prometheus registry setup for NestJS Redis apps.'
 ---
 
 # Configuration
@@ -36,7 +36,7 @@ new MetricsPlugin({
   },
 
   /**
-   * prom-client registry to register metrics into —
+   * prom-client registry to register metrics into -
    * see "Registry Selection" below
    * @default 'own'
    */
@@ -105,10 +105,10 @@ The `endpoint` option is reserved for future use. The metrics endpoint is curren
 
 ## Registry Selection
 
-By default the plugin uses an isolated prom-client registry (`registry: 'own'`), exposed via its own `/metrics` endpoint and `getMetrics()`. If your application already serves metrics from the global `promClient.register`, RedisX metrics will NOT appear there — point the plugin at your registry instead:
+By default the plugin uses an isolated prom-client registry (`registry: 'own'`), exposed via its own `/metrics` endpoint and `getMetrics()`. If your application already serves metrics from the global `promClient.register`, RedisX metrics will NOT appear there - point the plugin at your registry instead:
 
 ```typescript
-// Global prom-client registry — RedisX metrics show up on the
+// Global prom-client registry - RedisX metrics show up on the
 // application's existing /metrics endpoint
 new MetricsPlugin({ registry: 'default', exposeEndpoint: false })
 
@@ -118,14 +118,14 @@ new MetricsPlugin({ registry: myRegistry, exposeEndpoint: false })
 
 With an external registry (`'default'` or an instance) the plugin plays a guest, not an owner:
 
-- On shutdown it removes only its OWN metrics — it never clears the application's.
-- `defaultLabels` are applied only when explicitly configured — it never overwrites the registry's existing default labels.
+- On shutdown it removes only its OWN metrics - it never clears the application's.
+- `defaultLabels` are applied only when explicitly configured - it never overwrites the registry's existing default labels.
 - `collectDefaultMetrics` becomes **opt-in** (default `false`): the application almost certainly collects process metrics there already, and the plugin's prefixed copies would only duplicate them.
 
 Recommended for apps with an existing Prometheus setup: `registry: 'default'` plus `exposeEndpoint: false`, so all metrics are scraped from the single endpoint you already have.
 
 ::: info prom-client is a peer dependency
-The plugin uses your application's `prom-client` instance (npm 7+ and pnpm 8+ install it automatically). This is what makes passing a `Registry` instance safe — plugin and application always share one prom-client. With yarn classic, add `prom-client` to your dependencies explicitly.
+The plugin uses your application's `prom-client` instance (npm 7+ and pnpm 8+ install it automatically). This is what makes passing a `Registry` instance safe - plugin and application always share one prom-client. With yarn classic, add `prom-client` to your dependencies explicitly.
 :::
 
 ## Configuration by Use Case
@@ -454,6 +454,6 @@ await validate(config);
 
 ## Next Steps
 
-- [Prometheus](./prometheus) — Set up Prometheus scraping
-- [Grafana](./grafana) — Create dashboards
-- [Custom Metrics](./custom-metrics) — Add custom metrics
+- [Prometheus](./prometheus) - Set up Prometheus scraping
+- [Grafana](./grafana) - Create dashboards
+- [Custom Metrics](./custom-metrics) - Add custom metrics

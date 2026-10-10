@@ -1,5 +1,5 @@
 ---
-title: 'Monitoring and Metrics — Rate Limit Plugin | NestJS RedisX'
+title: 'Monitoring and Metrics - Rate Limit Plugin | NestJS RedisX'
 description: 'Observe NestJS rate limiting via redisx_ratelimit_requests_total counters, Prometheus queries, Grafana dashboards, and structured request logs.'
 ---
 
@@ -49,7 +49,7 @@ rate(redisx_ratelimit_requests_total{status="allowed"}[5m])
 / rate(redisx_ratelimit_requests_total[5m])
 ```
 
-**Alert Condition — High Rejection Rate (>10%):**
+**Alert Condition - High Rejection Rate (>10%):**
 
 ```yaml
 (
@@ -213,5 +213,5 @@ export class RateLimitGateway {
 
 ## Next Steps
 
-- [Testing](./testing) — Test rate limits
-- [Troubleshooting](./troubleshooting) — Debug issues
+- [Testing](./testing) - Test rate limits
+- [Troubleshooting](./troubleshooting) - Debug issues

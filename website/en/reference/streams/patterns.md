@@ -1,5 +1,5 @@
 ---
-title: 'Streaming Architecture Patterns — Streams Plugin | NestJS RedisX'
+title: 'Streaming Architecture Patterns - Streams Plugin | NestJS RedisX'
 description: 'Implement fan-out, work queues, event sourcing, saga, priority queues, and pipelines on Redis Streams using consumer groups in NestJS microservices.'
 ---
 
@@ -280,5 +280,5 @@ Distribute work items to workers.
 
 ## Next Steps
 
-- [Monitoring](./monitoring) — Track streaming metrics
-- [Recipes](./recipes) — Real-world examples
+- [Monitoring](./monitoring) - Track streaming metrics
+- [Recipes](./recipes) - Real-world examples

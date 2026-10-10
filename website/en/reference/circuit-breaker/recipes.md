@@ -1,5 +1,5 @@
 ---
-title: 'Recipes — Circuit Breaker Plugin | NestJS RedisX'
+title: 'Recipes - Circuit Breaker Plugin | NestJS RedisX'
 description: 'Practical circuit breaker patterns for NestJS: cache fallbacks, per-dependency circuits, skip-on-open, health-probe driven breakers, and operator tooling.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Practical circuit breaker patterns for NestJS: cache fallbacks, pe
 
 ## Fallback to a cached value
 
-Return a cached/default value instead of throwing while the breaker is OPEN — the dependency gets time to recover, users get slightly stale data instead of errors.
+Return a cached/default value instead of throwing while the breaker is OPEN - the dependency gets time to recover, users get slightly stale data instead of errors.
 
 <<< @/apps/demo/src/plugins/circuit-breaker/recipes/fallback-cache.usage.ts{typescript}
 
@@ -25,7 +25,7 @@ For non-critical background work, resolve to `undefined` while OPEN instead of t
 
 ## Health-probe driven breaker
 
-Drive the breaker from a scheduled health probe with the manual API instead of wrapping every call — hot-path code only reads the state.
+Drive the breaker from a scheduled health probe with the manual API instead of wrapping every call - hot-path code only reads the state.
 
 <<< @/apps/demo/src/plugins/circuit-breaker/recipes/health-probe.usage.ts{typescript}
 

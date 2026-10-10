@@ -1,5 +1,5 @@
 ---
-title: 'CacheService API Reference — Cache Plugin | NestJS RedisX'
+title: 'CacheService API Reference - Cache Plugin | NestJS RedisX'
 description: 'Reference for CacheService and CACHE_SERVICE token: get, set, getOrSet, wrap, getMany, setMany, invalidateTags, and TTL helpers for programmatic caching.'
 ---
 
@@ -56,8 +56,8 @@ await this.cache.set('user:123', user, {
 ```
 
 ::: info varyBy in Service API vs decorators
-In Service API, `varyBy` accepts **resolved key-value pairs** (`Record<string, string>`) — you provide the values directly.
-In `@Cached` decorator, `varyBy` accepts **key names** (`string[]`) — values are resolved automatically from `contextProvider`.
+In Service API, `varyBy` accepts **resolved key-value pairs** (`Record<string, string>`) - you provide the values directly.
+In `@Cached` decorator, `varyBy` accepts **key names** (`string[]`) - values are resolved automatically from `contextProvider`.
 :::
 
 ### Get or Set (Cache-Aside)
@@ -92,7 +92,7 @@ const user = await this.cache.getOrSet<User>(
 
 ### Hashing Objects into Keys
 
-When the cache key is "this whole request body", use `hashKey()` — the same
+When the cache key is "this whole request body", use `hashKey()` - the same
 **frozen** algorithm the `@Cached` decorator uses for auto-generated keys:
 object keys are sorted recursively (so `{a:1,b:2}` and `{b:2,a:1}` produce the
 same key), the result is SHA-256 truncated to 16 hex chars. No hand-rolled
@@ -104,11 +104,11 @@ same key), the result is SHA-256 truncated to 16 hex chars. No hand-rolled
 The fluent builder offers the same algorithm as `KeyBuilder.hashStable()`.
 
 ::: warning Stability contract
-The `hashKey` algorithm is frozen — its output is part of the public API,
+The `hashKey` algorithm is frozen - its output is part of the public API,
 because your cache keys are derived from it. It will never change in place
 (a change would silently invalidate every derived key on upgrade); any future
 algorithm ships under a new name. `KeyBuilder.hash()` is **deprecated**: it is
-key-order-sensitive and 32-bit (collision-prone) — prefer `hashStable()` /
+key-order-sensitive and 32-bit (collision-prone) - prefer `hashStable()` /
 `hashKey()`. Its output is intentionally unchanged for backward compatibility.
 Scope note: `hashKey` is for cache keys, not identity or security.
 :::
@@ -231,9 +231,9 @@ const stats = await this.cache.getStats();
 
 ## Error Handling
 
-**Read operations** (`get`, `has`, `ttl`, `getMany`, `getKeysByTag`) are **fail-open** — errors return `null`/`false`/`[]`.
+**Read operations** (`get`, `has`, `ttl`, `getMany`, `getKeysByTag`) are **fail-open** - errors return `null`/`false`/`[]`.
 
-**Write operations** (`set`, `del`, `deleteMany`, `setMany`, `getOrSet`, `invalidate`, `clear`) are **fail-closed** — errors throw.
+**Write operations** (`set`, `del`, `deleteMany`, `setMany`, `getOrSet`, `invalidate`, `clear`) are **fail-closed** - errors throw.
 
 | Scenario | Behavior |
 |----------|----------|
@@ -249,5 +249,5 @@ Key validation rules: non-empty, no whitespace, only `a-zA-Z0-9_-:.`, max 1024 c
 
 ## Next Steps
 
-- [Tag Invalidation](./tags) — Advanced tag patterns
-- [Anti-Stampede](./stampede) — Prevent cache stampede
+- [Tag Invalidation](./tags) - Advanced tag patterns
+- [Anti-Stampede](./stampede) - Prevent cache stampede

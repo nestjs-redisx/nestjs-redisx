@@ -1,5 +1,5 @@
 ---
-title: 'Overview — @nestjs-redisx/tracing | NestJS RedisX'
+title: 'Overview - @nestjs-redisx/tracing | NestJS RedisX'
 description: 'Trace Redis commands, cache, locks, and rate-limit operations in NestJS with OpenTelemetry spans, OTLP exporters, and parent-based context propagation.'
 ---
 
@@ -18,10 +18,10 @@ Trace Redis operations across your distributed system.
 
 ## Key Features
 
-- **Spans** — Redis commands, cache operations, lock acquire/release, rate limit checks
-- **Context Propagation** — Trace propagation, parent-child spans
-- **Exporters** — OTLP, Jaeger, Zipkin, Console
-- **Sampling** — Always, Never, Ratio, Parent-based
+- **Spans** - Redis commands, cache operations, lock acquire/release, rate limit checks
+- **Context Propagation** - Trace propagation, parent-child spans
+- **Exporters** - OTLP, Jaeger, Zipkin, Console
+- **Sampling** - Always, Never, Ratio, Parent-based
 
 ## Installation
 

@@ -1,5 +1,5 @@
 ---
-title: 'Troubleshooting — Testing Utilities | NestJS RedisX'
+title: 'Troubleshooting - Testing Utilities | NestJS RedisX'
 description: 'Resolve common issues with the in-memory Redis driver for NestJS RedisX tests: unsupported driver type, unimplemented commands, and Lua execution errors.'
 ---
 
@@ -20,7 +20,7 @@ registerMemoryDriver();
 ## `In-memory driver does not implement command: XYZ`
 
 The code under test issued a command outside the [supported set](./memory-driver#supported-commands).
-This is intentional — the driver fails loudly rather than returning a wrong
+This is intentional - the driver fails loudly rather than returning a wrong
 result. The cache, locks, rate-limit, idempotency, and streams plugins all stay
 within the supported set; if you hit this with one of them, please open an issue.
 
@@ -35,7 +35,7 @@ within the bounded subset, or run that particular test against a real Redis.
 
 The in-memory driver implements standard single-node semantics. If you rely on
 cluster cross-slot behavior or cross-process Pub/Sub, use a real Redis for
-those tests — the in-memory driver targets correctness for the data-structure,
+those tests - the in-memory driver targets correctness for the data-structure,
 scripting, stream consumer-group, and in-process Pub/Sub paths the plugins use. Note that `BLOCK` on
 `XREADGROUP`/`XREAD` returns promptly rather than waiting the full timeout.
 

@@ -95,12 +95,12 @@ Background Jobs + Webhook Delivery + Scheduled Tasks
 
 Each recipe follows this structure:
 
-1. **Problem Statement** — What challenge does this solve?
-2. **Solution Overview** — Architecture diagram
-3. **Non-Goals** — What this does NOT solve
-4. **Implementation** — Step-by-step code
-5. **Failure Scenarios** — What happens when things go wrong
-6. **Monitoring** — Key metrics and alerts
+1. **Problem Statement** - What challenge does this solve?
+2. **Solution Overview** - Architecture diagram
+3. **Non-Goals** - What this does NOT solve
+4. **Implementation** - Step-by-step code
+5. **Failure Scenarios** - What happens when things go wrong
+6. **Monitoring** - Key metrics and alerts
 
 ## Next Steps
 

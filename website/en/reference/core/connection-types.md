@@ -1,5 +1,5 @@
 ---
-title: 'Single, Cluster, and Sentinel Topologies — Core | NestJS RedisX'
+title: 'Single, Cluster, and Sentinel Topologies - Core | NestJS RedisX'
 description: 'Set up Redis single-instance, Cluster, and Sentinel topologies in NestJS with ConnectionConfig, TLS, replica routing, and failover-ready configuration.'
 ---
 
@@ -72,7 +72,7 @@ RedisModule.forRoot({
 ### Connection URL
 
 12-factor platforms (Heroku, Railway, Upstash, docker-compose, `.env`) expose a
-single `REDIS_URL`. Pass it directly as `url` — no manual parsing:
+single `REDIS_URL`. Pass it directly as `url` - no manual parsing:
 
 ```typescript
 RedisModule.forRoot({
@@ -179,7 +179,7 @@ clusterOptions: {
 
 ### NAT Mapping (Docker/Kubernetes)
 
-When cluster nodes report internal IPs that aren't accessible, use `natMap` to map internal addresses to external ones. This works with both drivers — ioredis uses `natMap` natively, node-redis translates it to `nodeAddressMap` automatically:
+When cluster nodes report internal IPs that aren't accessible, use `natMap` to map internal addresses to external ones. This works with both drivers - ioredis uses `natMap` natively, node-redis translates it to `nodeAddressMap` automatically:
 
 ```typescript
 RedisModule.forRoot({
@@ -304,8 +304,8 @@ Options inside `sentinelOptions` vary by driver. Common options work with both:
 | Option | Default | Description |
 |--------|---------|-------------|
 | `sentinelPassword` | - | Password for Sentinel authentication |
-| `enableTLSForSentinelMode` | false | Use TLS for the sentinel hops (requires the `tls` block — it supplies the certificates; data-node TLS follows `tls.enabled` regardless) |
-| `sentinelRetryStrategy` | - | Custom retry strategy for sentinel reconnection (ioredis only — node-redis rotates to the next sentinel instead) |
+| `enableTLSForSentinelMode` | false | Use TLS for the sentinel hops (requires the `tls` block - it supplies the certificates; data-node TLS follows `tls.enabled` regardless) |
+| `sentinelRetryStrategy` | - | Custom retry strategy for sentinel reconnection (ioredis only - node-redis rotates to the next sentinel instead) |
 
 #### ioredis-Specific Options
 
@@ -434,6 +434,6 @@ graph TB
 
 ## Next Steps
 
-- [Health Monitoring](./health-monitoring) — Monitor connection health
-- [Multiple Clients](./multiple-clients) — Named client management
-- [Troubleshooting](./troubleshooting) — Connection issues
+- [Health Monitoring](./health-monitoring) - Monitor connection health
+- [Multiple Clients](./multiple-clients) - Named client management
+- [Troubleshooting](./troubleshooting) - Connection issues

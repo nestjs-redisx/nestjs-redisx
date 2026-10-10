@@ -1,5 +1,5 @@
 ---
-title: 'Alerting Rules — Metrics Plugin | NestJS RedisX'
+title: 'Alerting Rules - Metrics Plugin | NestJS RedisX'
 description: 'Configure Prometheus AlertManager rules for Redis cache hit rate, lock contention, error counters, and latency thresholds in NestJS applications.'
 ---
 
@@ -487,6 +487,6 @@ curl -X POST http://localhost:9093/api/v1/alerts \
 
 ## Next Steps
 
-- [Grafana](./grafana) — Visualize metrics
-- [Troubleshooting](./troubleshooting) — Debug alerts
-- [Overview](./index) — Back to overview
+- [Grafana](./grafana) - Visualize metrics
+- [Troubleshooting](./troubleshooting) - Debug alerts
+- [Overview](./index) - Back to overview

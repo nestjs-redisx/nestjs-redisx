@@ -1,5 +1,5 @@
 ---
-title: 'RateLimitService API — Rate Limit Plugin | NestJS RedisX'
+title: 'RateLimitService API - Rate Limit Plugin | NestJS RedisX'
 description: 'Reference for RATE_LIMIT_SERVICE: check, peek, reset, and getState methods returning remaining points, reset time, and retryAfter in NestJS.'
 ---
 
@@ -85,7 +85,7 @@ async upgradeToPremium(userId: string): Promise<void> {
 With no options, `reset()` sweeps every algorithm variant in **both** stores
 (redis and memory). Pass `{ store }` to target one. Redis-backed keys are
 cleared globally for all instances; memory-backed keys only on the instance
-that executes the call — see [Stores](./stores) for the semantics:
+that executes the call - see [Stores](./stores) for the semantics:
 
 <<< @/apps/demo/src/plugins/rate-limit/store-reset.usage.ts{typescript}
 
@@ -274,5 +274,5 @@ describe('ApiService', () => {
 
 ## Next Steps
 
-- [Algorithms](./algorithms) — Deep dive into algorithms
-- [Testing](./testing) — Test rate-limited code
+- [Algorithms](./algorithms) - Deep dive into algorithms
+- [Testing](./testing) - Test rate-limited code

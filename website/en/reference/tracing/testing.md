@@ -1,6 +1,6 @@
 ---
-title: 'Testing Guide — Tracing Plugin | NestJS RedisX'
-description: 'Test NestJS services that create spans with Vitest — mock ITracingService, stub withSpan, and assert span attributes, events, and exception recording.'
+title: 'Testing Guide - Tracing Plugin | NestJS RedisX'
+description: 'Test NestJS services that create spans with Vitest - mock ITracingService, stub withSpan, and assert span attributes, events, and exception recording.'
 ---
 
 # Testing
@@ -308,7 +308,7 @@ describe('Tracing (integration)', () => {
       await tracing.withSpan('child', async () => {
         const childSpan = tracing.getCurrentSpan();
 
-        // Then — child is in the same trace
+        // Then - child is in the same trace
         expect(childSpan).toBeDefined();
         expect(parentSpan).toBeDefined();
       });
@@ -324,19 +324,19 @@ Integration tests need a running Redis instance. Use `docker-compose up -d` from
 ## Best Practices
 
 ### Do
-- Mock `ITracingService` via `TRACING_SERVICE` token — don't test OpenTelemetry internals
+- Mock `ITracingService` via `TRACING_SERVICE` token - don't test OpenTelemetry internals
 - Make `withSpan` mock actually call the function: `vi.fn().mockImplementation(async (_name, fn) => fn())`
 - Test that `span.end()` is called in `finally` blocks for manual spans
-- Test error recording — verify `recordException` is called on failures
+- Test error recording - verify `recordException` is called on failures
 - Use Given-When-Then comments in every test
 
 ### Don't
-- Don't import `@opentelemetry/api` directly in unit tests — mock via the service interface
-- Don't test span IDs or trace IDs for specific values — they're random
-- Don't use `jest.fn()` — use `vi.fn()` (Vitest)
-- Don't skip testing error paths — tracing is especially valuable for debugging failures
+- Don't import `@opentelemetry/api` directly in unit tests - mock via the service interface
+- Don't test span IDs or trace IDs for specific values - they're random
+- Don't use `jest.fn()` - use `vi.fn()` (Vitest)
+- Don't skip testing error paths - tracing is especially valuable for debugging failures
 
 ## Next Steps
 
-- [Recipes](./recipes) — Real-world tracing patterns
-- [Troubleshooting](./troubleshooting) — Debug issues
+- [Recipes](./recipes) - Real-world tracing patterns
+- [Troubleshooting](./troubleshooting) - Debug issues

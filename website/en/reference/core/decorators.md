@@ -1,5 +1,5 @@
 ---
-title: 'InjectRedis Decorator — Core Module | NestJS RedisX'
+title: 'InjectRedis Decorator - Core Module | NestJS RedisX'
 description: 'Reference for the @InjectRedis decorator in NestJS: inject default and named Redis drivers, combine with RedisService, and wire low-level clients via DI.'
 ---
 
@@ -253,6 +253,6 @@ export class CustomService {
 
 ## Next Steps
 
-- [Driver Abstraction](./driver-abstraction) — ioredis vs node-redis
-- [RedisService](./redis-service) — High-level API
-- [Multiple Clients](./multiple-clients) — Named clients
+- [Driver Abstraction](./driver-abstraction) - ioredis vs node-redis
+- [RedisService](./redis-service) - High-level API
+- [Multiple Clients](./multiple-clients) - Named clients

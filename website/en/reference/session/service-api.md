@@ -1,5 +1,5 @@
 ---
-title: 'Service API — Session Plugin | NestJS RedisX'
+title: 'Service API - Session Plugin | NestJS RedisX'
 description: 'ISessionService reference: getSession, getSessionsByUser, count, countByUser, revoke, revokeAll, revokeAllExcept, recordActivity.'
 ---
 
@@ -17,7 +17,7 @@ constructor(
 
 ### `getSession(sessionId)`
 
-Returns `ISessionInfo<T> | null` — the parsed middleware payload plus plugin metadata. Reading a session enforces the absolute lifetime cap (a capped-out session is destroyed and reported as `null`).
+Returns `ISessionInfo<T> | null` - the parsed middleware payload plus plugin metadata. Reading a session enforces the absolute lifetime cap (a capped-out session is destroyed and reported as `null`).
 
 ```typescript
 const info = await sessions.getSession(req.sessionID);
@@ -43,7 +43,7 @@ Terminates one session; returns `true` when a session existed. The owner's next 
 
 ### `revokeAll(userId)`
 
-Password change / compromise response — terminates every session of the user; returns the number revoked.
+Password change / compromise response - terminates every session of the user; returns the number revoked.
 
 ### `revokeAllExcept(userId, currentSessionId)`
 
@@ -55,7 +55,7 @@ The real product button: "log out everywhere else". A naked `revokeAll` logs out
 
 ### `recordActivity(sessionId, { ip?, userAgent? })`
 
-Stamps request-scoped attributes onto the session metadata and refreshes `lastSeenAt`. No-op for missing sessions. See [Store Adapters — Activity Stamping](/en/reference/session/store-adapters#activity-stamping) for the middleware one-liner.
+Stamps request-scoped attributes onto the session metadata and refreshes `lastSeenAt`. No-op for missing sessions. See [Store Adapters - Activity Stamping](/en/reference/session/store-adapters#activity-stamping) for the middleware one-liner.
 
 ## Errors
 

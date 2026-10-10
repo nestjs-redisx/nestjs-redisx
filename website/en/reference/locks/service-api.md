@@ -1,5 +1,5 @@
 ---
-title: 'LockService API Reference — Locks Plugin | NestJS RedisX'
+title: 'LockService API Reference - Locks Plugin | NestJS RedisX'
 description: 'Reference for LOCK_SERVICE: acquire, tryAcquire, withLock, release, and extend methods for programmatic Redis locking in NestJS providers.'
 ---
 
@@ -86,7 +86,7 @@ if (busy) {
 
 ```typescript
 // Emergency: remove a stuck lock regardless of ownership
-// Use with extreme caution — can break critical sections
+// Use with extreme caution - can break critical sections
 const removed = await this.lockService.forceRelease('stuck:lock');
 
 if (removed) {
@@ -224,7 +224,7 @@ try {
 } catch (error) {
   if (error instanceof LockAcquisitionError) {
     // Could not acquire lock after all retries.
-    // NOTE: error.reason is always 'timeout' in practice — although the type
+    // NOTE: error.reason is always 'timeout' in practice - although the type
     // declares 'timeout' | 'held' | 'error', the service only ever throws with
     // 'timeout' (after retries are exhausted).
     console.error('Lock busy:', error.lockKey, error.reason);
@@ -240,5 +240,5 @@ try {
 
 ## Next Steps
 
-- [Auto-Renewal](./auto-renewal) — Automatic lock extension
-- [Retry Strategies](./retry-strategies) — Configuring retries
+- [Auto-Renewal](./auto-renewal) - Automatic lock extension
+- [Retry Strategies](./retry-strategies) - Configuring retries

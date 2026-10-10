@@ -1,5 +1,5 @@
 ---
-title: 'Recipes — Session Plugin | NestJS RedisX'
+title: 'Recipes - Session Plugin | NestJS RedisX'
 description: 'Production recipes: GitHub-style device page, log out everywhere else, seat limits, compliance lifetime cap, audit events, typed sessions.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Production recipes: GitHub-style device page, log out everywhere e
 
 ## GitHub-Style Device Page
 
-List every signed-in device with browser, IP, and activity — mark the current one:
+List every signed-in device with browser, IP, and activity - mark the current one:
 
 <<< @/apps/demo/src/plugins/session/device-page.usage.ts{typescript}
 
@@ -37,7 +37,7 @@ Banking-grade policies in two options:
 
 ## OIDC Back-Channel Logout
 
-The plugin makes back-channel logout implementable in a few lines: the IdP's `backchannel_logout` request carries the user (`sub`) — resolve it and call `revokeAll(sub)`. No session enumeration, no custom index.
+The plugin makes back-channel logout implementable in a few lines: the IdP's `backchannel_logout` request carries the user (`sub`) - resolve it and call `revokeAll(sub)`. No session enumeration, no custom index.
 
 ```typescript
 @Post('backchannel-logout')

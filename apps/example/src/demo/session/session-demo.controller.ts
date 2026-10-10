@@ -2,7 +2,7 @@
  * @fileoverview Controller demonstrating session management endpoints.
  *
  * The login flow mimics passport's req.logIn: session regeneration (fixation
- * defense) + `session.passport.user` + explicit save — so the plugin's default
+ * defense) + `session.passport.user` + explicit save - so the plugin's default
  * userIdExtractor picks the user up with zero configuration.
  */
 
@@ -50,7 +50,7 @@ export class SessionDemoController {
   }
 
   /**
-   * Who am I — 401-style payload when unauthenticated.
+   * Who am I - 401-style payload when unauthenticated.
    * GET /demo/session/me
    */
   @Get('me')

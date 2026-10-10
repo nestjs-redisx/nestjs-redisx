@@ -8,7 +8,7 @@ export class StatsService {
     private readonly counters: ICounterService,
   ) {}
 
-  // Atomic fleet-wide increment — concurrent updates never get lost.
+  // Atomic fleet-wide increment - concurrent updates never get lost.
   async onArticleView(articleId: string): Promise<number> {
     return this.counters.increment(`views:${articleId}`);
   }
@@ -17,7 +17,7 @@ export class StatsService {
     return this.counters.get(`views:${articleId}`); // 0 when absent
   }
 
-  // Counters go negative freely — clamp in domain code if needed.
+  // Counters go negative freely - clamp in domain code if needed.
   async releaseSeat(eventId: string): Promise<number> {
     return this.counters.decrement(`seats:${eventId}`);
   }

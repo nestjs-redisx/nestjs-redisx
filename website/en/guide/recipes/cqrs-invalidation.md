@@ -87,5 +87,5 @@ users               → All user caches
 
 ## Next Steps
 
-- [Two-Tier Caching](../concepts/two-tier-caching) — Cache architecture
-- [Cache Reference](../../reference/cache/tags) — Tag API
+- [Two-Tier Caching](../concepts/two-tier-caching) - Cache architecture
+- [Cache Reference](../../reference/cache/tags) - Tag API

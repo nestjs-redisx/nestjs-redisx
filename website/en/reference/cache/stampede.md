@@ -1,5 +1,5 @@
 ---
-title: 'Anti-Stampede Protection — Cache Plugin | NestJS RedisX'
+title: 'Anti-Stampede Protection - Cache Plugin | NestJS RedisX'
 description: 'Prevent cache stampede with in-process singleflight coalescing and distributed SET NX EX locks under _stampede: keys across NestJS Redis instances.'
 ---
 
@@ -9,7 +9,7 @@ Prevent multiple processes from hammering your database when cache expires.
 
 ## The Problem
 
-When a popular cache entry expires, many requests arrive simultaneously — potentially overloading the database.
+When a popular cache entry expires, many requests arrive simultaneously - potentially overloading the database.
 
 **Real impact:**
 - 100 concurrent requests × 50ms query = 5 seconds of DB saturation
@@ -21,7 +21,7 @@ When a popular cache entry expires, many requests arrive simultaneously — pote
 Only ONE request fetches from database, others wait for its result.
 
 ::: tip In `mode: 'l1-only'`
-There is no distributed lock (no Redis) — coalescing falls back to **in-process singleflight**, which is the complete, correct protection for a single instance.
+There is no distributed lock (no Redis) - coalescing falls back to **in-process singleflight**, which is the complete, correct protection for a single instance.
 :::
 
 ## How It Works
@@ -31,7 +31,7 @@ Stampede protection uses a **two-layer architecture**:
 ```
 Layer 1: Local Singleflight (in-memory)
   ├─ Coalesces concurrent requests within the SAME process
-  ├─ Uses Promise coalescing — waiters share the same Promise
+  ├─ Uses Promise coalescing - waiters share the same Promise
   └─ No Redis calls, zero latency overhead
 
 Layer 2: Distributed Redis Lock (cross-process)
@@ -44,22 +44,22 @@ Layer 2: Distributed Redis Lock (cross-process)
 **Step by step:**
 
 1. Request arrives, cache miss detected in `getOrSet()` (via Service API or `@Cached` decorator)
-2. Check local flights — if another request is already loading this key, **wait for its Promise**
+2. Check local flights - if another request is already loading this key, **wait for its Promise**
 3. Register new flight (synchronous, before any async work)
 4. Try to acquire distributed Redis lock (`SET _stampede:{key} {value} EX {ttl} NX`)
-5. **Lock held by another instance?** Wait for the lock to clear (bounded by `waitTimeout`), then re-read the cache and serve the value the other instance stored — the load happens **once across all instances**. If the leader failed or the wait times out, fall back to loading locally.
+5. **Lock held by another instance?** Wait for the lock to clear (bounded by `waitTimeout`), then re-read the cache and serve the value the other instance stored - the load happens **once across all instances**. If the leader failed or the wait times out, fall back to loading locally.
 6. **Lock acquired (or coordination fell through):** execute the loader with timeout, then **write the value to the cache while still holding the lock**
 7. Resolve all local waiters with the loaded value
 8. Release Redis lock (Lua script ensures only owner releases)
 
-Local waiters use `Promise.race()` — no polling. Cross-instance waiting polls the lock key every 50 ms, bounded by `waitTimeout`.
+Local waiters use `Promise.race()` - no polling. Cross-instance waiting polls the lock key every 50 ms, bounded by `waitTimeout`.
 
 ::: tip No stale-flight window
-A completed flight is removed synchronously, so a later `getOrSet` after `invalidateTags`/`delete` always re-checks the cache and reloads — it can never be served a pre-invalidation value from a finished flight.
+A completed flight is removed synchronously, so a later `getOrSet` after `invalidateTags`/`delete` always re-checks the cache and reloads - it can never be served a pre-invalidation value from a finished flight.
 :::
 
 ::: tip @Cached includes stampede protection
-Since v1.1.0, `@Cached` decorator uses `getOrSet()` internally — stampede protection is automatic for both decorator and Service API usage.
+Since v1.1.0, `@Cached` decorator uses `getOrSet()` internally - stampede protection is automatic for both decorator and Service API usage.
 :::
 
 ## Configuration
@@ -87,7 +87,7 @@ new CachePlugin({
 Stampede protection is automatic when using `getOrSet`:
 
 ```typescript
-// With getOrSet — stampede protected by default
+// With getOrSet - stampede protected by default
 const data = await this.cache.getOrSet(
   'popular-key',
   () => this.db.fetchData(),
@@ -142,7 +142,7 @@ Lock keys in Redis use the format `_stampede:{cacheKey}`. To inspect active lock
 KEYS _stampede:*
 ```
 
-If a lock is stuck (rare — TTL should auto-expire):
+If a lock is stuck (rare - TTL should auto-expire):
 
 ```bash
 # Check TTL
@@ -163,5 +163,5 @@ DEL _stampede:popular-key
 
 ## Next Steps
 
-- [Stale-While-Revalidate](./swr) — Serve stale data while refreshing
-- [Monitoring](./monitoring) — Track cache performance
+- [Stale-While-Revalidate](./swr) - Serve stale data while refreshing
+- [Monitoring](./monitoring) - Track cache performance

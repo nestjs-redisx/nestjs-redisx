@@ -1,5 +1,5 @@
 ---
-title: 'Monitoring and Metrics — Streams Plugin | NestJS RedisX'
+title: 'Monitoring and Metrics - Streams Plugin | NestJS RedisX'
 description: 'Monitor Redis Streams health with redisx_stream_messages_consumed_total, consumer lag, PEL size, DLQ depth, and Grafana queries for NestJS deployments.'
 ---
 
@@ -36,7 +36,7 @@ Monitor stream health and performance.
 
 ### Built-in Metrics (redisx_*)
 
-These metrics are automatically collected by the Metrics plugin — no extra code needed:
+These metrics are automatically collected by the Metrics plugin - no extra code needed:
 
 **Processing Rate (success):**
 
@@ -78,7 +78,7 @@ rate(redisx_stream_messages_published_total{stream="orders"}[5m])
 
 ### Custom Metrics
 
-The examples above (in "Collect Metrics" and "Instrument Consumers") show how to add your own application-level metrics for stream length, consumer lag, pending counts, and DLQ size. These are not built-in — you implement them using the `IStreamProducer.getStreamInfo()` and `IStreamConsumer.getPending()` APIs with your own Prometheus registry.
+The examples above (in "Collect Metrics" and "Instrument Consumers") show how to add your own application-level metrics for stream length, consumer lag, pending counts, and DLQ size. These are not built-in - you implement them using the `IStreamProducer.getStreamInfo()` and `IStreamConsumer.getPending()` APIs with your own Prometheus registry.
 
 **Stream Length (custom):**
 
@@ -268,7 +268,7 @@ export class RealtimeMonitor {
   async printStats() {
     const streams = ['orders', 'notifications'];
 
-    // IStreamConsumer has no getGroups() — track known group names
+    // IStreamConsumer has no getGroups() - track known group names
     const groupNames = ['processors', 'notifications'];
 
     for (const stream of streams) {
@@ -343,5 +343,5 @@ catch (error) {
 
 ## Next Steps
 
-- [Testing](./testing) — Test stream consumers
-- [Troubleshooting](./troubleshooting) — Debug common issues
+- [Testing](./testing) - Test stream consumers
+- [Troubleshooting](./troubleshooting) - Debug common issues

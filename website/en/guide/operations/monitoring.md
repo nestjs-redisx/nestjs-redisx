@@ -1,5 +1,5 @@
 ---
-title: 'Production Monitoring — NestJS RedisX Operations | NestJS RedisX'
+title: 'Production Monitoring - NestJS RedisX Operations | NestJS RedisX'
 description: 'Monitor cache hit rate, lock wait times, rate limit rejections, and stream lag with Prometheus metrics, Grafana dashboards, and SLOs for NestJS RedisX.'
 ---
 
@@ -174,5 +174,5 @@ export class HealthController {
 
 ## Next Steps
 
-- [Alerting](./alerting) — Configure alerts
-- [Runbooks](./runbooks) — Incident response
+- [Alerting](./alerting) - Configure alerts
+- [Runbooks](./runbooks) - Incident response

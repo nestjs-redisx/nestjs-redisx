@@ -1,5 +1,5 @@
 ---
-title: 'Testing Strategies — Streams Plugin | NestJS RedisX'
+title: 'Testing Strategies - Streams Plugin | NestJS RedisX'
 description: 'Test NestJS Redis Streams with Vitest: mock STREAM_PRODUCER publish, simulate IStreamMessage ack flows, and run consumer groups against real Redis fixtures.'
 ---
 
@@ -506,5 +506,5 @@ const mockPaymentGateway = {
 
 ## Next Steps
 
-- [Recipes](./recipes) — Real-world examples
-- [Troubleshooting](./troubleshooting) — Debug test failures
+- [Recipes](./recipes) - Real-world examples
+- [Troubleshooting](./troubleshooting) - Debug test failures

@@ -1,6 +1,6 @@
 ---
-title: 'Configuration Reference — Tracing Plugin | NestJS RedisX'
-description: 'Reference for ITracingPluginOptions — service name, OTLP endpoint, Jaeger/Zipkin/console exporters, samplers, and headers for NestJS Redis tracing.'
+title: 'Configuration Reference - Tracing Plugin | NestJS RedisX'
+description: 'Reference for ITracingPluginOptions - service name, OTLP endpoint, Jaeger/Zipkin/console exporters, samplers, and headers for NestJS Redis tracing.'
 ---
 
 # Configuration
@@ -20,7 +20,7 @@ interface ITracingPluginOptions {
   // Enable/disable tracing
   enabled?: boolean;                    // @default true
 
-  // Tracer provider strategy — see "Provider Modes" below
+  // Tracer provider strategy - see "Provider Modes" below
   provider?: 'auto' | 'external' | 'standalone';  // @default 'auto'
 
   // Service identification
@@ -54,8 +54,8 @@ interface ITracingPluginOptions {
   sampleRate?: number;             // @default 1.0
 
   // Enable/disable features
-  traceRedisCommands?: boolean | 'force';  // @default true — native redis.<COMMAND> spans, no extra packages
-  traceHttpRequests?: boolean;   // @default true — startup check only, see below
+  traceRedisCommands?: boolean | 'force';  // @default true - native redis.<COMMAND> spans, no extra packages
+  traceHttpRequests?: boolean;   // @default true - startup check only, see below
   pluginTracing?: boolean;       // @default true
 }
 ```
@@ -74,7 +74,7 @@ The `provider` option controls where spans go:
 In every mode, if a global tracer provider is already registered when the plugin initializes, the plugin uses it and does not touch the global registration. With `provider: 'standalone'` this is additionally logged as a warning, since the requested own provider was not created.
 :::
 
-Apps with their own OpenTelemetry bootstrap need no configuration at all — `'auto'` detects the registered provider and RedisX spans join the application's traces, exporter and sampler included. See [OpenTelemetry Integration](/en/reference/tracing/opentelemetry) for bootstrap ordering details.
+Apps with their own OpenTelemetry bootstrap need no configuration at all - `'auto'` detects the registered provider and RedisX spans join the application's traces, exporter and sampler included. See [OpenTelemetry Integration](/en/reference/tracing/opentelemetry) for bootstrap ordering details.
 
 ## Service Identification
 
@@ -108,7 +108,7 @@ OpenTelemetry Protocol - recommended for production.
 
 ### Jaeger Exporter
 
-Export to Jaeger via OTLP protocol. Internally uses the same OTLP exporter — just point to your Jaeger OTLP endpoint.
+Export to Jaeger via OTLP protocol. Internally uses the same OTLP exporter - just point to your Jaeger OTLP endpoint.
 
 ```typescript
 {
@@ -283,14 +283,14 @@ Add custom attributes to all spans.
 }
 ```
 
-Command tracing is **native**: every command executed through RedisX drivers is wrapped in a `redis.<COMMAND>` CLIENT span at the driver layer — no external instrumentation package needed. It covers all named clients and runtime-created connections (e.g. the Pub/Sub subscriber), honors `spans.excludeCommands` / `includeArgs` / `includeResult` / `maxArgLength`, and each span parents onto the active trace context, so Redis commands appear inside the HTTP request trace that triggered them.
+Command tracing is **native**: every command executed through RedisX drivers is wrapped in a `redis.<COMMAND>` CLIENT span at the driver layer - no external instrumentation package needed. It covers all named clients and runtime-created connections (e.g. the Pub/Sub subscriber), honors `spans.excludeCommands` / `includeArgs` / `includeResult` / `maxArgLength`, and each span parents onto the active trace context, so Redis commands appear inside the HTTP request trace that triggered them.
 
-::: warning Either the native hook or an OTel instrumentation — not both
-If `@opentelemetry/instrumentation-ioredis` (or `instrumentation-redis-4`) is active, both it and the native hook would emit a span per command. The plugin detects an active instrumentation and pauses its hook automatically — the check runs per command, so instrumentation enabled late or disabled at runtime is handled too, with one log line per state change. Pick ONE source of Redis spans: either drop the Redis instrumentation from your OTel bootstrap (the native hook carries the same `db.*` attributes), or set `traceRedisCommands: false`. To deliberately emit both, set `traceRedisCommands: 'force'`.
+::: warning Either the native hook or an OTel instrumentation - not both
+If `@opentelemetry/instrumentation-ioredis` (or `instrumentation-redis-4`) is active, both it and the native hook would emit a span per command. The plugin detects an active instrumentation and pauses its hook automatically - the check runs per command, so instrumentation enabled late or disabled at runtime is handled too, with one log line per state change. Pick ONE source of Redis spans: either drop the Redis instrumentation from your OTel bootstrap (the native hook carries the same `db.*` attributes), or set `traceRedisCommands: false`. To deliberately emit both, set `traceRedisCommands: 'force'`.
 :::
 
 ::: warning traceHttpRequests is a startup check
-Incoming-HTTP instrumentation cannot be registered by this plugin — `@opentelemetry/instrumentation-http` must load **before** the `http` module is imported, i.e. in your own OpenTelemetry bootstrap file. With `traceHttpRequests: true` the plugin only verifies the package is installed and logs a warning when it is missing.
+Incoming-HTTP instrumentation cannot be registered by this plugin - `@opentelemetry/instrumentation-http` must load **before** the `http` module is imported, i.e. in your own OpenTelemetry bootstrap file. With `traceHttpRequests: true` the plugin only verifies the package is installed and logs a warning when it is missing.
 :::
 
 ### Trace Plugin Operations
@@ -400,6 +400,6 @@ exporter: { type: 'console' }
 
 ## Next Steps
 
-- [OpenTelemetry](./opentelemetry) — OTel integration
-- [Exporters](./exporters) — Exporter setup
-- [Sampling](./sampling) — Sampling strategies
+- [OpenTelemetry](./opentelemetry) - OTel integration
+- [Exporters](./exporters) - Exporter setup
+- [Sampling](./sampling) - Sampling strategies

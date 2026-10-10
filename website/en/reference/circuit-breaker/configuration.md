@@ -1,5 +1,5 @@
 ---
-title: 'Configuration — Circuit Breaker Plugin | NestJS RedisX'
+title: 'Configuration - Circuit Breaker Plugin | NestJS RedisX'
 description: 'Configure @nestjs-redisx/circuit-breaker: failure threshold, rolling window, open duration, half-open probes, key prefix, and error policy.'
 ---
 
@@ -20,9 +20,9 @@ description: 'Configure @nestjs-redisx/circuit-breaker: failure threshold, rolli
 | `keyPrefix` | `string` | `'cb:'` | Redis key prefix for circuit state. |
 | `client` | `string` | `'default'` | Named Redis client to use. |
 | `errorPolicy` | `'fail-open' \| 'fail-closed'` | `'fail-closed'` | Behaviour when the **state store** is unavailable. |
-| `errorFactory` | `(key, snapshot) => Error` | — | Custom error thrown when the breaker rejects a call. |
+| `errorFactory` | `(key, snapshot) => Error` | - | Custom error thrown when the breaker rejects a call. |
 
-All numeric knobs are validated at bootstrap (integers ≥ 1; `successThreshold <= halfOpenMaxCalls`) — an invalid config throws `InvalidCircuitBreakerConfigError` instead of silently misbehaving.
+All numeric knobs are validated at bootstrap (integers ≥ 1; `successThreshold <= halfOpenMaxCalls`) - an invalid config throws `InvalidCircuitBreakerConfigError` instead of silently misbehaving.
 
 ## Synchronous Setup
 
@@ -36,7 +36,7 @@ Load option values from `ConfigService` with `CircuitBreakerPlugin.registerAsync
 
 ## Error Policy
 
-`errorPolicy` decides what happens when the **state store itself** (Redis) is unavailable — it does **not** affect what happens when the breaker is simply OPEN (that always rejects unless you provide a fallback).
+`errorPolicy` decides what happens when the **state store itself** (Redis) is unavailable - it does **not** affect what happens when the breaker is simply OPEN (that always rejects unless you provide a fallback).
 
 - `fail-closed` (default): throw `CircuitBreakerStoreError`.
 - `fail-open`: run the guarded call anyway, favouring availability.

@@ -1,5 +1,5 @@
 ---
-title: 'Observability Strategy — NestJS RedisX Concepts | NestJS RedisX'
+title: 'Observability Strategy - NestJS RedisX Concepts | NestJS RedisX'
 description: 'Plan observability for NestJS RedisX: choose the right counters, histograms, and gauges, wire logs and traces, and define SLOs and alerting thresholds.'
 ---
 
@@ -213,6 +213,6 @@ span.setAttribute('stream.message_id', id);
 
 ## Next Steps
 
-- [Prometheus & Grafana Setup](../integration/prometheus-grafana) — Implementation guide
-- [OpenTelemetry Setup](../integration/opentelemetry) — Tracing setup
-- [Operations: Monitoring](../operations/monitoring) — Production monitoring
+- [Prometheus & Grafana Setup](../integration/prometheus-grafana) - Implementation guide
+- [OpenTelemetry Setup](../integration/opentelemetry) - Tracing setup
+- [Operations: Monitoring](../operations/monitoring) - Production monitoring

@@ -8,7 +8,7 @@ import { AppModule } from './types';
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
 
-  // One line replaces connect-redis — passport and req.session keep working.
+  // One line replaces connect-redis - passport and req.session keep working.
   const store = app.get<ISessionStore>(SESSION_STORE);
   app.use(
     session({

@@ -1,5 +1,5 @@
 ---
-title: 'Backpressure Control — Streams Plugin | NestJS RedisX'
+title: 'Backpressure Control - Streams Plugin | NestJS RedisX'
 description: 'Scale Redis Streams consumers in NestJS by tuning batchSize, concurrency, blockTimeout, and semaphore patterns to throttle throughput without dropping work.'
 ---
 
@@ -333,5 +333,5 @@ await consumer.claimIdle('orders', 'processors', 'worker-recovery', 30000); // i
 
 ## Next Steps
 
-- [Patterns](./patterns) — Common streaming patterns
-- [Monitoring](./monitoring) — Track performance
+- [Patterns](./patterns) - Common streaming patterns
+- [Monitoring](./monitoring) - Track performance

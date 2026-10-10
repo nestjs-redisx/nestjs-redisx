@@ -174,5 +174,5 @@ new TracingPlugin({
 
 ## Next Steps
 
-- [Prometheus & Grafana](./prometheus-grafana) — Metrics setup
-- [Operations: Monitoring](../operations/monitoring) — Production monitoring
+- [Prometheus & Grafana](./prometheus-grafana) - Metrics setup
+- [Operations: Monitoring](../operations/monitoring) - Production monitoring

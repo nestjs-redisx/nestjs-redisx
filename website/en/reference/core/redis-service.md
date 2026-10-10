@@ -1,5 +1,5 @@
 ---
-title: 'RedisService API — Core Module | NestJS RedisX'
+title: 'RedisService API - Core Module | NestJS RedisX'
 description: 'Reference for RedisService high-level helpers: ping, isConnected, get/set, del, pipelines, and delegating to named clients across NestJS services.'
 ---
 
@@ -574,6 +574,6 @@ await this.redis.flushall();
 
 ## Next Steps
 
-- [Multiple Clients](./multiple-clients) — Named client management
-- [Connection Types](./connection-types) — Single, Cluster, Sentinel
-- [Decorators](./decorators) — @InjectRedis usage
+- [Multiple Clients](./multiple-clients) - Named client management
+- [Connection Types](./connection-types) - Single, Cluster, Sentinel
+- [Decorators](./decorators) - @InjectRedis usage

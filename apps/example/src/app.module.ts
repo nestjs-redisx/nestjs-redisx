@@ -58,7 +58,7 @@ import { IntegrationDemoModule } from './demo/integration/integration-demo.modul
       envFilePath: ['.env.local', '.env'],
     }),
 
-    // ScheduleModule — @Cron fires on every instance; @LeaderOnly gates the body
+    // ScheduleModule - @Cron fires on every instance; @LeaderOnly gates the body
     ScheduleModule.forRoot(),
 
     // All plugins are registered via RedisModule.forRootAsync()
@@ -70,18 +70,18 @@ import { IntegrationDemoModule } from './demo/integration/integration-demo.modul
       // Plugins OUTSIDE useFactory - they must be available statically
       // Plugin configuration is loaded from process.env (statically)
       plugins: [
-        // MetricsPlugin — Prometheus metrics (FIRST for integration with other plugins)
+        // MetricsPlugin - Prometheus metrics (FIRST for integration with other plugins)
         new MetricsPlugin({
           enabled: true,
           exposeEndpoint: true,
         }),
 
-        // TracingPlugin — OpenTelemetry distributed tracing
+        // TracingPlugin - OpenTelemetry distributed tracing
         new TracingPlugin({
           enabled: true,
         }),
 
-        // CachePlugin — L1+L2 caching, SWR, tag invalidation (async via ConfigService)
+        // CachePlugin - L1+L2 caching, SWR, tag invalidation (async via ConfigService)
         CachePlugin.registerAsync({
           imports: [ConfigModule],
           inject: [ConfigService],
@@ -101,13 +101,13 @@ import { IntegrationDemoModule } from './demo/integration/integration-demo.modul
           }),
         }),
 
-        // LocksPlugin — distributed locks with auto-renewal
+        // LocksPlugin - distributed locks with auto-renewal
         new LocksPlugin({
           defaultTtl: parseInt(process.env.LOCK_DEFAULT_TTL || '30000', 10),
           autoRenew: { enabled: process.env.LOCK_AUTO_RENEW !== 'false' },
         }),
 
-        // RateLimitPlugin — request rate limiting (fixed/sliding/token-bucket)
+        // RateLimitPlugin - request rate limiting (fixed/sliding/token-bucket)
         new RateLimitPlugin({
           defaultPoints: parseInt(process.env.RATE_LIMIT_POINTS || '100', 10),
           defaultDuration: parseInt(
@@ -116,12 +116,12 @@ import { IntegrationDemoModule } from './demo/integration/integration-demo.modul
           ),
         }),
 
-        // IdempotencyPlugin — request deduplication with replay
+        // IdempotencyPlugin - request deduplication with replay
         new IdempotencyPlugin({
           defaultTtl: 3600000,
         }),
 
-        // SessionPlugin — express-session store + device page / revocation / seat limits
+        // SessionPlugin - express-session store + device page / revocation / seat limits
         new SessionPlugin({
           maxSessionsPerUser: parseInt(
             process.env.SESSION_MAX_PER_USER || '5',
@@ -134,7 +134,7 @@ import { IntegrationDemoModule } from './demo/integration/integration-demo.modul
           ),
         }),
 
-        // LeaderPlugin — run cron/singleton work on exactly one instance
+        // LeaderPlugin - run cron/singleton work on exactly one instance
         new LeaderPlugin({
           ttlMs: parseInt(process.env.LEADER_TTL_MS || '15000', 10),
           onElected: (group) => console.log(`[leader] elected for "${group}"`),
@@ -142,7 +142,7 @@ import { IntegrationDemoModule } from './demo/integration/integration-demo.modul
             console.log(`[leader] lost "${group}" (${reason})`),
         }),
 
-        // StreamsPlugin — Redis Streams with consumer groups and DLQ
+        // StreamsPlugin - Redis Streams with consumer groups and DLQ
         // Uses dedicated 'streams' client to avoid blocking the shared connection
         new StreamsPlugin({
           client: 'streams',

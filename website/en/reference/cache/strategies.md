@@ -1,5 +1,5 @@
 ---
-title: 'L1 Eviction Strategies — Cache Plugin | NestJS RedisX'
+title: 'L1 Eviction Strategies - Cache Plugin | NestJS RedisX'
 description: 'Compare LRU and LFU eviction policies, lazy TTL cleanup, and maxSize tuning for the in-memory L1 tier of @nestjs-redisx/cache on top of Redis.'
 ---
 
@@ -41,11 +41,11 @@ new CachePlugin({
 | `ttl` | `60` | L1 entry TTL in seconds |
 | `evictionPolicy` | `'lru'` | Eviction policy: `'lru'` or `'lfu'` |
 
-## LRU (Least Recently Used) — Default
+## LRU (Least Recently Used) - Default
 
 Evicts the entry that hasn't been accessed for the longest time.
 
-**Implementation:** Doubly-linked list. On every `get()` or `set()` (update), the node is moved to the **head** (`moveToFront`). The **tail** is always the least recently used — evicted first.
+**Implementation:** Doubly-linked list. On every `get()` or `set()` (update), the node is moved to the **head** (`moveToFront`). The **tail** is always the least recently used - evicted first.
 
 ```
 Head (most recent) ←→ ... ←→ ... ←→ Tail (least recent = evict candidate)
@@ -98,11 +98,11 @@ Cache (max 3): A(freq=5), B(freq=2), C(freq=3)
 | Evicts | Tail node (oldest access) | Lowest frequency (tiebreak: oldest insert) |
 | Best for | General use, recency matters | Stable popularity patterns |
 | Weakness | Scan pollution (one-time reads push out hot data) | Slow to adapt to popularity changes |
-| Eviction complexity | O(1) — always tail | O(n) — scan all nodes for min frequency |
+| Eviction complexity | O(1) - always tail | O(n) - scan all nodes for min frequency |
 
 ## Standalone Strategy Utilities
 
-The package also exports standalone strategy classes implementing the `IEvictionStrategy` interface. These are **not used by the L1 adapter internally** — they are utilities for building custom cache implementations.
+The package also exports standalone strategy classes implementing the `IEvictionStrategy` interface. These are **not used by the L1 adapter internally** - they are utilities for building custom cache implementations.
 
 ```typescript
 import {
@@ -125,8 +125,8 @@ import {
 | `size()` | Get number of tracked keys |
 
 All three strategies also provide:
-- `getKeys()` — all keys in eviction order (first = next victim)
-- `getVictims(targetSize)` — keys to evict to reach target size
+- `getKeys()` - all keys in eviction order (first = next victim)
+- `getVictims(targetSize)` - keys to evict to reach target size
 
 ### Available Strategies
 
@@ -134,7 +134,7 @@ All three strategies also provide:
 |-------|-------------------|-------------|
 | `LruStrategy` | `evictionPolicy: 'lru'` | Timestamp-based LRU |
 | `LfuStrategy` | `evictionPolicy: 'lfu'` | Frequency counter with insertion-order tiebreaker |
-| `FifoStrategy` | *(not configurable)* | Simple queue — insertion order only, `recordAccess` is a no-op |
+| `FifoStrategy` | *(not configurable)* | Simple queue - insertion order only, `recordAccess` is a no-op |
 
 ::: info FIFO is utility-only
 `FifoStrategy` is exported for custom use but **not available** via `evictionPolicy` config. The L1 adapter only supports `'lru'` and `'lfu'`.
@@ -193,17 +193,17 @@ maxmemory-samples 5
 ## Best Practices
 
 ### Do
-- Use **LRU** for most cases — it's simpler and O(1) eviction
+- Use **LRU** for most cases - it's simpler and O(1) eviction
 - Use **LFU** when you have clear hot/cold separation and want hot data to survive
-- Monitor hit rates via `getStats()` — if hit rate < 50%, consider increasing `maxSize`
+- Monitor hit rates via `getStats()` - if hit rate < 50%, consider increasing `maxSize`
 - Set L1 TTL shorter than L2 TTL to keep memory bounded
 
 ### Don't
-- Set `maxSize` too low — causes thrashing (constant evict/insert)
+- Set `maxSize` too low - causes thrashing (constant evict/insert)
 - Use `noeviction` in Redis without monitoring memory usage
-- Assume L1 TTL = L2 TTL — they are independent (L1 default: 60s, L2 default: 3600s)
+- Assume L1 TTL = L2 TTL - they are independent (L1 default: 60s, L2 default: 3600s)
 
 ## Next Steps
 
-- [Monitoring](./monitoring) — Track cache performance
-- [Testing](./testing) — Test cache behavior
+- [Monitoring](./monitoring) - Track cache performance
+- [Testing](./testing) - Test cache behavior

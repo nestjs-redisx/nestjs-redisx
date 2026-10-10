@@ -9,7 +9,7 @@ import { CircuitBreakerPlugin } from '@nestjs-redisx/circuit-breaker';
       plugins: [
         new CircuitBreakerPlugin({
           // errorPolicy governs what happens when the STATE STORE (Redis) is
-          // unavailable — not when the breaker itself is OPEN.
+          // unavailable - not when the breaker itself is OPEN.
           //
           // 'fail-open'  -> run the guarded call anyway (favor availability)
           // 'fail-closed' (default) -> throw CircuitBreakerStoreError

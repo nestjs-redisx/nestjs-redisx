@@ -12,7 +12,7 @@ description: 'CountersPlugin options: key prefix, named clients, async registrat
 | `client` | `string` | `'default'` | Named Redis client to use |
 | `keyPrefix` | `string` | `'_ctr:'` | Prefix for counter keys (must be non-empty) |
 
-The plugin is deliberately thin — behavior lives in per-call options.
+The plugin is deliberately thin - behavior lives in per-call options.
 
 ## Synchronous Setup
 
@@ -45,4 +45,4 @@ CountersPlugin.registerAsync({
 | `value` (set) | Safe integer |
 | `ttl` | Positive integer milliseconds |
 
-Violations throw `InvalidCounterConfigError` before any Redis round-trip — `Number(unsetEnvVar)` (NaN) is reported truthfully rather than corrupting a counter.
+Violations throw `InvalidCounterConfigError` before any Redis round-trip - `Number(unsetEnvVar)` (NaN) is reported truthfully rather than corrupting a counter.

@@ -1,5 +1,5 @@
 ---
-title: 'Failure Modes — NestJS RedisX Architecture | NestJS RedisX'
+title: 'Failure Modes - NestJS RedisX Architecture | NestJS RedisX'
 description: 'Plan graceful degradation when Redis drops: understand default plugin fallbacks, circuit breakers, and fail-open vs fail-closed strategies in NestJS apps.'
 ---
 
@@ -143,8 +143,8 @@ export class HealthController {
 
 ### Cache: Serve Stale
 
-Two independent policies compose here: SWR (freshness — serve stale while
-refreshing in the background) and stale-if-error (availability — serve the
+Two independent policies compose here: SWR (freshness - serve stale while
+refreshing in the background) and stale-if-error (availability - serve the
 last known value while the loader keeps failing):
 
 ```typescript
@@ -258,5 +258,5 @@ rate(redis_fallback_total[5m])
 
 ## Next Steps
 
-- [Connection Management](./connection-management) — Pool and timeout config
-- [Deployment](./deployment) — High availability topologies
+- [Connection Management](./connection-management) - Pool and timeout config
+- [Deployment](./deployment) - High availability topologies

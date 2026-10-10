@@ -1,11 +1,11 @@
 ---
-title: 'Testing — Session Plugin | NestJS RedisX'
-description: 'Test session flows without Redis using the @nestjs-redisx/testing in-memory driver — Lua scripts included.'
+title: 'Testing - Session Plugin | NestJS RedisX'
+description: 'Test session flows without Redis using the @nestjs-redisx/testing in-memory driver - Lua scripts included.'
 ---
 
 # Testing
 
-The session store runs fully on the [`@nestjs-redisx/testing`](/en/reference/testing/) in-memory driver — including its Lua scripts — so login, device-page, revocation, and seat-limit flows are testable hermetically, with no Redis and no mocks of your own code.
+The session store runs fully on the [`@nestjs-redisx/testing`](/en/reference/testing/) in-memory driver - including its Lua scripts - so login, device-page, revocation, and seat-limit flows are testable hermetically, with no Redis and no mocks of your own code.
 
 ## Unit / Integration Without Redis
 

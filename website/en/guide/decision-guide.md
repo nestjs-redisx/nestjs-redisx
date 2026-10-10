@@ -138,8 +138,8 @@ All plugins depend on Core. Metrics and Tracing enhance other plugins with obser
 
 Once you've identified your plugins:
 
-1. [Installation](./installation) — Install required packages
-2. [Quick Start](./quick-start) — Basic configuration
+1. [Installation](./installation) - Install required packages
+2. [Quick Start](./quick-start) - Basic configuration
 3. Choose your concept guide:
    - [Two-Tier Caching](./concepts/two-tier-caching)
    - [Distributed Coordination](./concepts/distributed-coordination)

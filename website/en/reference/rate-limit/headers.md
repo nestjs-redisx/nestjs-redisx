@@ -1,5 +1,5 @@
 ---
-title: 'Response Headers — Rate Limit Plugin | NestJS RedisX'
+title: 'Response Headers - Rate Limit Plugin | NestJS RedisX'
 description: 'Send X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, and Retry-After headers from NestJS Redis rate limit responses to clients.'
 ---
 
@@ -324,5 +324,5 @@ app.enableCors({
 
 ## Next Steps
 
-- [Monitoring](./monitoring) — Track rate limits
-- [Testing](./testing) — Test with headers
+- [Monitoring](./monitoring) - Track rate limits
+- [Testing](./testing) - Test with headers

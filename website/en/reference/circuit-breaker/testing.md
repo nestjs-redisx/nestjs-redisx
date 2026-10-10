@@ -1,5 +1,5 @@
 ---
-title: 'Testing Guide — Circuit Breaker Plugin | NestJS RedisX'
+title: 'Testing Guide - Circuit Breaker Plugin | NestJS RedisX'
 description: 'Test NestJS code guarded by the circuit breaker: unit-test the pure state machine, mock CircuitBreakerService, or run the real plugin on the in-memory driver.'
 ---
 
@@ -9,7 +9,7 @@ There are three levels, from fastest to most realistic.
 
 ## 1. Unit-test the pure state machine
 
-`CircuitBreakerState` is pure and time-injected — pass explicit `now` values, no Redis, no fake timers:
+`CircuitBreakerState` is pure and time-injected - pass explicit `now` values, no Redis, no fake timers:
 
 ```typescript
 import { describe, it, expect } from 'vitest';
@@ -70,7 +70,7 @@ describe('UsersService', () => {
 
 ## 3. Run the real plugin on the in-memory driver (no Redis)
 
-`@nestjs-redisx/testing` provides an in-memory Redis driver that runs the **real** plugin — including the Lua scripts — so you can exercise the full closed → open → half-open → closed cycle without a Redis server:
+`@nestjs-redisx/testing` provides an in-memory Redis driver that runs the **real** plugin - including the Lua scripts - so you can exercise the full closed → open → half-open → closed cycle without a Redis server:
 
 ```typescript
 import { Test } from '@nestjs/testing';
@@ -106,5 +106,5 @@ describe('breaker on the memory driver', () => {
 ```
 
 ::: tip Time-dependent transitions
-The distributed store reads time via `Date.now()`, so tests that cross the OPEN cooldown either wait for a small `openDurationMs` or assert the pre-cooldown behaviour. The pure `CircuitBreakerState` (level 1) needs no waiting — pass the `now` you want.
+The distributed store reads time via `Date.now()`, so tests that cross the OPEN cooldown either wait for a small `openDurationMs` or assert the pre-cooldown behaviour. The pure `CircuitBreakerState` (level 1) needs no waiting - pass the `now` you want.
 :::

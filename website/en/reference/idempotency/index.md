@@ -1,5 +1,5 @@
 ---
-title: 'Overview — Idempotency Plugin | NestJS RedisX'
+title: 'Overview - Idempotency Plugin | NestJS RedisX'
 description: 'Deduplicate HTTP requests and guarantee exactly-once execution in NestJS with @nestjs-redisx/idempotency, Idempotency-Key headers, fingerprints, and replay.'
 ---
 
@@ -19,12 +19,12 @@ The Idempotency Plugin provides idempotency key handling with request fingerprin
 
 ## Key Features
 
-- **Idempotency Key Handling** — Header validation and processing
-- **Request Fingerprinting** — Detect mismatched requests with same key
-- **Response Replay** — Return cached response for duplicate requests
-- **Concurrent Request Handling** — Second request waits for first to complete
-- **Configurable TTL** — Control how long responses are cached
-- **Header Preservation** — Original response headers included in replay
+- **Idempotency Key Handling** - Header validation and processing
+- **Request Fingerprinting** - Detect mismatched requests with same key
+- **Response Replay** - Return cached response for duplicate requests
+- **Concurrent Request Handling** - Second request waits for first to complete
+- **Configurable TTL** - Control how long responses are cached
+- **Header Preservation** - Original response headers included in replay
 
 ## Installation
 

@@ -140,7 +140,7 @@ export class RateLimitDemoController {
   /**
    * In-memory (per-instance) store: the counter lives in process memory, so
    * the check adds zero Redis round-trip to the request. Each instance
-   * enforces its own limit — ideal for cheap anti-abuse limiting on hot
+   * enforces its own limit - ideal for cheap anti-abuse limiting on hot
    * routes when exact global counts are not required.
    *
    * @example

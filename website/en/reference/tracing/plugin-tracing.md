@@ -1,6 +1,6 @@
 ---
-title: 'Automatic Plugin Tracing — Tracing Plugin | NestJS RedisX'
-description: 'Automatic span creation for Cache, Locks, Rate Limit, Streams, and Idempotency plugins — span names, attributes, and parent-child nesting in NestJS.'
+title: 'Automatic Plugin Tracing - Tracing Plugin | NestJS RedisX'
+description: 'Automatic span creation for Cache, Locks, Rate Limit, Streams, and Idempotency plugins - span names, attributes, and parent-child nesting in NestJS.'
 ---
 
 # Plugin Tracing
@@ -433,6 +433,6 @@ Check Jaeger/Tempo for trace count and adjust sampling accordingly.
 
 ## Next Steps
 
-- [Spans](./spans) — Create custom spans
-- [Sampling](./sampling) — Sampling strategies
-- [Visualization](./visualization) — Analyze traces
+- [Spans](./spans) - Create custom spans
+- [Sampling](./sampling) - Sampling strategies
+- [Visualization](./visualization) - Analyze traces

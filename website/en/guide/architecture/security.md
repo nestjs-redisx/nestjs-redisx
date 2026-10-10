@@ -1,5 +1,5 @@
 ---
-title: 'Security — NestJS RedisX Architecture | NestJS RedisX'
+title: 'Security - NestJS RedisX Architecture | NestJS RedisX'
 description: 'Secure Redis with NestJS RedisX: enable TLS, configure ACL users, classify sensitive data, rotate credentials, and harden networks for production workloads.'
 ---
 
@@ -160,7 +160,7 @@ function hashPii(value: string): string {
   return createHash('sha256').update(value).digest('hex').slice(0, 16);
 }
 
-// Hash before calling cached method — raw PII never in key
+// Hash before calling cached method - raw PII never in key
 async getUserByEmail(email: string) {
   return this.findByEmailHash(hashPii(email));
 }
@@ -275,5 +275,5 @@ Verify these items before deploying to production:
 
 ## Next Steps
 
-- [Connection Management](./connection-management) — Secure connection setup
-- [Key Naming](./key-naming) — Safe key patterns
+- [Connection Management](./connection-management) - Secure connection setup
+- [Key Naming](./key-naming) - Safe key patterns

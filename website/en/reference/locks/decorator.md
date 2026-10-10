@@ -1,11 +1,11 @@
 ---
-title: '@WithLock Decorator — Locks Plugin | NestJS RedisX'
+title: '@WithLock Decorator - Locks Plugin | NestJS RedisX'
 description: 'Apply distributed Redis locks declaratively with @WithLock: dynamic key builders, TTL, autoRenew, retry-based waiting, and onLockFailed strategies.'
 ---
 
 # @WithLock Decorator
 
-Declarative locking — add distributed locks with a single decorator.
+Declarative locking - add distributed locks with a single decorator.
 
 ## Basic Usage
 
@@ -36,7 +36,7 @@ first. Leave `waitTimeout` unset to let the retry config alone govern the wait.
 ### Static Key
 
 ```typescript
-// Global lock — only one instance runs at a time
+// Global lock - only one instance runs at a time
 @WithLock({ key: 'sync:products' })
 async syncProducts(): Promise<void> {
   // Global product sync
@@ -226,5 +226,5 @@ async runScheduler(): Promise<void> {
 
 ## Next Steps
 
-- [Service API](./service-api) — Programmatic lock management
-- [Auto-Renewal](./auto-renewal) — How auto-renewal works
+- [Service API](./service-api) - Programmatic lock management
+- [Auto-Renewal](./auto-renewal) - How auto-renewal works

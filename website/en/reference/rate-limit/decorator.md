@@ -1,5 +1,5 @@
 ---
-title: '@RateLimit Decorator — Rate Limit Plugin | NestJS RedisX'
+title: '@RateLimit Decorator - Rate Limit Plugin | NestJS RedisX'
 description: 'Apply throttling declaratively with @RateLimit: points, duration, algorithm, key extractors, skip predicates, and custom errorFactory in NestJS.'
 ---
 
@@ -39,9 +39,9 @@ interface IRateLimitOptions {
 }
 ```
 
-The `store` option selects the counter backend for this route — `'redis'`
+The `store` option selects the counter backend for this route - `'redis'`
 (exact, shared by all instances) or `'memory'` (per-instance, zero Redis
-round-trip) — overriding the plugin default in either direction. See
+round-trip) - overriding the plugin default in either direction. See
 [Stores](./stores):
 
 <<< @/apps/demo/src/plugins/rate-limit/store-per-route.usage.ts{typescript}
@@ -298,5 +298,5 @@ async generateReport(@Body() dto: ReportDto) {
 
 ## Next Steps
 
-- [Guard](./guard) — RateLimitGuard usage
-- [Service API](./service-api) — Programmatic access
+- [Guard](./guard) - RateLimitGuard usage
+- [Service API](./service-api) - Programmatic access

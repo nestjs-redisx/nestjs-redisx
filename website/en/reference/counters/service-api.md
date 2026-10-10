@@ -1,6 +1,6 @@
 ---
 title: 'Counters Service API | NestJS RedisX'
-description: 'ICounterService: increment, decrement, get, set, reset, getAndReset, next, current — semantics and failure modes.'
+description: 'ICounterService: increment, decrement, get, set, reset, getAndReset, next, current - semantics and failure modes.'
 ---
 
 # Service API
@@ -24,18 +24,18 @@ Inject with the `COUNTER_SERVICE` token:
 
 ## Window Semantics (`ttl`)
 
-The TTL is applied **only when the mutation creates the key** (atomic Lua: `EXISTS` check before `INCRBY`, `PEXPIRE` only on creation — a pre-existing permanent counter is never retrofitted with a window):
+The TTL is applied **only when the mutation creates the key** (atomic Lua: `EXISTS` check before `INCRBY`, `PEXPIRE` only on creation - a pre-existing permanent counter is never retrofitted with a window):
 
 <<< @/apps/demo/src/plugins/counters/window.usage.ts{typescript}
 
-The window is anchored to the FIRST write — later increments never push it forward, so a daily key expires a day after its first event, not its last. For calendar-aligned windows, put the period in the key (`:2026-10-09`).
+The window is anchored to the FIRST write - later increments never push it forward, so a daily key expires a day after its first event, not its last. For calendar-aligned windows, put the period in the key (`:2026-10-09`).
 
 ## Sequences
 
 <<< @/apps/demo/src/plugins/counters/sequences.usage.ts{typescript}
 
-Values are strictly monotonic and collision-free across instances. They are **not gapless** — a crashed consumer may abandon a value; ledgers that demand gapless numbering need an application-level protocol, not a counter.
+Values are strictly monotonic and collision-free across instances. They are **not gapless** - a crashed consumer may abandon a value; ledgers that demand gapless numbering need an application-level protocol, not a counter.
 
 ## Poisoned Keys
 
-`get`, `current`, and `getAndReset` throw `CounterValueError` (code `OP_TYPE_MISMATCH`) when the key holds a non-numeric value — a shared-key wiring bug fails loudly instead of leaking `NaN` into aggregates. Mutations on such keys fail inside Redis itself (`CommandError`).
+`get`, `current`, and `getAndReset` throw `CounterValueError` (code `OP_TYPE_MISMATCH`) when the key holds a non-numeric value - a shared-key wiring bug fails loudly instead of leaking `NaN` into aggregates. Mutations on such keys fail inside Redis itself (`CommandError`).

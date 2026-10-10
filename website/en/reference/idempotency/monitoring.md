@@ -1,5 +1,5 @@
 ---
-title: 'Monitoring and Metrics — Idempotency Plugin | NestJS RedisX'
+title: 'Monitoring and Metrics - Idempotency Plugin | NestJS RedisX'
 description: 'Monitor redisx_idempotency_requests_total counters, duration histograms, replay vs mismatch status, and Grafana queries for NestJS idempotent endpoints.'
 ---
 
@@ -16,7 +16,7 @@ When using `MetricsPlugin` alongside `IdempotencyPlugin`, the following metrics 
 | `redisx_idempotency_requests_total` | Counter | `status=new` | First-time requests |
 | `redisx_idempotency_requests_total` | Counter | `status=replay` | Duplicate/cached responses |
 | `redisx_idempotency_requests_total` | Counter | `status=mismatch` | Fingerprint mismatches |
-| `redisx_idempotency_duration_seconds` | Histogram | — | Processing duration |
+| `redisx_idempotency_duration_seconds` | Histogram | - | Processing duration |
 
 ## Prometheus Integration
 
@@ -257,5 +257,5 @@ export class IdempotencyTracer {
 
 ## Next Steps
 
-- [Testing](./testing) — Test idempotent endpoints
-- [Troubleshooting](./troubleshooting) — Debug issues
+- [Testing](./testing) - Test idempotent endpoints
+- [Troubleshooting](./troubleshooting) - Debug issues

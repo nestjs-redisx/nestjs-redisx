@@ -1,5 +1,5 @@
 ---
-title: 'Core Concepts — Idempotency Plugin | NestJS RedisX'
+title: 'Core Concepts - Idempotency Plugin | NestJS RedisX'
 description: 'Understand idempotency keys, request fingerprints, response replay, and TTL semantics that power exactly-once execution in NestJS on Redis.'
 ---
 
@@ -232,5 +232,5 @@ After TTL expires, the same idempotency key can be used for a NEW operation. Cho
 
 ## Next Steps
 
-- [Configuration](./configuration) — Full configuration reference
-- [Fingerprinting](./fingerprinting) — Deep dive into fingerprints
+- [Configuration](./configuration) - Full configuration reference
+- [Fingerprinting](./fingerprinting) - Deep dive into fingerprints

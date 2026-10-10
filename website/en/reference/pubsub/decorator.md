@@ -1,5 +1,5 @@
 ---
-title: '@Subscribe Decorator — Pub/Sub Plugin | NestJS RedisX'
+title: '@Subscribe Decorator - Pub/Sub Plugin | NestJS RedisX'
 description: 'Auto-discovered Pub/Sub handlers in NestJS: @Subscribe for channels and Redis glob patterns with typed IPubSubMessage payloads.'
 ---
 
@@ -36,6 +36,6 @@ interface IPubSubMessage<T = unknown> {
 
 ## Behaviour
 
-- Handler errors (sync throws and async rejections) are caught and logged — one failing handler never breaks the others or the subscriber connection.
+- Handler errors (sync throws and async rejections) are caught and logged - one failing handler never breaks the others or the subscriber connection.
 - Multiple decorated methods on any providers may target the same channel; they share one underlying Redis subscription.
 - Handlers are bound to their provider instance (`this` works).

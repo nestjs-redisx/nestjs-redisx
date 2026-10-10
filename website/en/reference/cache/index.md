@@ -21,25 +21,25 @@ The Cache Plugin provides a two-tier caching solution for NestJS applications.
 
 ## Key Features
 
-- **Two-Tier Architecture** — In-memory L1 cache with Redis L2 backend
-- **Runs without Redis** — optional [`l1-only` mode](./configuration#running-without-redis-l1-only) for a full in-memory, single-instance cache (the app boots with no Redis)
-- **Stampede Protection** — Prevents cache avalanche on expiry
-- **Stale-While-Revalidate** — Serve stale data while refreshing in background
-- **Tag-Based Invalidation** — Invalidate groups of related cache entries
-- **Decorator API** — `@Cached`, `@Cacheable`, `@CacheEvict`, `@CachePut`
-- **Observability** — Prometheus metrics and OpenTelemetry tracing
+- **Two-Tier Architecture** - In-memory L1 cache with Redis L2 backend
+- **Runs without Redis** - optional [`l1-only` mode](./configuration#running-without-redis-l1-only) for a full in-memory, single-instance cache (the app boots with no Redis)
+- **Stampede Protection** - Prevents cache avalanche on expiry
+- **Stale-While-Revalidate** - Serve stale data while refreshing in background
+- **Tag-Based Invalidation** - Invalidate groups of related cache entries
+- **Decorator API** - `@Cached`, `@Cacheable`, `@CacheEvict`, `@CachePut`
+- **Observability** - Prometheus metrics and OpenTelemetry tracing
 
 ## Why Proxy-Based Decorators
 
-Unlike most NestJS caching libraries that rely on interceptors, RedisX `@Cached` uses **descriptor replacement on the prototype** — not a proxy object wrapping the instance. This gives you capabilities that interceptor-based solutions fundamentally cannot provide:
+Unlike most NestJS caching libraries that rely on interceptors, RedisX `@Cached` uses **descriptor replacement on the prototype** - not a proxy object wrapping the instance. This gives you capabilities that interceptor-based solutions fundamentally cannot provide:
 
-- **Works on any Injectable** — services, repositories, workers, cron jobs, RMQ consumers
-- **Self-invocation works** — `this.getUser()` inside the same class goes through cache. No "self-invocation limitation" like Spring or NestJS interceptors
-- **No ExecutionContext dependency** — caching is not tied to the HTTP request pipeline
-- **No interceptor registration** — no `UseInterceptors()`, no controller-only restrictions
+- **Works on any Injectable** - services, repositories, workers, cron jobs, RMQ consumers
+- **Self-invocation works** - `this.getUser()` inside the same class goes through cache. No "self-invocation limitation" like Spring or NestJS interceptors
+- **No ExecutionContext dependency** - caching is not tied to the HTTP request pipeline
+- **No interceptor registration** - no `UseInterceptors()`, no controller-only restrictions
 
 ::: tip How it works
-`@Cached` replaces the method on the class prototype at decoration time. When NestJS creates an instance, the prototype already contains the wrapped version. Every call — including `this.method()` from the same class — goes through the cache layer automatically.
+`@Cached` replaces the method on the class prototype at decoration time. When NestJS creates an instance, the prototype already contains the wrapped version. Every call - including `this.method()` from the same class - goes through the cache layer automatically.
 :::
 
 The Spring-style decorators (`@Cacheable`, `@CacheEvict`, `@CachePut`) are also available for developers who prefer that pattern, but they require `DeclarativeCacheInterceptor` and only work in controller context.

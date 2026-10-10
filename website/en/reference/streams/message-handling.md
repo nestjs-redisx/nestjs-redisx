@@ -1,5 +1,5 @@
 ---
-title: 'Message Handling Lifecycle — Streams Plugin | NestJS RedisX'
+title: 'Message Handling Lifecycle - Streams Plugin | NestJS RedisX'
 description: 'Acknowledge Redis Stream messages with message.ack and reject, manage PEL entries, exponential backoff retries, and error boundaries in NestJS consumers.'
 ---
 
@@ -19,13 +19,13 @@ from how the handler **completes**:
   retry, then DLQ once attempts reach `maxRetries`). Re-throwing is the simplest
   way to trigger a retry.
 
-`message.ack()` and `message.reject()` remain available for explicit control —
+`message.ack()` and `message.reject()` remain available for explicit control -
 for example to reject without throwing, or to ACK a poison message so it is not
 retried. The examples below use them for clarity, but a handler that simply
 returns (success) or throws (failure) is fully supported.
 
 ```typescript
-// Minimal handler — return = ack, throw = retry/DLQ
+// Minimal handler - return = ack, throw = retry/DLQ
 @StreamConsumer({ stream: 'orders', group: 'processors' })
 async handle(message: IStreamMessage<Order>): Promise<void> {
   await this.orderService.process(message.data); // throws → retried
@@ -105,8 +105,8 @@ async handle(message: IStreamMessage<Order>): Promise<void> {
 
 ### What Reject Does
 
-1. If `attempt >= maxRetries` — moves message to DLQ and ACKs the original
-2. If `attempt < maxRetries` — waits for exponential backoff delay, then ACKs the original and re-adds the message to the stream with `_attempt` incremented
+1. If `attempt >= maxRetries` - moves message to DLQ and ACKs the original
+2. If `attempt < maxRetries` - waits for exponential backoff delay, then ACKs the original and re-adds the message to the stream with `_attempt` incremented
 3. The re-added message gets a new ID and is delivered to the next available consumer in the group
 
 ## Retry Logic
@@ -141,7 +141,7 @@ With defaults (`initialDelay: 1000`, `multiplier: 2`, `maxDelay: 30000`):
 - ...and so on, capped at **30s**
 
 ::: tip
-Idle claiming is a separate mechanism for recovering **orphaned** messages — messages stuck in the PEL because the original consumer crashed before ACK. By default each consumer reclaims these automatically via a background auto-claim loop (`claimIdleTimeout`, default `30000` ms); the `claimIdle()` method is also available for on-demand claiming. See [Consumer Groups — Claiming Idle Messages](./consumer-groups#claiming-idle-messages).
+Idle claiming is a separate mechanism for recovering **orphaned** messages - messages stuck in the PEL because the original consumer crashed before ACK. By default each consumer reclaims these automatically via a background auto-claim loop (`claimIdleTimeout`, default `30000` ms); the `claimIdle()` method is also available for on-demand claiming. See [Consumer Groups - Claiming Idle Messages](./consumer-groups#claiming-idle-messages).
 :::
 
 ## Attempt Tracking
@@ -466,5 +466,5 @@ maxRetries: 10
 
 ## Next Steps
 
-- [Dead Letter Queue](./dead-letter-queue) — Handle failed messages
-- [Backpressure](./backpressure) — Control processing rate
+- [Dead Letter Queue](./dead-letter-queue) - Handle failed messages
+- [Backpressure](./backpressure) - Control processing rate

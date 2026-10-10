@@ -12,7 +12,7 @@ export class ConfigService implements OnModuleInit {
   ) {}
 
   onModuleInit() {
-    // Create once in onModuleInit — avoids re-creating closures per request
+    // Create once in onModuleInit - avoids re-creating closures per request
     this.getCachedConfig = this.cache.wrap(
       (key: string) => this.repository.findByKey(key),
       {

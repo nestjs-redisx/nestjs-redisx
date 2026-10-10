@@ -1,5 +1,5 @@
 ---
-title: 'Configuration — Leader Election Plugin | NestJS RedisX'
+title: 'Configuration - Leader Election Plugin | NestJS RedisX'
 description: 'LeaderPlugin configuration: lease TTL, heartbeat and retry intervals, election groups, instance identity, lifecycle callbacks, and fail-fast validation.'
 ---
 
@@ -23,7 +23,7 @@ new LeaderPlugin({
   // ttlMs + retryIntervalMs; a gracefully stopped one immediately.
   ttlMs: 15_000,
 
-  // Heartbeat while leader. MUST be strictly less than ttlMs —
+  // Heartbeat while leader. MUST be strictly less than ttlMs -
   // validation fails fast otherwise.
   renewIntervalMs: 5_000,
 
@@ -80,23 +80,23 @@ RedisModule.forRootAsync({
 Rule of thumb: `renewIntervalMs ≈ ttlMs / 3`. The gap is your budget for Redis latency spikes and event-loop pauses before a healthy leader gets demoted.
 
 ::: danger `instanceId` must be unique per replica
-Two replicas presenting the same id BOTH win the election: acquire deliberately re-claims a key that already holds the caller's own id (that is what makes restarts with a stable id seamless). A shared value — a host name with several workers per host (pm2 cluster mode), a fleet-wide constant — silently collapses "exactly one instance" into "every instance". Use the pod name, or leave it unset for a generated unique id.
+Two replicas presenting the same id BOTH win the election: acquire deliberately re-claims a key that already holds the caller's own id (that is what makes restarts with a stable id seamless). A shared value - a host name with several workers per host (pm2 cluster mode), a fleet-wide constant - silently collapses "exactly one instance" into "every instance". Use the pod name, or leave it unset for a generated unique id.
 :::
 
 ## Validation (fail-fast)
 
-Invalid configuration throws `InvalidLeaderConfigError` at construction — on both the sync and `registerAsync` paths, never masked:
+Invalid configuration throws `InvalidLeaderConfigError` at construction - on both the sync and `registerAsync` paths, never masked:
 
-- `ttlMs`, `renewIntervalMs`, `retryIntervalMs` — positive integers up to 2³¹−1 ms (~24.8 days, the JS timer range; a larger value would be clamped by `setTimeout` to 1 ms and hot-loop)
-- `renewIntervalMs < ttlMs` — a lease must outlive its own heartbeat
-- `groups` — non-empty strings; `instanceId` — non-empty when provided
-- `keyPrefix` — non-empty when provided (an empty prefix would make the election key a bare group name)
-- `onElected` / `onLost` — functions when provided (a dead callback would otherwise only surface as a contained warning on the winning pod, silently skipping the paired singleton work)
-- the options value itself — a plain object: `undefined`/`null` (a `registerAsync` factory returning `undefined` for a missing config key), an accidentally list-wrapped config, and an un-awaited `Promise` (`new LeaderPlugin(loadConfig())` with an async loader — zero own keys, so every per-key check would otherwise pass) all fail with a source-tagged error instead of a bare TypeError or a silent all-defaults boot; `@LeaderOnly` applies the same rejection (null, array, thenable) to its own argument — only the documented zero-argument form gates `'default'`
+- `ttlMs`, `renewIntervalMs`, `retryIntervalMs` - positive integers up to 2³¹−1 ms (~24.8 days, the JS timer range; a larger value would be clamped by `setTimeout` to 1 ms and hot-loop)
+- `renewIntervalMs < ttlMs` - a lease must outlive its own heartbeat
+- `groups` - non-empty strings; `instanceId` - non-empty when provided
+- `keyPrefix` - non-empty when provided (an empty prefix would make the election key a bare group name)
+- `onElected` / `onLost` - functions when provided (a dead callback would otherwise only surface as a contained warning on the winning pod, silently skipping the paired singleton work)
+- the options value itself - a plain object: `undefined`/`null` (a `registerAsync` factory returning `undefined` for a missing config key), an accidentally list-wrapped config, and an un-awaited `Promise` (`new LeaderPlugin(loadConfig())` with an async loader - zero own keys, so every per-key check would otherwise pass) all fail with a source-tagged error instead of a bare TypeError or a silent all-defaults boot; `@LeaderOnly` applies the same rejection (null, array, thenable) to its own argument - only the documented zero-argument form gates `'default'`
 
-Register **one** `LeaderPlugin` per application — a second instance is rejected by `RedisModule` (their injection tokens would collide and the first plugin's options would be silently discarded). Several elections belong in one plugin's `groups` option.
+Register **one** `LeaderPlugin` per application - a second instance is rejected by `RedisModule` (their injection tokens would collide and the first plugin's options would be silently discarded). Several elections belong in one plugin's `groups` option.
 
 ## Next Steps
 
-- [Failover](./failover) — what these numbers mean in takeover time
-- [@LeaderOnly Decorator](./decorator) — per-method gating
+- [Failover](./failover) - what these numbers mean in takeover time
+- [@LeaderOnly Decorator](./decorator) - per-method gating

@@ -1,5 +1,5 @@
 ---
-title: 'Grafana Dashboards — Metrics Plugin | NestJS RedisX'
+title: 'Grafana Dashboards - Metrics Plugin | NestJS RedisX'
 description: 'Visualize Redis cache, lock, rate-limit, and latency metrics in Grafana with PromQL panels, provisioned datasources, and sample dashboard JSON.'
 ---
 
@@ -520,6 +520,6 @@ providers:
 
 ## Next Steps
 
-- [Alerting](./alerting) — Set up alerts
-- [Custom Metrics](./custom-metrics) — Add custom panels
-- [Troubleshooting](./troubleshooting) — Debug dashboard issues
+- [Alerting](./alerting) - Set up alerts
+- [Custom Metrics](./custom-metrics) - Add custom panels
+- [Troubleshooting](./troubleshooting) - Debug dashboard issues

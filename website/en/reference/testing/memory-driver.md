@@ -1,5 +1,5 @@
 ---
-title: 'In-Memory Driver — Testing Utilities | NestJS RedisX'
+title: 'In-Memory Driver - Testing Utilities | NestJS RedisX'
 description: 'What the in-memory Redis driver supports: string, hash, set, sorted-set, and list commands, keys/TTL, and a bounded Lua interpreter for the plugins atomic scripts.'
 ---
 
@@ -34,7 +34,7 @@ Streams are modelled with real consumer-group semantics: monotonic `<ms>-<seq>`
 ids, per-group delivery cursors, per-consumer pending-entries lists (PEL),
 delivery counts, and idle-time tracking. So `XREADGROUP ... >` delivers only
 never-seen entries and records them in the PEL; `XACK` clears them; `XPENDING`
-and `XCLAIM` let another consumer reclaim idle messages — exactly what the
+and `XCLAIM` let another consumer reclaim idle messages - exactly what the
 Streams plugin's consumer loop and auto-claim rely on.
 
 The in-memory driver never truly blocks. A blocking `XREADGROUP`/`XREAD` that
@@ -46,7 +46,7 @@ starving the event loop.
 
 The plugins rely on Lua scripts for atomicity (e.g. token-bucket rate limiting,
 owner-checked lock release). The in-memory driver runs them on a small in-house
-interpreter — no third-party engine. `redis.call(...)` re-enters the same
+interpreter - no third-party engine. `redis.call(...)` re-enters the same
 executor, so a script sees a consistent, single-threaded view, exactly like Redis.
 
 The interpreter supports the bounded subset the project's scripts use:
@@ -64,13 +64,13 @@ a `LuaExecutionError` rather than returning a silently wrong result.
 ## Limitations
 
 ::: warning What it intentionally does not simulate
-- **No real blocking** — `BLOCK` on `XREADGROUP`/`XREAD` returns promptly instead of waiting; delivery is still correct, only the timing differs.
-- **Pub/Sub is a process-wide bus** — `PUBLISH`/`SUBSCRIBE`/`PSUBSCRIBE` work across all in-memory connections inside one test process (single-node semantics; no sharded Pub/Sub, no cross-process delivery).
-- **Single keyspace** — no multi-database (`SELECT`) or cross-slot cluster semantics; behavior matches a single standalone Redis, so a missing hash-tag passes here but can fail on a real cluster.
-- **Not for load testing** — it is a correctness tool for unit tests, not a performance simulator.
-- **Unsupported commands fail loudly** — calling a command the driver does not implement throws `MemoryDriverError`, surfacing gaps instead of hiding them.
+- **No real blocking** - `BLOCK` on `XREADGROUP`/`XREAD` returns promptly instead of waiting; delivery is still correct, only the timing differs.
+- **Pub/Sub is a process-wide bus** - `PUBLISH`/`SUBSCRIBE`/`PSUBSCRIBE` work across all in-memory connections inside one test process (single-node semantics; no sharded Pub/Sub, no cross-process delivery).
+- **Single keyspace** - no multi-database (`SELECT`) or cross-slot cluster semantics; behavior matches a single standalone Redis, so a missing hash-tag passes here but can fail on a real cluster.
+- **Not for load testing** - it is a correctness tool for unit tests, not a performance simulator.
+- **Unsupported commands fail loudly** - calling a command the driver does not implement throws `MemoryDriverError`, surfacing gaps instead of hiding them.
 
-For cluster routing, cross-process Pub/Sub, failover, or performance, test against a real Redis — see [When to Use It](./#when-to-use-it-and-when-to-use-real-redis).
+For cluster routing, cross-process Pub/Sub, failover, or performance, test against a real Redis - see [When to Use It](./#when-to-use-it-and-when-to-use-real-redis).
 :::
 
 ## Direct use

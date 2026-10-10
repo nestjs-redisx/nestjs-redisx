@@ -1,5 +1,5 @@
 ---
-title: 'Overview — Rate Limit Plugin | NestJS RedisX'
+title: 'Overview - Rate Limit Plugin | NestJS RedisX'
 description: 'Protect NestJS APIs with @nestjs-redisx/rate-limit: sliding window, token bucket, and fixed window algorithms backed by Redis with @RateLimit.'
 ---
 
@@ -19,13 +19,13 @@ The Rate Limit Plugin provides distributed rate limiting backed by Redis, ensuri
 
 ## Key Features
 
-- **Multiple Algorithms** — Fixed window, sliding window, and token bucket strategies
-- **Flexible Key Extraction** — Rate limit by IP, user ID, API key, or custom identifiers
-- **Standard Headers** — `X-RateLimit-*` and `Retry-After` headers
-- **Distributed State** — Consistent limits across all application instances via Redis
-- **Per-Route Store Selection** — Zero-latency in-memory counters on bulk routes, exact Redis counters where it matters
-- **Configurable Responses** — Custom error messages and status codes
-- **Skip Conditions** — Bypass rate limits for specific requests or users
+- **Multiple Algorithms** - Fixed window, sliding window, and token bucket strategies
+- **Flexible Key Extraction** - Rate limit by IP, user ID, API key, or custom identifiers
+- **Standard Headers** - `X-RateLimit-*` and `Retry-After` headers
+- **Distributed State** - Consistent limits across all application instances via Redis
+- **Per-Route Store Selection** - Zero-latency in-memory counters on bulk routes, exact Redis counters where it matters
+- **Configurable Responses** - Custom error messages and status codes
+- **Skip Conditions** - Bypass rate limits for specific requests or users
 
 ## Installation
 

@@ -1,5 +1,5 @@
 ---
-title: 'Configuration Reference — Cache Plugin | NestJS RedisX'
+title: 'Configuration Reference - Cache Plugin | NestJS RedisX'
 description: 'Configure CachePlugin with l1 and l2 options, TTLs, eviction policies, stampede, SWR, varyBy, contextKeys, and keyPrefix for NestJS Redis caching.'
 ---
 
@@ -20,7 +20,7 @@ new CachePlugin({
   isGlobal: false,
 
   // Deployment topology (default: 'l1-l2')
-  // 'l1-only' runs entirely in local memory with NO Redis — see below.
+  // 'l1-only' runs entirely in local memory with NO Redis - see below.
   mode: 'l1-l2',
 
   // L1 Memory Cache
@@ -56,7 +56,7 @@ new CachePlugin({
 
   // Stale-If-Error: serve the last known value when the loader FAILS,
   // for defaultWindow seconds beyond the normal expiry. Availability policy,
-  // independent of SWR — see the SWR page for semantics and guardrails.
+  // independent of SWR - see the SWR page for semantics and guardrails.
   staleIfError: {
     enabled: false,           // Opt-in (default: false)
     defaultWindow: 86400,     // Seconds; always finite (explicit = bounded memory)
@@ -120,21 +120,21 @@ new CachePlugin({
 
 By default the cache is **`l1-l2`**: an in-memory L1 in front of a Redis L2,
 which requires a reachable Redis connection. Set **`mode: 'l1-only'`** to run
-the cache **entirely in local process memory, with no Redis** — the app boots
+the cache **entirely in local process memory, with no Redis** - the app boots
 even when Redis is unreachable.
 
 <<< @/apps/demo/src/plugins/cache/l1-only.setup.ts{typescript}
 
 **What works in `l1-only`:** `get` / `set` / `getOrSet`, `getMany` / `setMany`,
 `ttl`, tag invalidation, `invalidateByPattern`, SWR, stale-if-error, and
-in-process singleflight (stampede coalescing) — all backed by an in-memory
+in-process singleflight (stampede coalescing) - all backed by an in-memory
 store that keeps the **live** object (no serialization, so a value is stored
-once and shared with L1, not duplicated — this matters for large values).
+once and shared with L1, not duplicated - this matters for large values).
 
 ::: warning Single-instance only
 `l1-only` is **per-process**: nothing is shared across instances and
 invalidation (tags, events) affects only the local process. Use it for a single
-instance, a sidecar/proxy, local development, or tests — not for cross-instance
+instance, a sidecar/proxy, local development, or tests - not for cross-instance
 cache coherence (use `l1-l2` with Redis for that).
 :::
 
@@ -147,10 +147,10 @@ rejected at startup with a `CacheConfigError` (never silently ignored):
 
 - a named `client` (there is no Redis client to select),
 - `l1.enabled: false` (nothing would be left to cache),
-- `l2.enabled: false` (redundant — the L2 tier is already in-memory),
+- `l2.enabled: false` (redundant - the L2 tier is already in-memory),
 - `invalidation.source: 'amqp'` (needs an external broker).
 
-Tags, SWR and stale-if-error are **not** rejected — they work in memory.
+Tags, SWR and stale-if-error are **not** rejected - they work in memory.
 
 > `RedisModule` still needs a `clients` block, but in `l1-only` the cache never
 > opens that connection, so an unreachable host is fine.
@@ -167,20 +167,20 @@ CachePlugin.registerAsync({
 
 ## Allowed Key and Tag Characters
 
-::: warning Cache keys and tags are validated — invalid characters throw
+::: warning Cache keys and tags are validated - invalid characters throw
 Cache **keys** are validated by `keys.validation` (default **`'safe'`**):
 
-- **`'safe'`** — rejects only empty keys, whitespace, and control characters.
-  Everything else is allowed, because Redis keys are binary-safe — so `/`, `?`,
+- **`'safe'`** - rejects only empty keys, whitespace, and control characters.
+  Everything else is allowed, because Redis keys are binary-safe - so `/`, `?`,
   `=`, `%`, and unicode are valid, and **URL / path keys work out of the box**
   (`cache.getOrSet('http:/api/users/123', …)`).
-- **`'strict'`** — allows only `A-Z a-z 0-9 - _ : .` (the pre-1.9.2 behavior),
+- **`'strict'`** - allows only `A-Z a-z 0-9 - _ : .` (the pre-1.9.2 behavior),
   for teams that want to enforce clean, predictable keys.
-- **`'off'`** — no character check (only empty + length).
-- **`pattern`** — a custom `RegExp` allowlist that overrides the mode.
+- **`'off'`** - no character check (only empty + length).
+- **`pattern`** - a custom `RegExp` allowlist that overrides the mode.
 
-A violating key throws a `CacheKeyError`. For arbitrary URLs — especially with
-query strings — prefer hashing the URL into a bounded key with `hashKey()`
+A violating key throws a `CacheKeyError`. For arbitrary URLs - especially with
+query strings - prefer hashing the URL into a bounded key with `hashKey()`
 (see [Service API](./service-api)) rather than storing the raw URL.
 
 Cache **tags** are normalized to **lowercase** and may contain only
@@ -208,13 +208,13 @@ The cache service treats read and write failures differently:
 
 ### `stampede.fallback`
 
-Controls what happens when stampede protection times out — i.e. a waiter exceeds
+Controls what happens when stampede protection times out - i.e. a waiter exceeds
 `waitTimeout` waiting for the in-flight loader to finish:
 
-- `'load'` (default) — load directly without coordination and cache the result,
+- `'load'` (default) - load directly without coordination and cache the result,
   so the caller still gets a value.
-- `'null'` — return `null` without loading or caching.
-- `'error'` — throw `StampedeError`.
+- `'null'` - return `null` without loading or caching.
+- `'error'` - throw `StampedeError`.
 
 ### `isGlobal`
 
@@ -222,7 +222,7 @@ When `true`, `CacheService` and other cache exports are available in all modules
 
 ### `keys.version`
 
-The `version` string is used when validating key length. The full key for length validation is built as `version + separator + rawKey`. This ensures that if you later change the version, keys won't exceed `maxLength`. However, the version is **not** stored as part of the actual Redis key — only the raw key (with `l2.keyPrefix`) is stored.
+The `version` string is used when validating key length. The full key for length validation is built as `version + separator + rawKey`. This ensures that if you later change the version, keys won't exceed `maxLength`. However, the version is **not** stored as part of the actual Redis key - only the raw key (with `l2.keyPrefix`) is stored.
 
 ### `invalidation.rules`
 
@@ -290,5 +290,5 @@ new CachePlugin({
 
 ## Next Steps
 
-- [Decorators](./decorators) — Learn @Cached, @Cacheable, @CacheEvict, @CachePut
-- [Service API](./service-api) — Programmatic cache access
+- [Decorators](./decorators) - Learn @Cached, @Cacheable, @CacheEvict, @CachePut
+- [Service API](./service-api) - Programmatic cache access

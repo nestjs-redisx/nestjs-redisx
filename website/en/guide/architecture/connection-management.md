@@ -1,5 +1,5 @@
 ---
-title: 'Connections — NestJS RedisX Architecture | NestJS RedisX'
+title: 'Connections - NestJS RedisX Architecture | NestJS RedisX'
 description: 'Tune Redis connection pools, timeouts, retry strategies, and keepalive for NestJS RedisX in production, with sizing formulas and pipelining guidance.'
 ---
 
@@ -317,5 +317,5 @@ histogram_quantile(0.99, redis_command_duration_seconds)
 
 ## Next Steps
 
-- [Deployment](./deployment) — Topology selection
-- [Tuning](./tuning) — Performance optimization
+- [Deployment](./deployment) - Topology selection
+- [Tuning](./tuning) - Performance optimization

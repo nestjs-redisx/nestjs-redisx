@@ -1,5 +1,5 @@
 ---
-title: 'Two-Tier Caching — NestJS RedisX Concepts | NestJS RedisX'
+title: 'Two-Tier Caching - NestJS RedisX Concepts | NestJS RedisX'
 description: 'Understand the two-tier cache model in NestJS RedisX: choose between L1 in-memory and L2 Redis layers, balance latency and consistency, and size each tier.'
 ---
 
@@ -186,6 +186,6 @@ Key metrics to watch:
 
 ## Next Steps
 
-- [Cache Configuration](../../reference/cache/configuration) — Full configuration options
-- [Tag Invalidation](../../reference/cache/tags) — Invalidate related entries
-- [Stampede Protection](../../reference/cache/stampede) — Prevent thundering herd
+- [Cache Configuration](../../reference/cache/configuration) - Full configuration options
+- [Tag Invalidation](../../reference/cache/tags) - Invalidate related entries
+- [Stampede Protection](../../reference/cache/stampede) - Prevent thundering herd

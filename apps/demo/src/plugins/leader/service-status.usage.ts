@@ -8,7 +8,7 @@ export class LeadershipStatusService {
     private readonly leaderService: ILeaderService,
   ) {}
 
-  // Synchronous local view — safe to call on every request.
+  // Synchronous local view - safe to call on every request.
   isThisInstanceTheLeader(): boolean {
     return this.leaderService.isLeader();
   }

@@ -1,6 +1,6 @@
 ---
-title: 'Custom Spans — @nestjs-redisx/tracing | NestJS RedisX'
-description: 'Create custom spans with ITracingService and withSpan in NestJS — set attributes, add events, record exceptions, and select span kinds around Redis.'
+title: 'Custom Spans - @nestjs-redisx/tracing | NestJS RedisX'
+description: 'Create custom spans with ITracingService and withSpan in NestJS - set attributes, add events, record exceptions, and select span kinds around Redis.'
 ---
 
 # Spans
@@ -9,7 +9,7 @@ Create custom spans to trace application-specific operations.
 
 ## Automatic Redis Command Spans
 
-With `traceRedisCommands: true` (the default), every command executed through RedisX drivers is wrapped in a `redis.<COMMAND>` CLIENT span natively — no external instrumentation package. Spans carry `db.system`, `db.operation`, `db.statement`, `redisx.client` (the named client, including runtime-created ones like the Pub/Sub subscriber), and `redisx.duration_ms`; `db.statement.args` / `db.statement.result` appear only when `spans.includeArgs` / `spans.includeResult` are enabled (truncated to `spans.maxArgLength`). Commands listed in `spans.excludeCommands` are skipped. Each span parents onto the active trace context:
+With `traceRedisCommands: true` (the default), every command executed through RedisX drivers is wrapped in a `redis.<COMMAND>` CLIENT span natively - no external instrumentation package. Spans carry `db.system`, `db.operation`, `db.statement`, `redisx.client` (the named client, including runtime-created ones like the Pub/Sub subscriber), and `redisx.duration_ms`; `db.statement.args` / `db.statement.result` appear only when `spans.includeArgs` / `spans.includeResult` are enabled (truncated to `spans.maxArgLength`). Commands listed in `spans.excludeCommands` are skipped. Each span parents onto the active trace context:
 
 ```
 GET /api/users/123
@@ -253,7 +253,7 @@ Categorize span types.
 
 ### INTERNAL
 
-Internal operations (not the default — see CLIENT below).
+Internal operations (not the default - see CLIENT below).
 
 ```typescript
 await this.tracing.withSpan('process.data', async () => {
@@ -434,6 +434,6 @@ try {
 
 ## Next Steps
 
-- [Plugin Tracing](./plugin-tracing) — Automatic plugin traces
-- [Visualization](./visualization) — Analyze traces
-- [Troubleshooting](./troubleshooting) — Debug tracing issues
+- [Plugin Tracing](./plugin-tracing) - Automatic plugin traces
+- [Visualization](./visualization) - Analyze traces
+- [Troubleshooting](./troubleshooting) - Debug tracing issues

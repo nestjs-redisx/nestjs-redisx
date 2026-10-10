@@ -1,5 +1,5 @@
 ---
-title: 'Response Header Caching — Idempotency Plugin | NestJS RedisX'
+title: 'Response Header Caching - Idempotency Plugin | NestJS RedisX'
 description: 'Replay Location, ETag, and custom response headers alongside bodies using cacheHeaders on @Idempotent for consistent NestJS retries backed by Redis.'
 ---
 
@@ -355,5 +355,5 @@ This is expected behavior. Headers are only cached on the first request and repl
 
 ## Next Steps
 
-- [Client Guide](./client-guide) — Client-side implementation
-- [Recipes](./recipes) — Real-world examples
+- [Client Guide](./client-guide) - Client-side implementation
+- [Recipes](./recipes) - Real-world examples

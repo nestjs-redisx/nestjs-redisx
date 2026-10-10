@@ -91,7 +91,7 @@ redis-cli SLOWLOG GET 10
 
 ## Next Steps
 
-- [Cache Issues](./cache-issues) — Detailed cache troubleshooting
-- [Lock Issues](./lock-issues) — Lock and contention issues
-- [Performance Issues](./performance-issues) — Latency and throughput
-- [Debugging](./debugging) — Tools and techniques
+- [Cache Issues](./cache-issues) - Detailed cache troubleshooting
+- [Lock Issues](./lock-issues) - Lock and contention issues
+- [Performance Issues](./performance-issues) - Latency and throughput
+- [Debugging](./debugging) - Tools and techniques

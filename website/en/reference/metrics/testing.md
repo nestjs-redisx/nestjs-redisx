@@ -1,6 +1,6 @@
 ---
-title: 'Testing Guide — Metrics Plugin | NestJS RedisX'
-description: 'Test NestJS services that collect Redis metrics with Vitest — mock IMetricsService, assert counter and histogram calls, and follow Given-When-Then.'
+title: 'Testing Guide - Metrics Plugin | NestJS RedisX'
+description: 'Test NestJS services that collect Redis metrics with Vitest - mock IMetricsService, assert counter and histogram calls, and follow Given-When-Then.'
 ---
 
 # Testing
@@ -110,7 +110,7 @@ describe('OrderService', () => {
 
 ## Testing Histogram Observations
 
-Test the `startTimer()` pattern — mock it to return a spy function, then verify the timer was stopped:
+Test the `startTimer()` pattern - mock it to return a spy function, then verify the timer was stopped:
 
 ```typescript
 describe('OrderService.processPayment', () => {
@@ -386,19 +386,19 @@ Integration tests need a running Redis instance. Use `docker-compose up -d` from
 ## Best Practices
 
 ### Do
-- Mock `IMetricsService` via `METRICS_SERVICE` token — don't test prom-client internals
+- Mock `IMetricsService` via `METRICS_SERVICE` token - don't test prom-client internals
 - Test **behavior** (counter incremented, timer stopped) not **metric values**
 - Use `startTimer` mock that returns a spy to verify timer completion
 - Use Given-When-Then comments in every test
 - Test that metrics are registered in `onModuleInit`
 
 ### Don't
-- Don't import `prom-client` directly in tests — mock via the service interface
-- Don't assert exact metric output format — it may change between versions
-- Don't use `jest.fn()` — use `vi.fn()` (Vitest)
+- Don't import `prom-client` directly in tests - mock via the service interface
+- Don't assert exact metric output format - it may change between versions
+- Don't use `jest.fn()` - use `vi.fn()` (Vitest)
 - Don't forget to test timer completion in error paths (finally blocks)
 
 ## Next Steps
 
-- [Recipes](./recipes) — Real-world metrics patterns
-- [Troubleshooting](./troubleshooting) — Debug issues
+- [Recipes](./recipes) - Real-world metrics patterns
+- [Troubleshooting](./troubleshooting) - Debug issues

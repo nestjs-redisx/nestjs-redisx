@@ -14,7 +14,7 @@ Common issues and how to fix them.
 ### 1. Plugin not registered
 
 ```typescript
-// Wrong — no CachePlugin
+// Wrong - no CachePlugin
 RedisModule.forRoot({ clients: { ... } })
 
 // Correct
@@ -36,15 +36,15 @@ redis-cli ping
 `@Cached` and `@Cacheable` use **different** key interpolation:
 
 ```typescript
-// @Cached — positional: {0}, {1}, {2}
+// @Cached - positional: {0}, {1}, {2}
 @Cached({ key: 'user:{0}' })
 async getUser(id: string) {}
 
-// @Cacheable — named: {paramName}
+// @Cacheable - named: {paramName}
 @Cacheable({ key: 'user:{id}' })
 async getUser(id: string) {}
 
-// Wrong — mixing syntaxes
+// Wrong - mixing syntaxes
 @Cached({ key: 'user:{id}' })     // {id} won't resolve, stays literal
 @Cacheable({ key: 'user:{0}' })   // {0} won't resolve, stays literal
 ```
@@ -54,12 +54,12 @@ async getUser(id: string) {}
 `@Cached` uses `JSON.stringify()` for object arguments. Property order may vary:
 
 ```typescript
-// Fragile — object serialized as JSON, key is long and order-dependent
+// Fragile - object serialized as JSON, key is long and order-dependent
 @Cached({ key: 'products:{0}' })
 async find(filter: ProductFilter) {}
 // Key: products:{"category":"shoes","page":1}
 
-// Better — use getOrSet() with a stable key builder
+// Better - use getOrSet() with a stable key builder
 async find(filter: ProductFilter) {
   const key = `products:${filter.category}:p${filter.page}`;
   return this.cache.getOrSet(key, () => this.repo.find(filter), { ttl: 300 });
@@ -86,7 +86,7 @@ new CachePlugin({
 ```
 
 ::: tip
-Keep L1 TTL shorter than L2 TTL. L1 is memory — bounded by `maxSize` and TTL. L2 is Redis — bounded by Redis `maxmemory`.
+Keep L1 TTL shorter than L2 TTL. L1 is memory - bounded by `maxSize` and TTL. L2 is Redis - bounded by Redis `maxmemory`.
 :::
 
 ## SWR Not Revalidating
@@ -99,13 +99,13 @@ Keep L1 TTL shorter than L2 TTL. L1 is memory — bounded by `maxSize` and TTL. 
 |-------|----------|
 | SWR not enabled globally | Set `swr: { enabled: true }` in `CachePlugin` options |
 | SWR disabled per-call | Check `swr: { enabled: false }` is not set in decorator/getOrSet options |
-| L2 disabled | SWR requires L2 (Redis) — metadata is stored in L2 only |
+| L2 disabled | SWR requires L2 (Redis) - metadata is stored in L2 only |
 | TTL + staleTime already expired | Data past `staleAt + staleTime` is treated as a full cache miss, not SWR |
 
 Both `@Cached` and `getOrSet()` support full SWR behavior:
 
 ```typescript
-// Decorator — works with full SWR
+// Decorator - works with full SWR
 @Cached({
   key: 'data:{0}',
   ttl: 300,
@@ -113,7 +113,7 @@ Both `@Cached` and `getOrSet()` support full SWR behavior:
 })
 async getData(id: string) { ... }
 
-// Service API — also works
+// Service API - also works
 async getData(id: string) {
   return this.cache.getOrSet(
     `data:${id}`,
@@ -130,12 +130,12 @@ async getData(id: string) {
 **Cause:** `varyBy` resolves values from `contextProvider`. If `contextProvider` is not configured in `CachePlugin`, `varyBy` is silently ignored.
 
 ```typescript
-// Missing contextProvider — varyBy does nothing
+// Missing contextProvider - varyBy does nothing
 new CachePlugin({
   l1: { maxSize: 1000 },
 })
 
-// Correct — provide context source
+// Correct - provide context source
 new CachePlugin({
   l1: { maxSize: 1000 },
   contextProvider: clsService,     // implements IContextProvider
@@ -176,7 +176,7 @@ async getUser(id: string) {}
 })
 async updateUser(id: string) {}
 
-// Wrong — tag name doesn't match
+// Wrong - tag name doesn't match
 @InvalidateTags({
   tags: (id: string) => [`users:${id}`],  // 'users:123' ≠ 'user:123'
 })
@@ -187,11 +187,11 @@ async updateUser(id: string) {}
 Broad tags cause excessive invalidation:
 
 ```typescript
-// Bad — ANY user update clears ALL user caches
+// Bad - ANY user update clears ALL user caches
 @InvalidateTags({ tags: ['users'] })
 async updateUser(id: string) {}
 
-// Better — only invalidate the specific user
+// Better - only invalidate the specific user
 @InvalidateTags({
   tags: (id: string) => [`user:${id}`],
 })
@@ -245,11 +245,11 @@ new CachePlugin({
 
 ## Application Fails to Start Without Redis
 
-**Symptom:** the app crashes at startup with a connection error (e.g. `ECONNREFUSED`) when Redis is unreachable — even though you only wanted an in-memory cache.
+**Symptom:** the app crashes at startup with a connection error (e.g. `ECONNREFUSED`) when Redis is unreachable - even though you only wanted an in-memory cache.
 
 **Cause:** the default `mode: 'l1-l2'` requires Redis, and RedisModule connects at boot.
 
-**Solution:** run the cache in local memory with `mode: 'l1-only'` — the app then boots with no Redis:
+**Solution:** run the cache in local memory with `mode: 'l1-only'` - the app then boots with no Redis:
 
 ```typescript
 new CachePlugin({ mode: 'l1-only' })
@@ -317,5 +317,5 @@ Key debug messages:
 
 ## Next Steps
 
-- [Monitoring](./monitoring) — Track performance
-- [Overview](./index) — Back to overview
+- [Monitoring](./monitoring) - Track performance
+- [Overview](./index) - Back to overview

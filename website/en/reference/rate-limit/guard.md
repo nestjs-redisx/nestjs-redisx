@@ -1,5 +1,5 @@
 ---
-title: 'RateLimitGuard — Rate Limit Plugin | NestJS RedisX'
+title: 'RateLimitGuard - Rate Limit Plugin | NestJS RedisX'
 description: 'Apply RateLimitGuard manually with @UseGuards, order it after AuthGuard, and combine it with @RateLimit metadata on NestJS controllers.'
 ---
 
@@ -9,9 +9,9 @@ Use RateLimitGuard for fine-grained control.
 
 ::: tip The guard is safe to bind more than once
 The `@RateLimit()` decorator **already binds `RateLimitGuard`** for you (it applies
-`UseGuards(RateLimitGuard)` internally). Binding it again — `@RateLimit()` on both the class
+`UseGuards(RateLimitGuard)` internally). Binding it again - `@RateLimit()` on both the class
 and the method, or `@RateLimit()` together with a global `{ provide: APP_GUARD, useClass:
-RateLimitGuard }` — is safe: the guard **consumes the limit at most once per request**, so a
+RateLimitGuard }` - is safe: the guard **consumes the limit at most once per request**, so a
 `points: 10` limit stays 10 regardless of how many times the guard is bound on the route.
 :::
 
@@ -91,12 +91,12 @@ Apply to all endpoints via module (required for DI):
 <<< @/apps/demo/src/plugins/rate-limit/guard-global.setup.ts{typescript}
 
 ::: warning
-Do not use `app.useGlobalGuards(new RateLimitGuard())` — the guard requires DI
+Do not use `app.useGlobalGuards(new RateLimitGuard())` - the guard requires DI
 (RateLimitService, Reflector, module options). Use `APP_GUARD` with `useClass` instead.
 :::
 
 ::: danger Do NOT combine global registration with `@RateLimit()`
-When the guard is registered globally, do **not** also add `@RateLimit()` to routes — the
+When the guard is registered globally, do **not** also add `@RateLimit()` to routes - the
 decorator binds the guard a second time and the limit is consumed twice. With a global guard,
 configure per-route limits is not safe via `@RateLimit()`; instead rely on the default
 plugin-level `points`/`duration` and use `skip` to exempt routes. If you need different limits
@@ -122,7 +122,7 @@ export class ApiController {
   }
 
   @Get('unlimited')
-  // No @RateLimit — no guard attached, no rate limiting
+  // No @RateLimit - no guard attached, no rate limiting
   unlimited() {
     return { unlimited: true };
   }
@@ -226,7 +226,7 @@ The built-in `RateLimitGuard` uses `context.switchToHttp()` for both key extract
 :::
 
 ```typescript
-// Plugin config — disable HTTP headers for WebSocket
+// Plugin config - disable HTTP headers for WebSocket
 new RateLimitPlugin({
   includeHeaders: false, // Required for non-HTTP contexts
 })
@@ -259,12 +259,12 @@ export class ChatGateway {
 
 ::: warning
 For microservice contexts, you must:
-1. Provide a custom `key` function — the built-in key extractors (`ip`, `user`, `apiKey`) rely on HTTP request objects
+1. Provide a custom `key` function - the built-in key extractors (`ip`, `user`, `apiKey`) rely on HTTP request objects
 2. Set `includeHeaders: false` in `RateLimitPlugin` options (since RPC contexts have no HTTP response headers)
 :::
 
 ```typescript
-// Plugin config — disable HTTP headers for microservice contexts
+// Plugin config - disable HTTP headers for microservice contexts
 new RateLimitPlugin({
   includeHeaders: false, // Required for non-HTTP contexts
 })
@@ -295,5 +295,5 @@ export class UserController {
 
 ## Next Steps
 
-- [Service API](./service-api) — Programmatic API
-- [Key Extraction](./key-extraction) — Custom keys
+- [Service API](./service-api) - Programmatic API
+- [Key Extraction](./key-extraction) - Custom keys

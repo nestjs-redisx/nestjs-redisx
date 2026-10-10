@@ -180,5 +180,5 @@ sum(rate(redisx_ratelimit_allowed_total[5m]) + rate(redisx_ratelimit_rejected_to
 
 ## Next Steps
 
-- [OpenTelemetry](./opentelemetry) — Distributed tracing
-- [Operations: Monitoring](../operations/monitoring) — Production monitoring
+- [OpenTelemetry](./opentelemetry) - Distributed tracing
+- [Operations: Monitoring](../operations/monitoring) - Production monitoring
