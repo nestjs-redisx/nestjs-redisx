@@ -165,6 +165,15 @@ export function WithCircuitBreaker(options: IWithCircuitBreakerOptions): MethodD
       writable: false,
     });
 
+    // Carry over metadata stamped by decorators applied BEFORE this one
+    // (written below @WithCircuitBreaker in source order — e.g. @Cron). Discovery-based
+    // consumers (the scheduler among them) read metadata off the prototype's
+    // method, which is now the wrapper; without the copy, `@WithCircuitBreaker` above
+    // `@Cron()` silently unregisters the job on every instance.
+    for (const metadataKey of Reflect.getOwnMetadataKeys(originalMethod)) {
+      Reflect.defineMetadata(metadataKey, Reflect.getOwnMetadata(metadataKey, originalMethod), descriptor.value);
+    }
+
     // Store metadata on the WRAPPER function for reflection (after replacement).
     Reflect.defineMetadata(WITH_CIRCUIT_BREAKER_OPTIONS, options, descriptor.value);
 

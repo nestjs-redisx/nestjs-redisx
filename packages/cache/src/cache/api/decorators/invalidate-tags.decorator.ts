@@ -93,6 +93,15 @@ export function InvalidateTags(options: IInvalidateTagsOptions): MethodDecorator
       writable: false,
     });
 
+    // Carry over metadata stamped by decorators applied BEFORE this one
+    // (written below @InvalidateTags in source order — e.g. @Cron). Discovery-based
+    // consumers (the scheduler among them) read metadata off the prototype's
+    // method, which is now the wrapper; without the copy, `@InvalidateTags` above
+    // `@Cron()` silently unregisters the job on every instance.
+    for (const metadataKey of Reflect.getOwnMetadataKeys(originalMethod)) {
+      Reflect.defineMetadata(metadataKey, Reflect.getOwnMetadata(metadataKey, originalMethod), descriptor.value);
+    }
+
     // Store metadata on WRAPPER function for reflection (after replacement)
     Reflect.defineMetadata(INVALIDATE_TAGS_KEY, options, descriptor.value);
 

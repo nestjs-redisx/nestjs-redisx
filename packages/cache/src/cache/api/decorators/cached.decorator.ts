@@ -282,6 +282,15 @@ export function Cached(options: ICachedOptions = {}): MethodDecorator {
       writable: false,
     });
 
+    // Carry over metadata stamped by decorators applied BEFORE this one
+    // (written below @Cached in source order — e.g. @Cron). Discovery-based
+    // consumers (the scheduler among them) read metadata off the prototype's
+    // method, which is now the wrapper; without the copy, `@Cached` above
+    // `@Cron()` silently unregisters the job on every instance.
+    for (const metadataKey of Reflect.getOwnMetadataKeys(originalMethod)) {
+      Reflect.defineMetadata(metadataKey, Reflect.getOwnMetadata(metadataKey, originalMethod), descriptor.value);
+    }
+
     // Store metadata on WRAPPER function for reflection (after replacement)
     Reflect.defineMetadata(CACHE_OPTIONS_KEY, options, descriptor.value);
 

@@ -874,4 +874,31 @@ describe('@Cached decorator', () => {
       expect(getOrSetCall[2].unless).toBeUndefined();
     });
   });
+
+  describe('metadata carry-over', () => {
+    it('should carry metadata stamped by decorators applied before it — @Cron below @Cached must not silently unregister the job', () => {
+      // Given — a method already stamped by an earlier decorator. Source order
+      // `@Cached` above `@Cron()` applies @Cron FIRST, to the ORIGINAL method;
+      // discovery-based consumers (the scheduler among them) read metadata off
+      // the prototype's method — which is the wrapper after @Cached runs.
+      const CRON_METADATA = 'test:schedule-expression';
+      class CarryOverHost {
+        async job(): Promise<string> {
+          return 'ran';
+        }
+      }
+      const descriptor = Object.getOwnPropertyDescriptor(CarryOverHost.prototype, 'job')!;
+      Reflect.defineMetadata(CRON_METADATA, '0 3 * * *', descriptor.value);
+
+      // When — @Cached wraps the already-stamped method
+      Cached({ key: 'carry:{0}' })(CarryOverHost.prototype, 'job', descriptor);
+      Object.defineProperty(CarryOverHost.prototype, 'job', descriptor);
+
+      // Then — the wrapper carries the earlier decorator's metadata (the cron
+      // stays discoverable) and still exposes its own options
+      const wrapper = CarryOverHost.prototype.job;
+      expect(Reflect.getMetadata(CRON_METADATA, wrapper)).toBe('0 3 * * *');
+      expect(Reflect.getMetadata(CACHE_OPTIONS_KEY, wrapper)).toEqual({ key: 'carry:{0}' });
+    });
+  });
 });
